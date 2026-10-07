@@ -33,10 +33,21 @@ class Profile:
 
     @property
     def build_path(self) -> Path:
-        p = Path(self.build_dir).expanduser()
+        value = self.build_dir
+        if self.mode in {"kas", "kas-container"} and self.build_dir == "build":
+            value = self.environment.get("KAS_BUILD_DIR") or str(Path(self.environment.get("KAS_WORK_DIR", str(self.root_path))) / "build")
+        p = Path(value).expanduser()
         return p.resolve() if p.is_absolute() else self.root_path / p
 
     def validate(self) -> None:
+        if not self.name.strip():
+            raise ValueError("Profile name is required")
+        if not isinstance(self.environment, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in self.environment.items()):
+            raise ValueError("environment must contain string keys and values")
+        if not isinstance(self.container_args, list) or any(not isinstance(a, str) for a in self.container_args):
+            raise ValueError("container_args must be an array of strings")
+        if not isinstance(self.targets, list) or any(not isinstance(t, str) for t in self.targets):
+            raise ValueError("targets must be an array of strings")
         if self.mode not in {"host", "kas", "container", "kas-container"}:
             raise ValueError("Mode must be host, kas, container or kas-container")
         if self.engine not in {"docker", "podman"}:
@@ -47,7 +58,7 @@ class Profile:
             raise ValueError("container_root must be an absolute container path")
         if any(not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", k) for k in self.environment):
             raise ValueError("Invalid environment variable name")
-        if self.mode in {"container", "kas-container"}:
+        if self.mode == "container":
             try:
                 self.build_path.relative_to(self.root_path)
             except ValueError as exc:
@@ -65,6 +76,12 @@ class Settings:
             self.profiles = [Profile(**p) for p in data.get("profiles", [])]
         if not self.profiles:
             self.profiles = [Profile(root=str(Path.cwd()))]
+        for profile in self.profiles:
+            profile.validate()
+        if len({p.name for p in self.profiles}) != len(self.profiles):
+            raise ValueError("Profile names must be unique")
+        if self.active not in {p.name for p in self.profiles}:
+            raise ValueError("Active profile must exist")
 
     @property
     def profile(self) -> Profile:

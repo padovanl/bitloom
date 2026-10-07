@@ -126,6 +126,8 @@ class Runner:
         finally:
             job.finished = now()
             self.store.put(job)
+            if self.active is job:
+                self.active = None
             self.callback(job, None)
 
     @staticmethod

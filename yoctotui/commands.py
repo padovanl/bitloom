@@ -85,6 +85,15 @@ ACTIONS = [
     Action("kas-shell", "Kas", "Open kas shell", "kas", ("shell",), interactive=True),
     Action("custom", "Utility", "Custom command (argument list)", "", inputs=("command",), help="Parsed as argv. Shell operators are not interpreted."),
 ]
+ACTIONS.extend([
+    Action("getvar", "Inspect", "Resolve one BitBake variable", "bitbake-getvar", inputs=("variable",)),
+    Action("dumpsig", "Inspect", "Read signature file", "bitbake-dumpsig", inputs=("path",)),
+    Action("diffsigs", "Inspect", "Compare signature files", "bitbake-diffsigs", inputs=("path", "path2")),
+    Action("kernel-diff", "Kernel", "Export kernel config changes", "bitbake", ("-c", "diffconfig"), ("target",)),
+    Action("kernel-fragments", "Kernel", "Validate kernel config fragments", "bitbake", ("-c", "kernel_configcheck"), ("target",)),
+    Action("cve", "Security", "Run recipe CVE check", "bitbake", ("-c", "cve_check"), ("target",), help="Requires the cve-check class and CVE database."),
+    Action("kas-lock", "Kas", "Generate kas lock file", "kas", ("lock",)),
+])
 BY_ID = {a.id: a for a in ACTIONS}
 
 

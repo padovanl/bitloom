@@ -129,3 +129,61 @@ def test_log_search_context(tmp_path):
     log.write_text('before\nERROR: compile failed\nafter\n')
     result = search_log(log, 'compile', True)
     assert 'before' in result and 'after' in result
+
+
+def test_complete_file_log_search_finds_early_error(tmp_path):
+    log = tmp_path / 'large.log'
+    log.write_text('ERROR: early issue\n' + 'fine\n' * 6000)
+    assert 'early issue' in search_log(log, 'issue', True)
+
+
+def test_prune_protects_git_checkout_and_sibling_lock(tmp_path):
+    root = tmp_path / 'downloads'
+    git = root / 'git2/repo/objects'
+    git.mkdir(parents=True)
+    p = git / 'object'
+    p.write_text('git object')
+    archive = root / 'source.tar.gz'
+    archive.write_text('source')
+    archive.with_name(archive.name + '.lock').touch()
+    old = time.time() - 86400 * 60
+    for file in (p, archive):
+        os.utime(file, (old, old))
+    entries = [Entry(file.name, '', file, file.stat().st_size, file.stat().st_mtime) for file in (p, archive)]
+    assert cache_candidates(entries, 30) == []
+
+
+def test_store_prevents_concurrent_sessions(tmp_path):
+    first = Store(tmp_path)
+    with pytest.raises(ValueError, match='Another'):
+        Store(tmp_path)
+    first.close()
+    second = Store(tmp_path)
+    second.close()
+
+
+async def test_graceful_stop_sends_only_one_client_signal(tmp_path, monkeypatch):
+    import signal
+    store = Store(tmp_path / 'state')
+    runner = Runner(store, lambda *_: None)
+    job = Job(Profile(root=str(tmp_path)), 'image', ['bitbake', 'image'])
+    class Process:
+        pid = 12345
+        returncode = None
+    job.process = Process()
+    job.status = 'running'
+    calls = []
+    monkeypatch.setattr(os, 'kill', lambda pid, sig: calls.append((pid, sig)))
+    await runner.graceful_stop(job)
+    await runner.graceful_stop(job)
+    assert calls == [(12345, signal.SIGINT)]
+    assert job.status == 'cancelling'
+    store.close()
+
+
+def test_kas_external_work_directory(tmp_path):
+    p = Profile(root=str(tmp_path), mode='kas-container', environment={'KAS_WORK_DIR': '/tmp/separate-work'})
+    p.validate()
+    assert p.build_path == Path('/tmp/separate-work/build')
+    p.environment['KAS_BUILD_DIR'] = '/tmp/custom-build'
+    assert p.build_path == Path('/tmp/custom-build')

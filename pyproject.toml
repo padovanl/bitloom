@@ -7,7 +7,11 @@ name = "yoctotui"
 version = "0.1.0"
 description = "A terminal cockpit for Yocto, BitBake, kas and container workflows"
 requires-python = ">=3.10"
-dependencies = ["textual>=0.89,<2"]
+dependencies = ["textual>=1.0,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+docs = ["pillow>=10", "cairosvg>=2.7", "markdown-it-py>=3"]
 
 [project.scripts]
 yoctotui = "yoctotui.cli:main"

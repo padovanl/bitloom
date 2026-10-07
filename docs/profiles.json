@@ -1,0 +1,38 @@
+{
+  "active": "kas-container",
+  "profiles": [
+    {
+      "name": "kas-container",
+      "root": "/path/to/your/yocto-project",
+      "build_dir": "work/build",
+      "mode": "kas-container",
+      "kas_file": "kas/base.yml:kas/board.yml",
+      "environment": {
+        "KAS_WORK_DIR": "/path/to/your/yocto-project/work",
+        "KAS_BUILD_DIR": "/path/to/your/yocto-project/work/build",
+        "KAS_CONTAINER_ENGINE": "docker"
+      },
+      "targets": ["core-image-minimal"]
+    },
+    {
+      "name": "host",
+      "root": "/path/to/your/poky-checkout",
+      "build_dir": "build-qemu",
+      "mode": "host",
+      "init_script": "oe-init-build-env",
+      "machine": "qemux86-64",
+      "targets": ["core-image-minimal", "busybox"]
+    },
+    {
+      "name": "podman",
+      "root": "/path/to/your/poky-checkout",
+      "build_dir": "build",
+      "mode": "container",
+      "engine": "podman",
+      "image": "your-yocto-builder:scarthgap",
+      "init_script": "oe-init-build-env",
+      "container_root": "/work",
+      "targets": ["core-image-minimal"]
+    }
+  ]
+}

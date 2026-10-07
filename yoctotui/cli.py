@@ -56,4 +56,8 @@ def main():
             print(f"{status:5} {name:20} {detail}")
         return
     from .app import YoctoApp
-    YoctoApp(args.config, args.state).run()
+    try:
+        app = YoctoApp(args.config, args.state)
+    except (OSError, ValueError, TypeError) as exc:
+        parser.exit(1, f"yoctotui: {exc}\n")
+    app.run()
