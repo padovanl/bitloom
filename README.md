@@ -39,7 +39,7 @@ bitloom --config .yoctotui/profiles.json
 
 | Area | Capabilities |
 | --- | --- |
-| Builds | Serial queue, persistent SQLite history, streaming logs, observed live recipe tasks, task progress, exit status, retries with original profile, cancellation, SDK/eSDK, recipe tasks, forced compile, dry runs, parsing |
+| Builds | Independent reconnectable build service, serial queue, persistent SQLite history, streaming logs, observed live recipe tasks, task progress, exit status, retries with original profile, cancellation, SDK/eSDK, recipe tasks, forced compile, dry runs, parsing |
 | Runtimes | Initialized host environment; kas config composition; fresh Docker/Podman containers; existing containers; official kas-container wrapper |
 | Layers | Expandable layer tree, search local layers, priorities through BitBake, add/remove/create, overlays, appends, cross-layer dependencies, edit metadata with backups |
 | Recipes | Browse `.bb`, `.bbappend`, `.bbclass` and kas YAML, compile/patch/package individual recipes, list tasks, evaluate environment |
@@ -47,7 +47,7 @@ bitloom --config .yoctotui/profiles.json
 | Errors and logs | Build and task log browsers, case-insensitive search with context, error-only view, pause/resume, failure notifications, exports, build summary and timestamped slow-task reports |
 | Downloads | Fetch a recipe or all target dependencies, size/age inventory, orphan marker and partial-download audit, concrete prune plans |
 | Shared state | Local inventory, age-based prune plans, recipe cleansstate, signature dumps/diffs, `-S printdiff` |
-| Analysis | Search metadata contents with file/line locations, compare package manifests by architecture, inspect sstate hit rates, group repeated warnings, export reports |
+| Analysis | Runtime file/directory access and backed-up editing, binary artifact export with SHA-256 verification, failure diagnosis, image package/file provenance, preflight, snapshots and comparison, reproducibility bundles, conservative signature-reference cache plans; search metadata contents with file/line locations, compare package manifests by architecture, inspect sstate hit rates, group repeated warnings, export reports |
 | Workbench | Filter evaluated environment variables, compare two snapshots, browse generated dependency edges and transitive/reverse dependency context, buildhistory Git diff |
 | Outputs | Discover images, SDKs, manifests, licenses, SBOMs, buildstats and buildhistory files; text preview, read-only tar rootfs inventory (permissions, owners, links), and binary artifact paths |
 | Configuration | Multiple named profiles, custom environment/runtime arguments, local.conf and bblayers.conf editor, backups, external-change detection, diagnostics |
@@ -56,6 +56,14 @@ bitloom --config .yoctotui/profiles.json
 | Utilities | Argument-based custom commands, interactive terminal handoff, command filtering, keyboard shortcuts, command palette, CLI diagnostics |
 
 The [command reference](docs/commands.md) documents every built-in action. The [user guide](docs/guide.md) describes complete workflows and runtime constraints.
+
+## Reconnectable builds and evidence workflows
+
+Real sessions use an independent local service: close the terminal and reconnect with the same `--state` directory. Ctrl+Q detaches; F5 explicitly stops a job. `--embedded` retains the previous stop-on-exit behavior. Inspect an idle service with `--service-status`, or stop it with `--service-stop`.
+
+The **Analysis** selector connects signature explanations, failure diagnosis, runtime filesystem access, image provenance, snapshot comparison, devtool review, reproducibility exports, preflight and conservative cache reference plans. Shared/exclusive advisory cache locks coordinate cooperating Bitloom builders. Read the [workflow guide](docs/guide.md#evidence-workflows) for inputs, bounds and limitations.
+
+![Real container image provenance](docs/assets/real-kas-provenance.png)
 
 ## Keyboard
 
@@ -69,7 +77,7 @@ The [command reference](docs/commands.md) documents every built-in action. The [
 | Alt+1…5 | Builds, metadata, task logs, workbench, caches |
 | Ctrl+L | Focus build log search |
 | Ctrl+P | Textual command palette |
-| Ctrl+Q | Stop active jobs and exit |
+| Ctrl+Q | Detach from service and exit; embedded/demo stops owned jobs |
 | Enter | Select a build log or open a metadata/task/artifact row |
 | Tab / Shift+Tab | Move focus |
 | Escape | Close a dialog |

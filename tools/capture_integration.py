@@ -21,7 +21,7 @@ async def capture():
         raise RuntimeError('A successfully built and verified rootfs is required before making this capture')
     config = state / 'profiles.json'
     settings = Settings(config)
-    settings.profiles = [Profile(name='kas-integration', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml', machine='qemux86-64', distro='poky', environment={'KAS_WORK_DIR': report['work'], 'KAS_CONTAINER_ENGINE': 'docker'}, targets=['core-image-minimal'])]
+    settings.profiles = [Profile(name='kas-integration', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml', machine='qemux86-64', distro='poky', environment={'KAS_WORK_DIR': report['work'], 'KAS_CONTAINER_ENGINE': 'docker', 'KAS_CONTAINER_IMAGE':'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'}, targets=['core-image-minimal'])]
     settings.active = 'kas-integration'
     settings.save()
     os.environ.pop('NO_COLOR', None)
@@ -54,6 +54,24 @@ async def capture():
         await app.workers.wait_for_complete()
         await pilot.pause(.2)
         shot('real-kas-dependencies', 'Bitloom · actual task dependency graph from kas-container')
+        app.query_one('#workspace', TabbedContent).active = 'analysis'
+        app.query_one('#target', Input).value = 'core-image-minimal'
+        app.query_one('#analysis-kind', Select).value = 'preflight'
+        app.query_one('#analysis-first', Input).value = '/work/build'
+        app.run_analysis()
+        await app.workers.wait_for_complete()
+        await pilot.pause(.2)
+        shot('real-kas-preflight', 'Bitloom · runtime filesystem preflight from kas-container')
+        app.query_one('#analysis-kind', Select).value = 'provenance'
+        app.query_one('#analysis-first', Input).value = '/bin/sh'
+        app.run_analysis()
+        await app.workers.wait_for_complete()
+        await pilot.pause(.2)
+        shot('real-kas-provenance', 'Bitloom · actual file ownership and image inclusion chain')
+        from PIL import Image
+        frames=[Image.open(ROOT / f'docs/assets/{name}.png').convert('RGB') for name in ['real-kas-build','real-kas-preflight','real-kas-provenance']]
+        frames[0].save(ROOT/'docs/assets/real-workflows.gif',save_all=True,append_images=frames[1:],duration=2200,loop=0)
+
     app.store.close()
     print('Captured verified real image build from persisted history')
 
