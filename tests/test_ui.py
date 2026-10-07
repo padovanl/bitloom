@@ -54,3 +54,55 @@ async def test_ui_job_and_error_search(tmp_path):
         await pilot.pause(.3)
         assert app.selected_log == job.log
     app.store.close()
+
+
+async def test_terminal_navigation_preview_and_pause(tmp_path):
+    from textual.widgets import Button, RichLog, Tree
+    config = make_demo(tmp_path / 'demo')
+    app = YoctoApp(config, tmp_path / 'state')
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.5)
+        await pilot.press('alt+2')
+        await pilot.pause(.3)
+        assert app.query_one('#workspace', TabbedContent).active == 'metadata'
+        assert app.query_one('#source-preview', RichLog).lines
+        tree = app.query_one('#layer-tree', Tree)
+        layer = next(node for node in tree.root.children if node.data and node.data.kind == 'layer')
+        tree.select_node(layer)
+        await pilot.pause(.3)
+        assert app.query_one('#metadata-search', Input).value == str(layer.data.path)
+        assert app.query_one('#metadata-table').row_count >= 2
+        await pilot.press('alt+1')
+        await pilot.click('#log-follow')
+        assert not app.follow_log
+        assert str(app.query_one('#log-follow', Button).label) == 'Resume'
+        app.live_lines.append('saved output')
+        app.flush_log()
+        assert app.live_lines == ['saved output']
+        await pilot.pause(.4)
+        await pilot.click('#log-follow')
+        await pilot.pause(.2)
+        assert app.follow_log
+        await pilot.resize_terminal(90, 28)
+        await pilot.pause(.3)
+        assert app.screen.has_class('narrow')
+    app.store.close()
+
+
+async def test_background_output_survives_command_dialog(tmp_path):
+    import sys
+    config = make_demo(tmp_path / 'demo')
+    app = YoctoApp(config, tmp_path / 'state')
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.3)
+        job = app.runner.submit(app.profile, 'background', [sys.executable, '-c', 'import time; time.sleep(.3); print("NOTE: background output"); time.sleep(.3)'])
+        app.select_job(job.id, job.log)
+        await pilot.press('f2')
+        await app.runner.consumer
+        app.update_telemetry()
+        assert isinstance(app.screen, ActionScreen)
+        assert job.status == 'success'
+        await pilot.press('escape')
+        await pilot.pause(.3)
+        assert app.history_rows[job.id]['status'] == 'success'
+    app.store.close()
