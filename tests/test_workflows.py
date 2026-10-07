@@ -63,3 +63,54 @@ async def test_service_survives_client_disconnect(tmp_path):
     assert current['status']=='success'
     assert 'after' in Path(current['log']).read_text()
     await asyncio.to_thread(rpc,state,{'op':'stop'})
+
+def test_shared_cache_coordination(tmp_path):
+    from yoctotui.leases import CacheLease
+    a=CacheLease(tmp_path); b=CacheLease(tmp_path); maintenance=CacheLease(tmp_path,exclusive=True)
+    a.acquire(); b.acquire()
+    try:
+        with pytest.raises(ValueError,match='in use'): maintenance.acquire()
+    finally: a.close(); b.close()
+    with maintenance:
+        with pytest.raises(ValueError,match='in use'): a.acquire()
+
+@pytest.mark.asyncio
+async def test_runtime_binary_export_is_exact_and_never_overwrites(tmp_path):
+    from yoctotui.runtime import download
+    source=tmp_path/'artifact.bin'; source.write_bytes(bytes(range(256))*900)
+    destination=tmp_path/'export.bin'; profile=Profile(root=str(tmp_path))
+    result=await download(profile,str(source),destination)
+    assert result['size']==source.stat().st_size
+    assert destination.read_bytes()==source.read_bytes()
+    with pytest.raises(ValueError,match='exists'): await download(profile,str(source),destination)
+    assert not list(tmp_path.glob('*.part-*'))
+
+def test_provenance_report_keeps_chain_and_owner_evidence():
+    from yoctotui.workflows import provenance_report
+    text=provenance_report({'image':'minimal','query':'/bin/sh','owners':{'busybox':'busybox'},'sizes':{'busybox':100},'inclusion_paths':[['packagegroup-core-boot','busybox']],'direct_dependents':{'busybox':['packagegroup-core-boot']},'image_install':'packagegroup-core-boot','package_install':'packagegroup-core-boot','policy':'Evidence is bounded.'})
+    assert 'packagegroup-core-boot → busybox' in text
+    assert 'busybox → busybox · 100' in text
+
+@pytest.mark.asyncio
+async def test_signature_pairs_are_kept_in_their_task_variant(tmp_path):
+    import os
+    stamps=tmp_path/'build/tmp/stamps/arch/busybox/version'; stamps.mkdir(parents=True)
+    first=stamps/'do_compile.sigdata.before'; second=stamps/'do_compile.sigdata.after'
+    first.touch(); second.touch(); os.utime(first,(10,10)); os.utime(second,(20,20))
+    (stamps/'do_install.sigdata.only-one').touch()
+    tools=tmp_path/'bin'; tools.mkdir()
+    binary=tools/'bitbake-diffsigs'; binary.write_text('#!/bin/sh\nprintf "Variable CFLAGS value changed\\n"\n'); binary.chmod(0o755)
+    profile=Profile(root=str(tmp_path),environment={'PATH':str(tools)+':'+os.environ['PATH']})
+    result=await request(profile,'signature-context',str(tmp_path/'build'),recipe='busybox')
+    assert len(result['comparisons'])==1
+    assert result['comparisons'][0]['before']==str(first)
+    assert result['comparisons'][0]['after']==str(second)
+    assert 'CFLAGS' in result['comparisons'][0]['evidence']
+
+def test_snapshot_comparison_normalizes_manifest_timestamps():
+    first={'manifests':{'/old/image.rootfs-20260101010101.manifest':'busybox arch 1.0'},'package_sizes':{'arch/busybox':100}}
+    second={'manifests':{'/new/image.rootfs-20260202020202.manifest':'busybox arch 1.1'},'package_sizes':{'arch/busybox':120}}
+    text=compare(first,second)
+    assert '-busybox arch 1.0' in text and '+busybox arch 1.1' in text
+    assert 'arch/busybox: 100 → 120' in text
+    assert '202601' not in text

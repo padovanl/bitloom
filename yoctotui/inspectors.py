@@ -186,12 +186,18 @@ def cache_candidates(entries: list[Entry], days: int) -> list[Entry]:
 
 
 def prune_cache(root: Path, entries: list[Entry]) -> tuple[int, int]:
+    from .leases import CacheLease
+    with CacheLease(root, exclusive=True):
+        return _prune_cache(root, entries)
+
+
+def _prune_cache(root: Path, entries: list[Entry]) -> tuple[int, int]:
     """Delete only explicitly selected stale files, never follow links or delete roots."""
     root = root.resolve()
     removed = freed = 0
     for entry in entries:
         p = entry.path
-        if p.is_symlink() or not p.is_file() or p.with_name(p.name + ".lock").exists():
+        if p.name.endswith((".lock", ".done")) or p.is_symlink() or not p.is_file() or p.with_name(p.name + ".lock").exists():
             continue
         try:
             p.resolve().relative_to(root)
