@@ -93,3 +93,71 @@ def build_summary(path: Path) -> str:
             if 'Tasks Summary:' in line:
                 task = line
     return '\n'.join([f'Build report: {path}', f'Errors: {len(errors)} · Warnings: {len(warnings)}', '', *sstate, task, '', 'Failed tasks', *failed[-100:], '', 'Errors', *errors[-100:], '', 'Warnings', *warnings[-100:]])
+
+
+def dependency_context(edges: list[tuple[str, str]], node: str, limit: int = 200) -> str:
+    """Walk both directions without looping on cycles in BitBake DOT graphs."""
+    from collections import defaultdict, deque
+    forward, reverse = defaultdict(set), defaultdict(set)
+    for parent, dependency in edges:
+        forward[parent].add(dependency)
+        reverse[dependency].add(parent)
+    if node not in forward and node not in reverse:
+        raise ValueError('Enter an exact task/node name from the loaded graph')
+
+    def walk(graph):
+        queue = deque([(node, 0)])
+        seen, result = {node}, []
+        while queue and len(result) < limit:
+            current, depth = queue.popleft()
+            for child in sorted(graph[current]):
+                if child not in seen:
+                    seen.add(child)
+                    result.append(f'{depth+1:>3}  {child}')
+                    queue.append((child, depth+1))
+        return result
+    return '\n'.join([f'Dependency context: {node}', 'Numbers indicate shortest graph distance. Each direction is bounded.', '', 'REQUIRES / transitive dependencies', *walk(forward), '', 'REQUIRED BY / reverse dependencies', *walk(reverse)])
+
+
+def image_contents(path: Path, limit: int = 20000) -> str:
+    """Inspect tar rootfs metadata without extracting or following archive links."""
+    import tarfile
+    try:
+        with tarfile.open(path, 'r:*') as archive:
+            lines, total, count = [], 0, 0
+            for item in archive:
+                count += 1
+                if count > limit:
+                    lines.append(f'Inventory truncated at {limit} entries')
+                    break
+                total += item.size if item.isfile() else 0
+                kind = 'dir' if item.isdir() else 'link' if item.issym() or item.islnk() else 'file' if item.isfile() else 'special'
+                link = f' -> {item.linkname}' if item.issym() or item.islnk() else ''
+                lines.append(f'{kind:7} {item.mode:04o} {item.uid:5}:{item.gid:<5} {item.size:10} {item.name}{link}')
+    except tarfile.TarError as exc:
+        raise ValueError('Select a tar rootfs archive (.tar, .tar.gz, .tar.bz2, .tar.xz)') from exc
+    return '\n'.join([f'Root filesystem: {path}', f'Indexed entries: {min(count, limit)} · regular-file bytes: {total}', 'Read-only archive inspection; nothing was extracted.', '', 'TYPE    MODE UID:GID           BYTES PATH', *lines])
+
+
+def task_timings(path: Path) -> str:
+    """Use observed timestamps; never infer durations from line positions."""
+    from datetime import datetime
+    running, complete = {}, []
+    with path.open(errors='replace') as source:
+        for line in source:
+            stamp = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', line)
+            event = re.search(r'recipe (\S+): task (\S+): (Started|Succeeded|Failed)', line)
+            if not stamp or not event:
+                continue
+            timestamp = datetime.strptime(stamp[1], '%Y-%m-%d %H:%M:%S')
+            key = (event[1], event[2])
+            if event[3] == 'Started':
+                running[key] = timestamp
+            elif key in running:
+                seconds = (timestamp-running.pop(key)).total_seconds()
+                if seconds >= 0:
+                    complete.append((seconds, *key, event[3]))
+    if not complete:
+        return 'No completed timestamped task pairs found. kas timestamped output is supported. Plain BitBake output does not provide timings; enable buildstats and inspect its artifacts.'
+    rows = [f'{seconds:9.0f}s  {recipe:45} {task:30} {status}' for seconds, recipe, task, status in sorted(complete, reverse=True)[:200]]
+    return '\n'.join([f'Observed task timings: {path}', f'Completed pairs: {len(complete)} · unmatched starts: {len(running)}', 'Sorted by wall duration. Tasks overlap; summed durations are not build elapsed time.', '', *rows])

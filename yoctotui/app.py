@@ -3,18 +3,21 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
-from datetime import datetime
+import shutil
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from rich.text import Text
+from rich.syntax import Syntax
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane
+from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane, Tree
 
 from .commands import invocation
 from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, inventory, metadata, prune_cache, search_log, task_logs
-from .models import Profile, Settings
+from .models import Profile, Settings, read_assignments
 from .runner import Job, Runner
 from .screens import ActionScreen, FileScreen, ProfilesScreen, PruneScreen
 from .store import Store
@@ -44,37 +47,79 @@ Commands depend on the selected Yocto release and inherited classes. SPDX, ptest
 
 class YoctoApp(App):
     TITLE = "YoctoTUI"
-    SUB_TITLE = "BUILD · DEVELOP · SHIP"
+    SUB_TITLE = "Yocto / BitBake workspace"
     CSS = """
-    Screen { background: #0b1120; }
-    Header { background: #17233a; }
-    #toolbar { height: 3; padding: 0 1; background: #101c30; }
-    #profile { width: 28; }
+    Screen { background: #0b1115; color: #bdcbd2; }
+    Header { background: #111b22; color: #84c9c0; }
+    #toolbar { height: 1; padding: 0 1; background: #111b22; }
+    #profile { width: 22; height: 1; }
     #target { width: 1fr; }
-    #toolbar Button { min-width: 10; }
-    #overview { height: 5; padding: 1 2; background: #111e32; color: #81e0dc; }
+    Button { height: 1; min-width: 8; border: none; background: #16232a; color: #a9c3ce; padding: 0 1; }
+    Button:hover, Button:focus { background: #25404b; color: #e0f3f6; }
+    Button.-primary { background: #183832; color: #8fdbc3; }
+    Button.-warning { background: #382d1b; color: #dfbe77; }
+    Input { height: 1; border: none; background: #121e25; padding: 0 1; }
+    Select { height: 1; border: none; }
+    SelectCurrent { height: 1; border: none; padding: 0 1; background: #172730; }
+    #shell { height: 1fr; }
+    #rail { width: 22; background: #0d171d; padding: 0 1; border-right: solid #30444e; }
+    #brand { height: 3; color: #89d2bd; text-style: bold; padding-top: 1; }
+    .rail-label { color: #d2b77b; height: 2; padding-top: 1; }
+    #rail Button { width: 1fr; text-align: left; height: 1; margin: 0; padding: 0 1; background: #0d171d; color: #9ab4c0; }
+    #rail Button.selected { background: #203e49; color: #d9f3f5; text-style: bold; }
+    #rail-context { height: 1fr; color: #738e9d; margin-top: 2; }
+    #main { width: 1fr; }
+    #overview { height: 3; padding: 0 1; color: #9ab4c0; border-bottom: solid #30444e; }
+    #metrics { height: 4; }
+    .metric { width: 1fr; padding: 0 1; border-bottom: solid #30444e; border-right: solid #30444e; background: #0b1115; }
     #workspace { height: 1fr; }
-    TabPane { padding: 1; }
-    .tools { height: 3; margin-bottom: 1; }
+    #workspace > ContentTabs { display: none; }
+    TabPane { padding: 0 1; }
+    .tools { height: 1; margin-bottom: 1; }
     .tools Input { width: 1fr; }
-    .tools Button { min-width: 10; }
-    DataTable { height: 1fr; border: round #243d59; }
-    #history { height: 11; }
-    #job-state { height: 2; }
-    #progress { height: 1; }
-    #log { height: 1fr; border: round #243d59; background: #070d18; }
+    .tools Button { min-width: 8; }
+    DataTable { height: 1fr; border: solid #30444e; background: #0b1115; }
+    DataTable > .datatable--header { background: #14242c; color: #89c7d5; text-style: bold; }
+    DataTable > .datatable--cursor { background: #203e49; color: #daf1f2; }
+    #build-split { height: 1fr; }
+    #history-panel { width: 40; padding-right: 1; }
+    #history { height: 1fr; }
+    #task-monitor { height: 9; border: solid #30444e; color: #97cbbb; padding: 0 1; }
+    #stream-panel { width: 1fr; }
+    .section-title { height: 2; color: #81bdcf; padding-top: 1; }
+    #job-state { height: 2; color: #9eb2c1; }
+    #progress { height: 1; margin-bottom: 1; }
+    #log { height: 1fr; border: solid #30444e; background: #080f13; }
     #scan-state { height: 2; color: #92a4bd; }
-    #cache-days { width: 12; }
-    #cache-kind { width: 20; }
+    #cache-days { width: 9; }
+    #cache-kind { width: 18; }
+    #inspect-kind { width: 19; }
     #health { height: 1fr; }
-    #detail { height: 3; color: #92a4bd; }
+    #metadata-split { height: 1fr; }
+    #layer-tree { width: 26; border: solid #30444e; background: #0d171d; }
+    #metadata-table { width: 3fr; }
+    #source-preview { width: 2fr; border: solid #30444e; background: #080f13; }
+    #active-tasks { height: 4; color: #a6d9c8; }
+    #detail { height: 2; color: #92a4bd; }
     #help { height: 1fr; }
-    Footer { background: #17233a; }
+    Footer { background: #111b22; }
+    Screen.compact #rail { width: 20; }
+    Screen.compact #history-panel { width: 34; }
+    Screen.compact #toolbar #commands, Screen.compact #toolbar #profiles { display: none; }
+    Screen.narrow #rail { display: none; }
+    Screen.narrow #workspace > ContentTabs { display: block; }
+    Screen.narrow #metrics { height: 4; }
+    Screen.narrow #history-panel, Screen.narrow #source-preview, Screen.narrow #layer-tree { display: none; }
     """
     BINDINGS = [
         ("f2", "command", "Commands"), ("f3", "refresh", "Refresh"),
         ("f4", "profiles", "Profiles"), ("ctrl+q", "quit", "Exit"),
         ("ctrl+l", "log_focus", "Logs"),
+        ("alt+1", "section('builds')", "Builds"),
+        ("alt+2", "section('metadata')", "Metadata"),
+        ("alt+3", "section('tasklogs')", "Tasks"),
+        ("alt+4", "section('workbench')", "Inspect"),
+        ("alt+5", "section('caches')", "Caches"),
     ]
 
     def __init__(self, config: Path, state: Path):
@@ -89,99 +134,139 @@ class YoctoApp(App):
         self.selected_log: Path | None = None
         self.selected_job_id: str | None = None
         self.errors_only = False
+        self.follow_log = True
+        self.resource_previous = None
+        self.resource_time = time.monotonic()
         self.last_line = ""
         self.live_lines: list[str] = []
         self.history_rows: dict[str, dict] = {}
         self.metadata_rows: dict[str, Entry] = {}
         self.file_rows: dict[str, Entry] = {}
         self.inspection_rows: list[tuple[str, str]] = []
+        self.config_hints = {}
+
+    def main_query(self, selector, expect_type=None):
+        """Keep background updates on the workspace while a modal is open."""
+        return self.screen_stack[0].query_one(selector, expect_type)
 
     @property
     def profile(self):
         return self.settings.profile
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield Header(show_clock=True, icon="Y")
         with Horizontal(id="toolbar"):
             yield Select([(p.name, p.name) for p in self.settings.profiles], value=self.profile.name, allow_blank=False, id="profile")
             yield Input(placeholder="Build target / recipe", value=self.profile.targets[0] if self.profile.targets else "", id="target")
-            yield Button("▶ Build", variant="primary", id="build")
+            yield Button("[ Build ]", variant="primary", id="build")
             yield Button("Commands", id="commands")
             yield Button("Profiles", id="profiles")
-        yield Static(id="overview", markup=False)
-        with TabbedContent(id="workspace"):
-            with TabPane("◈ Builds", id="builds"):
-                yield DataTable(id="history", cursor_type="row")
-                with Horizontal(classes="tools"):
-                    yield Button("Stop…", variant="warning", id="stop")
-                    yield Button("Retry", id="retry")
-                    yield Button("Export log", id="export")
-                    yield Input(placeholder="Search selected log (case insensitive, ±3 lines)", id="log-search")
-                    yield Button("Errors only", id="errors")
-                yield Static("No job selected", id="job-state", markup=False)
-                yield ProgressBar(total=100, show_eta=False, id="progress")
-                yield RichLog(id="log", wrap=True, highlight=False, markup=False, max_lines=5000)
-            with TabPane("◇ Layers & recipes", id="metadata"):
-                with Horizontal(classes="tools"):
-                    yield Input(placeholder="Search recipe, layer, append, class, kas file…", id="metadata-search")
-                    yield Button("Build recipe", id="recipe-build")
-                    yield Button("Modify", id="recipe-modify")
-                    yield Button("Layer actions", id="layer-actions")
-                    yield Button("Rescan", id="rescan")
-                yield Static(id="detail", markup=False)
-                yield DataTable(id="metadata-table", cursor_type="row")
-            with TabPane("≋ Task logs", id="tasklogs"):
-                with Horizontal(classes="tools"):
-                    yield Input(placeholder="Filter task logs by recipe or task…", id="task-search")
-                    yield Button("Refresh logs", id="logs-refresh")
-                    yield Button("Read selected", id="logs-read")
-                    yield Button("Failed task log", id="failed-task-log")
-                yield DataTable(id="task-table", cursor_type="row")
-            with TabPane("▣ Caches & downloads", id="caches"):
-                with Horizontal(classes="tools"):
-                    yield Select([("Downloads", "downloads"), ("Shared state", "sstate")], value="downloads", allow_blank=False, id="cache-kind")
-                    yield Input(placeholder="Filter files", id="cache-search")
-                    yield Input(value="30", placeholder="Age days", id="cache-days", type="integer")
-                    yield Button("Scan", id="cache-scan")
-                    yield Button("Prune plan", variant="warning", id="cache-prune")
-                    yield Button("Fetch all", id="fetch-all")
-                yield Static("Scan a cache to inspect files, size and age.", id="scan-state", markup=False)
-                yield DataTable(id="cache-table", cursor_type="row")
-            with TabPane("◉ Artifacts", id="artifacts"):
-                with Horizontal(classes="tools"):
-                    yield Input(placeholder="Search images, SDK, manifests, licenses, SPDX, buildstats…", id="artifact-search")
-                    yield Button("Refresh", id="artifact-refresh")
-                    yield Button("Read file", id="artifact-read")
-                yield DataTable(id="artifact-table", cursor_type="row")
-            with TabPane("⚙ Health & config", id="healthtab"):
-                with Horizontal(classes="tools"):
-                    yield Button("local.conf", id="local-conf")
-                    yield Button("bblayers.conf", id="layers-conf")
-                    yield Button("Environment", id="environment")
-                    yield Button("Devtool status", id="dev-status")
-                    yield Button("Versions", id="versions")
-                    yield Button("Refresh", id="health-refresh")
-                yield DataTable(id="health", cursor_type="row")
-            with TabPane("⌕ Workbench", id="workbench"):
-                with Horizontal(classes="tools"):
-                    yield Select([("Environment", "env"), ("Dependencies", "graph")], value="env", allow_blank=False, id="inspect-kind")
-                    yield Input(placeholder="Filter variable/value or graph node…", id="inspect-search")
-                    yield Button("Load", id="inspect-load")
-                    yield Button("Resolve env", id="inspect-resolve")
-                    yield Button("Env diff", id="inspect-diff")
-                with Horizontal(classes="tools"):
-                    yield Button("Build history diff", id="buildhistory-report")
-                    yield Button("Download audit", id="download-audit")
-                    yield Button("Build report", id="build-report")
-                    yield Button("Generate graph", id="generate-graph")
-                yield DataTable(id="inspect-table", cursor_type="row")
-            with TabPane("? Guide", id="guide"):
-                yield Markdown(HELP, id="help")
+        with Horizontal(id="shell"):
+            with Vertical(id="rail"):
+                yield Static("YOCTOTUI\nYocto / BitBake", id="brand")
+                yield Static("BUILD & DIAGNOSE", classes="rail-label")
+                for title, tab in [("Builds / logs", "builds"), ("Task logs", "tasklogs")]:
+                    yield Button(title, id=f"nav-{tab}")
+                yield Static("DEVELOP & INSPECT", classes="rail-label")
+                for title, tab in [("Metadata", "metadata"), ("Environment", "workbench"), ("Artifacts", "artifacts")]:
+                    yield Button(title, id=f"nav-{tab}")
+                yield Static("WORKSPACE", classes="rail-label")
+                for title, tab in [("Caches", "caches"), ("Configuration", "healthtab"), ("Help", "guide")]:
+                    yield Button(title, id=f"nav-{tab}")
+                yield Static(id="rail-context")
+            with Vertical(id="main"):
+                yield Static(id="overview", markup=False)
+                with Horizontal(id="metrics"):
+                    for ident in ("build-metric", "queue-metric", "resource-metric", "disk-metric"):
+                        yield Static(id=ident, classes="metric")
+                with TabbedContent(id="workspace"):
+                    with TabPane("◈ Builds", id="builds"):
+                        with Horizontal(id="build-split"):
+                            with Vertical(id="history-panel"):
+                                yield Static("RECENT OPERATIONS", classes="section-title")
+                                yield DataTable(id="history", cursor_type="row")
+                                with Horizontal(classes="tools"):
+                                    yield Button("Stop…", variant="warning", id="stop")
+                                    yield Button("Retry", id="retry")
+                                    yield Button("Export", id="export")
+                                yield Static("No observed active tasks", id="task-monitor", markup=False)
+                            with Vertical(id="stream-panel"):
+                                yield Static("BUILD OUTPUT / DIAGNOSTICS", classes="section-title")
+                                yield Static("Select an operation to inspect its output", id="job-state", markup=False)
+                                yield ProgressBar(total=100, show_eta=False, id="progress")
+                                with Horizontal(classes="tools"):
+                                    yield Input(placeholder="Search output · ±3 context lines", id="log-search")
+                                    yield Button("Errors", id="errors")
+                                    yield Button("Pause", id="log-follow")
+                                yield RichLog(id="log", wrap=True, highlight=False, markup=False, max_lines=5000)
+                    with TabPane("◇ Layers & recipes", id="metadata"):
+                        with Horizontal(classes="tools"):
+                            yield Input(placeholder="Search recipe, layer, append, class, kas file…", id="metadata-search")
+                            yield Button("Build recipe", id="recipe-build")
+                            yield Button("Modify", id="recipe-modify")
+                            yield Button("Layer actions", id="layer-actions")
+                            yield Button("Rescan", id="rescan")
+                        yield Static(id="detail", markup=False)
+                        with Horizontal(id="metadata-split"):
+                            yield Tree("Workspace metadata", id="layer-tree")
+                            yield DataTable(id="metadata-table", cursor_type="row")
+                            yield RichLog(id="source-preview", wrap=False, max_lines=200, markup=False)
+                    with TabPane("≋ Task logs", id="tasklogs"):
+                        with Horizontal(classes="tools"):
+                            yield Input(placeholder="Filter task logs by recipe or task…", id="task-search")
+                            yield Button("Refresh logs", id="logs-refresh")
+                            yield Button("Read selected", id="logs-read")
+                            yield Button("Failed task log", id="failed-task-log")
+                        yield Static("No active tasks in this TUI session.", id="active-tasks", markup=False)
+                        yield DataTable(id="task-table", cursor_type="row")
+                    with TabPane("▣ Caches & downloads", id="caches"):
+                        with Horizontal(classes="tools"):
+                            yield Select([("Downloads", "downloads"), ("Shared state", "sstate")], value="downloads", allow_blank=False, id="cache-kind")
+                            yield Input(placeholder="Filter files", id="cache-search")
+                            yield Input(value="30", placeholder="Age days", id="cache-days", type="integer")
+                            yield Button("Scan", id="cache-scan")
+                            yield Button("Prune plan", variant="warning", id="cache-prune")
+                            yield Button("Fetch all", id="fetch-all")
+                        yield Static("Scan a cache to inspect files, size and age.", id="scan-state", markup=False)
+                        yield DataTable(id="cache-table", cursor_type="row")
+                    with TabPane("◉ Artifacts", id="artifacts"):
+                        with Horizontal(classes="tools"):
+                            yield Input(placeholder="Search images, SDK, manifests, licenses, SPDX, buildstats…", id="artifact-search")
+                            yield Button("Refresh", id="artifact-refresh")
+                            yield Button("Read file", id="artifact-read")
+                            yield Button("Rootfs inventory", id="image-contents")
+                        yield DataTable(id="artifact-table", cursor_type="row")
+                    with TabPane("⚙ Health & config", id="healthtab"):
+                        with Horizontal(classes="tools"):
+                            yield Button("local.conf", id="local-conf")
+                            yield Button("bblayers.conf", id="layers-conf")
+                            yield Button("Environment", id="environment")
+                            yield Button("Devtool status", id="dev-status")
+                            yield Button("Versions", id="versions")
+                            yield Button("Refresh", id="health-refresh")
+                        yield DataTable(id="health", cursor_type="row")
+                    with TabPane("⌕ Workbench", id="workbench"):
+                        with Horizontal(classes="tools"):
+                            yield Select([("Environment", "env"), ("Dependencies", "graph")], value="env", allow_blank=False, id="inspect-kind")
+                            yield Input(placeholder="Filter variable/value or graph node…", id="inspect-search")
+                            yield Button("Load", id="inspect-load")
+                            yield Button("Resolve env", id="inspect-resolve")
+                            yield Button("Env diff", id="inspect-diff")
+                        with Horizontal(classes="tools"):
+                            yield Button("Build history diff", id="buildhistory-report")
+                            yield Button("Download audit", id="download-audit")
+                            yield Button("Build report", id="build-report")
+                            yield Button("Generate graph", id="generate-graph")
+                            yield Button("Why this task?", id="dependency-context")
+                            yield Button("Timings", id="task-timings")
+                        yield DataTable(id="inspect-table", cursor_type="row")
+                    with TabPane("? Guide", id="guide"):
+                        yield Markdown(HELP, id="help")
         yield Footer()
 
     def on_mount(self):
         columns = {
-            "history": ("ID", "Profile", "Operation", "Status", "Started", "Exit"),
+            "history": ("Operation", "Status", "Elapsed"),
             "metadata-table": ("Name", "Type", "Path / details"),
             "task-table": ("Recipe", "Task", "Size", "Modified"),
             "cache-table": ("File", "Size", "Age", "Path"),
@@ -190,13 +275,21 @@ class YoctoApp(App):
             "inspect-table": ("Variable / task", "Value / dependency"),
         }
         for ident, names in columns.items():
-            self.query_one(f"#{ident}", DataTable).add_columns(*names)
+            table = self.main_query(f"#{ident}", DataTable)
+            for name in names:
+                table.add_column(name, width=16 if ident == "history" and name == "Operation" else None)
+        self.main_query("#history", DataTable).border_title = "Persistent history"
+        self.main_query("#log", RichLog).border_title = "Live stream"
+        self.main_query("#task-monitor", Static).border_title = "Active BitBake tasks"
         self.set_interval(0.2, self.flush_log)
+        self.set_interval(2, self.update_telemetry)
+        self.navigation_changed()
+        self.update_telemetry()
         self.refresh_history()
         self.action_refresh()
 
     def action_command(self, action_id="build", target=None):
-        target = target if target is not None else self.query_one("#target", Input).value
+        target = target if target is not None else self.main_query("#target", Input).value
         self.push_screen(ActionScreen(self.profile, action_id, target), self.command_result)
 
     def command_result(self, result):
@@ -212,7 +305,7 @@ class YoctoApp(App):
         try:
             job = self.runner.submit(self.profile, action.title, argv, action.id)
             self.select_job(job.id, job.log)
-            self.query_one("#workspace", TabbedContent).active = "builds"
+            self.main_query("#workspace", TabbedContent).active = "builds"
         except (ValueError, OSError) as exc:
             self.notify(str(exc), severity="error")
 
@@ -235,7 +328,7 @@ class YoctoApp(App):
 
     def profiles_result(self, saved):
         if saved:
-            selector = self.query_one("#profile", Select)
+            selector = self.main_query("#profile", Select)
             selector.set_options([(p.name, p.name) for p in self.settings.profiles])
             selector.value = self.settings.active
             self.action_refresh()
@@ -247,7 +340,7 @@ class YoctoApp(App):
         self.settings.active = str(event.value)
         if self.is_mounted:
             self.settings.save()
-            self.query_one("#target", Input).value = self.profile.targets[0] if self.profile.targets else ""
+            self.main_query("#target", Input).value = self.profile.targets[0] if self.profile.targets else ""
             self.cache_entries = []
             self.inspection_rows = []
             self.render_cache()
@@ -263,12 +356,102 @@ class YoctoApp(App):
         p = self.profile
         active = self.runner.active
         queue = sum(j.status == "queued" for j in self.runner.jobs)
-        self.query_one("#overview", Static).update(
-            f"YOCTO CONTROL ROOM  /  {p.name.upper()}  /  {p.mode.upper()}\n"
-            f"{p.root_path}  →  {p.build_dir}\n"
-            f"Machine: {p.machine or 'from configuration'}   Distro: {p.distro or 'from configuration'}   "
-            f"Active: {active.title if active else 'idle'}   Queued: {queue}"
+        self.main_query("#overview", Static).update(
+            f"{p.name.upper()}  /  {p.mode.upper()}  ·  MACHINE={p.machine or self.config_hints.get('MACHINE', '?')}  ·  DISTRO={p.distro or self.config_hints.get('DISTRO', '?')}\n"
+            f"{p.root_path}  →  {p.build_dir}"
         )
+        recent = next((r for r in self.history_rows.values() if r["profile"] == p.name), None)
+        status = active.status.upper() if active else recent["status"].upper() if recent else "IDLE"
+        title = active.title if active else recent["title"] if recent else "No jobs in this profile"
+        color = "#df9a87" if status == "FAILED" else "#a6d9c8"
+        metric = Text("BUILD STATUS\n", style="dim", no_wrap=True, overflow="ellipsis")
+        metric.append(status + "\n", style=f"bold {color}")
+        metric.append(title, style="#bdcbd2")
+        self.main_query("#build-metric", Static).update(metric)
+        progress = active.progress if active else json.loads(recent["metadata"]).get("progress", [0, 0]) if recent else [0, 0]
+        tasks = f"{progress[0]} / {progress[1]}" if progress[1] else "No task count reported"
+        self.main_query("#queue-metric", Static).update(Text.from_markup(
+            f"[dim]TASKS / QUEUE[/dim]\n[bold #dfbe77]{tasks}[/]\n{queue} queued / {len(active.at_risk) if active else 0} running"))
+        self.main_query("#rail-context", Static).update(
+            f"RUNTIME\n{p.mode}\n\nPROFILE\n{p.name}\n\nF2  Command center\nF4  Edit profiles"
+        )
+
+    def action_section(self, tab):
+        self.main_query("#workspace", TabbedContent).active = tab
+
+    def on_resize(self, event):
+        self.screen_stack[0].set_class(event.size.width < 130, "compact")
+        self.screen_stack[0].set_class(event.size.width < 105, "narrow")
+
+    @on(Button.Pressed, "#rail Button")
+    def navigate(self, event):
+        self.main_query("#workspace", TabbedContent).active = event.button.id[4:]
+
+    @on(TabbedContent.TabActivated, "#workspace")
+    def navigation_changed(self):
+        active = self.main_query("#workspace", TabbedContent).active
+        for button in self.screen_stack[0].query("#rail Button"):
+            button.set_class(button.id == f"nav-{active}", "selected")
+
+    @on(Button.Pressed, "#log-follow")
+    def toggle_follow(self):
+        self.follow_log = not self.follow_log
+        self.main_query("#log-follow", Button).label = "Pause" if self.follow_log else "Resume"
+        if self.follow_log:
+            self.live_lines.clear()
+            self.reload_log()
+
+    def update_telemetry(self):
+        # Host resources are explicitly labelled: a remote/container runtime may differ.
+        try:
+            values = [int(x) for x in Path("/proc/stat").read_text().splitlines()[0].split()[1:]]
+            current = (sum(values[:8]), values[3] + values[4])
+            cpu = "warming up"
+            if self.resource_previous:
+                delta = current[0] - self.resource_previous[0]
+                usage = 100 * (1 - (current[1] - self.resource_previous[1]) / delta) if delta else 0
+                cpu = f"{usage:.0f}% CPU"
+            self.resource_previous = current
+            mem = {line.split(':')[0]: int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()}
+            ram = 100 * (1 - mem['MemAvailable'] / mem['MemTotal'])
+            self.main_query("#resource-metric", Static).update(Text.from_markup(
+                f"[dim]HOST RESOURCES[/dim]\n[bold #adc7fa]{cpu} · {ram:.0f}% RAM[/]\n{human_size((mem['MemTotal']-mem['MemAvailable'])*1024)} used"))
+        except (OSError, ValueError, KeyError):
+            self.main_query("#resource-metric", Static).update("HOST RESOURCES\nUnavailable on this host")
+        try:
+            disk = shutil.disk_usage(self.profile.root_path)
+            self.main_query("#disk-metric", Static).update(Text.from_markup(
+                f"[dim]WORKSPACE DISK[/dim]\n[bold #a6e3cb]{human_size(disk.free)} free[/]\n{100*disk.used/disk.total:.0f}% used · host filesystem"))
+        except OSError:
+            self.main_query("#disk-metric", Static).update("WORKSPACE DISK\nPath unavailable")
+        active = self.runner.active
+        tasks = list(active.active_recipe_tasks) if active else []
+        self.main_query("#task-monitor", Static).update("\n".join(tasks[:7]) if tasks else "No observed active tasks\n\nTasks appear as BitBake reports\nStarted / Succeeded events.")
+        self.main_query("#active-tasks", Static).update(
+            "LIVE TASKS / CURRENT SESSION\n" + ("  ·  ".join(tasks[:8]) if tasks else "No observed active tasks")
+        )
+        self.update_overview()
+
+    @on(DataTable.RowHighlighted, "#metadata-table")
+    def preview_metadata(self, event):
+        entry = self.metadata_rows.get(str(event.row_key.value))
+        if entry:
+            path = entry.path / "conf/layer.conf" if entry.kind == "layer" else entry.path
+            self.read_preview(path)
+
+    @work(exclusive=True, group="preview")
+    async def read_preview(self, path):
+        def read():
+            with path.open(errors="replace") as source:
+                return "".join(line for _, line in zip(range(200), source))
+        try:
+            content = await asyncio.to_thread(read)
+        except OSError as exc:
+            content = str(exc)
+        preview = self.main_query("#source-preview", RichLog)
+        preview.border_title = path.name
+        preview.clear()
+        preview.write(Syntax(content, "yaml" if path.suffix in {".yml", ".yaml"} else "bash", theme="nord", line_numbers=True, word_wrap=False))
 
     @work(exclusive=True, group="scan")
     async def scan_project(self):
@@ -278,14 +461,17 @@ class YoctoApp(App):
             asyncio.to_thread(diagnostics, p), asyncio.to_thread(self.find_artifacts, p),
         )
         self.entries, self.logs, self.artifacts = entries, logs, artifacts
+        self.config_hints = await asyncio.to_thread(read_assignments, p.build_path / "conf/local.conf")
+        self.update_overview()
         self.render_metadata()
+        self.render_layer_tree()
         self.render_logs()
         self.render_artifacts()
-        table = self.query_one("#health", DataTable)
+        table = self.main_query("#health", DataTable)
         table.clear()
         for status, name, detail in health:
             table.add_row(Text(status, style={"OK": "green", "WARN": "yellow", "INFO": "cyan"}[status]), name, detail)
-        self.query_one("#detail", Static).update(f"{len(entries)} local metadata entries. BitBake layer commands show evaluated configuration. Enter opens a file.")
+        self.main_query("#detail", Static).update(f"{len(entries)} local metadata entries. BitBake layer commands show evaluated configuration. Enter opens a file.")
 
     @staticmethod
     def find_artifacts(p):
@@ -294,9 +480,35 @@ class YoctoApp(App):
             result.extend(inventory(p.build_path / sub, limit=4000))
         return sorted(result, key=lambda e: e.modified, reverse=True)
 
+    def render_layer_tree(self):
+        tree = self.main_query("#layer-tree", Tree)
+        tree.clear()
+        tree.show_root = False
+        layers = sorted((e for e in self.entries if e.kind == "layer"), key=lambda e: len(e.path.parts), reverse=True)
+        nodes = {str(e.path): tree.root.add(e.name, data=e, expand=False) for e in layers}
+        layer_paths = {e.path: e for e in layers}
+        other = tree.root.add("Workspace files", expand=True)
+        for entry in self.entries:
+            if entry.kind == "layer":
+                continue
+            layer = next((layer_paths[parent] for parent in entry.path.parents if parent in layer_paths), None)
+            parent = nodes[str(layer.path)] if layer else other
+            parent.add_leaf(entry.name, data=entry)
+        if not other.children:
+            other.remove()
+        tree.root.expand()
+
+    @on(Tree.NodeSelected, "#layer-tree")
+    def layer_tree_selected(self, event):
+        entry = event.node.data
+        if isinstance(entry, Entry):
+            self.main_query("#metadata-search", Input).value = str(entry.path) if entry.kind == "layer" else entry.name
+            path = entry.path / "conf/layer.conf" if entry.kind == "layer" else entry.path
+            self.read_preview(path)
+
     def render_metadata(self):
-        query = self.query_one("#metadata-search", Input).value.casefold()
-        table = self.query_one("#metadata-table", DataTable)
+        query = self.main_query("#metadata-search", Input).value.casefold()
+        table = self.main_query("#metadata-table", DataTable)
         table.clear()
         self.metadata_rows.clear()
         for i, e in enumerate(self.entries):
@@ -306,8 +518,8 @@ class YoctoApp(App):
                 table.add_row(e.name, e.kind, e.detail or str(e.path), key=key)
 
     def render_logs(self):
-        query = self.query_one("#task-search", Input).value.casefold()
-        table = self.query_one("#task-table", DataTable)
+        query = self.main_query("#task-search", Input).value.casefold()
+        table = self.main_query("#task-table", DataTable)
         table.clear()
         for i, e in enumerate(self.logs):
             if query in f"{e.name} {e.detail}".casefold():
@@ -316,8 +528,8 @@ class YoctoApp(App):
                 table.add_row(e.detail, e.name, human_size(e.size), datetime.fromtimestamp(e.modified).strftime("%m-%d %H:%M"), key=key)
 
     def render_artifacts(self):
-        query = self.query_one("#artifact-search", Input).value.casefold()
-        table = self.query_one("#artifact-table", DataTable)
+        query = self.main_query("#artifact-search", Input).value.casefold()
+        table = self.main_query("#artifact-table", DataTable)
         table.clear()
         for i, e in enumerate(self.artifacts):
             if query in str(e.path).casefold():
@@ -338,7 +550,7 @@ class YoctoApp(App):
         self.render_artifacts()
 
     def refresh_history(self):
-        table = self.query_one("#history", DataTable)
+        table = self.main_query("#history", DataTable)
         cursor = table.cursor_row
         table.clear()
         self.history_rows.clear()
@@ -346,14 +558,21 @@ class YoctoApp(App):
             self.history_rows[row["id"]] = row
             status = row["status"]
             color = {"success": "green", "failed": "red", "running": "cyan", "queued": "yellow"}.get(status, "white")
-            table.add_row(row["id"][:8], row["profile"], row["title"], Text(status, style=color), row["started"][11:19], str(row["code"] if row["code"] is not None else "—"), key=row["id"])
+            elapsed = "—"
+            if status != "queued":
+                start = datetime.fromisoformat(row["started"])
+                end = datetime.fromisoformat(row["finished"]) if row["finished"] else datetime.now(timezone.utc)
+                seconds = max(0, int((end-start).total_seconds()))
+                elapsed = f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
+            table.add_row(row["title"], Text(status, style=color), elapsed, key=row["id"])
         if table.row_count:
             table.move_cursor(row=min(cursor, table.row_count-1))
 
     def job_update(self, job: Job, line: str | None):
         if line is not None:
-            if job.id == self.selected_job_id and not self.errors_only and not self.query_one("#log-search", Input).value:
-                self.live_lines.append(line)
+            if job.id == self.selected_job_id and not self.errors_only and not self.main_query("#log-search", Input).value:
+                if self.follow_log:
+                    self.live_lines.append(line)
             if "ERROR:" in line:
                 self.last_line = line
         else:
@@ -363,13 +582,15 @@ class YoctoApp(App):
                 self.notify(f"{job.title} failed — open Errors only and Task logs", severity="error", timeout=8)
                 self.scan_project()
             if job.id == self.selected_job_id:
-                self.query_one("#job-state", Static).update(f"{job.title} · {job.status} · exit {job.code} · {job.log}")
-        if job.id == self.selected_job_id and job.progress[1]:
-            self.query_one("#progress", ProgressBar).update(total=job.progress[1], progress=job.progress[0])
+                self.main_query("#job-state", Static).update(f"{job.title} · {job.status} · exit {job.code} · {job.log}")
+        if job.id == self.selected_job_id and job.status == "success":
+            self.main_query("#progress", ProgressBar).update(total=100, progress=100)
+        elif job.id == self.selected_job_id and job.progress[1]:
+            self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=job.progress[0])
 
     def flush_log(self):
-        if self.live_lines:
-            log = self.query_one("#log", RichLog)
+        if self.live_lines and self.follow_log:
+            log = self.main_query("#log", RichLog)
             for line in self.live_lines:
                 style = "red" if "ERROR:" in line else "yellow" if "WARNING:" in line else None
                 log.write(Text(line, style=style))
@@ -382,19 +603,29 @@ class YoctoApp(App):
         self.reload_log()
         row = self.history_rows.get(ident)
         if row:
-            self.query_one("#job-state", Static).update(f"{row['title']} · {row['status']} · {path}")
+            progress = json.loads(row["metadata"]).get("progress", [0, 0])
+            live = next((j for j in self.runner.jobs if j.id == ident), None)
+            if live:
+                progress = live.progress
+            if row["status"] == "success":
+                self.main_query("#progress", ProgressBar).update(total=100, progress=100)
+            elif progress[1]:
+                self.main_query("#progress", ProgressBar).update(total=progress[1], progress=progress[0])
+            else:
+                self.main_query("#progress", ProgressBar).update(total=100, progress=0)
+            self.main_query("#job-state", Static).update(f"{row['title']} · {row['status']} · {path}")
 
     @work(exclusive=True, group="logread")
     async def reload_log(self):
         path = self.selected_log
         if not path:
             return
-        query = self.query_one("#log-search", Input).value
+        query = self.main_query("#log-search", Input).value
         try:
             text = await asyncio.to_thread(search_log, path, query, self.errors_only)
         except OSError as exc:
             text = str(exc) if path.exists() else "Waiting for log output…"
-        log = self.query_one("#log", RichLog)
+        log = self.main_query("#log", RichLog)
         log.clear()
         for line in text.splitlines():
             log.write(Text(line, style="red" if "ERROR:" in line else None))
@@ -418,8 +649,8 @@ class YoctoApp(App):
             e = self.file_rows[key]
             self.selected_job_id = None
             self.selected_log = e.path
-            self.query_one("#workspace", TabbedContent).active = "builds"
-            self.query_one("#job-state", Static).update(str(e.path))
+            self.main_query("#workspace", TabbedContent).active = "builds"
+            self.main_query("#job-state", Static).update(str(e.path))
             self.reload_log()
         elif ident == "artifact-table":
             self.open_file(self.file_rows[key].path)
@@ -438,7 +669,7 @@ class YoctoApp(App):
             self.notify(str(exc), severity="error")
 
     def selected_entry(self):
-        table = self.query_one("#metadata-table", DataTable)
+        table = self.main_query("#metadata-table", DataTable)
         if not table.row_count:
             return None
         key = str(table.coordinate_to_cell_key(table.cursor_coordinate).row_key.value)
@@ -448,7 +679,7 @@ class YoctoApp(App):
         e = self.selected_entry()
         if e and e.kind in {"bb", "bbappend"}:
             return e.name.split("_", 1)[0].removesuffix(".bb").removesuffix(".bbappend")
-        return self.query_one("#target", Input).value
+        return self.main_query("#target", Input).value
 
     @on(Button.Pressed)
     def button_pressed(self, event):
@@ -486,10 +717,10 @@ class YoctoApp(App):
             self.version_report()
         elif ident == "inspect-load":
             self.load_inspection()
-        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report"}:
+        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report", "dependency-context", "image-contents", "task-timings"}:
             self.make_report(ident)
         elif ident in {"logs-read", "artifact-read"}:
-            table = self.query_one("#task-table" if ident == "logs-read" else "#artifact-table", DataTable)
+            table = self.main_query("#task-table" if ident == "logs-read" else "#artifact-table", DataTable)
             if table.row_count:
                 key = table.coordinate_to_cell_key(table.cursor_coordinate).row_key
                 table.post_message(DataTable.RowSelected(table, table.cursor_row, key))
@@ -521,7 +752,7 @@ class YoctoApp(App):
             for path in paths[:10]:
                 job = self.runner.submit(profile, "Failed task log: " + Path(path).name, ["cat", path], "custom")
             self.select_job(job.id, job.log)
-            self.query_one("#workspace", TabbedContent).active = "builds"
+            self.main_query("#workspace", TabbedContent).active = "builds"
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity="error")
 
@@ -537,15 +768,15 @@ class YoctoApp(App):
 
     @work(exclusive=True, group="cache")
     async def scan_cache(self):
-        kind = str(self.query_one("#cache-kind", Select).value)
+        kind = str(self.main_query("#cache-kind", Select).value)
         p = cache_path(self.profile, kind)
-        self.query_one("#scan-state", Static).update(f"Scanning {p}…")
+        self.main_query("#scan-state", Static).update(f"Scanning {p}…")
         entries = await asyncio.to_thread(inventory, p)
-        if kind != str(self.query_one("#cache-kind", Select).value) or p != cache_path(self.profile, kind):
+        if kind != str(self.main_query("#cache-kind", Select).value) or p != cache_path(self.profile, kind):
             return
         self.cache_entries = entries
         self.render_cache()
-        self.query_one("#scan-state", Static).update(f"{p} · {len(entries)} files · {human_size(sum(e.size for e in entries))} · scan capped at 20,000 files")
+        self.main_query("#scan-state", Static).update(f"{p} · {len(entries)} files · {human_size(sum(e.size for e in entries))} · scan capped at 20,000 files")
 
     @on(Select.Changed, "#cache-kind")
     def cache_kind_changed(self):
@@ -559,8 +790,8 @@ class YoctoApp(App):
 
     def render_cache(self):
         import time
-        table = self.query_one("#cache-table", DataTable)
-        query = self.query_one("#cache-search", Input).value.casefold()
+        table = self.main_query("#cache-table", DataTable)
+        query = self.main_query("#cache-search", Input).value.casefold()
         table.clear()
         for e in self.cache_entries:
             if query in str(e.path).casefold():
@@ -571,11 +802,11 @@ class YoctoApp(App):
             self.notify("Stop or finish queued builds before pruning caches", severity="warning")
             return
         try:
-            days = int(self.query_one("#cache-days", Input).value)
+            days = int(self.main_query("#cache-days", Input).value)
             if days < 1:
                 raise ValueError("Age must be at least one day")
             entries = cache_candidates(self.cache_entries, days)
-            root = cache_path(self.profile, str(self.query_one("#cache-kind", Select).value))
+            root = cache_path(self.profile, str(self.main_query("#cache-kind", Select).value))
             self.push_screen(PruneScreen(root, entries), lambda execute: self.execute_prune(root, entries) if execute else None)
         except ValueError as exc:
             self.notify(str(exc), severity="error")
@@ -601,9 +832,9 @@ class YoctoApp(App):
     async def load_inspection(self):
         from .reports import dependencies, environment, environment_jobs
         try:
-            kind = str(self.query_one("#inspect-kind", Select).value)
+            kind = str(self.main_query("#inspect-kind", Select).value)
             if kind == "env":
-                jobs = environment_jobs(self.store, self.profile, self.query_one("#target", Input).value)
+                jobs = environment_jobs(self.store, self.profile, self.main_query("#target", Input).value)
                 if not jobs:
                     raise ValueError("Resolve an environment first, then load its successful output")
                 values = await asyncio.to_thread(environment, Path(jobs[0]["log"]))
@@ -620,8 +851,8 @@ class YoctoApp(App):
         self.render_inspection()
 
     def render_inspection(self):
-        query = self.query_one("#inspect-search", Input).value.casefold()
-        table = self.query_one("#inspect-table", DataTable)
+        query = self.main_query("#inspect-search", Input).value.casefold()
+        table = self.main_query("#inspect-table", DataTable)
         table.clear()
         for name, value in self.inspection_rows:
             if query in f"{name} {value}".casefold():
@@ -629,10 +860,20 @@ class YoctoApp(App):
 
     @work(exclusive=True, group="reports")
     async def make_report(self, ident):
-        from .reports import build_history, build_summary, download_audit, environment, environment_jobs, env_diff
+        from .reports import build_history, build_summary, download_audit, environment, environment_jobs, env_diff, dependency_context, image_contents, task_timings
         try:
-            if ident == "inspect-diff":
-                jobs = environment_jobs(self.store, self.profile, self.query_one("#target", Input).value)
+            if ident == "dependency-context":
+                if str(self.main_query("#inspect-kind", Select).value) != "graph":
+                    raise ValueError("Load a dependency graph first")
+                text = dependency_context(self.inspection_rows, self.main_query("#inspect-search", Input).value.strip())
+            elif ident == "image-contents":
+                table = self.main_query("#artifact-table", DataTable)
+                if not table.row_count:
+                    raise ValueError("Select a rootfs tar archive first")
+                key = str(table.coordinate_to_cell_key(table.cursor_coordinate).row_key.value)
+                text = await asyncio.to_thread(image_contents, self.file_rows[key].path)
+            elif ident == "inspect-diff":
+                jobs = environment_jobs(self.store, self.profile, self.main_query("#target", Input).value)
                 if len(jobs) < 2:
                     raise ValueError("Capture two successful environments for the same recipe/profile first")
                 first, second = await asyncio.gather(asyncio.to_thread(environment, Path(jobs[1]["log"])), asyncio.to_thread(environment, Path(jobs[0]["log"])))
@@ -646,7 +887,7 @@ class YoctoApp(App):
             else:
                 if not self.selected_log:
                     raise ValueError("Select a build log first")
-                text = await asyncio.to_thread(build_summary, self.selected_log)
+                text = await asyncio.to_thread(task_timings if ident == "task-timings" else build_summary, self.selected_log)
             dest = self.store.directory / "reports" / f"{ident}.txt"
             dest.parent.mkdir(exist_ok=True)
             dest.write_text(text)
@@ -655,8 +896,8 @@ class YoctoApp(App):
             self.notify(str(exc), severity="warning")
 
     def action_log_focus(self):
-        self.query_one("#workspace", TabbedContent).active = "builds"
-        self.query_one("#log-search", Input).focus()
+        self.main_query("#workspace", TabbedContent).active = "builds"
+        self.main_query("#log-search", Input).focus()
 
     def stop_build(self):
         from .stop import StopScreen
