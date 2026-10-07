@@ -70,3 +70,23 @@ Reference behavior: [BitBake knotty UI shutdown handling](https://github.com/ope
 ## Additional Analysis validation
 
 The Analysis panel was tested for metadata content search, report export and sstate mode switching. Parser checks cover package architecture changes, conflicting manifest versions, missing current-task counts, zero denominators and repeated warning messages. The existing real kas build supplied 35 manifest package/architecture entries, a 0% initial sstate hit rate and 20 warning occurrences. Comparing its unchanged manifest against itself yielded no differences; changed manifests were validated with explicit test fixtures. No additional cold Yocto build was required for these read-only features.
+
+## Persistent service and runtime evidence validation
+
+The new workflows were exercised against the same pinned kas-container and existing real build on 2026-10-10 with `tools/probe_workflows.py`. Runtime preflight found writable configuration, 842.8 GiB available and more than 63 million free inodes. The snapshot recorded two Git repositories, two manifests, 4,798 package size records and eight non-symlink artifacts. These are bounded snapshot counts, not counts of packages installed in the minimal image.
+
+Image provenance evaluated core-image-minimal and identified `/bin/sh` as owned by package/recipe `busybox`, with the inclusion path `packagegroup-core-boot → busybox`. Reported BusyBox package file bytes were 699,723; those are pkgdata file sizes, not compressed image size.
+
+Two real jobs completed through the independent service after the submitting RPC connections closed: `bitbake -S printdiff busybox` and a warm `bitbake core-image-minimal`. Both exited 0. The warm build attempted 4,064 tasks, all already current and all succeeded; its summary reported Current 1,854 with Wanted 0. This validates an incremental container build, not a second cold build. The service was stopped only after its queue finished.
+
+The runtime binary exporter transferred the actual 18,012,484-byte rootfs archive and verified SHA-256 `f96d0d5d60d2465caa4ca5ce6b8d60e92c454e1a2a1df1e27d1c236db0f7cfe1`, matching the original artifact. WSL verification exposed unsupported Unix sockets on the project Windows mount; sockets now live in a private Linux /tmp directory while history remains in the project.
+
+Additional automated checks cover UI detach/reconnect, an independent service surviving closed client connections, build-directory leases, shared/exclusive cache locking, redacted exports, conservative signature plans, runtime edit conflicts/backups and byte-exact binary export without overwrite. A persistent daemon does not provide reboot recovery. Shared-cache locking only coordinates participants using the same advisory lock; external builders remain outside that guarantee.
+
+![Actual runtime preflight](assets/real-kas-preflight.png)
+
+![Actual file ownership and inclusion path](assets/real-kas-provenance.png)
+
+![Actual new workflow tour](assets/real-workflows.gif)
+
+A final runtime check resolved the configured kas image to its matching cached digest, found 22 BusyBox sigdata files and indexed 4,044 stamps signature references against 5,897 cache files. No before/after signature pairs existed for those BusyBox task variants, so no variable-difference claim was made from that workspace. Pair comparison was verified separately with an explicit two-signature fixture using the release-tool invocation. Default runtime build-path discovery also retained the pinned Poky commit without assuming the host path existed.

@@ -89,7 +89,7 @@ Open **Analysis** in the navigator or tab bar, choose a report, and press Analyz
 - **Sstate efficiency:** leave the first path blank to use the selected build log, or enter another log path. The report reads actual Sstate summary counts and computes hit rate for wanted tasks and coverage including current tasks. A zero denominator or missing count is shown as unavailable. This does not establish which cache objects are safe to remove.
 - **Warning groups:** select or enter a build log. Identical messages are counted after removing the timestamp/logger prefix; the 200 most frequent groups are shown. Different recipe paths and message text remain distinct.
 
-Reports are read-only and can use persisted build logs from host, kas and container runtimes. Export is explicit and does not modify recipes, artifacts or caches.
+Metadata, manifest, efficiency and warning reports read persisted data from the selected paths. Runtime tools below also provide explicit editing and artifact export.
 
 ## Cache and download maintenance
 
@@ -128,3 +128,48 @@ Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline 
 ## Documentation and verification
 
 `python tools/capture_docs.py` captures the real Textual interface with Pilot and exports SVG/PNG/GIF. It uses labelled demo data. `python tools/validate_kas.py` executes a real image build through Runner and records a JSON result. Read validation.md for evidence from the current development session.
+
+## Persistent build service and reconnecting
+
+Real launches now use an independent local build service by default. Closing the TUI, pressing Ctrl+Q, or losing the terminal detaches the client: queued and running jobs remain owned by the service. Reopen Bitloom with the same `--state` directory to reconnect. Jobs retain their original profile, commands and complete logs. Multiple clients can observe the same service.
+
+```bash
+bitloom --config .yoctotui/profiles.json --state .yoctotui
+bitloom --state .yoctotui --service-status
+bitloom --state .yoctotui --service-stop  # idle service only
+bitloom --embedded                     # exit stops owned jobs
+```
+
+Demo mode remains embedded. F5 still explicitly interrupts a selected job through the service. The service refuses an idle-stop request when jobs remain queued/running; use F5 first if interruption is intended. A Unix socket in a private Linux `/tmp/bitloom-services-UID` directory works even when the project lives on a WSL Windows mount. Connections are restricted to the same UID. History remains under the selected state directory. This is local persistence, not reboot recovery or a distributed scheduler: a crashed service marks incomplete history interrupted on its next start and does not automatically replay work.
+
+## Runtime filesystem and artifacts
+
+The Analysis selector now provides **Runtime directory**, **Runtime file**, **Edit runtime file** and **Export runtime artifact**. Enter an absolute path as seen by the selected runtime, such as `/work/build/conf/local.conf` in kas-container. These operations run Python inside that runtime through the same command routing as builds. Python 3 must exist there.
+
+Directory previews stop at 2,000 entries; text previews/edits at 2 MiB. Runtime editing opens an actual editor, rejects files changed since the preview, refuses symlink edits, preserves the original file in a content-addressed backup and replaces the file atomically. Saving is blocked while this client's build queue is active. External programs remain responsible for their own edits.
+
+Binary export streams a file up to 1 GiB into a temporary local file and verifies both SHA-256 and byte count before committing it. The second path is the local destination; leaving it blank uses the state's exports directory. Existing destinations are never overwritten. This handles artifacts visible only inside the container, including a Docker Snap daemon's private filesystem. It does not require mounting or extracting an image.
+
+## Evidence workflows
+
+| Analysis choice | Input and result |
+| --- | --- |
+| Why rebuilding? | Enter one recipe; queue release-native `bitbake -S printdiff` and evaluated environment. Analyze again after completion to link the stored explanation, the two newest available sigdata files per task/work variant, release-native signature comparisons and referenced variable values. The chosen signature timestamps must match your intended before/after states. Use F2 to capture a fresh printdiff; a matching cache can legitimately report no difference. |
+| Failure diagnosis | Select a build log or enter a runtime task log path. Classify fetch/patch/compile/QA/rootfs evidence and show the first diagnostic with context and reported task-log paths. Suggestions are troubleshooting steps, not automatic fixes. |
+| Package provenance | Set the top target field to an image recipe and enter a package or absolute installed file path. Evaluate the image, read runtime pkgdata, map files to packages/recipes and show a shortest path from PACKAGE_INSTALL/IMAGE_INSTALL through runtime dependencies. |
+| Build preflight | Enter a runtime build directory or leave blank. Check writable parent, disk headroom, free inodes and configuration presence in the actual filesystem. BLOCK and WARN are distinct; this advisory report does not intercept queued commands. |
+| Devtool review | Enter the runtime source Git directory. Review status, uncommitted diff, commits and patch text before using build/deploy/finish/reset from F2. It does not calculate the release-specific final patch transfer set. |
+| Capture snapshot | Record runtime configurations, repository commits/dirty state, image manifests, artifact sizes and package file sizes into JSON. If a log is selected, include its measured warning, timing and sstate reports; select the correct build log yourself. |
+| Compare snapshots | Enter before and after JSON paths. Compare configuration diffs, layer commits, package manifests, package/artifact sizes and recorded metrics. Unavailable metrics remain absent; a snapshot records capture time state, not an automatically reconstructed historic build. |
+| Reproducibility bundle | Export a reference JSON bundle with original profile, runtime snapshot, available kas configurations and resolved cached container image digests. Dirty sources require a separate patch export; this is not a self-contained source archive or one-command replay. |
+| Cache reference plan | Enter host-visible or runtime cache and stamps directories. Index 64-character signature hashes and classify files as referenced or unproven. No deletion follows from a missing reference. |
+
+Package inclusion follows both RDEPENDS and RRECOMMENDS. Virtual providers, renaming, package-manager choices, exclusions and optional recommendations can complicate the chain; absent evidence is explicitly not proof of absence. The evaluated image operation requires an idle queue. Mirror reachability and layer compatibility are not proven by filesystem preflight; use BitBake metadata parsing, layer inspection and fetch actions.
+
+Reproducibility exports redact credential-named configuration lines and URL userinfo. Profile environment uses a small build-control allowlist; unknown keys and custom container arguments are omitted. Supply those separately. Inspect any bundle before sharing because project-specific secrets embedded under innocuous configuration names cannot be recognized reliably. An unresolved container tag is explicitly reported and is not treated as an exact digest.
+
+## Coordinating shared caches
+
+Bitloom builders take a shared `.bitloom-coordination.lock` on host-visible download and sstate directories. Maintenance takes an exclusive lock, so cooperating services cannot prune while another Bitloom builder uses the cache. A separate build-directory lease prevents duplicate builders across local state directories. Existing `.lock` and `.done` protection also applies when executing a plan directly.
+
+These are advisory locks. External BitBake processes, container-only cache paths and builders that do not take the same lock are not coordinated. Signature reference plans are conservative: one build's stamps are not an exhaustive record of every cache user. For release-specific removal, coordinate all builders and use that release's `scripts/sstate-cache-management.sh` after inspecting its own help/options. Bitloom does not infer reachability from age or silently invoke a destructive cache script.
