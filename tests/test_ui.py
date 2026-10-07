@@ -86,6 +86,9 @@ async def test_terminal_navigation_preview_and_pause(tmp_path):
         await pilot.resize_terminal(90, 28)
         await pilot.pause(.3)
         assert app.screen.has_class('narrow')
+        assert app.query_one('#stop').region.x < 90
+        assert app.query_one('#log-follow').region.x < 90
+        assert app.query_one('#log-follow').region.y < 28
     app.store.close()
 
 
@@ -105,4 +108,21 @@ async def test_background_output_survives_command_dialog(tmp_path):
         await pilot.press('escape')
         await pilot.pause(.3)
         assert app.history_rows[job.id]['status'] == 'success'
+    app.store.close()
+
+
+async def test_runtime_graph_output_is_loaded_into_workbench(tmp_path):
+    import sys
+    config = make_demo(tmp_path / 'demo')
+    app = YoctoApp(config, tmp_path / 'state')
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.3)
+        app.query_one('#workspace', TabbedContent).active = 'workbench'
+        app.query_one('#inspect-kind', Select).value = 'graph'
+        job = app.runner.submit(app.profile, 'runtime graph', [sys.executable, '-c', 'print(\'"image.do_build" -> "busybox.do_compile";\')'], 'graph-read')
+        await app.runner.consumer
+        await pilot.pause(.4)
+        assert job.status == 'success'
+        assert app.inspection_rows == [('image.do_build', 'busybox.do_compile')]
+        assert app.query_one('#inspect-table').row_count == 1
     app.store.close()

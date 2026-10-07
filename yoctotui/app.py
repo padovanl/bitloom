@@ -108,12 +108,20 @@ class YoctoApp(App):
     Screen.compact #toolbar #commands, Screen.compact #toolbar #profiles { display: none; }
     Screen.narrow #rail { display: none; }
     Screen.narrow #workspace > ContentTabs { display: block; }
-    Screen.narrow #metrics { height: 4; }
-    Screen.narrow #history-panel, Screen.narrow #source-preview, Screen.narrow #layer-tree { display: none; }
+    Screen.narrow #overview { height: 2; }
+    Screen.narrow #metrics { height: 3; }
+    Screen.narrow .section-title { height: 1; padding-top: 0; }
+    Screen.narrow .tools { margin-bottom: 0; }
+    Screen.narrow #progress { margin-bottom: 0; }
+    Screen.narrow #build-split { layout: vertical; }
+    Screen.narrow #history-panel { width: 1fr; height: 7; padding-right: 0; }
+    Screen.narrow #stream-panel { width: 1fr; height: 1fr; }
+    Screen.narrow #task-monitor, Screen.narrow #source-preview, Screen.narrow #layer-tree { display: none; }
     """
     BINDINGS = [
         ("f2", "command", "Commands"), ("f3", "refresh", "Refresh"),
         ("f4", "profiles", "Profiles"), ("ctrl+q", "quit", "Exit"),
+        ("f5", "stop_job", "Stop"), ("f6", "retry", "Retry"),
         ("ctrl+l", "log_focus", "Logs"),
         ("alt+1", "section('builds')", "Builds"),
         ("alt+2", "section('metadata')", "Metadata"),
@@ -198,7 +206,7 @@ class YoctoApp(App):
                                     yield Input(placeholder="Search output · ±3 context lines", id="log-search")
                                     yield Button("Errors", id="errors")
                                     yield Button("Pause", id="log-follow")
-                                yield RichLog(id="log", wrap=True, highlight=False, markup=False, max_lines=5000)
+                                yield RichLog(id="log", min_width=1, wrap=True, highlight=False, markup=False, max_lines=5000)
                     with TabPane("◇ Layers & recipes", id="metadata"):
                         with Horizontal(classes="tools"):
                             yield Input(placeholder="Search recipe, layer, append, class, kas file…", id="metadata-search")
@@ -578,6 +586,8 @@ class YoctoApp(App):
         else:
             self.refresh_history()
             self.update_overview()
+            if job.status == "success" and job.action_id == "graph-read" and job.profile.name == self.profile.name:
+                self.read_runtime_graph(job.log)
             if job.status == "failed":
                 self.notify(f"{job.title} failed — open Errors only and Task logs", severity="error", timeout=8)
                 self.scan_project()
@@ -841,9 +851,24 @@ class YoctoApp(App):
                 self.inspection_rows = sorted(values.items())
             else:
                 path = self.profile.build_path / "task-depends.dot"
+                if not path.exists() and self.profile.mode != "host":
+                    job = self.runner.submit(self.profile, "Read runtime dependency graph", ["cat", "task-depends.dot"], "graph-read")
+                    self.select_job(job.id, job.log)
+                    self.notify("Reading task-depends.dot through the selected runtime")
+                    return
                 self.inspection_rows = await asyncio.to_thread(dependencies, path)
             self.render_inspection()
         except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="warning")
+
+    @work(exclusive=True, group="runtime-graph")
+    async def read_runtime_graph(self, path):
+        from .reports import dependencies
+        try:
+            self.inspection_rows = await asyncio.to_thread(dependencies, path)
+            self.render_inspection()
+            self.notify(f"Loaded {len(self.inspection_rows)} runtime dependency edges")
+        except OSError as exc:
             self.notify(str(exc), severity="warning")
 
     @on(Input.Changed, "#inspect-search")
@@ -898,6 +923,12 @@ class YoctoApp(App):
     def action_log_focus(self):
         self.main_query("#workspace", TabbedContent).active = "builds"
         self.main_query("#log-search", Input).focus()
+
+    def action_stop_job(self):
+        self.stop_build()
+
+    def action_retry(self):
+        self.retry_job()
 
     def stop_build(self):
         from .stop import StopScreen
