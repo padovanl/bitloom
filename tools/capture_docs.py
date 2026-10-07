@@ -68,6 +68,11 @@ async def capture():
             app.inspection_rows = sorted(read_assignments(app.profile.build_path / 'conf/local.conf').items())
             app.render_inspection()
             await shot('workbench')
+            app.query_one('#workspace', TabbedContent).active = 'analysis'
+            app.query_one('#analysis-query', Input).value = 'SRC_URI'
+            app.run_analysis()
+            await app.workers.wait_for_complete()
+            await shot('analysis')
             from yoctotui.runner import Job
             from yoctotui.stop import StopScreen
             demo_stop = Job(app.profile, 'Demo: interruption options', ['bitbake', 'demo-image'], at_risk={'demo-agent'})
