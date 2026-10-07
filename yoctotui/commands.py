@@ -120,7 +120,7 @@ class Invocation:
         return shlex.join(self.argv)
 
 
-def invocation(profile: Profile, argv: list[str]) -> Invocation:
+def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Invocation:
     profile.validate()
     env = os.environ.copy()
     env.update(profile.environment)
@@ -156,6 +156,8 @@ def invocation(profile: Profile, argv: list[str]) -> Invocation:
             prefix = [profile.engine, "exec", "-i", "-w", profile.container_root]
         else:
             prefix = [profile.engine, "run", "--rm", "-i", "--init", "-v", f"{root}:{profile.container_root}", "-w", profile.container_root]
+            if managed_name:
+                prefix += ["--name", managed_name]
             if hasattr(os, "getuid"):
                 prefix += ["--user", f"{os.getuid()}:{os.getgid()}"]
         for key in sorted(passthrough | {"BB_ENV_PASSTHROUGH_ADDITIONS"}):
