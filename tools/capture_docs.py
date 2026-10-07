@@ -56,6 +56,17 @@ async def capture():
             await shot('caches')
             app.query_one('#workspace', TabbedContent).active = 'healthtab'
             await shot('health')
+            app.query_one('#workspace', TabbedContent).active = 'workbench'
+            from yoctotui.models import read_assignments
+            app.inspection_rows = sorted(read_assignments(app.profile.build_path / 'conf/local.conf').items())
+            app.render_inspection()
+            await shot('workbench')
+            from yoctotui.runner import Job
+            from yoctotui.stop import StopScreen
+            demo_stop = Job(app.profile, 'Demo: interruption options', ['bitbake', 'demo-image'], at_risk={'demo-agent'})
+            app.push_screen(StopScreen(demo_stop))
+            await shot('interruption')
+            await pilot.press('escape')
             await pilot.press('f2')
             await shot('command-center')
             await pilot.press('escape')

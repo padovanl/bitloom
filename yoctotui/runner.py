@@ -38,9 +38,12 @@ class Job:
     process: asyncio.subprocess.Process | None = None
     progress: tuple[int, int] = (0, 0)
     errors: list[str] = field(default_factory=list)
+    failure_logs: list[str] = field(default_factory=list)
     cancel_requested: bool = False
     managed_container: str = ""
     graceful_requested: bool = False
+    stop_confirmed: bool = False
+    shutdown_message: bool = False
     at_risk: set[str] = field(default_factory=set)
     active_recipe_tasks: dict[str, str] = field(default_factory=dict)
 
@@ -105,6 +108,11 @@ class Runner:
                         break
                     line = ANSI.sub("", raw.decode(errors="replace")).rstrip()
                     output.write(line + "\n")
+                    if "Execution was interrupted" in line:
+                        job.shutdown_message = True
+                    failure = re.search(r"Logfile of failure stored in:\s*(.+)$", line)
+                    if failure and failure[1] not in job.failure_logs:
+                        job.failure_logs.append(failure[1].strip())
                     self.track_tasks(job, line)
                     m = PROGRESS.search(line)
                     if m:
@@ -114,6 +122,8 @@ class Runner:
                         job.errors = job.errors[-200:]
                     self.callback(job, line)
                 job.code = await job.process.wait()
+                if job.cancel_requested and job.shutdown_message and job.code >= 0:
+                    job.stop_confirmed = True
             job.status = "cancelled" if job.cancel_requested else ("success" if job.code == 0 else "failed")
         except Exception as exc:
             job.status = "failed"
@@ -189,11 +199,25 @@ class Runner:
         if job.managed_container:
             control = await asyncio.create_subprocess_exec(job.profile.engine, "stop", "--time", "10", job.managed_container, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
             output, _ = await control.communicate()
+            if control.returncode == 0:
+                job.stop_confirmed = True
             if control.returncode:
                 self.callback(job, "WARNING: Container stop: " + output.decode(errors="replace"))
         elif job.profile.mode != "host":
             self.callback(job, "WARNING: Stopping runtime client; check external container/server before recovery.")
-        # Signal the process group, including children launched by BitBake.
+        if job.profile.mode == "host" and job.command[0] == "bitbake" and job.process.returncode is None:
+            # BitBake's first interrupt drains tasks; the second asks its server
+            # to stop executing tasks. The daemon may be outside our process group.
+            try:
+                if not job.graceful_requested:
+                    os.kill(job.process.pid, signal.SIGINT)
+                    await asyncio.sleep(0.3)
+                if job.process.returncode is None:
+                    os.kill(job.process.pid, signal.SIGINT)
+                await asyncio.wait_for(job.process.wait(), 15)
+            except (ProcessLookupError, asyncio.TimeoutError):
+                pass
+        # Escalate remaining client/children; external servers are not assumed stopped.
         for sig, timeout in ((signal.SIGINT, 8), (signal.SIGTERM, 4), (signal.SIGKILL, 2)):
             if job.process.returncode is not None:
                 break
