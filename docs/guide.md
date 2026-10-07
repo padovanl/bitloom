@@ -36,7 +36,7 @@ Set mode to `kas` and point kas_file to your YAML. BitBake/devtool commands exec
 
 Install the official kas-container wrapper and a functioning Docker or Podman runtime. Set `KAS_CONTAINER_ENGINE`, `KAS_WORK_DIR` and optionally `KAS_BUILD_DIR` in environment. Use a dedicated work directory distinct from the Git source repository. The wrapper supplies containerized kas and Yocto dependencies.
 
-kas-container does not forward every arbitrary host environment variable into its container. Put Yocto overrides in kas YAML or use officially supported kas environment variables. Set `KAS_MACHINE`/`KAS_DISTRO` for kas overrides. Set container engine through `KAS_CONTAINER_ENGINE`, not the generic engine field.
+kas-container does not forward every arbitrary host environment variable into its container. Put Yocto overrides in kas YAML or use officially supported kas environment variables. The machine/distro profile fields map to `KAS_MACHINE`/`KAS_DISTRO` in kas modes; you can also set these directly. Set container engine through `KAS_CONTAINER_ENGINE`, not the generic engine field.
 
 ### Generic Docker / Podman
 
@@ -56,7 +56,7 @@ Interactive actions suspend Textual and give the real terminal to devshell, menu
 
 ## Errors and log search
 
-Failures generate a notification and refresh the task-log browser. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.yoctotui/exports`.
+Failures generate a notification and refresh the task-log browser. Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.yoctotui/exports`.
 
 Task logs are discovered under the standard `tmp/work/ARCH/RECIPE/VERSION/temp` hierarchy and ordered by modification time. Custom TMPDIR layouts currently require setting build_dir to match the expected layout or opening logs externally. Symlink aliases are skipped to avoid duplicate entries.
 
@@ -76,7 +76,7 @@ The Workbench build report extracts warnings, errors, task summaries, failed tas
 
 Scan either Downloads or Shared state to view names, size, age and relative paths. Inventory is capped at 20,000 files. The scan total is the indexed total, not necessarily the entire cache. Set an age of at least one day and open Prune plan. It lists concrete files and estimated bytes; nothing is removed before Execute plan.
 
-Pruning excludes symlinks, `.lock`/`.done` markers, Git checkout internals and files whose sibling lock exists. Each file's path, size and modification time is checked again at deletion. Only files inside the selected root can be deleted. The TUI refuses a plan while its own jobs are active/queued. Other machines/builders cannot be detected.
+Pruning excludes symlinks, `.lock`/`.done` markers, Git checkout internals and files whose sibling lock exists. Each file's path, size, modification time and sibling lock are checked again at deletion. Only files inside the selected root can be deleted. The TUI refuses a plan while its own jobs are active/queued. Other machines/builders cannot be detected.
 
 Age is not proof that an artifact is unused. Keep shared caches and offline source requirements in mind. Recipe clean keeps downloads/sstate; cleansstate removes local recipe shared state; cleanall also deletes recipe downloads. Remote sstate mirrors are unaffected by local inventory pruning.
 

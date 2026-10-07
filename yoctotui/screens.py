@@ -4,7 +4,6 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from rich.syntax import Syntax
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll

@@ -67,7 +67,7 @@ ACTIONS = [
     Action("dev-deploy", "Devtool", "Deploy to device", "devtool", ("deploy-target",), ("target", "device")),
     Action("dev-undeploy", "Devtool", "Undeploy from device", "devtool", ("undeploy-target",), ("target", "device")),
     Action("dev-config", "Devtool", "Configure help", "devtool", ("configure-help",), ("target",)),
-    Action("dev-test", "Devtool", "Test workspace recipe", "devtool", ("build", "--enable-tests"), ("target",)),
+    Action("dev-upgrade-status", "Devtool", "Check recipe upgrade status", "devtool", ("check-upgrade-status",), ("target",)),
     Action("recipe-create", "Recipes", "Create recipe from URL/source", "recipetool", ("create",), ("source",)),
     Action("packages", "Packages", "List built packages", "oe-pkgdata-util", ("list-pkgs",)),
     Action("package-files", "Packages", "List package files", "oe-pkgdata-util", ("list-pkg-files",), ("target",)),
@@ -142,7 +142,12 @@ def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Inv
     passthrough.update(profile.environment)
     passthrough.update(k for k, v in (("MACHINE", profile.machine), ("DISTRO", profile.distro)) if v)
     env["BB_ENV_PASSTHROUGH_ADDITIONS"] = " ".join(sorted(passthrough))
-    if argv[0] == "kas":
+    if profile.mode in {"kas", "kas-container"}:
+        if profile.machine:
+            env["KAS_MACHINE"] = profile.machine
+        if profile.distro:
+            env["KAS_DISTRO"] = profile.distro
+    if argv[0] == "kas" and profile.mode != "container":
         executable = "kas-container" if profile.mode == "kas-container" else "kas"
         return Invocation([executable, *argv[1:], profile.kas_file], root, env)
     if profile.mode in {"kas", "kas-container"}:
@@ -160,7 +165,10 @@ def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Inv
         container_script = script
         if script and Path(script).is_absolute():
             container_script = str(Path(profile.container_root) / Path(script).relative_to(root))
-        command = shell_command(argv, container_script, build, profile.container_root)
+        if argv[0] == "kas":
+            command = f"cd {shlex.quote(profile.container_root)} && exec {shlex.join([*argv, profile.kas_file])}"
+        else:
+            command = shell_command(argv, container_script, build, profile.container_root)
         if profile.container_name:
             prefix = [profile.engine, "exec", "-i", "-w", profile.container_root]
         else:

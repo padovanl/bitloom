@@ -70,7 +70,7 @@ A terminal of at least **140 columns × 42 rows** is recommended for the complet
 
 - **Let finish** leaves the build running.
 - **Graceful stop** sends exactly one SIGINT to the host BitBake client, or to the main process of a fresh container managed by YoctoTUI. BitBake can finish its currently executing tasks. The TUI does not escalate this request automatically.
-- **Force + recovery** terminates the managed process/container and offers `bitbake -c clean` for recipes observed running in the log. Finished tasks are removed from that active set. Work files may contain developer edits: the recovery dialog makes the selection explicit.
+- **Force + recovery** terminates the managed process/container and offers `bitbake -c clean` for recipes observed running in the log. Finished tasks are removed from that active set. Recovery is withheld if runtime shutdown is unconfirmed. Work files may contain developer edits: the recovery dialog makes the selection explicit.
 
 kas wrappers and pre-existing containers do not expose a guaranteed client PID. Graceful stop is disabled there; forced client termination requires checking the external build server before manually cleaning. A build interruption does not normally rewrite `.bb` files, and an observed active recipe is **not proof of corruption**. Task detection depends on standard BitBake log messages.
 

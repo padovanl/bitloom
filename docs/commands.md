@@ -50,7 +50,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 | `dev-deploy` | Devtool | Deploy to device | target, device | `devtool deploy-target` |
 | `dev-undeploy` | Devtool | Undeploy from device | target, device | `devtool undeploy-target` |
 | `dev-config` | Devtool | Configure help | target | `devtool configure-help` |
-| `dev-test` | Devtool | Test workspace recipe | target | `devtool build --enable-tests` |
+| `dev-upgrade-status` | Devtool | Check recipe upgrade status | target | `devtool check-upgrade-status` |
 | `recipe-create` | Recipes | Create recipe from URL/source | source | `recipetool create` |
 | `packages` | Packages | List built packages | — | `oe-pkgdata-util list-pkgs` |
 | `package-files` | Packages | List package files | target | `oe-pkgdata-util list-pkg-files` |
