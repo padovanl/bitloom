@@ -235,3 +235,37 @@ class PruneScreen(ModalScreen):
     @on(Button.Pressed, "#close")
     def close(self):
         self.dismiss(False)
+
+
+class RuntimeFileScreen(ModalScreen):
+    """Edit runtime files with optimistic concurrency and a preserved backup."""
+    DEFAULT_CSS = FileScreen.DEFAULT_CSS.replace('FileScreen', 'RuntimeFileScreen')
+    BINDINGS = [("escape", "dismiss", "Close")]
+
+    def __init__(self, profile, data):
+        super().__init__()
+        self.profile, self.data = profile, data
+
+    def compose(self):
+        with Vertical():
+            yield Label(self.data['path'], markup=False)
+            yield TextArea(self.data['text'], id='content', show_line_numbers=True)
+            with Horizontal():
+                yield Button('Save + backup', id='save', variant='primary')
+                yield Button('Close', id='close')
+
+    @on(Button.Pressed, '#save')
+    async def save(self):
+        from .runtime import request
+        try:
+            text = self.query_one('#content', TextArea).text
+            result = await request(self.profile, 'write', self.data['path'], sha256=self.data['sha256'], text=text)
+            import hashlib
+            self.data['sha256'] = hashlib.sha256(text.encode()).hexdigest()
+            self.notify('Saved. Backup: ' + result['backup'])
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity='error')
+
+    @on(Button.Pressed, '#close')
+    def close(self):
+        self.dismiss(None)

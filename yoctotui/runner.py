@@ -89,7 +89,10 @@ class Runner:
         job.started = now()
         self.store.put(job)
         self.callback(job, None)
+        from .leases import BuildLease
+        lease = BuildLease(job.profile)
         try:
+            lease.acquire()
             if job.profile.mode == "container" and not job.profile.container_name:
                 job.managed_container = f"yoctotui-{job.id}"
             inv = invocation(job.profile, job.command, job.managed_container)
@@ -134,6 +137,7 @@ class Runner:
             job.errors.append(message)
             self.callback(job, message)
         finally:
+            lease.close()
             job.finished = now()
             self.store.put(job)
             if self.active is job:
