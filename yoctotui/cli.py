@@ -40,7 +40,15 @@ def main():
     parser.add_argument("--demo", action="store_true", help="Create an isolated sample workspace; no fake build execution")
     parser.add_argument("--doctor", action="store_true", help="Print profile diagnostics without opening the TUI")
     parser.add_argument("--list-actions", action="store_true", help="List all available operations")
+    parser.add_argument("--embedded", action="store_true", help="Run jobs in the TUI process; exit stops jobs")
+    parser.add_argument("--service-status", action="store_true")
+    parser.add_argument("--service-stop", action="store_true", help="Stop an idle build service")
     args = parser.parse_args()
+    if args.service_status or args.service_stop:
+        from .daemon import rpc
+        import json
+        print(json.dumps(rpc(args.state, {"op": "stop" if args.service_stop else "status"}), indent=2))
+        return
     if args.list_actions:
         from .commands import ACTIONS
         for a in ACTIONS:
@@ -56,7 +64,7 @@ def main():
         return
     from .app import YoctoApp
     try:
-        app = YoctoApp(args.config, args.state)
+        app = YoctoApp(args.config, args.state, persistent=not (args.embedded or args.demo))
     except (OSError, ValueError, TypeError) as exc:
         parser.exit(1, f"yoctotui: {exc}\n")
     app.run()

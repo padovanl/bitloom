@@ -132,11 +132,18 @@ class YoctoApp(App):
         ("alt+5", "section('caches')", "Caches"),
     ]
 
-    def __init__(self, config: Path, state: Path):
+    def __init__(self, config: Path, state: Path, persistent=False):
         super().__init__()
         self.settings = Settings(config)
-        self.store = Store(state)
-        self.runner = Runner(self.store, self.job_update)
+        self.persistent = persistent
+        if persistent:
+            from .daemon import ensure_service, RemoteRunner
+            ensure_service(state)
+            self.store = Store(state, readonly=True)
+            self.runner = RemoteRunner(self.store, self.job_update)
+        else:
+            self.store = Store(state)
+            self.runner = Runner(self.store, self.job_update)
         self.entries: list[Entry] = []
         self.cache_entries: list[Entry] = []
         self.logs: list[Entry] = []
@@ -273,14 +280,14 @@ class YoctoApp(App):
                         yield DataTable(id="inspect-table", cursor_type="row")
                     with TabPane("Analysis", id="analysis"):
                         with Horizontal(classes="tools"):
-                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings")], value="metadata", allow_blank=False, id="analysis-kind")
+                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Package provenance", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
                             yield Input(placeholder="Literal metadata search phrase", id="analysis-query")
                             yield Button("Analyze", id="analysis-run")
                             yield Button("Export", id="analysis-export")
                         with Horizontal(classes="tools", id="analysis-paths"):
                             yield Input(placeholder="First manifest / build log path (blank uses selected log)", id="analysis-first")
                             yield Input(placeholder="Second manifest path", id="analysis-second")
-                        yield Static("Read-only reports. Manifest paths must be visible on the host; logs are persisted from every runtime.", id="analysis-note", markup=False)
+                        yield Static("Reports and runtime tools. First field: runtime path / recipe / package. Second: comparison file / stamps path. Export saves the report.", id="analysis-note", markup=False)
                         yield RichLog(id="analysis-output", min_width=1, wrap=True, markup=False)
                     with TabPane("? Guide", id="guide"):
                         yield Markdown(HELP, id="help")
@@ -305,6 +312,8 @@ class YoctoApp(App):
         self.main_query("#task-monitor", Static).border_title = "Active BitBake tasks"
         self.set_interval(0.2, self.flush_log)
         self.set_interval(2, self.update_telemetry)
+        if self.persistent:
+            self.runner.start()
         self.analysis_fields()
         self.navigation_changed()
         self.update_telemetry()
@@ -940,7 +949,7 @@ class YoctoApp(App):
         kind = str(self.main_query("#analysis-kind", Select).value)
         self.main_query("#analysis-query", Input).display = kind == "metadata"
         self.main_query("#analysis-paths").display = kind != "metadata"
-        self.main_query("#analysis-second", Input).display = kind == "manifests"
+        self.main_query("#analysis-second", Input).display = kind in {"manifests", "compare", "cache-plan"}
 
     @on(Button.Pressed, "#analysis-run")
     @work(exclusive=True, group="analysis")
@@ -950,7 +959,9 @@ class YoctoApp(App):
             kind = str(self.main_query("#analysis-kind", Select).value)
             first = self.main_query("#analysis-first", Input).value.strip()
             second = self.main_query("#analysis-second", Input).value.strip()
-            if kind == "metadata":
+            if kind not in {"metadata", "manifests", "sstate", "warnings"}:
+                text = await self.workflow_report(kind, first, second)
+            elif kind == "metadata":
                 text = await asyncio.to_thread(metadata_search, list(self.entries), self.main_query("#analysis-query", Input).value)
             elif kind == "manifests":
                 if not first or not second:
@@ -968,6 +979,68 @@ class YoctoApp(App):
             output.scroll_home(animate=False)
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity="warning")
+
+    async def workflow_report(self, kind, first, second):
+        import json, re
+        from .runtime import request
+        from .workflows import diagnose, compare, bundle, preflight_report, cache_plan
+        build = "/work/build" if self.profile.mode == "kas-container" else str(self.profile.build_path)
+        if self.profile.mode == "container":
+            try:
+                build = str(Path(self.profile.container_root) / self.profile.build_path.relative_to(self.profile.root_path))
+            except ValueError:
+                raise ValueError("Build directory must be inside the mounted project")
+        if kind == "diagnose":
+            path = Path(first) if first else self.selected_log
+            if path is None: raise ValueError("Select a failed build or enter a task log path")
+            if path.is_file(): data = await asyncio.to_thread(path.read_text, errors="replace")
+            else: data = (await request(self.profile, "read", str(path)))["text"]
+            return diagnose(data)
+        if kind in {"runtime-list", "runtime-read", "runtime-edit", "preflight", "devtool-review"}:
+            op = {"runtime-list":"list", "runtime-read":"read", "runtime-edit":"read", "preflight":"preflight", "devtool-review":"devtool"}[kind]
+            if kind == "devtool-review" and not first: raise ValueError("Enter the devtool source directory")
+            result = await request(self.profile, op, first or build)
+            if kind == "runtime-edit":
+                from .screens import RuntimeFileScreen
+                self.push_screen(RuntimeFileScreen(self.profile, result))
+                return "Opened runtime editor with content hash verification and backup."
+            if kind == "preflight": return preflight_report(result)
+            if kind == "runtime-read": return result["text"] + "\nSHA256: " + result["sha256"]
+            if kind == "devtool-review":
+                return json.dumps(result,indent=2) + "\nFinish transfers committed recipe/source changes to the destination layer. Reset removes workspace metadata; source directories are retained. Review uncommitted changes and the destination layer before running either action."
+            return json.dumps(result, indent=2)
+        if kind in {"snapshot", "bundle"}:
+            result = await request(self.profile, "snapshot", first or build)
+            from .workflows import redact
+            if self.selected_log and self.selected_log.is_file():
+                from .analysis import sstate_report, warning_report
+                from .reports import task_timings
+                result["metrics"] = {"sstate":sstate_report(self.selected_log), "warnings":warning_report(self.selected_log), "timings":task_timings(self.selected_log)}
+                result["metrics_source"] = str(self.selected_log)
+            if kind == "bundle": result = bundle(self.profile, result, self.profile.image or self.profile.environment.get("KAS_CONTAINER_IMAGE"))
+            else: result = redact(result)
+            destination = self.store.directory / "exports" / (kind + "-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json")
+            destination.parent.mkdir(parents=True,exist_ok=True)
+            destination.write_text(json.dumps(result, indent=2)); destination.chmod(0o600)
+            return "Saved: " + str(destination) + "\n" + json.dumps(result,indent=2)
+        if kind == "compare":
+            if not first or not second: raise ValueError("Enter before and after snapshot JSON paths")
+            return compare(json.loads(Path(first).read_text()),json.loads(Path(second).read_text()))
+        if kind == "cache-plan":
+            if not first or not second: raise ValueError("Enter host-visible cache and stamps paths")
+            return json.dumps(await asyncio.to_thread(cache_plan,Path(first),Path(second)),indent=2)
+        if kind == "provenance":
+            image = self.main_query("#target", Input).value.strip()
+            if not first or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", image):
+                raise ValueError("Enter a package or absolute file path; set the top target field to an image recipe")
+            if self.runner.active or any(j.status == "queued" for j in self.runner.jobs):
+                raise ValueError("Wait for the build queue before evaluating image package metadata")
+            return json.dumps(await request(self.profile, "provenance", build, package=first, image=image), indent=2)
+        if kind == "rebuild":
+            if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*",first): raise ValueError("Enter one recipe name")
+            job = self.runner.submit(self.profile, "Why rebuilding: " + first, ["bitbake", "-S", "printdiff", first], kind)
+            return "Queued signature evidence: " + job.id + "\nRead the job log in Builds. printdiff compares current signatures against the closest cache/stamp signature. Use signature diff and evaluated environment to investigate reported variable and dependency changes."
+        raise ValueError("Unknown workflow")
 
     @on(Button.Pressed, "#analysis-export")
     def export_analysis(self):
@@ -1025,7 +1098,7 @@ class YoctoApp(App):
     @work(group="exit", exclusive=True)
     async def action_quit(self):
         if self.runner.active:
-            self.notify("Stopping active job and preserving history…", timeout=15)
+            self.notify("Detaching; build service remains active" if self.persistent else "Stopping active job and preserving history…", timeout=15)
         await self.runner.shutdown()
         self.store.close()
         self.exit()
