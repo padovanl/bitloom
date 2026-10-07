@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import fcntl
 import sqlite3
 from pathlib import Path
 
@@ -9,6 +10,12 @@ class Store:
     def __init__(self, directory: Path):
         directory.mkdir(parents=True, exist_ok=True)
         self.directory = directory
+        self.lock = (directory / "session.lock").open("a")
+        try:
+            fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            self.lock.close()
+            raise ValueError("Another YoctoTUI session is using this state directory") from exc
         self.db = sqlite3.connect(directory / "history.sqlite3")
         self.db.row_factory = sqlite3.Row
         self.db.execute("""CREATE TABLE IF NOT EXISTS jobs (
@@ -30,3 +37,4 @@ class Store:
 
     def close(self):
         self.db.close()
+        self.lock.close()

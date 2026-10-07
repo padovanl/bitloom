@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Command reference — YoctoTUI</title><link rel="stylesheet" href="style.css"></head>
+<body><header><a class="brand" href="index.html">Y▸ YoctoTUI</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a></nav></header><main class="manual"><article class="doc"><h1 id="command-reference">Command reference</h1>
+<p>All actions use the selected profile/runtime. Required inputs appear in the command dialog.
+Commands may require classes or options supplied by your selected Yocto release.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Group</th>
+<th>Operation</th>
+<th>Required input</th>
+<th>Tool / arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build</code></td>
+<td>Build</td>
+<td>Build target</td>
+<td>target</td>
+<td><code>bitbake</code></td>
+</tr>
+<tr>
+<td><code>dry-run</code></td>
+<td>Build</td>
+<td>Dry run</td>
+<td>target</td>
+<td><code>bitbake -n</code></td>
+</tr>
+<tr>
+<td><code>parse</code></td>
+<td>Build</td>
+<td>Parse metadata</td>
+<td>—</td>
+<td><code>bitbake -p</code></td>
+</tr>
+<tr>
+<td><code>fetch</code></td>
+<td>Downloads</td>
+<td>Fetch recipe sources</td>
+<td>target</td>
+<td><code>bitbake -c fetch</code></td>
+</tr>
+<tr>
+<td><code>fetch-all</code></td>
+<td>Downloads</td>
+<td>Fetch all target dependencies</td>
+<td>target</td>
+<td><code>bitbake --runall=fetch</code></td>
+</tr>
+<tr>
+<td><code>unpack</code></td>
+<td>Build</td>
+<td>Unpack recipe</td>
+<td>target</td>
+<td><code>bitbake -c unpack</code></td>
+</tr>
+<tr>
+<td><code>patch</code></td>
+<td>Build</td>
+<td>Apply recipe patches</td>
+<td>target</td>
+<td><code>bitbake -c patch</code></td>
+</tr>
+<tr>
+<td><code>configure</code></td>
+<td>Build</td>
+<td>Configure recipe</td>
+<td>target</td>
+<td><code>bitbake -c configure</code></td>
+</tr>
+<tr>
+<td><code>compile</code></td>
+<td>Build</td>
+<td>Compile recipe</td>
+<td>target</td>
+<td><code>bitbake -c compile</code></td>
+</tr>
+<tr>
+<td><code>force-compile</code></td>
+<td>Build</td>
+<td>Force compile</td>
+<td>target</td>
+<td><code>bitbake -f -c compile</code></td>
+</tr>
+<tr>
+<td><code>install</code></td>
+<td>Build</td>
+<td>Install recipe</td>
+<td>target</td>
+<td><code>bitbake -c install</code></td>
+</tr>
+<tr>
+<td><code>package</code></td>
+<td>Build</td>
+<td>Package recipe</td>
+<td>target</td>
+<td><code>bitbake -c package</code></td>
+</tr>
+<tr>
+<td><code>rootfs</code></td>
+<td>Build</td>
+<td>Build root filesystem</td>
+<td>target</td>
+<td><code>bitbake -c rootfs</code></td>
+</tr>
+<tr>
+<td><code>sdk</code></td>
+<td>Build</td>
+<td>Build SDK</td>
+<td>target</td>
+<td><code>bitbake -c populate_sdk</code></td>
+</tr>
+<tr>
+<td><code>esdk</code></td>
+<td>Build</td>
+<td>Build extensible SDK</td>
+<td>target</td>
+<td><code>bitbake -c populate_sdk_ext</code></td>
+</tr>
+<tr>
+<td><code>task</code></td>
+<td>Build</td>
+<td>Run custom task</td>
+<td>target, task</td>
+<td><code>bitbake</code></td>
+</tr>
+<tr>
+<td><code>clean</code></td>
+<td>Maintenance</td>
+<td>Clean recipe work directory</td>
+<td>target</td>
+<td><code>bitbake -c clean</code></td>
+</tr>
+<tr>
+<td><code>cleansstate</code></td>
+<td>Maintenance</td>
+<td>Clean recipe + sstate</td>
+<td>target</td>
+<td><code>bitbake -c cleansstate</code></td>
+</tr>
+<tr>
+<td><code>cleanall</code></td>
+<td>Maintenance</td>
+<td>Clean recipe + sstate + downloads</td>
+<td>target</td>
+<td><code>bitbake -c cleanall</code></td>
+</tr>
+<tr>
+<td><code>environment</code></td>
+<td>Inspect</td>
+<td>Resolve recipe environment</td>
+<td>target</td>
+<td><code>bitbake -e</code></td>
+</tr>
+<tr>
+<td><code>tasks</code></td>
+<td>Inspect</td>
+<td>List recipe tasks</td>
+<td>target</td>
+<td><code>bitbake -c listtasks</code></td>
+</tr>
+<tr>
+<td><code>graph</code></td>
+<td>Inspect</td>
+<td>Generate dependency graph</td>
+<td>target</td>
+<td><code>bitbake -g</code></td>
+</tr>
+<tr>
+<td><code>signatures</code></td>
+<td>Inspect</td>
+<td>Dump signatures</td>
+<td>target</td>
+<td><code>bitbake -S none</code></td>
+</tr>
+<tr>
+<td><code>sig-diff</code></td>
+<td>Inspect</td>
+<td>Explain sstate differences</td>
+<td>target</td>
+<td><code>bitbake -S printdiff</code></td>
+</tr>
+<tr>
+<td><code>layers</code></td>
+<td>Layers</td>
+<td>Show layers and priorities</td>
+<td>—</td>
+<td><code>bitbake-layers show-layers</code></td>
+</tr>
+<tr>
+<td><code>recipes</code></td>
+<td>Layers</td>
+<td>Show recipes</td>
+<td>—</td>
+<td><code>bitbake-layers show-recipes</code></td>
+</tr>
+<tr>
+<td><code>appends</code></td>
+<td>Layers</td>
+<td>Show recipe appends</td>
+<td>—</td>
+<td><code>bitbake-layers show-appends</code></td>
+</tr>
+<tr>
+<td><code>overlay</code></td>
+<td>Layers</td>
+<td>Show overlaid recipes</td>
+<td>—</td>
+<td><code>bitbake-layers show-overlayed</code></td>
+</tr>
+<tr>
+<td><code>layer-add</code></td>
+<td>Layers</td>
+<td>Add layer</td>
+<td>path</td>
+<td><code>bitbake-layers add-layer</code></td>
+</tr>
+<tr>
+<td><code>layer-remove</code></td>
+<td>Layers</td>
+<td>Remove layer</td>
+<td>path</td>
+<td><code>bitbake-layers remove-layer</code></td>
+</tr>
+<tr>
+<td><code>layer-create</code></td>
+<td>Layers</td>
+<td>Create layer</td>
+<td>path</td>
+<td><code>bitbake-layers create-layer</code></td>
+</tr>
+<tr>
+<td><code>layer-depends</code></td>
+<td>Layers</td>
+<td>Show cross-layer dependencies</td>
+<td>—</td>
+<td><code>bitbake-layers show-cross-depends</code></td>
+</tr>
+<tr>
+<td><code>dev-status</code></td>
+<td>Devtool</td>
+<td>Workspace status</td>
+<td>—</td>
+<td><code>devtool status</code></td>
+</tr>
+<tr>
+<td><code>dev-modify</code></td>
+<td>Devtool</td>
+<td>Modify recipe</td>
+<td>target</td>
+<td><code>devtool modify</code></td>
+</tr>
+<tr>
+<td><code>dev-add</code></td>
+<td>Devtool</td>
+<td>Add source as recipe</td>
+<td>target, path</td>
+<td><code>devtool add</code></td>
+</tr>
+<tr>
+<td><code>dev-build</code></td>
+<td>Devtool</td>
+<td>Build workspace recipe</td>
+<td>target</td>
+<td><code>devtool build</code></td>
+</tr>
+<tr>
+<td><code>dev-image</code></td>
+<td>Devtool</td>
+<td>Build image with workspace recipes</td>
+<td>target</td>
+<td><code>devtool build-image</code></td>
+</tr>
+<tr>
+<td><code>dev-reset</code></td>
+<td>Devtool</td>
+<td>Reset workspace recipe</td>
+<td>target</td>
+<td><code>devtool reset</code></td>
+</tr>
+<tr>
+<td><code>dev-finish</code></td>
+<td>Devtool</td>
+<td>Finish recipe into layer</td>
+<td>target, path</td>
+<td><code>devtool finish</code></td>
+</tr>
+<tr>
+<td><code>dev-update</code></td>
+<td>Devtool</td>
+<td>Update recipe from source</td>
+<td>target</td>
+<td><code>devtool update-recipe</code></td>
+</tr>
+<tr>
+<td><code>dev-upgrade</code></td>
+<td>Devtool</td>
+<td>Upgrade recipe</td>
+<td>target</td>
+<td><code>devtool upgrade</code></td>
+</tr>
+<tr>
+<td><code>dev-latest</code></td>
+<td>Devtool</td>
+<td>Check upstream version</td>
+<td>target</td>
+<td><code>devtool latest-version</code></td>
+</tr>
+<tr>
+<td><code>dev-deploy</code></td>
+<td>Devtool</td>
+<td>Deploy to device</td>
+<td>target, device</td>
+<td><code>devtool deploy-target</code></td>
+</tr>
+<tr>
+<td><code>dev-undeploy</code></td>
+<td>Devtool</td>
+<td>Undeploy from device</td>
+<td>target, device</td>
+<td><code>devtool undeploy-target</code></td>
+</tr>
+<tr>
+<td><code>dev-config</code></td>
+<td>Devtool</td>
+<td>Configure help</td>
+<td>target</td>
+<td><code>devtool configure-help</code></td>
+</tr>
+<tr>
+<td><code>dev-test</code></td>
+<td>Devtool</td>
+<td>Test workspace recipe</td>
+<td>target</td>
+<td><code>devtool build --enable-tests</code></td>
+</tr>
+<tr>
+<td><code>recipe-create</code></td>
+<td>Recipes</td>
+<td>Create recipe from URL/source</td>
+<td>source</td>
+<td><code>recipetool create</code></td>
+</tr>
+<tr>
+<td><code>packages</code></td>
+<td>Packages</td>
+<td>List built packages</td>
+<td>—</td>
+<td><code>oe-pkgdata-util list-pkgs</code></td>
+</tr>
+<tr>
+<td><code>package-files</code></td>
+<td>Packages</td>
+<td>List package files</td>
+<td>target</td>
+<td><code>oe-pkgdata-util list-pkg-files</code></td>
+</tr>
+<tr>
+<td><code>find-path</code></td>
+<td>Packages</td>
+<td>Find package owning a path</td>
+<td>path</td>
+<td><code>oe-pkgdata-util find-path</code></td>
+</tr>
+<tr>
+<td><code>package-recipe</code></td>
+<td>Packages</td>
+<td>Find recipe for package</td>
+<td>target</td>
+<td><code>oe-pkgdata-util lookup-recipe</code></td>
+</tr>
+<tr>
+<td><code>license</code></td>
+<td>Inspect</td>
+<td>Generate SPDX SBOM</td>
+<td>target</td>
+<td><code>bitbake -c create_spdx</code></td>
+</tr>
+<tr>
+<td><code>testimage</code></td>
+<td>Testing</td>
+<td>Run image tests</td>
+<td>target</td>
+<td><code>bitbake -c testimage</code></td>
+</tr>
+<tr>
+<td><code>ptest</code></td>
+<td>Testing</td>
+<td>Build ptest packages</td>
+<td>target</td>
+<td><code>bitbake -c compile_ptest_base</code></td>
+</tr>
+<tr>
+<td><code>devshell</code></td>
+<td>Terminal</td>
+<td>Open recipe development shell</td>
+<td>target</td>
+<td><code>bitbake -c devshell</code></td>
+</tr>
+<tr>
+<td><code>menuconfig</code></td>
+<td>Terminal</td>
+<td>Kernel menuconfig</td>
+<td>target</td>
+<td><code>bitbake -c menuconfig</code></td>
+</tr>
+<tr>
+<td><code>qemu</code></td>
+<td>Terminal</td>
+<td>Boot image with QEMU</td>
+<td>target</td>
+<td><code>runqemu</code></td>
+</tr>
+<tr>
+<td><code>kas-build</code></td>
+<td>Kas</td>
+<td>Build kas configuration</td>
+<td>—</td>
+<td><code>kas build</code></td>
+</tr>
+<tr>
+<td><code>kas-checkout</code></td>
+<td>Kas</td>
+<td>Checkout kas repositories</td>
+<td>—</td>
+<td><code>kas checkout</code></td>
+</tr>
+<tr>
+<td><code>kas-dump</code></td>
+<td>Kas</td>
+<td>Dump resolved kas configuration</td>
+<td>—</td>
+<td><code>kas dump</code></td>
+</tr>
+<tr>
+<td><code>kas-shell</code></td>
+<td>Kas</td>
+<td>Open kas shell</td>
+<td>—</td>
+<td><code>kas shell</code></td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td>Utility</td>
+<td>Custom command (argument list)</td>
+<td>command</td>
+<td><code>custom argv</code></td>
+</tr>
+<tr>
+<td><code>getvar</code></td>
+<td>Inspect</td>
+<td>Resolve one BitBake variable</td>
+<td>variable</td>
+<td><code>bitbake-getvar</code></td>
+</tr>
+<tr>
+<td><code>dumpsig</code></td>
+<td>Inspect</td>
+<td>Read signature file</td>
+<td>path</td>
+<td><code>bitbake-dumpsig</code></td>
+</tr>
+<tr>
+<td><code>diffsigs</code></td>
+<td>Inspect</td>
+<td>Compare signature files</td>
+<td>path, path2</td>
+<td><code>bitbake-diffsigs</code></td>
+</tr>
+<tr>
+<td><code>kernel-diff</code></td>
+<td>Kernel</td>
+<td>Export kernel config changes</td>
+<td>target</td>
+<td><code>bitbake -c diffconfig</code></td>
+</tr>
+<tr>
+<td><code>kernel-fragments</code></td>
+<td>Kernel</td>
+<td>Validate kernel config fragments</td>
+<td>target</td>
+<td><code>bitbake -c kernel_configcheck</code></td>
+</tr>
+<tr>
+<td><code>cve</code></td>
+<td>Security</td>
+<td>Run recipe CVE check</td>
+<td>target</td>
+<td><code>bitbake -c cve_check</code></td>
+</tr>
+<tr>
+<td><code>kas-lock</code></td>
+<td>Kas</td>
+<td>Generate kas lock file</td>
+<td>—</td>
+<td><code>kas lock</code></td>
+</tr>
+</tbody>
+</table>
+<p>Interactive commands hand off to a real terminal and are not stored as queued build logs.
+Custom task adds <code>-c TASK</code> after the target. kas commands append the selected kas_file.</p>
+<h2 id="action-specific-requirements">Action-specific requirements</h2>
+<ul>
+<li><strong>Clean recipe + sstate:</strong> Removes this recipe's local shared state. Avoid with shared caches in active use.</li>
+<li><strong>Clean recipe + sstate + downloads:</strong> Removes recipe sources and local shared state.</li>
+<li><strong>Generate SPDX SBOM:</strong> Requires create-spdx in your image configuration.</li>
+<li><strong>Run image tests:</strong> Requires testimage configuration and suitable target runner.</li>
+<li><strong>Build ptest packages:</strong> Recipe must inherit ptest and ptest must be enabled.</li>
+<li><strong>Custom command (argument list):</strong> Parsed as argv. Shell operators are not interpreted.</li>
+<li><strong>Run recipe CVE check:</strong> Requires the cve-check class and CVE database.</li>
+</ul>
+</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="commands.md">Markdown source</a></footer></body></html>

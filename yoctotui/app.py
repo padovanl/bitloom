@@ -97,7 +97,7 @@ class YoctoApp(App):
         self.history_rows: dict[str, dict] = {}
         self.metadata_rows: dict[str, Entry] = {}
         self.file_rows: dict[str, Entry] = {}
-        self.active_tasks: dict[str, set[str]] = {}
+        self.inspection_rows: list[tuple[str, str]] = []
 
     @property
     def profile(self):
@@ -164,6 +164,19 @@ class YoctoApp(App):
                     yield Button("Versions", id="versions")
                     yield Button("Refresh", id="health-refresh")
                 yield DataTable(id="health", cursor_type="row")
+            with TabPane("⌕ Workbench", id="workbench"):
+                with Horizontal(classes="tools"):
+                    yield Select([("Environment", "env"), ("Dependencies", "graph")], value="env", allow_blank=False, id="inspect-kind")
+                    yield Input(placeholder="Filter variable/value or graph node…", id="inspect-search")
+                    yield Button("Load", id="inspect-load")
+                    yield Button("Resolve env", id="inspect-resolve")
+                    yield Button("Env diff", id="inspect-diff")
+                with Horizontal(classes="tools"):
+                    yield Button("Build history diff", id="buildhistory-report")
+                    yield Button("Download audit", id="download-audit")
+                    yield Button("Build report", id="build-report")
+                    yield Button("Generate graph", id="generate-graph")
+                yield DataTable(id="inspect-table", cursor_type="row")
             with TabPane("? Guide", id="guide"):
                 yield Markdown(HELP, id="help")
         yield Footer()
@@ -176,6 +189,7 @@ class YoctoApp(App):
             "cache-table": ("File", "Size", "Age", "Path"),
             "artifact-table": ("Artifact", "Type", "Size", "Path"),
             "health": ("Status", "Check", "Details"),
+            "inspect-table": ("Variable / task", "Value / dependency"),
         }
         for ident, names in columns.items():
             self.query_one(f"#{ident}", DataTable).add_columns(*names)
@@ -192,7 +206,7 @@ class YoctoApp(App):
             return
         action, argv = result
         if action.interactive:
-            if self.runner.active:
+            if any(j.status in {"running", "queued", "cancelling"} for j in self.runner.jobs):
                 self.notify("Wait for the active job before opening an interactive command", severity="warning")
                 return
             self.run_interactive(argv)
@@ -236,6 +250,10 @@ class YoctoApp(App):
         if self.is_mounted:
             self.settings.save()
             self.query_one("#target", Input).value = self.profile.targets[0] if self.profile.targets else ""
+            self.cache_entries = []
+            self.inspection_rows = []
+            self.render_cache()
+            self.render_inspection()
             self.action_refresh()
 
     def action_refresh(self):
@@ -437,7 +455,7 @@ class YoctoApp(App):
     @on(Button.Pressed)
     def button_pressed(self, event):
         ident = event.button.id
-        commands = {"build": "build", "commands": "build", "layer-actions": "layers", "environment": "environment", "dev-status": "dev-status", "fetch-all": "fetch-all"}
+        commands = {"build": "build", "commands": "build", "layer-actions": "layers", "environment": "environment", "dev-status": "dev-status", "fetch-all": "fetch-all", "inspect-resolve": "environment", "generate-graph": "graph"}
         if ident in commands:
             self.action_command(commands[ident])
         elif ident == "profiles":
@@ -466,6 +484,10 @@ class YoctoApp(App):
             self.open_file(self.profile.build_path / "conf/bblayers.conf", True)
         elif ident == "versions":
             self.version_report()
+        elif ident == "inspect-load":
+            self.load_inspection()
+        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report"}:
+            self.make_report(ident)
         elif ident in {"logs-read", "artifact-read"}:
             table = self.query_one("#task-table" if ident == "logs-read" else "#artifact-table", DataTable)
             if table.row_count:
@@ -555,6 +577,63 @@ class YoctoApp(App):
         dest = self.store.directory / "versions.txt"
         dest.write_text(text)
         self.open_file(dest)
+
+    @work(exclusive=True, group="inspection")
+    async def load_inspection(self):
+        from .reports import dependencies, environment, environment_jobs
+        try:
+            kind = str(self.query_one("#inspect-kind", Select).value)
+            if kind == "env":
+                jobs = environment_jobs(self.store, self.profile, self.query_one("#target", Input).value)
+                if not jobs:
+                    raise ValueError("Resolve an environment first, then load its successful output")
+                values = await asyncio.to_thread(environment, Path(jobs[0]["log"]))
+                self.inspection_rows = sorted(values.items())
+            else:
+                path = self.profile.build_path / "task-depends.dot"
+                self.inspection_rows = await asyncio.to_thread(dependencies, path)
+            self.render_inspection()
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="warning")
+
+    @on(Input.Changed, "#inspect-search")
+    def inspection_filter(self):
+        self.render_inspection()
+
+    def render_inspection(self):
+        query = self.query_one("#inspect-search", Input).value.casefold()
+        table = self.query_one("#inspect-table", DataTable)
+        table.clear()
+        for name, value in self.inspection_rows:
+            if query in f"{name} {value}".casefold():
+                table.add_row(name, value)
+
+    @work(exclusive=True, group="reports")
+    async def make_report(self, ident):
+        from .reports import build_history, build_summary, download_audit, environment, environment_jobs, env_diff
+        try:
+            if ident == "inspect-diff":
+                jobs = environment_jobs(self.store, self.profile, self.query_one("#target", Input).value)
+                if len(jobs) < 2:
+                    raise ValueError("Capture two successful environments for the same recipe/profile first")
+                first, second = await asyncio.gather(asyncio.to_thread(environment, Path(jobs[1]["log"])), asyncio.to_thread(environment, Path(jobs[0]["log"])))
+                text = env_diff(first, second)
+            elif ident == "buildhistory-report":
+                text = await asyncio.to_thread(build_history, self.profile)
+            elif ident == "download-audit":
+                root = cache_path(self.profile, "downloads")
+                entries = await asyncio.to_thread(inventory, root)
+                text = download_audit(root, entries)
+            else:
+                if not self.selected_log:
+                    raise ValueError("Select a build log first")
+                text = await asyncio.to_thread(build_summary, self.selected_log)
+            dest = self.store.directory / "reports" / f"{ident}.txt"
+            dest.parent.mkdir(exist_ok=True)
+            dest.write_text(text)
+            self.open_file(dest)
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="warning")
 
     def action_log_focus(self):
         self.query_one("#workspace", TabbedContent).active = "builds"

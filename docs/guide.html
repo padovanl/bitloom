@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>User guide — YoctoTUI</title><link rel="stylesheet" href="style.css"></head>
+<body><header><a class="brand" href="index.html">Y▸ YoctoTUI</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a></nav></header><main class="manual"><article class="doc"><h1 id="user-guide">User guide</h1>
+<h2 id="profiles-and-paths">Profiles and paths</h2>
+<p>Profiles are local JSON stored at <code>.yoctotui/profiles.json</code> by default. State is stored at <code>.yoctotui/</code>; both paths can be set on the command line. The file is atomically replaced with mode 0600. Profile names must be unique; queued jobs retain a copy of the original profile.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>Unique profile identifier</td>
+</tr>
+<tr>
+<td><code>root</code></td>
+<td>Absolute or relative project root (resolved on the host)</td>
+</tr>
+<tr>
+<td><code>build_dir</code></td>
+<td>Build directory, relative to root or absolute on host</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td><code>host</code>, <code>kas</code>, <code>container</code>, or <code>kas-container</code></td>
+</tr>
+<tr>
+<td><code>init_script</code></td>
+<td>Host/container init script; autodetects oe-init-build-env or poky/oe-init-build-env</td>
+</tr>
+<tr>
+<td><code>kas_file</code></td>
+<td>kas configuration path(s), including colon-separated composition</td>
+</tr>
+<tr>
+<td><code>engine</code></td>
+<td>Docker or Podman for generic container mode</td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td>Builder image for a fresh container</td>
+</tr>
+<tr>
+<td><code>container_name</code></td>
+<td>Existing container name; empty starts a fresh temporary container</td>
+</tr>
+<tr>
+<td><code>container_root</code></td>
+<td>Project mount path inside a generic container; default <code>/work</code></td>
+</tr>
+<tr>
+<td><code>machine</code>, <code>distro</code></td>
+<td>Environment overrides passed through BitBake's allow-list</td>
+</tr>
+<tr>
+<td><code>downloads</code>, <code>sstate</code></td>
+<td>Host paths used by cache inventory; these do not modify BitBake configuration</td>
+</tr>
+<tr>
+<td><code>environment</code></td>
+<td>String environment variables; kas variables control kas paths/runtime</td>
+</tr>
+<tr>
+<td><code>container_args</code></td>
+<td>Array of additional Docker/Podman arguments</td>
+</tr>
+<tr>
+<td><code>targets</code></td>
+<td>Suggested targets; the first fills the toolbar</td>
+</tr>
+</tbody>
+</table>
+<p><code>DL_DIR</code>/<code>SSTATE_DIR</code> in local.conf are read as literal hints. <code>${TOPDIR}</code> is expanded; other expressions require a profile path override. Runtime paths, especially kas container paths, may differ from host paths. Use <strong>Resolve env</strong> to inspect the authoritative result.</p>
+<h3 id="host">Host</h3>
+<p>Set root to your checkout. The TUI sources the init script in bash and executes a quoted argument list. You can also start from an already initialized shell and leave init_script empty. No shell operators in target fields are executed.</p>
+<h3 id="kas">kas</h3>
+<p>Set mode to <code>kas</code> and point kas_file to your YAML. BitBake/devtool commands execute with <code>kas shell FILE -c COMMAND</code>; kas actions call the appropriate subcommand directly. Install kas in your preferred environment.</p>
+<h3 id="kas-container">kas-container</h3>
+<p>Install the official kas-container wrapper and a functioning Docker or Podman runtime. Set <code>KAS_CONTAINER_ENGINE</code>, <code>KAS_WORK_DIR</code> and optionally <code>KAS_BUILD_DIR</code> in environment. Use a dedicated work directory distinct from the Git source repository. The wrapper supplies containerized kas and Yocto dependencies.</p>
+<p>kas-container does not forward every arbitrary host environment variable into its container. Put Yocto overrides in kas YAML or use officially supported kas environment variables. Set <code>KAS_MACHINE</code>/<code>KAS_DISTRO</code> for kas overrides. Set container engine through <code>KAS_CONTAINER_ENGINE</code>, not the generic engine field.</p>
+<h3 id="generic-docker--podman">Generic Docker / Podman</h3>
+<p>Set mode to <code>container</code>, engine and image. New containers bind root at container_root, use the current UID/GID and have a unique name. The image must contain bash and your build dependencies. BitBake should be the final exec process for graceful signalling.</p>
+<p>Existing container_name uses <code>exec</code> instead; that container must already mount the project at container_root. build_dir must be inside root. External caches require explicit mounts plus matching paths in your build configuration. Runtime args must be JSON strings, such as <code>[&quot;--network&quot;, &quot;host&quot;]</code>; review privileged options yourself.</p>
+<h2 id="build-and-development-workflows">Build and development workflows</h2>
+<p>Enter one target or recipe in the toolbar and press Build or F2. Filter the command list by group/name. Required inputs appear dynamically. Review the exact invocation and queue it. Builds and utilities share a serial queue to avoid two servers modifying one build directory.</p>
+<p>The Build pane persists operation, profile, status, timestamps, exit code and log path. Enter on a row loads its log. Retry uses original command and profile even if you have switched profiles. Live progress comes from standard <code>Running task N of M</code> messages. History timestamps are stored in UTC.</p>
+<p>Use recipe browsing to locate metadata, open files, build or start devtool modify. The metadata browser indexes local files, including inactive layers; <code>Show layers</code>, <code>Show recipes</code>, <code>Show appends</code> and <code>Show overlaid recipes</code> ask BitBake for evaluated state.</p>
+<p>Interactive actions suspend Textual and give the real terminal to devshell, menuconfig, QEMU or kas shell. They require a real terminal and cannot start while a queued/running job occupies the runner. Their output is not persisted as a queued build log.</p>
+<h2 id="errors-and-log-search">Errors and log search</h2>
+<p>Failures generate a notification and refresh the task-log browser. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to <code>.yoctotui/exports</code>.</p>
+<p>Task logs are discovered under the standard <code>tmp/work/ARCH/RECIPE/VERSION/temp</code> hierarchy and ordered by modification time. Custom TMPDIR layouts currently require setting build_dir to match the expected layout or opening logs externally. Symlink aliases are skipped to avoid duplicate entries.</p>
+<p>The Workbench build report extracts warnings, errors, task summaries, failed tasks and shared-state summaries. It does not invent diagnoses. Use the task's own log to determine the cause.</p>
+<h2 id="workbench">Workbench</h2>
+<p><strong>Environment:</strong> Resolve env for the chosen target, wait for success, then Load. Filter both variable names and values. Capturing two environments for the same target/profile enables Env diff. Literal exported values are compared; function bodies and assignment provenance remain in the original log.</p>
+<p><strong>Dependencies:</strong> Generate graph for a target and wait for success. Choose Dependencies and Load to read task-depends.dot from the configured host-visible build directory. Filter nodes to explore task relationships. The first 20,000 edges are indexed.</p>
+<p><strong>Build history:</strong> Enable buildhistory and BUILDHISTORY_COMMIT in local.conf, build an image, then open Build history diff. The report shows recent Git commits and changes between the newest two commits.</p>
+<p><strong>Signatures:</strong> Use Dump signatures, Explain sstate differences, Read signature file or Compare signature files. Signature commands use BitBake tools from the selected release rather than decoding undocumented binary formats.</p>
+<h2 id="cache-and-download-maintenance">Cache and download maintenance</h2>
+<p>Scan either Downloads or Shared state to view names, size, age and relative paths. Inventory is capped at 20,000 files. The scan total is the indexed total, not necessarily the entire cache. Set an age of at least one day and open Prune plan. It lists concrete files and estimated bytes; nothing is removed before Execute plan.</p>
+<p>Pruning excludes symlinks, <code>.lock</code>/<code>.done</code> markers, Git checkout internals and files whose sibling lock exists. Each file's path, size and modification time is checked again at deletion. Only files inside the selected root can be deleted. The TUI refuses a plan while its own jobs are active/queued. Other machines/builders cannot be detected.</p>
+<p>Age is not proof that an artifact is unused. Keep shared caches and offline source requirements in mind. Recipe clean keeps downloads/sstate; cleansstate removes local recipe shared state; cleanall also deletes recipe downloads. Remote sstate mirrors are unaffected by local inventory pruning.</p>
+<p>Download audit reports possible partial files, lock files and orphan completion markers. For actual source integrity checking, use the recipe fetch task and its SRC_URI checksums.</p>
+<h2 id="releases-and-compatibility">Releases and compatibility</h2>
+<p>Versions reports local repository branches, commit IDs, Git descriptions, dirty status and literal LAYERSERIES_COMPAT declarations against locally detected LAYERSERIES_CORENAMES. Dynamic expressions can require manual review. Metadata parse is authoritative.</p>
+<p>Use one profile/build directory per release. The TUI does not switch active Git branches underneath a running build, silently migrate local.conf syntax or mix caches without your configuration.</p>
+<h2 id="configuration-editing">Configuration editing</h2>
+<p>local.conf, bblayers.conf and metadata are editable. Save creates a timestamped backup, refuses to overwrite a file changed externally, and atomically replaces the contents. Files above 2 MB and binary files are not opened in the editor. Close without saving discards in-editor changes. Review changes with your usual Git tooling.</p>
+<p>Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline builds, mirror tarballs, thread limits and optional image/security classes.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ul>
+<li><strong>bitbake not found:</strong> configure an init script or launch from a sourced environment.</li>
+<li><strong>Docker permission denied:</strong> the user running YoctoTUI must have permission to the Docker socket; the app never changes daemon permissions.</li>
+<li><strong>Docker Snap and /tmp:</strong> Snap's daemon can see a different <code>/tmp</code> from the host. A bind mount may be created as root in the daemon namespace. Prefer a dedicated Linux directory visible to both namespaces, or initialize only the dedicated mount ownership inside a container. Never apply broad permissions to Docker or the project root.</li>
+<li><strong>Windows/NTFS build paths:</strong> store Yocto work directories on a Linux filesystem. The TUI source can live under /mnt/c; BitBake source/build caches should not rely on NTFS semantics.</li>
+<li><strong>kas custom machine override:</strong> use KAS_MACHINE/KAS_DISTRO or kas YAML; arbitrary environment variables may not be forwarded by the wrapper.</li>
+<li><strong>Stop left an external build running:</strong> wrapper/pre-existing-container modes cannot guarantee server termination. Verify processes in that runtime before recovery.</li>
+<li><strong>Missing task/class:</strong> check your release and INHERIT configuration. CVE, SPDX, testimage and ptest entry points require appropriate metadata.</li>
+<li><strong>Too little space/RAM:</strong> check Health, reduce thread counts, and inspect cache plans before removal.</li>
+<li><strong>Small terminal:</strong> use keyboard shortcuts and Tab, or increase to 140×42 for the complete layout.</li>
+</ul>
+<h2 id="documentation-and-verification">Documentation and verification</h2>
+<p><code>python tools/capture_docs.py</code> captures the real Textual interface with Pilot and exports SVG/PNG/GIF. It uses labelled demo data. <code>python tools/validate_kas.py</code> executes a real image build through Runner and records a JSON result. Read validation.md for evidence from the current development session.</p>
+</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="guide.md">Markdown source</a></footer></body></html>

@@ -139,27 +139,44 @@ def human_size(n: int) -> str:
 
 def search_log(path: Path, query: str = "", errors_only=False, context=3, max_lines=5000) -> str:
     from collections import deque
-    # Bounded tail reader; huge bitbake -e output does not freeze the UI.
-    lines = deque(maxlen=max_lines)
-    with path.open(errors="replace") as stream:
-        for line in stream:
-            lines.append(line.rstrip("\n"))
-    lines = list(lines)
     if not query and not errors_only:
-        return "\n".join(lines)
-    selected = set()
-    for i, line in enumerate(lines):
-        match = query.casefold() in line.casefold() if query else True
-        if errors_only:
-            match = match and bool(re.search(r"error|failed|fatal|traceback|exception", line, re.I))
-        if match:
-            selected.update(range(max(0, i-context), min(len(lines), i+context+1)))
-    return "\n".join(f"{i+1}: {lines[i]}" for i in sorted(selected)) or "No matches in the last 5000 lines."
+        with path.open(errors="replace") as stream:
+            return "".join(deque(stream, maxlen=max_lines)).rstrip("\n")
+    # Search the complete file while keeping only a bounded set of context lines.
+    previous = deque(maxlen=context)
+    output = deque(maxlen=max_lines)
+    last_added = -1
+    until = -1
+    matches = 0
+    with path.open(errors="replace") as stream:
+        for i, raw in enumerate(stream):
+            line = raw.rstrip("\n")
+            match = query.casefold() in line.casefold() if query else True
+            if errors_only:
+                match = match and bool(re.search(r"error|failed|fatal|traceback|exception", line, re.I))
+            if match:
+                matches += 1
+                for number, before in previous:
+                    if number > last_added:
+                        output.append(f"{number+1}: {before}")
+                        last_added = number
+                until = i + context
+            if i <= until and i > last_added:
+                output.append(f"{i+1}: {line}")
+                last_added = i
+            previous.append((i, line))
+    if not matches:
+        return "No matches in the complete log."
+    return f"{matches} matches · showing at most {max_lines} context lines\n" + "\n".join(output)
 
 
 def cache_candidates(entries: list[Entry], days: int) -> list[Entry]:
     cutoff = time.time() - days * 86400
-    return [e for e in entries if e.modified < cutoff and not e.name.endswith((".lock", ".done"))]
+    protected = {"git2", "svn", "hg", "cvs", "npm2", ".git"}
+    return [e for e in entries if e.modified < cutoff
+            and not e.name.endswith((".lock", ".done"))
+            and not protected.intersection(e.path.parts)
+            and not e.path.with_name(e.name + ".lock").exists()]
 
 
 def prune_cache(root: Path, entries: list[Entry]) -> tuple[int, int]:
