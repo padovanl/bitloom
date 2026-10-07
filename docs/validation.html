@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Validation report — YoctoTUI</title><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="index.html">Y▸ YoctoTUI</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a></nav></header><main class="manual"><article class="doc"><h1 id="validation-report">Validation report</h1>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Validation report — Bitloom</title><link rel="stylesheet" href="style.css"></head>
+<body><header><a class="brand" href="index.html">B▸ Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a></nav></header><main class="manual"><article class="doc"><h1 id="validation-report">Validation report</h1>
 <h2 id="status">Status</h2>
 <p><strong>Completed on 2026-10-10.</strong> The real kas-container image build exited 0: all <strong>4,064 tasks succeeded</strong>, with no reused tasks. Elapsed wall time was <strong>57 minutes 10 seconds</strong> (10:41:45–11:38:55 UTC). BitBake reported <strong>20 warnings and no errors</strong>. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.</p>
 <h2 id="automated-checks">Automated checks</h2>
@@ -49,7 +49,7 @@
 </tr>
 <tr>
 <td>Engine integration</td>
-<td>YoctoTUI Runner, SQLite history, persistent streamed log</td>
+<td>Bitloom Runner, SQLite history, persistent streamed log</td>
 </tr>
 <tr>
 <td>Work</td>
@@ -93,7 +93,7 @@
 <p>Docker Snap exposed a private /tmp mount initially owned by root. Only that dedicated work mount was assigned the builder UID/GID. Docker socket permissions were not modified. A failed initial attempt and the later real build logs are retained locally under .validation.</p>
 <p>The configuration pins the fetched Poky commit for reproducibility. Standard upstream source fetches and mirrors are used; network warnings are not treated as successful fetch evidence.</p>
 <h2 id="runtime-probes-after-the-build">Runtime probes after the build</h2>
-<p>All eight probes ran through YoctoTUI Runner and the same pinned kas-container image, with exit 0: evaluated layers, busybox recipe lookup, busybox environment, devtool status, container-only local.conf, built package listing, dependency graph generation and container-only graph reading. The environment contained <strong>1,943 parsed variables</strong>, with MACHINE=qemux86-64 and PN=busybox. The graph contained <strong>12,654 parsed edges</strong>.</p>
+<p>All eight probes ran through Bitloom Runner and the same pinned kas-container image, with exit 0: evaluated layers, busybox recipe lookup, busybox environment, devtool status, container-only local.conf, built package listing, dependency graph generation and container-only graph reading. The environment contained <strong>1,943 parsed variables</strong>, with MACHINE=qemux86-64 and PN=busybox. The graph contained <strong>12,654 parsed edges</strong>.</p>
 <p>The rootfs inventory utility was also exercised on the actual copied archive without extraction. The timing report found <strong>4,048 completed timestamp pairs</strong> and zero unmatched starts; the slowest compile was llvm-native at <strong>1,770 seconds</strong>. Task wall times overlap and do not sum to the build duration.</p>
 <p>Reproduce post-build probes with <code>PATH=&quot;$PWD/.venv/bin:$PATH&quot; python tools/probe_kas.py</code>. Local machine evidence is retained in <code>.validation/result.json</code>, <code>.validation/probes.json</code>, the SQLite history and original logs; generated rootfs files are ignored by Git.</p>
 <p><img src="assets/real-kas-build.png" alt="Completed actual kas-container build" /></p>

@@ -39,21 +39,21 @@ async def capture():
             svg = ROOT / f'docs/assets/{name}.svg'
             svg.write_text(terminal_svg(app, title))
             cairosvg.svg2png(url=str(svg), write_to=str(svg.with_suffix('.png')), scale=.8)
-        shot('real-kas-build', 'YoctoTUI · actual kas-container image build')
+        shot('real-kas-build', 'Bitloom · actual kas-container image build')
         app.query_one('#workspace', TabbedContent).active = 'workbench'
         app.query_one('#target', Input).value = 'busybox'
         app.query_one('#inspect-search', Input).value = 'MACHINE'
         app.load_inspection()
         await app.workers.wait_for_complete()
         await pilot.pause(.2)
-        shot('real-kas-environment', 'YoctoTUI · evaluated busybox environment from kas-container')
+        shot('real-kas-environment', 'Bitloom · evaluated busybox environment from kas-container')
         graph = next(r for r in app.history_rows.values() if json.loads(r['metadata']).get('action') == 'graph-read' and r['status'] == 'success')
         app.query_one('#inspect-kind', Select).value = 'graph'
         app.query_one('#inspect-search', Input).value = 'busybox'
         app.read_runtime_graph(Path(graph['log']))
         await app.workers.wait_for_complete()
         await pilot.pause(.2)
-        shot('real-kas-dependencies', 'YoctoTUI · actual task dependency graph from kas-container')
+        shot('real-kas-dependencies', 'Bitloom · actual task dependency graph from kas-container')
     app.store.close()
     print('Captured verified real image build from persisted history')
 
