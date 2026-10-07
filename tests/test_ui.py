@@ -126,3 +126,27 @@ async def test_runtime_graph_output_is_loaded_into_workbench(tmp_path):
         assert app.inspection_rows == [('image.do_build', 'busybox.do_compile')]
         assert app.query_one('#inspect-table').row_count == 1
     app.store.close()
+
+
+async def test_analysis_content_search_log_report_and_export(tmp_path):
+    config = make_demo(tmp_path / 'demo')
+    app = YoctoApp(config, tmp_path / 'state')
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.4)
+        app.query_one('#workspace', TabbedContent).active = 'analysis'
+        app.query_one('#analysis-query', Input).value = 'SRC_URI'
+        app.run_analysis()
+        await app.workers.wait_for_complete()
+        assert 'file://agent.c' in app.analysis_text
+        app.export_analysis()
+        assert len(list((tmp_path/'state/exports').glob('analysis-*.txt'))) == 1
+        log = tmp_path/'sstate.log'
+        log.write_text('Sstate summary: Wanted 10 Local 5 Mirrors 0 Missed 5 Current 0\n')
+        app.query_one('#analysis-kind', Select).value = 'sstate'
+        app.query_one('#analysis-first', Input).value = str(log)
+        await pilot.pause(.2)
+        assert not app.query_one('#analysis-query', Input).display
+        app.run_analysis()
+        await app.workers.wait_for_complete()
+        assert '50.0%' in app.analysis_text
+    app.store.close()
