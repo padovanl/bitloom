@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT))
 from yoctotui.app import YoctoApp
 from terminal_capture import terminal_svg
 from yoctotui.models import Profile, Settings
-from textual.widgets import Input
+from textual.widgets import Input, Select, TabbedContent
 
 
 async def capture():
@@ -35,9 +35,25 @@ async def capture():
         app.select_job(job['id'], job['log'])
         app.query_one('#log-search', Input).value = 'Tasks Summary'
         await pilot.pause(.5)
-        svg = ROOT / 'docs/assets/real-kas-build.svg'
-        svg.write_text(terminal_svg(app, 'YoctoTUI · actual kas-container image build'))
-        cairosvg.svg2png(url=str(svg), write_to=str(svg.with_suffix('.png')), scale=.8)
+        def shot(name, title):
+            svg = ROOT / f'docs/assets/{name}.svg'
+            svg.write_text(terminal_svg(app, title))
+            cairosvg.svg2png(url=str(svg), write_to=str(svg.with_suffix('.png')), scale=.8)
+        shot('real-kas-build', 'YoctoTUI · actual kas-container image build')
+        app.query_one('#workspace', TabbedContent).active = 'workbench'
+        app.query_one('#target', Input).value = 'busybox'
+        app.query_one('#inspect-search', Input).value = 'MACHINE'
+        app.load_inspection()
+        await app.workers.wait_for_complete()
+        await pilot.pause(.2)
+        shot('real-kas-environment', 'YoctoTUI · evaluated busybox environment from kas-container')
+        graph = next(r for r in app.history_rows.values() if json.loads(r['metadata']).get('action') == 'graph-read' and r['status'] == 'success')
+        app.query_one('#inspect-kind', Select).value = 'graph'
+        app.query_one('#inspect-search', Input).value = 'busybox'
+        app.read_runtime_graph(Path(graph['log']))
+        await app.workers.wait_for_complete()
+        await pilot.pause(.2)
+        shot('real-kas-dependencies', 'YoctoTUI · actual task dependency graph from kas-container')
     app.store.close()
     print('Captured verified real image build from persisted history')
 
