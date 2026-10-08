@@ -116,3 +116,7 @@ The manual release workflow was validated with actionlint 1.7.12. Local packagin
 ## Bitloom namespace migration
 
 The distribution, Python imports, entry point, default state directory, release assets and helper scripts now use Bitloom consistently. The full suite passed 59 tests after renaming. Version 0.2.2 source, wheel and Debian assets were generated with the new names; the Debian package was installed in a disposable container, where the Bitloom CLI and runtime import/version succeeded. References to the external yoctui project remain in the inspiration credit. Historic terminal captures retain the original checkout paths shown when they were recorded.
+
+## Live elapsed time and terminal navigation
+
+A regression test runs a real four-second subprocess and verifies that its history duration advances before completion and stays fixed afterward. F8/F9 navigation is exercised with keys decoded from actual terminal escape sequences, rather than synthetic Alt events. These replace Alt+number as the documented navigation keys.

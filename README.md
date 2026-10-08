@@ -129,7 +129,7 @@ The **Analysis** selector connects signature explanations, failure diagnosis, ru
 | F5 | Open build interruption options |
 | F6 | Retry the selected job |
 | F7 | Preview and save a terminal theme |
-| Alt+1…5 | Builds, metadata, task logs, workbench, caches |
+| F8 / F9 | Previous / next section, including Analysis and Help |
 | Ctrl+L | Focus build log search |
 | Ctrl+P | Textual command palette |
 | Ctrl+Q | Detach from service and exit; embedded/demo stops owned jobs |
@@ -137,7 +137,7 @@ The **Analysis** selector connects signature explanations, failure diagnosis, ru
 | Tab / Shift+Tab | Move focus |
 | Escape | Close a dialog |
 
-The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace. Below 105 columns or 30 rows, tabs replace the navigator and side panes disappear. Short terminals also hide the task monitor and overview. Below 75 columns or 22 rows, logs take priority over history and metrics; resize to restore those panels. Command, profile and theme dialogs also fit within the terminal and scroll when necessary. Navigation with **Alt+1–5**, commands with **F2**, profiles with **F4** and themes with **F7** remain available. Layout tests cover **160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20 and 140 × 20**, including restoration after resizing. See the [compact capture](docs/assets/compact.png) and [small terminal capture](docs/assets/tiny.png). Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
+The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace. Below 105 columns or 30 rows, tabs replace the navigator and side panes disappear. Short terminals also hide the task monitor and overview. Below 75 columns or 22 rows, logs take priority over history and metrics; resize to restore those panels. Command, profile and theme dialogs also fit within the terminal and scroll when necessary. Navigation with **F8/F9**, commands with **F2**, profiles with **F4** and themes with **F7** remain available. Layout tests cover **160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20 and 140 × 20**, including restoration after resizing. See the [compact capture](docs/assets/compact.png) and [small terminal capture](docs/assets/tiny.png). Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
 
 ## Build interruption and recovery
 
@@ -302,3 +302,9 @@ Bitloom is released under the [MIT License](LICENSE). Bundled Python dependencie
 Press F7 and try **Soft Slate** (muted dark gray) or **Linen** (warm light background). **Nord** and **Catppuccin Mocha** are other softer choices. Focusing a log/report pane changes its border, keeping its background stable.
 
 If Windows Terminal/WSL shows saturated blue blocks instead of the documented colors, check `echo "$TERM / $COLORTERM"`. On a terminal supporting true color, launch with `COLORTERM=truecolor .venv/bin/bitloom --demo` (or your usual profile arguments). This declares terminal capability; it does not change the saved palette.
+
+### Navigation and elapsed time
+
+F8 selects the previous workspace section; F9 selects the next, including Analysis and Help. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.
+
+For step-by-step layer creation, new recipes, .bbappend files and rebuilding with kas, follow [Hands-on kas: layers and recipes](docs/guide.md#hands-on-kas-layers-and-recipes).
