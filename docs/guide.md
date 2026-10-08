@@ -196,3 +196,97 @@ Press **F7** or the toolbar's **Themes** button. Choose a palette to preview it 
 The choice is a UI preference stored in `appearance.json` under the selected state directory, independent of build profiles. Missing, malformed or unknown saved themes fall back to Bitloom. Themes do not change build settings or stop queued work.
 
 ![Twelve actual terminal theme previews](assets/themes.gif)
+
+## Build, launch and try the local Yocto workspace
+
+Run these commands from the repository root in a Linux/WSL terminal. Bitloom is a Python application: editable installation is sufficient for development; no native compilation is required.
+
+### Install for development
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+bitloom --help
+bitloom --demo
+```
+
+If themes appear monochrome and your shell sets `NO_COLOR`, run `unset NO_COLOR` before launching.
+
+In this prepared workspace, `.venv` and kas-container already exist. You can start directly with `source .venv/bin/activate`.
+
+### Build distributable packages
+
+```bash
+source .venv/bin/activate
+python -m pip install 'setuptools>=61' build wheel
+python -m build --no-isolation
+```
+
+Outputs are `dist/yoctotui-0.1.0-py3-none-any.whl` and `dist/yoctotui-0.1.0.tar.gz`. The distribution name remains yoctotui; its executable is **bitloom**. The source archive includes the English manuals, Pages assets, examples and integration tools. To install the wheel into another environment:
+
+```bash
+python3 -m venv /tmp/bitloom-wheel
+/tmp/bitloom-wheel/bin/python -m pip install dist/yoctotui-0.1.0-py3-none-any.whl
+/tmp/bitloom-wheel/bin/bitloom --help
+```
+
+### Open the already built local test workspace
+
+The verified local workspace uses **Poky yocto-5.0.8 / Scarthgap**, **qemux86-64**, **core-image-minimal** and a pinned kas container image. Yocto tools execute inside Docker; the host runs only the TUI and container wrapper. `.validation` is local generated state and is intentionally absent from a fresh Git clone.
+
+```bash
+source .venv/bin/activate
+python tools/prepare_validation.py
+bitloom --config .validation/profiles.json --state .validation
+```
+
+The helper recreates the test profile from `.validation/result.json` when available. It preserves history and other profiles, uses the recorded workspace and does not build anything. On this machine the recorded directory is `/tmp/yoctotui-kas-validation`; with Docker Snap, its contents are in the daemon's namespace and may appear empty on the host. In the container, the build directory is `/work/build`. Use Analysis runtime tools to browse it.
+
+1. Keep `core-image-minimal` in the top target field and press **Build** for an incremental image build. Existing matching task outputs are reused.
+2. Select its history row to follow the complete log. **F2** opens recipe tasks, fetch, SDK, layers and devtool actions; change the target to `busybox` to inspect or build one recipe.
+3. In **Analysis**, choose **Build preflight** and enter `/work/build`. For **Package provenance**, set the top target back to `core-image-minimal` and enter `/bin/sh`; the verified inclusion chain is `packagegroup-core-boot → busybox`.
+4. Try **Runtime directory** with `/work/build/tmp/deploy/images/qemux86-64`, or **Capture snapshot** with `/work/build`. **F7** previews and saves a theme.
+5. **Ctrl+Q** detaches while the service continues. Launch the same command again to reconnect. **F5** opens explicit interruption choices; choose Let finish if you want the build to complete.
+
+```bash
+bitloom --state .validation --service-status
+bitloom --state .validation --service-stop
+```
+
+The last command stops an idle service only. Stop it before running integration scripts that need exclusive access to `.validation`; closing the TUI alone does not stop the service.
+
+### Reproduce on a fresh machine
+
+Docker must be available and the build work directory must be on a Linux filesystem. Install the official wrapper if needed:
+
+```bash
+source .venv/bin/activate
+curl -fL https://raw.githubusercontent.com/siemens/kas/4.8.1/kas-container -o .venv/bin/kas-container
+chmod +x .venv/bin/kas-container
+python tools/prepare_validation.py --work /tmp/yoctotui-kas-validation --engine docker
+bitloom --config .validation/profiles.json --state .validation
+```
+
+Press Build to initialize and build the image. The first build downloads repositories/sources and needs substantially more time and disk than the verified incremental run. The helper does not repair container mount permissions: if Docker Snap creates the dedicated mount as root, follow the [runtime troubleshooting guide](#troubleshooting).
+
+For scripted verification, with the service stopped:
+
+```bash
+python tools/validate_kas.py --work /tmp/yoctotui-kas-validation --engine docker
+python tools/prepare_validation.py
+python tools/probe_kas.py
+python tools/probe_workflows.py
+```
+
+`validate_kas.py` builds the image and verifies its rootfs; probes then exercise real runtime operations. `probe_workflows.py` submits a warm build to a separate persistent service and stops that service after completion. Unit/UI checks run with `python -m pytest -q`; they do not require a Yocto build.
+
+### Preview the Pages site locally
+
+```bash
+python -m pip install '.[docs]'
+python tools/build_docs.py
+python -m http.server 8000 --directory docs
+```
+
+Open `http://localhost:8000`. The Pages workflow is included, but this workspace has no GitHub remote and no public deployment yet.
