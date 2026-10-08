@@ -114,3 +114,18 @@ def test_snapshot_comparison_normalizes_manifest_timestamps():
     assert '-busybox arch 1.0' in text and '+busybox arch 1.1' in text
     assert 'arch/busybox: 100 → 120' in text
     assert '202601' not in text
+
+async def test_create_runtime_file_is_atomic_and_never_overwrites(tmp_path):
+    profile=Profile(name='local',root=str(tmp_path))
+    path=tmp_path/'new-layer'/'recipes-example'/'hello_1.0.bb'
+    result=await request(profile,'create',str(path),text='SUMMARY = "Hello"\n')
+    assert result['path']==str(path)
+    assert path.read_text()=='SUMMARY = "Hello"\n'
+    with pytest.raises(ValueError):
+        await request(profile,'create',str(path),text='overwrite')
+    assert path.read_text()=='SUMMARY = "Hello"\n'
+    link=tmp_path/'dangling.bb'
+    link.symlink_to(tmp_path/'missing.bb')
+    with pytest.raises(ValueError):
+        await request(profile,'create',str(link),text='overwrite')
+    assert link.is_symlink() and not (tmp_path/'missing.bb').exists()

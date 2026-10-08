@@ -13,6 +13,18 @@ def git(path,*args):
 if op=='read':
  if p.stat().st_size>2097152: raise ValueError('File exceeds 2 MiB preview limit')
  result={'path':str(p.resolve()),'text':p.read_text(errors='replace'),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+elif op=='create':
+ data=request['text'].encode()
+ if len(data)>2097152: raise ValueError('File exceeds 2 MiB creation limit')
+ p=p.absolute(); p.parent.mkdir(parents=True,exist_ok=True)
+ fd,name=tempfile.mkstemp(dir=p.parent)
+ try:
+  os.fchmod(fd,0o644)
+  with os.fdopen(fd,'wb') as stream: stream.write(data); stream.flush(); os.fsync(stream.fileno())
+  os.link(name,p) # Atomic no-overwrite publication, including dangling symlinks.
+ finally:
+  if os.path.exists(name): os.unlink(name)
+ result={'path':str(p),'sha256':hashlib.sha256(data).hexdigest()}
 elif op=='write':
  if p.is_symlink(): raise ValueError('Refusing a symlink edit')
  old=p.read_bytes()

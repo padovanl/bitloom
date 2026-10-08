@@ -290,3 +290,66 @@ async def test_live_elapsed_and_terminal_navigation(tmp_path):
         await pilot.pause(1.2)
         assert table.get_cell(job.id,column)==final
     app.store.close()
+
+async def test_create_recipe_from_tui_and_detect_external_file(tmp_path):
+    from bitloom.screens import NewFileScreen
+    from textual.widgets import Button
+    app=BitloomApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    async with app.run_test(size=(140,42)) as pilot:
+        await pilot.pause(.3)
+        app.query_one('#workspace',TabbedContent).active='metadata'
+        app.query_one('#new-file',Button).press()
+        await pilot.pause(.2)
+        assert isinstance(app.screen,NewFileScreen)
+        path=tmp_path/'demo/meta-demo/recipes-example/new/new_1.0.bb'
+        app.screen.query_one('#new-path',Input).value=str(path)
+        app.screen.query_one('#new-template',Select).value='recipe'
+        await pilot.pause(.1)
+        assert 'do_install' in app.screen.query_one('#new-content',TextArea).text
+        app.screen.query_one('#create-file',Button).press()
+        await pilot.pause(.8)
+        assert path.exists()
+        assert any(e.path==path for e in app.entries)
+        external=path.with_name('external_1.0.bb')
+        external.write_text('SUMMARY = "Created externally"\n')
+        await pilot.pause(5.5)
+        assert any(e.path==external for e in app.entries)
+        previous=next(e.size for e in app.entries if e.path==external)
+        external.write_text('SUMMARY = "Externally modified recipe content"\n')
+        await pilot.pause(5.5)
+        assert next(e.size for e in app.entries if e.path==external)!=previous
+        external.unlink()
+        await pilot.pause(5.5)
+        assert not any(e.path==external for e in app.entries)
+    app.store.close()
+
+async def test_open_runtime_directory_refreshes_automatically(tmp_path):
+    app=BitloomApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    async with app.run_test(size=(120,36)) as pilot:
+        await pilot.pause(.3)
+        app.query_one('#workspace',TabbedContent).active='analysis'
+        app.query_one('#analysis-kind',Select).value='runtime-list'
+        app.query_one('#analysis-first',Input).value=str(tmp_path)
+        await app.run_analysis().wait()
+        assert 'external-runtime.conf' not in app.analysis_text
+        (tmp_path/'external-runtime.conf').write_text('Changed outside Bitloom\n')
+        await pilot.pause(15.5)
+        assert 'external-runtime.conf' in app.analysis_text
+    app.store.close()
+
+async def test_new_generic_file_opens_containing_directory(tmp_path):
+    from textual.widgets import Button
+    app=BitloomApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    async with app.run_test(size=(120,36)) as pilot:
+        await pilot.pause(.2)
+        app.new_file()
+        await pilot.pause(.2)
+        path=tmp_path/'demo/notes.txt'
+        app.screen.query_one('#new-path',Input).value=str(path)
+        app.screen.query_one('#new-content',TextArea).load_text('My notes\n')
+        app.screen.query_one('#create-file',Button).press()
+        await pilot.pause(1)
+        assert path.read_text()=='My notes\n'
+        assert app.query_one('#workspace',TabbedContent).active=='analysis'
+        assert 'notes.txt' in app.analysis_text
+    app.store.close()

@@ -402,3 +402,13 @@ SUMMARY:append = " (Bitloom experiment)"
 Evaluate BusyBox's environment and inspect SUMMARY to verify the append. For source development use Modify recipe (devtool modify), edit the extracted source directory reported by devtool, then Devtool build. Commit source changes before Devtool finish into `/work/meta-bitloom`; that exports the recipe changes/patches to your layer. Devtool reset removes workspace integration when you want to return to the layer recipe. Source files may remain, so inspect them before removing anything.
 
 References: [Yocto layers](https://docs.yoctoproject.org/dev/dev-manual/layers.html), [kas configuration](https://kas.readthedocs.io/en/4.8.2/userguide/project-configuration.html).
+
+## Create files and refresh external changes
+
+Metadata's **New file** button and Analysis's **Create runtime file** operation open an editor with an absolute destination path and templates for empty text, private example recipes and .bbappend files. Select the template before entering your content. **Create file** creates missing parent folders and atomically publishes the file without overwriting existing files or symlinks. Builds queued or running in this session must finish before metadata creation or editing.
+
+With kas/container profiles use runtime paths, for example `/work/meta-bitloom/recipes-example/hello/hello_1.0.bb`. The directory is shown in Analysis after creation. Local metadata remains a host filesystem index; container-only files are viewed through runtime directory/file operations. Host metadata additions, edits and deletions are detected every five seconds and refresh the index when changed. Open runtime directory listings refresh every fifteen seconds while idle, with a 2,000-entry limit. Dialogs pause automatic scans. F3 rescans local metadata; Analyze refreshes the current runtime directory immediately.
+
+To follow the hands-on tutorial entirely through Bitloom: use F2 Create layer for `/work/meta-bitloom`, then New file to create the .bb recipe and any .bbappend files. Create the kas experiment YAML in the host checkout using your editor, since a container profile's file dialog targets the container filesystem. Register the layer in kas as described above. Existing container files can be edited through Analysis → Edit runtime file.
+
+![New-file editor with sample recipe](assets/file-creation.png)
