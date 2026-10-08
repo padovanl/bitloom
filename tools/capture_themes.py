@@ -6,9 +6,9 @@ import tempfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from yoctotui.app import YoctoApp
-from yoctotui.cli import make_demo
-from yoctotui.themes import THEMES
+from bitloom.app import BitloomApp
+from bitloom.cli import make_demo
+from bitloom.themes import THEMES
 from terminal_capture import terminal_svg
 
 async def main():
@@ -17,7 +17,7 @@ async def main():
     os.environ.pop("NO_COLOR", None)
     frames=[]
     with tempfile.TemporaryDirectory(prefix='bitloom-themes-') as work:
-        root=Path(work); app=YoctoApp(make_demo(root/'demo'),root/'state')
+        root=Path(work); app=BitloomApp(make_demo(root/'demo'),root/'state')
         async with app.run_test(size=(120,36)) as pilot:
             await pilot.pause(.5)
             for name in THEMES:

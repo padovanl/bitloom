@@ -51,8 +51,7 @@ jobs:
           sudo dpkg -i "dist/release/bitloom_${RELEASE_VERSION}_all.deb"
           cd /tmp
           /usr/bin/bitloom --help
-          /usr/bin/yoctotui --help
-          /usr/bin/python3 -c 'import os, sys; sys.path.insert(0, "/opt/bitloom/lib"); import yoctotui; assert yoctotui.__version__ == os.environ["RELEASE_VERSION"]'
+          /usr/bin/python3 -c 'import os, sys; sys.path.insert(0, "/opt/bitloom/lib"); import bitloom; assert bitloom.__version__ == os.environ["RELEASE_VERSION"]'
       - name: Publish GitHub release
         run: |
           gh release create "v${RELEASE_VERSION}" dist/release/* \

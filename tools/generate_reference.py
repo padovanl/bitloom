@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from yoctotui.commands import ACTIONS
+from bitloom.commands import ACTIONS
 lines = ['# Command reference', '', 'All actions use the selected profile/runtime. Required inputs appear in the command dialog.', 'Commands may require classes or options supplied by your selected Yocto release.', '', '| ID | Group | Operation | Required input | Tool / arguments |', '| --- | --- | --- | --- | --- |']
 for a in ACTIONS:
     tool = ' '.join([a.tool, *a.args]).strip() or 'custom argv'

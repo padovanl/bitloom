@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 *.egg-info/
-.yoctotui/
+.bitloom/
 build/
 dist/
 .validation/

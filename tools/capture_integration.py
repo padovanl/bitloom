@@ -7,9 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from yoctotui.app import YoctoApp
+from bitloom.app import BitloomApp
 from terminal_capture import terminal_svg
-from yoctotui.models import Profile, Settings
+from bitloom.models import Profile, Settings
 from textual.widgets import Input, Select, TabbedContent
 
 
@@ -25,7 +25,7 @@ async def capture():
     settings.active = 'kas-integration'
     settings.save()
     os.environ.pop('NO_COLOR', None)
-    app = YoctoApp(config, state)
+    app = BitloomApp(config, state)
     async with app.run_test(size=(140, 44)) as pilot:
         await pilot.pause(.5)
         jobs = [r for r in app.history_rows.values() if r['status'] == 'success' and 'core-image-minimal' in r['title']]

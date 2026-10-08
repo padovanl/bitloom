@@ -12,9 +12,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from yoctotui.app import YoctoApp
+from bitloom.app import BitloomApp
 from terminal_capture import terminal_svg
-from yoctotui.cli import make_demo
+from bitloom.cli import make_demo
 from textual.widgets import Input, TabbedContent, Tree, DataTable
 
 
@@ -23,10 +23,10 @@ async def capture():
     from PIL import Image
     output = ROOT / 'docs/assets'
     output.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='yoctotui-docs-') as work:
+    with tempfile.TemporaryDirectory(prefix='bitloom-docs-') as work:
         root = Path(work)
         os.environ.pop('NO_COLOR', None)
-        app = YoctoApp(make_demo(root / 'demo'), root / 'state')
+        app = BitloomApp(make_demo(root / 'demo'), root / 'state')
         frames = []
         async with app.run_test(size=(140, 42)) as pilot:
             await pilot.pause(.8)
@@ -67,7 +67,7 @@ async def capture():
             app.query_one('#workspace', TabbedContent).active = 'healthtab'
             await shot('health')
             app.query_one('#workspace', TabbedContent).active = 'workbench'
-            from yoctotui.models import read_assignments
+            from bitloom.models import read_assignments
             app.inspection_rows = sorted(read_assignments(app.profile.build_path / 'conf/local.conf').items())
             app.render_inspection()
             await shot('workbench')
@@ -76,8 +76,8 @@ async def capture():
             app.run_analysis()
             await app.workers.wait_for_complete()
             await shot('analysis')
-            from yoctotui.runner import Job
-            from yoctotui.stop import StopScreen
+            from bitloom.runner import Job
+            from bitloom.stop import StopScreen
             demo_stop = Job(app.profile, 'Demo: interruption options', ['bitbake', 'demo-image'], at_risk={'demo-agent'})
             app.push_screen(StopScreen(demo_stop))
             await shot('interruption')

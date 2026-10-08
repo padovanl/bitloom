@@ -13,9 +13,9 @@ def test_reject_invalid_release_versions(value):
 
 
 def test_version_applied_to_distribution_and_runtime(tmp_path):
-    (tmp_path / 'yoctotui').mkdir()
+    (tmp_path / 'bitloom').mkdir()
     project = tmp_path / 'pyproject.toml'
-    runtime = tmp_path / 'yoctotui/__init__.py'
+    runtime = tmp_path / 'bitloom/__init__.py'
     project.write_text('[project]\nversion = "0.1.0"\n')
     runtime.write_text('__version__ = "0.1.0"\n')
     set_version(tmp_path, release_version('1.2.3'))

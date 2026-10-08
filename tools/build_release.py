@@ -21,7 +21,7 @@ def release_version(value: str) -> str:
 
 def set_version(source: Path, version: str) -> None:
     for filename, pattern in [('pyproject.toml', r'^version = ".*"$'),
-                              ('yoctotui/__init__.py', r'^__version__ = ".*"$')]:
+                              ('bitloom/__init__.py', r'^__version__ = ".*"$')]:
         path = source / filename
         replacement = f'version = "{version}"' if filename == 'pyproject.toml' else f'__version__ = "{version}"'
         text, count = re.subn(pattern, replacement, path.read_text(), flags=re.MULTILINE)
@@ -37,7 +37,7 @@ def run(*args: str, cwd: Path | None = None) -> None:
 def build(version: str, output: Path) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    names = [f'yoctotui-{version}.tar.gz', f'yoctotui-{version}-py3-none-any.whl',
+    names = [f'bitloom-{version}.tar.gz', f'bitloom-{version}-py3-none-any.whl',
              f'bitloom_{version}_all.deb', 'SHA256SUMS']
     if any((output / name).exists() for name in names):
         raise RuntimeError('Release assets already exist in the output directory; use a fresh directory.')
@@ -49,7 +49,7 @@ def build(version: str, output: Path) -> None:
         source.mkdir()
         # Copy project sources only: never include local state, caches or virtualenvs.
         for name in ('LICENSE', 'README.md', 'pyproject.toml', 'MANIFEST.in', 'setup-demo.sh',
-                     'yoctotui', 'docs', 'tools', 'tests', 'examples', '.github'):
+                     'bitloom', 'docs', 'tools', 'tests', 'examples', '.github'):
             origin, target = ROOT / name, source / name
             if origin.is_dir():
                 shutil.copytree(origin, target, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
@@ -82,9 +82,8 @@ def build(version: str, output: Path) -> None:
         binary = package / 'usr/bin'
         binary.mkdir(parents=True)
         launcher = binary / 'bitloom'
-        launcher.write_text('#!/usr/bin/python3\nimport sys\nsys.path.insert(0, "/opt/bitloom/lib")\nfrom yoctotui.cli import main\nmain()\n')
+        launcher.write_text('#!/usr/bin/python3\nimport sys\nsys.path.insert(0, "/opt/bitloom/lib")\nfrom bitloom.cli import main\nmain()\n')
         launcher.chmod(0o755)
-        (binary / 'yoctotui').symlink_to('bitloom')
         documentation = package / 'usr/share/doc/bitloom'
         documentation.mkdir(parents=True)
         shutil.copy2(source / 'README.md', documentation / 'README.md')

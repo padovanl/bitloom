@@ -6,10 +6,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from yoctotui.models import Profile
-from yoctotui.reports import environment, dependencies
-from yoctotui.runner import Runner
-from yoctotui.store import Store
+from bitloom.models import Profile
+from bitloom.reports import environment, dependencies
+from bitloom.runner import Runner
+from bitloom.store import Store
 
 
 async def probe():

@@ -1,8 +1,8 @@
 """Real-browser smoke test for the static GitHub Pages documentation.
 
 pip install playwright
-PLAYWRIGHT_BROWSERS_PATH=/tmp/yoctotui-browsers python -m playwright install chromium
-PLAYWRIGHT_BROWSERS_PATH=/tmp/yoctotui-browsers python tools/check_docs.py
+PLAYWRIGHT_BROWSERS_PATH=/tmp/bitloom-browsers python -m playwright install chromium
+PLAYWRIGHT_BROWSERS_PATH=/tmp/bitloom-browsers python tools/check_docs.py
 """
 import functools
 import http.server

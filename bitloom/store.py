@@ -21,7 +21,7 @@ class Store:
         except BlockingIOError as exc:
             if self.lock:
                 self.lock.close()
-            raise ValueError("Another YoctoTUI session is using this state directory") from exc
+            raise ValueError("Another Bitloom session is using this state directory") from exc
         self.db = sqlite3.connect(directory / "history.sqlite3")
         (directory / "history.sqlite3").chmod(0o600)
         self.db.row_factory = sqlite3.Row

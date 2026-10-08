@@ -6,7 +6,7 @@
 
 ## Automated checks
 
-The expanded suite passed **51 unit and UI tests** on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.
+The expanded suite passed **59 unit and UI tests** on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.
 
 The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thread example. The same tests passed when executed outside that sandbox. This restriction is separate from application behavior.
 
@@ -23,7 +23,7 @@ The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thr
 | Image digest observed | sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476 |
 | Runtime | Docker, through kas-container |
 | Engine integration | Bitloom Runner, SQLite history, persistent streamed log |
-| Work | Dedicated /tmp/yoctotui-kas-validation mount in the Docker daemon namespace |
+| Work | Dedicated work mount recorded in .validation/result.json, in the Docker daemon namespace |
 | Output format | root filesystem tar.bz2 |
 | Threads | BB_NUMBER_THREADS=8, PARALLEL_MAKE=-j8 |
 | Initial sstate | Wanted 1,854; Local 0; Mirrors 0; Missed 1,854 |
@@ -111,4 +111,8 @@ The README and landing page open with an idle demo capture. Failure captures els
 
 ## Release packaging
 
-The manual release workflow was validated with actionlint 1.7.12. Local packaging generated versioned source archives, wheels, Debian packages and SHA256SUMS for 0.2.0 and 0.2.1; all checksum checks passed. Seven release tests verify stable version validation and synchronized distribution/runtime versions. The .deb was actually installed in a disposable kas container, where both `/usr/bin/bitloom --help` and the compatibility command succeeded and the runtime version was checked. No package was installed on the host. The final source, wheel and Debian package were also checked for the MIT license. This verifies local packaging; the GitHub release workflow has not been dispatched or published during this work.
+The manual release workflow was validated with actionlint 1.7.12. Local packaging generated versioned source archives, wheels, Debian packages and SHA256SUMS for 0.2.0 and 0.2.1; all checksum checks passed. Seven release tests verify stable version validation and synchronized distribution/runtime versions. The .deb was actually installed in a disposable kas container, where `/usr/bin/bitloom --help` succeeded and the runtime version was checked. No package was installed on the host. The final source, wheel and Debian package were also checked for the MIT license. This verifies local packaging; the GitHub release workflow has not been dispatched or published during this work.
+
+## Bitloom namespace migration
+
+The distribution, Python imports, entry point, default state directory, release assets and helper scripts now use Bitloom consistently. The full suite passed 59 tests after renaming. Version 0.2.2 source, wheel and Debian assets were generated with the new names; the Debian package was installed in a disposable container, where the Bitloom CLI and runtime import/version succeeded. References to the external yoctui project remain in the inspiration credit. Historic terminal captures retain the original checkout paths shown when they were recorded.

@@ -25,7 +25,7 @@ def walk_files(root: Path, limit: int = 20000):
         return
     count = 0
     for directory, dirs, files in os.walk(root, followlinks=False):
-        dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".yoctotui"})
+        dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".bitloom"})
         for name in sorted(files):
             path = Path(directory) / name
             if path.is_symlink():
@@ -48,7 +48,7 @@ def metadata(profile: Profile) -> list[Entry]:
     for root in roots:
         for directory, dirs, files in os.walk(root, followlinks=False):
             base = Path(directory)
-            dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".yoctotui", "tmp", "sstate-cache", "downloads"} and (base / d).resolve() not in skip)
+            dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".bitloom", "tmp", "sstate-cache", "downloads"} and (base / d).resolve() not in skip)
             for name in sorted(files):
                 p = base / name
                 if p.is_symlink():
