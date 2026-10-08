@@ -103,7 +103,7 @@ class Runner:
                     cache_lease.acquire()
                     cache_leases.append(cache_lease)
             if job.profile.mode == "container" and not job.profile.container_name:
-                job.managed_container = f"yoctotui-{job.id}"
+                job.managed_container = f"bitloom-{job.id}"
             inv = invocation(job.profile, job.command, job.managed_container)
             with job.log.open("w", buffering=1) as output:
                 output.write(f"$ {inv.display}\n")

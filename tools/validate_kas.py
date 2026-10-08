@@ -1,6 +1,6 @@
 """Run a genuine kas-container build through Bitloom's own Runner.
 
-Usage: PATH="$PWD/.venv/bin:$PATH" python tools/validate_kas.py --work /tmp/yoctotui-kas
+Usage: PATH="$PWD/.venv/bin:$PATH" python tools/validate_kas.py --work /tmp/bitloom-kas
 Requires Docker or Podman and kas-container. Does not install Yocto on the host.
 """
 import argparse
@@ -13,9 +13,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from yoctotui.models import Profile
-from yoctotui.runner import Runner
-from yoctotui.store import Store
+from bitloom.models import Profile
+from bitloom.runner import Runner
+from bitloom.store import Store
 
 
 KAS_IMAGE = 'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'
@@ -94,7 +94,7 @@ async def validate(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work', type=Path, default=Path('/tmp/yoctotui-kas-validation'))
+    parser.add_argument('--work', type=Path, default=Path('/tmp/bitloom-kas-validation'))
     parser.add_argument('--verify-only', action='store_true', help='Verify/export artifacts from a completed recorded build')
     parser.add_argument('--engine', choices=['docker', 'podman'], default='docker')
     raise SystemExit(asyncio.run(validate(parser.parse_args())))

@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "yoctotui"
+name = "bitloom"
 version = "0.1.0"
 description = "A terminal cockpit for Yocto, BitBake, kas and container workflows"
 readme = "README.md"
@@ -22,11 +22,10 @@ dev = ["pytest>=8", "pytest-asyncio>=0.24"]
 docs = ["pillow>=10", "cairosvg>=2.7", "markdown-it-py>=3"]
 
 [project.scripts]
-bitloom = "yoctotui.cli:main"
-yoctotui = "yoctotui.cli:main"
+bitloom = "bitloom.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["yoctotui*"]
+include = ["bitloom*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
-from yoctotui.analysis import metadata_search, manifest_diff, sstate_report, warning_report
-from yoctotui.inspectors import Entry
+from bitloom.analysis import metadata_search, manifest_diff, sstate_report, warning_report
+from bitloom.inspectors import Entry
 
 
 def test_metadata_content_search_limits_and_missing_files(tmp_path):

@@ -3,14 +3,14 @@ from pathlib import Path
 
 from textual.widgets import Input, Select, TabbedContent, TextArea
 
-from yoctotui.app import YoctoApp
-from yoctotui.cli import make_demo
-from yoctotui.screens import ActionScreen, ProfilesScreen
+from bitloom.app import BitloomApp
+from bitloom.cli import make_demo
+from bitloom.screens import ActionScreen, ProfilesScreen
 
 
 async def test_app_tabs_modals_filters_and_demo(tmp_path):
     config = make_demo(tmp_path / 'demo')
-    app = YoctoApp(config, tmp_path / 'state')
+    app = BitloomApp(config, tmp_path / 'state')
     async with app.run_test(size=(150, 48)) as pilot:
         await pilot.pause(.8)
         assert len(app.entries) >= 3
@@ -41,7 +41,7 @@ async def test_app_tabs_modals_filters_and_demo(tmp_path):
 async def test_ui_job_and_error_search(tmp_path):
     import sys
     config = make_demo(tmp_path / 'demo')
-    app = YoctoApp(config, tmp_path / 'state')
+    app = BitloomApp(config, tmp_path / 'state')
     async with app.run_test(size=(140, 44)) as pilot:
         await pilot.pause(.4)
         job = app.runner.submit(app.profile, 'test failure', [sys.executable, '-c', 'print("ERROR: compiler failed"); exit(3)'])
@@ -59,7 +59,7 @@ async def test_ui_job_and_error_search(tmp_path):
 async def test_terminal_navigation_preview_and_pause(tmp_path):
     from textual.widgets import Button, RichLog, Tree
     config = make_demo(tmp_path / 'demo')
-    app = YoctoApp(config, tmp_path / 'state')
+    app = BitloomApp(config, tmp_path / 'state')
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause(.5)
         await pilot.press('alt+2')
@@ -95,7 +95,7 @@ async def test_terminal_navigation_preview_and_pause(tmp_path):
 async def test_background_output_survives_command_dialog(tmp_path):
     import sys
     config = make_demo(tmp_path / 'demo')
-    app = YoctoApp(config, tmp_path / 'state')
+    app = BitloomApp(config, tmp_path / 'state')
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause(.3)
         job = app.runner.submit(app.profile, 'background', [sys.executable, '-c', 'import time; time.sleep(.3); print("NOTE: background output"); time.sleep(.3)'])
@@ -114,7 +114,7 @@ async def test_background_output_survives_command_dialog(tmp_path):
 async def test_runtime_graph_output_is_loaded_into_workbench(tmp_path):
     import sys
     config = make_demo(tmp_path / 'demo')
-    app = YoctoApp(config, tmp_path / 'state')
+    app = BitloomApp(config, tmp_path / 'state')
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause(.3)
         app.query_one('#workspace', TabbedContent).active = 'workbench'
@@ -130,7 +130,7 @@ async def test_runtime_graph_output_is_loaded_into_workbench(tmp_path):
 
 async def test_analysis_content_search_log_report_and_export(tmp_path):
     config = make_demo(tmp_path / 'demo')
-    app = YoctoApp(config, tmp_path / 'state')
+    app = BitloomApp(config, tmp_path / 'state')
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause(.4)
         app.query_one('#workspace', TabbedContent).active = 'analysis'
@@ -153,16 +153,16 @@ async def test_analysis_content_search_log_report_and_export(tmp_path):
 
 async def test_persistent_tui_detaches_and_reconnects(tmp_path):
     import sys
-    from yoctotui.daemon import rpc
+    from bitloom.daemon import rpc
     config=make_demo(tmp_path/'demo'); state=tmp_path/'persistent'
-    app=YoctoApp(config,state,persistent=True)
+    app=BitloomApp(config,state,persistent=True)
     async with app.run_test(size=(140,42)) as pilot:
         await pilot.pause(.3)
         job=app.runner.submit(app.profile,'Detached UI probe',[sys.executable,'-c','import time; time.sleep(1); print("completed without UI")'])
         app.action_quit()
         await pilot.pause(.3)
     await asyncio.sleep(1)
-    reopened=YoctoApp(config,state,persistent=True)
+    reopened=BitloomApp(config,state,persistent=True)
     try:
         async with reopened.run_test(size=(140,42)) as pilot:
             await pilot.pause(.8)
@@ -176,11 +176,11 @@ async def test_persistent_tui_detaches_and_reconnects(tmp_path):
 
 async def test_all_themes_preview_cancel_and_persist(tmp_path):
     import json
-    from yoctotui.themes import THEMES
-    from yoctotui.screens import ThemeScreen
+    from bitloom.themes import THEMES
+    from bitloom.screens import ThemeScreen
     from textual.widgets import Button
     config=make_demo(tmp_path/'demo'); state=tmp_path/'state'
-    app=YoctoApp(config,state)
+    app=BitloomApp(config,state)
     async with app.run_test(size=(140,42)) as pilot:
         await pilot.pause(.3)
         await pilot.press('f7'); await pilot.pause(.2)
@@ -207,13 +207,13 @@ async def test_all_themes_preview_cancel_and_persist(tmp_path):
         assert app.theme=='Paper'
         assert json.loads((state/'appearance.json').read_text())['theme']=='Paper'
     app.store.close()
-    restored=YoctoApp(config,state)
+    restored=BitloomApp(config,state)
     assert restored.theme=='Paper'
     restored.store.close()
 
 async def test_responsive_terminal_sizes_preserve_log_and_navigation(tmp_path):
     from textual.widgets import RichLog, Button
-    app=YoctoApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    app=BitloomApp(make_demo(tmp_path/'demo'),tmp_path/'state')
     async with app.run_test(size=(160,50)) as pilot:
         await pilot.pause(.3)
         for width,height in [(160,50),(120,36),(90,28),(80,24),(60,20),(140,20),(160,50)]:
@@ -247,7 +247,7 @@ async def test_responsive_terminal_sizes_preserve_log_and_navigation(tmp_path):
 
 async def test_report_focus_keeps_background_stable(tmp_path):
     from textual.widgets import RichLog
-    app=YoctoApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    app=BitloomApp(make_demo(tmp_path/'demo'),tmp_path/'state')
     async with app.run_test(size=(120,36)) as pilot:
         for name in ('Bitloom','Soft Slate','Linen'):
             app.theme=name

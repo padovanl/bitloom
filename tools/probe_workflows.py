@@ -6,10 +6,10 @@ import sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from yoctotui.daemon import ensure_service,rpc
-from yoctotui.models import Profile
-from yoctotui.runtime import request
-from yoctotui.workflows import bundle,compare,preflight_report
+from bitloom.daemon import ensure_service,rpc
+from bitloom.models import Profile
+from bitloom.runtime import request
+from bitloom.workflows import bundle,compare,preflight_report
 
 async def main():
     evidence=json.loads((ROOT/'.validation/result.json').read_text())

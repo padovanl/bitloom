@@ -13,21 +13,21 @@ sudo apt install ./bitloom_1.2.3_all.deb
 bitloom --demo
 ```
 
-Requires Python 3.10+ on Debian/Ubuntu. Python application dependencies are included under `/opt/bitloom/lib`; no pip installation is needed. The package also provides the `yoctotui` compatibility command. Docker, Podman, kas and Yocto remain separate tools for real builds. Remove Bitloom with `sudo apt remove bitloom`.
+Requires Python 3.10+ on Debian/Ubuntu. Python application dependencies are included under `/opt/bitloom/lib`; no pip installation is needed. Docker, Podman, kas and Yocto remain separate tools for real builds. Remove Bitloom with `sudo apt remove bitloom`.
 
 ### Other Linux distributions / WSL2
 
-Download `yoctotui-1.2.3.tar.gz` and install in a virtual environment:
+Download `bitloom-1.2.3.tar.gz` and install in a virtual environment:
 
 ```bash
-tar -xzf yoctotui-1.2.3.tar.gz
-cd yoctotui-1.2.3
+tar -xzf bitloom-1.2.3.tar.gz
+cd bitloom-1.2.3
 python3 -m venv .venv
 .venv/bin/python -m pip install .
 .venv/bin/bitloom --demo
 ```
 
-Alternatively, install the release wheel with `.venv/bin/python -m pip install /path/to/yoctotui-1.2.3-py3-none-any.whl`. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.
+Alternatively, install the release wheel with `.venv/bin/python -m pip install /path/to/bitloom-1.2.3-py3-none-any.whl`. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.
 
 ### Verify downloaded assets
 
@@ -37,13 +37,13 @@ Download `SHA256SUMS` alongside the packages, then run `sha256sum --check --igno
 
 Run `./setup-demo.sh` from the cloned checkout to create or reuse `.venv`, install dependencies and launch the sample TUI. Requires Bash, Python 3.10+ with venv support on Linux or WSL2, and internet access for installation. No Docker, kas or Yocto installation is needed for the sample data.
 
-Use `./setup-demo.sh --no-launch` to prepare without launching, then `.venv/bin/bitloom --demo` to start later. `--dev` installs test dependencies; `--python python3.12` or `PYTHON` selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under `.yoctotui/demo` in the checkout.
+Use `./setup-demo.sh --no-launch` to prepare without launching, then `.venv/bin/bitloom --demo` to start later. `--dev` installs test dependencies; `--python python3.12` or `PYTHON` selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under `.bitloom/demo` in the checkout.
 
 The terminal adapts while resizing: below 105 columns or 30 rows it hides the navigator and side panes; below 30 rows it also hides the overview. Below 75 columns or 22 rows it hides history and metrics to preserve output. Resize to restore panels. Alt+1–5 switches sections and F2/F4/F7 opens commands/profiles/themes even when toolbar controls are hidden. Verified sizes range from 60 × 20 to 160 × 50, including a wide 140 × 20 terminal.
 
 ## Profiles and paths
 
-Profiles are local JSON stored at `.yoctotui/profiles.json` by default. State is stored at `.yoctotui/`; both paths can be set on the command line. The file is atomically replaced with mode 0600. Profile names must be unique; queued jobs retain a copy of the original profile.
+Profiles are local JSON stored at `.bitloom/profiles.json` by default. State is stored at `.bitloom/`; both paths can be set on the command line. The file is atomically replaced with mode 0600. Profile names must be unique; queued jobs retain a copy of the original profile.
 
 | Field | Meaning |
 | --- | --- |
@@ -101,7 +101,7 @@ F5 opens interruption options and F6 retries the selected job. Use the navigator
 
 ## Errors and log search
 
-Failures generate a notification and refresh the task-log browser. Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.yoctotui/exports`.
+Failures generate a notification and refresh the task-log browser. Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.bitloom/exports`.
 
 Task logs are discovered under the standard `tmp/work/ARCH/RECIPE/VERSION/temp` hierarchy and ordered by modification time. Custom TMPDIR layouts currently require setting build_dir to match the expected layout or opening logs externally. Symlink aliases are skipped to avoid duplicate entries.
 
@@ -175,9 +175,9 @@ Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline 
 Real launches now use an independent local build service by default. Closing the TUI, pressing Ctrl+Q, or losing the terminal detaches the client: queued and running jobs remain owned by the service. Reopen Bitloom with the same `--state` directory to reconnect. Jobs retain their original profile, commands and complete logs. Multiple clients can observe the same service.
 
 ```bash
-bitloom --config .yoctotui/profiles.json --state .yoctotui
-bitloom --state .yoctotui --service-status
-bitloom --state .yoctotui --service-stop  # idle service only
+bitloom --config .bitloom/profiles.json --state .bitloom
+bitloom --state .bitloom --service-status
+bitloom --state .bitloom --service-stop  # idle service only
 bitloom --embedded                     # exit stops owned jobs
 ```
 
@@ -266,11 +266,11 @@ python -m pip install 'setuptools>=61' build wheel
 python -m build --no-isolation
 ```
 
-Outputs are `dist/yoctotui-0.1.0-py3-none-any.whl` and `dist/yoctotui-0.1.0.tar.gz`. The distribution name remains yoctotui; its executable is **bitloom**. The source archive includes the English manuals, Pages assets, examples and integration tools. To install the wheel into another environment:
+Outputs are `dist/bitloom-0.1.0-py3-none-any.whl` and `dist/bitloom-0.1.0.tar.gz`. The distribution and executable are both named **bitloom**. The source archive includes the English manuals, Pages assets, examples and integration tools. To install the wheel into another environment:
 
 ```bash
 python3 -m venv /tmp/bitloom-wheel
-/tmp/bitloom-wheel/bin/python -m pip install dist/yoctotui-0.1.0-py3-none-any.whl
+/tmp/bitloom-wheel/bin/python -m pip install dist/bitloom-0.1.0-py3-none-any.whl
 /tmp/bitloom-wheel/bin/bitloom --help
 ```
 
@@ -284,7 +284,7 @@ python tools/prepare_validation.py
 bitloom --config .validation/profiles.json --state .validation
 ```
 
-The helper recreates the test profile from `.validation/result.json` when available. It preserves history and other profiles, uses the recorded workspace and does not build anything. On this machine the recorded directory is `/tmp/yoctotui-kas-validation`; with Docker Snap, its contents are in the daemon's namespace and may appear empty on the host. In the container, the build directory is `/work/build`. Use Analysis runtime tools to browse it.
+The helper recreates the test profile from `.validation/result.json` when available. It preserves history and other profiles, uses the recorded workspace and does not build anything. The actual work directory is recorded in `.validation/result.json`; with Docker Snap, its contents are in the daemon's namespace and may appear empty on the host. In the container, the build directory is `/work/build`. Use Analysis runtime tools to browse it.
 
 1. Keep `core-image-minimal` in the top target field and press **Build** for an incremental image build. Existing matching task outputs are reused.
 2. Select its history row to follow the complete log. **F2** opens recipe tasks, fetch, SDK, layers and devtool actions; change the target to `busybox` to inspect or build one recipe.
@@ -307,7 +307,7 @@ Docker must be available and the build work directory must be on a Linux filesys
 source .venv/bin/activate
 curl -fL https://raw.githubusercontent.com/siemens/kas/4.8.1/kas-container -o .venv/bin/kas-container
 chmod +x .venv/bin/kas-container
-python tools/prepare_validation.py --work /tmp/yoctotui-kas-validation --engine docker
+python tools/prepare_validation.py --work /tmp/bitloom-kas-validation --engine docker
 bitloom --config .validation/profiles.json --state .validation
 ```
 
@@ -316,7 +316,7 @@ Press Build to initialize and build the image. The first build downloads reposit
 For scripted verification, with the service stopped:
 
 ```bash
-python tools/validate_kas.py --work /tmp/yoctotui-kas-validation --engine docker
+python tools/validate_kas.py --work /tmp/bitloom-kas-validation --engine docker
 python tools/prepare_validation.py
 python tools/probe_kas.py
 python tools/probe_workflows.py

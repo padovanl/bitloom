@@ -1,4 +1,4 @@
-from yoctotui.reports import build_summary, dependencies, download_audit, env_diff, environment
+from bitloom.reports import build_summary, dependencies, download_audit, env_diff, environment
 
 
 def test_environment_and_diff(tmp_path):
@@ -25,7 +25,7 @@ def test_build_summary_uses_real_log(tmp_path):
 
 
 def test_dependency_context_cycles_and_reverse():
-    from yoctotui.reports import dependency_context
+    from bitloom.reports import dependency_context
     result = dependency_context([('image', 'busybox'), ('busybox', 'libc'), ('libc', 'busybox'), ('sdk', 'libc')], 'busybox')
     forward, reverse = result.split('REQUIRED BY')
     assert 'libc' in forward and 'image' in reverse and 'sdk' in reverse
@@ -35,7 +35,7 @@ def test_dependency_context_cycles_and_reverse():
 def test_rootfs_inventory_never_extracts_links(tmp_path):
     import io
     import tarfile
-    from yoctotui.reports import image_contents
+    from bitloom.reports import image_contents
     path = tmp_path / 'rootfs.tar.bz2'
     with tarfile.open(path, 'w:bz2') as archive:
         file = tarfile.TarInfo('etc/os-release')
@@ -51,7 +51,7 @@ def test_rootfs_inventory_never_extracts_links(tmp_path):
 
 
 def test_task_timings_requires_real_timestamp_pairs(tmp_path):
-    from yoctotui.reports import task_timings
+    from bitloom.reports import task_timings
     path = tmp_path / 'kas.log'
     path.write_text('2026-10-10 12:00:00 - NOTE: recipe busybox-1.0-r0: task do_compile: Started\n2026-10-10 12:00:12 - NOTE: recipe busybox-1.0-r0: task do_compile: Succeeded\nNOTE: recipe fake-1.0: task do_compile: Started\nNOTE: recipe fake-1.0: task do_compile: Succeeded\n')
     report = task_timings(path)

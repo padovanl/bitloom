@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from yoctotui.models import Profile, Settings
+from bitloom.models import Profile, Settings
 from tools.validate_kas import KAS_IMAGE
 
 
@@ -22,7 +22,7 @@ def main():
         if result.exists():
             work = Path(json.loads(result.read_text())['work'])
         else:
-            work = Path('/tmp/yoctotui-kas-validation')
+            work = Path('/tmp/bitloom-kas-validation')
     work = work.expanduser().resolve()
     settings = Settings(state / 'profiles.json')
     existing = settings.profiles if settings.path.exists() else []

@@ -23,7 +23,7 @@ def make_demo(directory: Path):
         p.parent.mkdir(parents=True, exist_ok=True)
         if not p.exists():
             p.write_text(content)
-    config = directory / ".yoctotui/profiles.json"
+    config = directory / ".bitloom/profiles.json"
     if not config.exists():
         from .models import Profile, Settings
         settings = Settings(config)
@@ -35,8 +35,8 @@ def make_demo(directory: Path):
 
 def main():
     parser = argparse.ArgumentParser(description="Bitloom — Yocto / BitBake development cockpit")
-    parser.add_argument("--config", type=Path, default=Path(".yoctotui/profiles.json"))
-    parser.add_argument("--state", type=Path, default=Path(".yoctotui"))
+    parser.add_argument("--config", type=Path, default=Path(".bitloom/profiles.json"))
+    parser.add_argument("--state", type=Path, default=Path(".bitloom"))
     parser.add_argument("--demo", action="store_true", help="Create an isolated sample workspace; no fake build execution")
     parser.add_argument("--doctor", action="store_true", help="Print profile diagnostics without opening the TUI")
     parser.add_argument("--list-actions", action="store_true", help="List all available operations")
@@ -62,9 +62,9 @@ def main():
         for status, name, detail in diagnostics(Settings(args.config).profile):
             print(f"{status:5} {name:20} {detail}")
         return
-    from .app import YoctoApp
+    from .app import BitloomApp
     try:
-        app = YoctoApp(args.config, args.state, persistent=not (args.embedded or args.demo))
+        app = BitloomApp(args.config, args.state, persistent=not (args.embedded or args.demo))
     except (OSError, ValueError, TypeError) as exc:
-        parser.exit(1, f"yoctotui: {exc}\n")
+        parser.exit(1, f"bitloom: {exc}\n")
     app.run()

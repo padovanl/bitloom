@@ -3,11 +3,11 @@ import json
 import sys
 from pathlib import Path
 import pytest
-from yoctotui.models import Profile
-from yoctotui.runtime import request
-from yoctotui.workflows import bundle, compare, diagnose, cache_plan
-from yoctotui.leases import BuildLease
-from yoctotui.daemon import ensure_service, rpc
+from bitloom.models import Profile
+from bitloom.runtime import request
+from bitloom.workflows import bundle, compare, diagnose, cache_plan
+from bitloom.leases import BuildLease
+from bitloom.daemon import ensure_service, rpc
 
 def test_credentials_and_config_are_redacted():
     p=Profile(environment={'MY_TOKEN':'sensitive','MACHINE':'qemu'},image='registry/image@sha256:abc')
@@ -65,7 +65,7 @@ async def test_service_survives_client_disconnect(tmp_path):
     await asyncio.to_thread(rpc,state,{'op':'stop'})
 
 def test_shared_cache_coordination(tmp_path):
-    from yoctotui.leases import CacheLease
+    from bitloom.leases import CacheLease
     a=CacheLease(tmp_path); b=CacheLease(tmp_path); maintenance=CacheLease(tmp_path,exclusive=True)
     a.acquire(); b.acquire()
     try:
@@ -76,7 +76,7 @@ def test_shared_cache_coordination(tmp_path):
 
 @pytest.mark.asyncio
 async def test_runtime_binary_export_is_exact_and_never_overwrites(tmp_path):
-    from yoctotui.runtime import download
+    from bitloom.runtime import download
     source=tmp_path/'artifact.bin'; source.write_bytes(bytes(range(256))*900)
     destination=tmp_path/'export.bin'; profile=Profile(root=str(tmp_path))
     result=await download(profile,str(source),destination)
@@ -86,7 +86,7 @@ async def test_runtime_binary_export_is_exact_and_never_overwrites(tmp_path):
     assert not list(tmp_path.glob('*.part-*'))
 
 def test_provenance_report_keeps_chain_and_owner_evidence():
-    from yoctotui.workflows import provenance_report
+    from bitloom.workflows import provenance_report
     text=provenance_report({'image':'minimal','query':'/bin/sh','owners':{'busybox':'busybox'},'sizes':{'busybox':100},'inclusion_paths':[['packagegroup-core-boot','busybox']],'direct_dependents':{'busybox':['packagegroup-core-boot']},'image_install':'packagegroup-core-boot','package_install':'packagegroup-core-boot','policy':'Evidence is bounded.'})
     assert 'packagegroup-core-boot → busybox' in text
     assert 'busybox → busybox · 100' in text

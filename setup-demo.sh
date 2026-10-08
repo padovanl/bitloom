@@ -36,10 +36,10 @@ fi
 DEMO_PACKAGE="$DEMO_ROOT"
 if ((DEMO_DEV)); then DEMO_PACKAGE="$DEMO_ROOT[dev]"; fi
 "$DEMO_VENV_PYTHON" -m pip --disable-pip-version-check install -e "$DEMO_PACKAGE"
-"$DEMO_VENV_PYTHON" -c 'import sys; from pathlib import Path; from yoctotui.cli import make_demo; make_demo(Path(sys.argv[1]) / "demo")' "$DEMO_ROOT/.yoctotui"
+"$DEMO_VENV_PYTHON" -c 'import sys; from pathlib import Path; from bitloom.cli import make_demo; make_demo(Path(sys.argv[1]) / "demo")' "$DEMO_ROOT/.bitloom"
 export PATH="$DEMO_ROOT/.venv/bin:$PATH"
-printf '\nDemo ready. Sample data is under .yoctotui/demo; no Yocto image was built.\n'
+printf '\nDemo ready. Sample data is under .bitloom/demo; no Yocto image was built.\n'
 if ((DEMO_LAUNCH)); then
-    exec "$DEMO_VENV_PYTHON" -m yoctotui --demo --state "$DEMO_ROOT/.yoctotui"
+    exec "$DEMO_VENV_PYTHON" -m bitloom --demo --state "$DEMO_ROOT/.bitloom"
 fi
 printf 'Launch: cd %q && .venv/bin/bitloom --demo\n' "$DEMO_ROOT"

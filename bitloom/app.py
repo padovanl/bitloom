@@ -47,7 +47,7 @@ Commands depend on the selected Yocto release and inherited classes. SPDX, ptest
 """
 
 
-class YoctoApp(App):
+class BitloomApp(App):
     TITLE = "Bitloom"
     SUB_TITLE = "Yocto / BitBake workspace"
     CSS = """

@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from yoctotui.commands import BY_ID, arguments, invocation
-from yoctotui.inspectors import Entry, cache_candidates, cache_path, metadata, prune_cache, search_log
-from yoctotui.models import Profile, Settings
-from yoctotui.runner import Job, Runner
-from yoctotui.store import Store
+from bitloom.commands import BY_ID, arguments, invocation
+from bitloom.inspectors import Entry, cache_candidates, cache_path, metadata, prune_cache, search_log
+from bitloom.models import Profile, Settings
+from bitloom.runner import Job, Runner
+from bitloom.store import Store
 
 
 def test_command_input_cannot_inject_shell(tmp_path):

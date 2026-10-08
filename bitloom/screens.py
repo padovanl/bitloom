@@ -189,7 +189,7 @@ class FileScreen(ModalScreen):
             if self.path.exists():
                 stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
                 self.path.with_name(self.path.name + ".bak-" + stamp).write_text(self.original)
-            temp = self.path.with_name(self.path.name + ".yoctotui-tmp")
+            temp = self.path.with_name(self.path.name + ".bitloom-tmp")
             temp.write_text(text)
             if self.path.exists():
                 temp.chmod(self.path.stat().st_mode)

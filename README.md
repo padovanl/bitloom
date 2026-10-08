@@ -37,21 +37,21 @@ sudo apt install ./bitloom_1.2.3_all.deb
 bitloom --demo
 ```
 
-Requires Python 3.10+ on Debian/Ubuntu. Python application dependencies are included under `/opt/bitloom/lib`; no pip installation is needed. The package also provides the `yoctotui` compatibility command. Docker, Podman, kas and Yocto remain separate tools for real builds. Remove Bitloom with `sudo apt remove bitloom`.
+Requires Python 3.10+ on Debian/Ubuntu. Python application dependencies are included under `/opt/bitloom/lib`; no pip installation is needed. Docker, Podman, kas and Yocto remain separate tools for real builds. Remove Bitloom with `sudo apt remove bitloom`.
 
 ### Other Linux distributions / WSL2
 
-Download `yoctotui-1.2.3.tar.gz` and install in a virtual environment:
+Download `bitloom-1.2.3.tar.gz` and install in a virtual environment:
 
 ```bash
-tar -xzf yoctotui-1.2.3.tar.gz
-cd yoctotui-1.2.3
+tar -xzf bitloom-1.2.3.tar.gz
+cd bitloom-1.2.3
 python3 -m venv .venv
 .venv/bin/python -m pip install .
 .venv/bin/bitloom --demo
 ```
 
-Alternatively, install the release wheel with `.venv/bin/python -m pip install /path/to/yoctotui-1.2.3-py3-none-any.whl`. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.
+Alternatively, install the release wheel with `.venv/bin/python -m pip install /path/to/bitloom-1.2.3-py3-none-any.whl`. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.
 
 ### Verify downloaded assets
 
@@ -74,17 +74,17 @@ After cloning, run the script from the checkout. It creates or reuses `.venv`, i
 
 `PYTHON` also selects the interpreter when creating a new environment. Existing `.venv` environments are reused. `./setup-demo.sh --help` lists the options. For a real containerized Yocto build, follow [the local build instructions](#build-launch-and-try-the-local-yocto-workspace).
 
-The executable is `bitloom`; `yoctotui` remains available as a compatibility alias. The Python package and existing `.yoctotui` configuration/state paths retain their names.
+The executable and Python package are both named `bitloom`. Configuration and state are stored under `.bitloom` by default.
 
-The demo creates an isolated sample workspace under `.yoctotui/demo`. Its metadata and screenshots are labelled demo data. It does **not** simulate successful Yocto builds or download Yocto.
+The demo creates an isolated sample workspace under `.bitloom/demo`. Its metadata and screenshots are labelled demo data. It does **not** simulate successful Yocto builds or download Yocto.
 
 For a real project, launch `bitloom`, press **F4**, and configure a profile. Alternatively:
 
 ```bash
-mkdir -p .yoctotui
-cp examples/profiles.json .yoctotui/profiles.json
+mkdir -p .bitloom
+cp examples/profiles.json .bitloom/profiles.json
 # Replace the example paths before starting.
-bitloom --config .yoctotui/profiles.json
+bitloom --config .bitloom/profiles.json
 ```
 
 ![Animated tour of the actual TUI](docs/assets/tour.gif)
@@ -159,7 +159,7 @@ curl -fL https://raw.githubusercontent.com/siemens/kas/4.8.1/kas-container \
   -o .venv/bin/kas-container
 chmod +x .venv/bin/kas-container
 PATH="$PWD/.venv/bin:$PATH" python tools/validate_kas.py \
-  --work /tmp/yoctotui-kas-validation --engine docker
+  --work /tmp/bitloom-kas-validation --engine docker
 ```
 
 Docker/Podman must be running. The kas image supplies Yocto build dependencies. The first build downloads sources and can take considerable time/disk space. `.validation/` contains logs, SQLite history and `result.json`; it is ignored by Git. Use a Linux filesystem for work files. Docker installed via Snap has a private `/tmp`; see the [troubleshooting guide](docs/guide.md#troubleshooting).
@@ -175,8 +175,8 @@ See the [validation report](docs/validation.md) for the actual result and limita
 ```bash
 pip install -e . pytest pytest-asyncio
 python -m pytest -q
-python -m yoctotui --list-actions
-python -m yoctotui --doctor
+python -m bitloom --list-actions
+python -m bitloom --doctor
 
 # Regenerate actual UI screenshots and GIF (optional tooling).
 pip install pillow cairosvg
@@ -225,11 +225,11 @@ python -m pip install 'setuptools>=61' build wheel
 python -m build --no-isolation
 ```
 
-Outputs are `dist/yoctotui-0.1.0-py3-none-any.whl` and `dist/yoctotui-0.1.0.tar.gz`. The distribution name remains yoctotui; its executable is **bitloom**. The source archive includes the English manuals, Pages assets, examples and integration tools. To install the wheel into another environment:
+Outputs are `dist/bitloom-0.1.0-py3-none-any.whl` and `dist/bitloom-0.1.0.tar.gz`. The distribution and executable are both named **bitloom**. The source archive includes the English manuals, Pages assets, examples and integration tools. To install the wheel into another environment:
 
 ```bash
 python3 -m venv /tmp/bitloom-wheel
-/tmp/bitloom-wheel/bin/python -m pip install dist/yoctotui-0.1.0-py3-none-any.whl
+/tmp/bitloom-wheel/bin/python -m pip install dist/bitloom-0.1.0-py3-none-any.whl
 /tmp/bitloom-wheel/bin/bitloom --help
 ```
 
@@ -243,7 +243,7 @@ python tools/prepare_validation.py
 bitloom --config .validation/profiles.json --state .validation
 ```
 
-The helper recreates the test profile from `.validation/result.json` when available. It preserves history and other profiles, uses the recorded workspace and does not build anything. On this machine the recorded directory is `/tmp/yoctotui-kas-validation`; with Docker Snap, its contents are in the daemon's namespace and may appear empty on the host. In the container, the build directory is `/work/build`. Use Analysis runtime tools to browse it.
+The helper recreates the test profile from `.validation/result.json` when available. It preserves history and other profiles, uses the recorded workspace and does not build anything. The actual work directory is recorded in `.validation/result.json`; with Docker Snap, its contents are in the daemon's namespace and may appear empty on the host. In the container, the build directory is `/work/build`. Use Analysis runtime tools to browse it.
 
 1. Keep `core-image-minimal` in the top target field and press **Build** for an incremental image build. Existing matching task outputs are reused.
 2. Select its history row to follow the complete log. **F2** opens recipe tasks, fetch, SDK, layers and devtool actions; change the target to `busybox` to inspect or build one recipe.
@@ -266,7 +266,7 @@ Docker must be available and the build work directory must be on a Linux filesys
 source .venv/bin/activate
 curl -fL https://raw.githubusercontent.com/siemens/kas/4.8.1/kas-container -o .venv/bin/kas-container
 chmod +x .venv/bin/kas-container
-python tools/prepare_validation.py --work /tmp/yoctotui-kas-validation --engine docker
+python tools/prepare_validation.py --work /tmp/bitloom-kas-validation --engine docker
 bitloom --config .validation/profiles.json --state .validation
 ```
 
@@ -275,7 +275,7 @@ Press Build to initialize and build the image. The first build downloads reposit
 For scripted verification, with the service stopped:
 
 ```bash
-python tools/validate_kas.py --work /tmp/yoctotui-kas-validation --engine docker
+python tools/validate_kas.py --work /tmp/bitloom-kas-validation --engine docker
 python tools/prepare_validation.py
 python tools/probe_kas.py
 python tools/probe_workflows.py
