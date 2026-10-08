@@ -173,3 +173,36 @@ async def test_persistent_tui_detaches_and_reconnects(tmp_path):
             await pilot.pause(.3)
     finally:
         await asyncio.to_thread(rpc,state,{'op':'stop'})
+
+async def test_all_themes_preview_cancel_and_persist(tmp_path):
+    import json
+    from yoctotui.themes import THEMES
+    from yoctotui.screens import ThemeScreen
+    from textual.widgets import Button
+    config=make_demo(tmp_path/'demo'); state=tmp_path/'state'
+    app=YoctoApp(config,state)
+    async with app.run_test(size=(140,42)) as pilot:
+        await pilot.pause(.3)
+        await pilot.press('f7'); await pilot.pause(.2)
+        assert isinstance(app.screen,ThemeScreen)
+        assert len(THEMES)>=10
+        backgrounds=set()
+        for name in THEMES:
+            app.screen.query_one('#theme-choice',Select).value=name
+            await pilot.pause(.08)
+            assert app.theme==name
+            backgrounds.add(app.screen_stack[0].styles.background.hex)
+        assert len(backgrounds)>=10
+        await pilot.press('escape'); await pilot.pause(.2)
+        assert app.theme=='Bitloom'
+        await pilot.press('f7'); await pilot.pause(.1)
+        app.screen.query_one('#theme-choice',Select).value='Paper'
+        await pilot.pause(.2)
+        app.screen.query_one('#theme-save',Button).press()
+        await pilot.pause(.2)
+        assert app.theme=='Paper'
+        assert json.loads((state/'appearance.json').read_text())['theme']=='Paper'
+    app.store.close()
+    restored=YoctoApp(config,state)
+    assert restored.theme=='Paper'
+    restored.store.close()

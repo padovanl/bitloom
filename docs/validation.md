@@ -90,3 +90,7 @@ Additional automated checks cover UI detach/reconnect, an independent service su
 ![Actual new workflow tour](assets/real-workflows.gif)
 
 A final runtime check resolved the configured kas image to its matching cached digest, found 22 BusyBox sigdata files and indexed 4,044 stamps signature references against 5,897 cache files. No before/after signature pairs existed for those BusyBox task variants, so no variable-difference claim was made from that workspace. Pair comparison was verified separately with an explicit two-signature fixture using the release-tool invocation. Default runtime build-path discovery also retained the pinned Poky commit without assuming the host path existed.
+
+## Theme and identity validation
+
+The expanded suite passed 50 tests after adding twelve palettes. The theme UI test switches through every palette, verifies distinct actual screen backgrounds, cancels back to the original theme, saves Paper and restores it in a new session. Status/log colors use semantic palette colors, including the light palette. `tools/capture_themes.py` records actual terminal views for all twelve palettes and assembles the documentation GIF; NO_COLOR is cleared for those captures. The woven B icon is an original SVG with 32-, 180- and 512-pixel PNG exports used by README, site headers and favicons.

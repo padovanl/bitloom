@@ -271,3 +271,52 @@ class RuntimeFileScreen(ModalScreen):
     @on(Button.Pressed, '#close')
     def close(self):
         self.dismiss(None)
+
+
+class ThemeScreen(ModalScreen):
+    DEFAULT_CSS = """
+    ThemeScreen { align: center middle; }
+    ThemeScreen > Vertical { width: 64; height: auto; padding: 1 2; border: solid $accent; background: $surface; }
+    ThemeScreen Select { height: 3; margin: 1 0; }
+    ThemeScreen Horizontal { height: 3; }
+    """
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self):
+        super().__init__()
+        self.original = None
+
+    def compose(self):
+        from .themes import THEMES
+        self.original = self.app.theme
+        with Vertical():
+            yield Label('BITLOOM THEMES')
+            yield Label('Preview a palette. Save keeps it for future sessions.')
+            choices = [(name, name) for name in THEMES]
+            if self.original not in THEMES:
+                choices.insert(0, (self.original, self.original))
+            yield Select(choices, value=self.original, allow_blank=False, id='theme-choice')
+            yield Label('Build status, warnings and errors retain semantic colors.')
+            with Horizontal():
+                yield Button('Save theme', id='theme-save', variant='primary')
+                yield Button('Cancel', id='theme-cancel')
+
+    @on(Select.Changed, '#theme-choice')
+    def preview(self, event):
+        if isinstance(event.value, str):
+            self.app.theme = event.value
+            self.app.refresh_theme_colors()
+
+    @on(Button.Pressed, '#theme-save')
+    def save(self):
+        try:
+            self.app.save_theme()
+            self.dismiss(True)
+        except OSError as exc:
+            self.notify(str(exc), severity='error')
+
+    @on(Button.Pressed, '#theme-cancel')
+    def action_cancel(self):
+        self.app.theme = self.original
+        self.app.refresh_theme_colors()
+        self.dismiss(False)
