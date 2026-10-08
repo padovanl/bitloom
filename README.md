@@ -2,6 +2,14 @@
 
 # Bitloom
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/padovanl/bitloom)](https://github.com/padovanl/bitloom/releases/latest)
+[![CI and tests](https://github.com/padovanl/bitloom/actions/workflows/tests.yml/badge.svg)](https://github.com/padovanl/bitloom/actions/workflows/tests.yml)
+[![Release CI](https://github.com/padovanl/bitloom/actions/workflows/release.yml/badge.svg)](https://github.com/padovanl/bitloom/actions/workflows/release.yml)
+[![Documentation](https://github.com/padovanl/bitloom/actions/workflows/pages.yml/badge.svg)](https://padovanl.github.io/bitloom/)
+[![Total release downloads](https://img.shields.io/github/downloads/padovanl/bitloom/total)](https://github.com/padovanl/bitloom/releases)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+
 **A terminal cockpit for everyday Yocto and BitBake development.** Build images, inspect recipes, develop with devtool, follow failures, and manage local caches from one keyboard-friendly interface.
 
 *Weaving layers, recipes and builds into one terminal workspace.*
@@ -15,6 +23,39 @@ The opening capture shows the idle sample workspace. Error screens in the tour d
 ## Inspiration and thanks
 
 Bitloom is inspired by the idea behind [yoctui](https://github.com/0xbadcaffe/yoctui): bringing everyday Yocto and BitBake work into a terminal interface. Thank you to [0xbadcaffe](https://github.com/0xbadcaffe), the author of yoctui, for the inspiration and for sharing the project with the community. Bitloom has its own implementation and interface.
+
+## Install from a GitHub release
+
+Open the [GitHub Releases page](https://github.com/padovanl/bitloom/releases) and download the assets for the version you want. Replace `1.2.3` below with that version.
+
+### Debian / Ubuntu
+
+Download `bitloom_1.2.3_all.deb`, then install it from the download directory:
+
+```bash
+sudo apt install ./bitloom_1.2.3_all.deb
+bitloom --demo
+```
+
+Requires Python 3.10+ on Debian/Ubuntu. Python application dependencies are included under `/opt/bitloom/lib`; no pip installation is needed. The package also provides the `yoctotui` compatibility command. Docker, Podman, kas and Yocto remain separate tools for real builds. Remove Bitloom with `sudo apt remove bitloom`.
+
+### Other Linux distributions / WSL2
+
+Download `yoctotui-1.2.3.tar.gz` and install in a virtual environment:
+
+```bash
+tar -xzf yoctotui-1.2.3.tar.gz
+cd yoctotui-1.2.3
+python3 -m venv .venv
+.venv/bin/python -m pip install .
+.venv/bin/bitloom --demo
+```
+
+Alternatively, install the release wheel with `.venv/bin/python -m pip install /path/to/yoctotui-1.2.3-py3-none-any.whl`. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.
+
+### Verify downloaded assets
+
+Download `SHA256SUMS` alongside the packages, then run `sha256sum --check --ignore-missing SHA256SUMS` in the same directory. Check that the package you downloaded reports `OK`.
 
 ## Start in one minute
 
@@ -251,3 +292,7 @@ python -m http.server 8000 --directory docs
 ```
 
 Open `http://localhost:8000`. The Pages workflow is included, but this workspace has no GitHub remote and no public deployment yet.
+
+## License
+
+Bitloom is released under the [MIT License](LICENSE). Bundled Python dependencies retain their own licenses.
