@@ -12,6 +12,7 @@ from rich.text import Text
 from rich.syntax import Syntax
 from textual import on, work
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane, Tree
 
@@ -155,11 +156,13 @@ class BitloomApp(App):
         ("f4", "profiles", "Profiles"), ("ctrl+q", "quit", "Exit"),
         ("f5", "stop_job", "Stop"), ("f6", "retry", "Retry"),
         ("ctrl+l", "log_focus", "Logs"),
-        ("alt+1", "section('builds')", "Builds"),
-        ("alt+2", "section('metadata')", "Metadata"),
-        ("alt+3", "section('tasklogs')", "Tasks"),
-        ("alt+4", "section('workbench')", "Inspect"),
-        ("alt+5", "section('caches')", "Caches"),
+        ("f8", "cycle_section(-1)", "Previous"),
+        ("f9", "cycle_section(1)", "Next"),
+        Binding("alt+1", "section('builds')", "Builds", show=False),
+        Binding("alt+2", "section('metadata')", "Metadata", show=False),
+        Binding("alt+3", "section('tasklogs')", "Tasks", show=False),
+        Binding("alt+4", "section('workbench')", "Inspect", show=False),
+        Binding("alt+5", "section('caches')", "Caches", show=False),
     ]
 
     def __init__(self, config: Path, state: Path, persistent=False):
@@ -378,6 +381,7 @@ class BitloomApp(App):
         self.main_query("#task-monitor", Static).border_title = "Active BitBake tasks"
         self.set_interval(0.2, self.flush_log)
         self.set_interval(2, self.update_telemetry)
+        self.set_interval(1, self.update_elapsed)
         if self.persistent:
             self.runner.start()
         self.analysis_fields()
@@ -473,6 +477,21 @@ class BitloomApp(App):
         self.main_query("#rail-context", Static).update(
             f"RUNTIME\n{p.mode}\n\nPROFILE\n{p.name}\n\nF2  Command center\nF4  Edit profiles"
         )
+
+    def action_cycle_section(self, direction):
+        if len(self.screen_stack)>1:
+            return
+        workspace=self.main_query('#workspace',TabbedContent)
+        sections=[pane.id for pane in workspace.query(TabPane)]
+        workspace.active=sections[(sections.index(workspace.active)+direction)%len(sections)]
+
+    def update_elapsed(self):
+        table=self.main_query('#history',DataTable)
+        for row in self.history_rows.values():
+            if row['status']=='running' and not row['finished']:
+                start=datetime.fromisoformat(row['started'])
+                seconds=max(0,int((datetime.now(timezone.utc)-start).total_seconds()))
+                table.update_cell(row['id'],list(table.columns)[2],f'{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}')
 
     def action_section(self, tab):
         self.main_query("#workspace", TabbedContent).active = tab

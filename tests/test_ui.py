@@ -263,3 +263,30 @@ async def test_report_focus_keeps_background_stable(tmp_path):
             app.query_one('#target',Input).focus()
             await pilot.pause(.1)
     app.store.close()
+
+async def test_live_elapsed_and_terminal_navigation(tmp_path):
+    import sys
+    from textual.widgets import DataTable
+    from textual._xterm_parser import XTermParser
+    app=BitloomApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    async with app.run_test(size=(120,36)) as pilot:
+        job=app.runner.submit(app.profile,'Timer regression',[sys.executable,'-c','import time; time.sleep(4)'])
+        await pilot.pause(.3)
+        table=app.query_one('#history',DataTable)
+        column=list(table.columns)[2]
+        initial=table.get_cell(job.id,column)
+        await pilot.pause(1.7)
+        assert table.get_cell(job.id,column)!=initial
+        assert job.status=='running'
+        # Feed real terminal escape sequences, rather than synthetic Alt events.
+        for sequence,expected in [('\x1b[20~','metadata'),('\x1b[19~','builds')]:
+            events=list(XTermParser().feed(sequence))
+            assert len(events)==1
+            await pilot.press(events[0].key)
+            assert app.query_one('#workspace',TabbedContent).active==expected
+        await app.runner.consumer
+        await pilot.pause(.2)
+        final=table.get_cell(job.id,column)
+        await pilot.pause(1.2)
+        assert table.get_cell(job.id,column)==final
+    app.store.close()

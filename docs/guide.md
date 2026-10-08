@@ -39,7 +39,7 @@ Run `./setup-demo.sh` from the cloned checkout to create or reuse `.venv`, insta
 
 Use `./setup-demo.sh --no-launch` to prepare without launching, then `.venv/bin/bitloom --demo` to start later. `--dev` installs test dependencies; `--python python3.12` or `PYTHON` selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under `.bitloom/demo` in the checkout.
 
-The terminal adapts while resizing: below 105 columns or 30 rows it hides the navigator and side panes; below 30 rows it also hides the overview. Below 75 columns or 22 rows it hides history and metrics to preserve output. Resize to restore panels. Alt+1–5 switches sections and F2/F4/F7 opens commands/profiles/themes even when toolbar controls are hidden. Verified sizes range from 60 × 20 to 160 × 50, including a wide 140 × 20 terminal.
+The terminal adapts while resizing: below 105 columns or 30 rows it hides the navigator and side panes; below 30 rows it also hides the overview. Below 75 columns or 22 rows it hides history and metrics to preserve output. Resize to restore panels. F8/F9 switches sections and F2/F4/F7 opens commands/profiles/themes even when toolbar controls are hidden. Verified sizes range from 60 × 20 to 160 × 50, including a wide 140 × 20 terminal.
 
 ## Profiles and paths
 
@@ -97,7 +97,7 @@ Interactive actions suspend Textual and give the real terminal to devshell, menu
 
 ## Terminal layout
 
-F5 opens interruption options and F6 retries the selected job. Use the navigator or Alt+1 through Alt+5 for Builds, metadata, task logs, workbench and caches. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.
+F5 opens interruption options and F6 retries the selected job. Use the navigator or F8/F9 for Builds, metadata, task logs, workbench and caches. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.
 
 ## Errors and log search
 
@@ -337,3 +337,68 @@ Open `http://localhost:8000`. The Pages workflow is included, but this workspace
 ## Gentle colors and focus
 
 F7 offers Soft Slate, a muted dark gray palette, and Linen, a warm light palette. Focusing report or log panes highlights the border without tinting the entire background. If a true-color terminal such as Windows Terminal renders saturated blue blocks, check TERM and COLORTERM and try `COLORTERM=truecolor bitloom` with your usual profile arguments. Limited-color terminals still use their available colors.
+
+### Navigation and elapsed time
+
+F8 selects the previous workspace section; F9 selects the next, including Analysis and Help. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.
+
+## Hands-on kas: layers and recipes
+
+Start the verified workspace with `python tools/prepare_validation.py`, then `bitloom --config .validation/profiles.json --state .validation`. Docker must be running. Use F2 to open commands and F8/F9 to change sections.
+
+First build `busybox`, repeat the build, run Clean recipe, and build again. Compare executed and reused tasks. Clean recipe + sstate removes the recipe's local shared state too; mirrors can still supply cached results. Build `core-image-minimal` afterward to inspect image assembly.
+
+### Create a layer and a small recipe
+
+From F2, open **Open kas shell**. The following commands run inside the container, with the BitBake environment initialized. `/work/meta-bitloom` persists in this profile's dedicated work mount.
+
+```bash
+bitbake-layers create-layer /work/meta-bitloom
+mkdir -p /work/meta-bitloom/recipes-example/bitloom-hello
+cat > /work/meta-bitloom/recipes-example/bitloom-hello/bitloom-hello_1.0.bb <<'EOF'
+SUMMARY = "Bitloom learning example"
+LICENSE = "CLOSED"
+S = "${WORKDIR}"
+do_install() {
+    install -d ${D}${bindir}
+    printf '#!/bin/sh\necho "Hello from Bitloom v1"\n' > ${D}${bindir}/bitloom-hello
+    chmod 0755 ${D}${bindir}/bitloom-hello
+}
+EOF
+exit
+```
+
+CLOSED is used for this private exercise to avoid needing a separate license file; use the actual license and checksum for distributable recipes. Layer creation and registration are separate operations. F2 also provides Create layer and Add layer, but a layer registered only in bblayers.conf may be lost when kas regenerates configuration.
+
+### Register the layer reproducibly
+
+Create `kas-experiment.yml` at the root of the Bitloom checkout, using your host editor:
+
+```yaml
+header:
+  version: 14
+  includes:
+    - tests/integration/kas-minimal.yml
+repos:
+  experiment:
+    path: /work/meta-bitloom
+local_conf_header:
+  bitloom-experiment: |
+    IMAGE_INSTALL:append = " bitloom-hello"
+```
+
+This absolute layer path intentionally targets the container workspace above. In F4 duplicate the kas integration profile, retaining its container environment and KAS_WORK_DIR, and set kas_file to `kas-experiment.yml`. Run **kas build** to apply the configuration. The local layer is declared in kas rather than only in a generated configuration file. Do not commit kas-experiment.yml until you decide whether this container-specific configuration belongs in your project.
+
+Build target `bitloom-hello`, then build `core-image-minimal` and inspect its package manifest for bitloom-hello. To edit the recipe, use the Analysis runtime file reader/editor on `/work/meta-bitloom/recipes-example/bitloom-hello/bitloom-hello_1.0.bb`, or open the kas shell and use an available editor. Change the greeting to v2 and rebuild the recipe and image. BitBake should detect the metadata change; a clean is usually unnecessary.
+
+### Extend an existing recipe
+
+Keep upstream recipes intact and add a matching .bbappend in your layer. For example, create `recipes-core/busybox/busybox_%.bbappend` containing:
+
+```bitbake
+SUMMARY:append = " (Bitloom experiment)"
+```
+
+Evaluate BusyBox's environment and inspect SUMMARY to verify the append. For source development use Modify recipe (devtool modify), edit the extracted source directory reported by devtool, then Devtool build. Commit source changes before Devtool finish into `/work/meta-bitloom`; that exports the recipe changes/patches to your layer. Devtool reset removes workspace integration when you want to return to the layer recipe. Source files may remain, so inspect them before removing anything.
+
+References: [Yocto layers](https://docs.yoctoproject.org/dev/dev-manual/layers.html), [kas configuration](https://kas.readthedocs.io/en/4.8.2/userguide/project-configuration.html).
