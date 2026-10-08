@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Bitloom icon</title>
+  <desc id="description">A woven letter B: three mint layer threads cross a blue vertical build thread on a dark terminal tile.</desc>
+  <rect width="512" height="512" rx="112" fill="#0b1115"/>
+  <rect x="24" y="24" width="464" height="464" rx="92" fill="none" stroke="#203e49" stroke-width="4"/>
+  <path d="M176 112h92c64 0 108 29 108 77 0 30-18 52-47 64 40 10 63 34 63 71 0 52-46 84-118 84h-98" fill="none" stroke="#84c9c0" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M176 112v296" fill="none" stroke="#81bdcf" stroke-width="32" stroke-linecap="round"/>
+  <path d="M104 160h162M104 256h202M104 352h174" fill="none" stroke="#84c9c0" stroke-width="24" stroke-linecap="round"/>
+  <path d="M176 141v38M176 333v38" stroke="#0b1115" stroke-width="40"/>
+  <path d="M104 160h162M104 352h174" fill="none" stroke="#84c9c0" stroke-width="24" stroke-linecap="round"/>
+  <path d="M158 256h36" stroke="#0b1115" stroke-width="32"/>
+  <path d="M176 233v46" stroke="#81bdcf" stroke-width="32"/>
+  <circle cx="420" cy="96" r="12" fill="#dfbe77"/>
+</svg>

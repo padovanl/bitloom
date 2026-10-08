@@ -173,3 +173,26 @@ Reproducibility exports redact credential-named configuration lines and URL user
 Bitloom builders take a shared `.bitloom-coordination.lock` on host-visible download and sstate directories. Maintenance takes an exclusive lock, so cooperating services cannot prune while another Bitloom builder uses the cache. A separate build-directory lease prevents duplicate builders across local state directories. Existing `.lock` and `.done` protection also applies when executing a plan directly.
 
 These are advisory locks. External BitBake processes, container-only cache paths and builders that do not take the same lock are not coordinated. Signature reference plans are conservative: one build's stamps are not an exhaustive record of every cache user. For release-specific removal, coordinate all builders and use that release's `scripts/sstate-cache-management.sh` after inspecting its own help/options. Bitloom does not infer reachability from age or silently invoke a destructive cache script.
+
+## Terminal themes
+
+Press **F7** or the toolbar's **Themes** button. Choose a palette to preview it immediately, then **Save theme** to persist it or **Cancel/Escape** to restore the palette you opened with. Changes affect terminal backgrounds, surfaces, tables, selection colors, modal dialogs and semantic status colors. Source previews use a matching light/dark syntax palette on their next refresh.
+
+| Theme | Character |
+| --- | --- |
+| Bitloom | Original dark terminal palette with mint and blue |
+| Nord | Cool slate and arctic cyan |
+| Dracula | Charcoal, violet and cyan |
+| Tokyo Night | Deep blue with lavender |
+| Catppuccin Mocha | Soft dark violet and blue |
+| Gruvbox | Warm charcoal with olive and gold |
+| Solarized Dark | Deep teal with blue accents |
+| Ocean | Navy with bright aqua |
+| Forest | Dark green with sage accents |
+| Ember | Warm brown with amber and coral |
+| Paper | Light paper background with dark text |
+| High Contrast | Black background with bright white, cyan and yellow |
+
+The choice is a UI preference stored in `appearance.json` under the selected state directory, independent of build profiles. Missing, malformed or unknown saved themes fall back to Bitloom. Themes do not change build settings or stop queued work.
+
+![Twelve actual terminal theme previews](assets/themes.gif)

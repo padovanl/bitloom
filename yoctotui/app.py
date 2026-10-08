@@ -24,7 +24,7 @@ from .store import Store
 
 HELP = """# Bitloom cockpit
 
-**F2** command center · **F3** refresh · **F4** profiles · **Ctrl+P** Textual command palette · **Ctrl+Q** exit
+**F2** command center · **F3** refresh · **F4** profiles · **F7** themes · **Ctrl+P** Textual command palette · **Ctrl+Q** exit
 
 ## Workflow
 1. Edit profiles (F4): set root, build_dir and runtime. Host auto-discovers oe-init-build-env or poky/oe-init-build-env. kas uses your configuration; containers mount the project at /work.
@@ -51,62 +51,62 @@ class YoctoApp(App):
     TITLE = "Bitloom"
     SUB_TITLE = "Yocto / BitBake workspace"
     CSS = """
-    Screen { background: #0b1115; color: #bdcbd2; }
-    Header { background: #111b22; color: #84c9c0; }
-    #toolbar { height: 1; padding: 0 1; background: #111b22; }
+    Screen { background: $background; color: $foreground; }
+    Header { background: $surface; color: $accent; }
+    #toolbar { height: 1; padding: 0 1; background: $surface; }
     #profile { width: 22; height: 1; }
     #target { width: 1fr; }
-    Button { height: 1; min-width: 8; border: none; background: #16232a; color: #a9c3ce; padding: 0 1; }
-    Button:hover, Button:focus { background: #25404b; color: #e0f3f6; }
-    Button.-primary { background: #183832; color: #8fdbc3; }
-    Button.-warning { background: #382d1b; color: #dfbe77; }
-    Input { height: 1; border: none; background: #121e25; padding: 0 1; }
+    Button { height: 1; min-width: 8; border: none; background: $surface; color: $foreground; padding: 0 1; }
+    Button:hover, Button:focus { background: $primary-muted; color: $foreground; }
+    Button.-primary { background: $primary-muted; color: $foreground; }
+    Button.-warning { background: $warning-muted; color: $warning; }
+    Input { height: 1; border: none; background: $surface; padding: 0 1; }
     Select { height: 1; border: none; }
-    SelectCurrent { height: 1; border: none; padding: 0 1; background: #172730; }
+    SelectCurrent { height: 1; border: none; padding: 0 1; background: $surface; }
     #shell { height: 1fr; }
-    #rail { width: 22; background: #0d171d; padding: 0 1; border-right: solid #30444e; }
-    #brand { height: 3; color: #89d2bd; text-style: bold; padding-top: 1; }
-    .rail-label { color: #d2b77b; height: 2; padding-top: 1; }
-    #rail Button { width: 1fr; text-align: left; height: 1; margin: 0; padding: 0 1; background: #0d171d; color: #9ab4c0; }
-    #rail Button.selected { background: #203e49; color: #d9f3f5; text-style: bold; }
-    #rail-context { height: 1fr; color: #738e9d; margin-top: 2; }
+    #rail { width: 22; background: $surface; padding: 0 1; border-right: solid $primary-muted; }
+    #brand { height: 3; color: $accent; text-style: bold; padding-top: 1; }
+    .rail-label { color: $warning; height: 2; padding-top: 1; }
+    #rail Button { width: 1fr; text-align: left; height: 1; margin: 0; padding: 0 1; background: $surface; color: $foreground-muted; }
+    #rail Button.selected { background: $primary-muted; color: $foreground; text-style: bold; }
+    #rail-context { height: 1fr; color: $foreground-muted; margin-top: 2; }
     #main { width: 1fr; }
-    #overview { height: 3; padding: 0 1; color: #9ab4c0; border-bottom: solid #30444e; }
+    #overview { height: 3; padding: 0 1; color: $foreground-muted; border-bottom: solid $primary-muted; }
     #metrics { height: 4; }
-    .metric { width: 1fr; padding: 0 1; border-bottom: solid #30444e; border-right: solid #30444e; background: #0b1115; }
+    .metric { width: 1fr; padding: 0 1; border-bottom: solid $primary-muted; border-right: solid $primary-muted; background: $background; }
     #workspace { height: 1fr; }
     #workspace > ContentTabs { display: none; }
     TabPane { padding: 0 1; }
     .tools { height: 1; margin-bottom: 1; }
     .tools Input { width: 1fr; }
     .tools Button { min-width: 8; }
-    DataTable { height: 1fr; border: solid #30444e; background: #0b1115; }
-    DataTable > .datatable--header { background: #14242c; color: #89c7d5; text-style: bold; }
-    DataTable > .datatable--cursor { background: #203e49; color: #daf1f2; }
+    DataTable { height: 1fr; border: solid $primary-muted; background: $background; }
+    DataTable > .datatable--header { background: $surface; color: $accent; text-style: bold; }
+    DataTable > .datatable--cursor { background: $primary-muted; color: $foreground; }
     #build-split { height: 1fr; }
     #history-panel { width: 40; padding-right: 1; }
     #history { height: 1fr; }
-    #task-monitor { height: 9; border: solid #30444e; color: #97cbbb; padding: 0 1; }
+    #task-monitor { height: 9; border: solid $primary-muted; color: $success; padding: 0 1; }
     #stream-panel { width: 1fr; }
-    .section-title { height: 2; color: #81bdcf; padding-top: 1; }
-    #job-state { height: 2; color: #9eb2c1; }
+    .section-title { height: 2; color: $accent; padding-top: 1; }
+    #job-state { height: 2; color: $foreground-muted; }
     #progress { height: 1; margin-bottom: 1; }
-    #log { height: 1fr; border: solid #30444e; background: #080f13; }
-    #scan-state { height: 2; color: #92a4bd; }
+    #log { height: 1fr; border: solid $primary-muted; background: $background; }
+    #scan-state { height: 2; color: $foreground-muted; }
     #cache-days { width: 9; }
     #cache-kind { width: 18; }
     #inspect-kind { width: 19; }
     #analysis-kind { width: 24; }
-    #analysis-output { height: 1fr; border: solid #30444e; }
+    #analysis-output { height: 1fr; border: solid $primary-muted; }
     #health { height: 1fr; }
     #metadata-split { height: 1fr; }
-    #layer-tree { width: 26; border: solid #30444e; background: #0d171d; }
+    #layer-tree { width: 26; border: solid $primary-muted; background: $surface; }
     #metadata-table { width: 3fr; }
-    #source-preview { width: 2fr; border: solid #30444e; background: #080f13; }
-    #active-tasks { height: 4; color: #a6d9c8; }
-    #detail { height: 2; color: #92a4bd; }
+    #source-preview { width: 2fr; border: solid $primary-muted; background: $background; }
+    #active-tasks { height: 4; color: $success; }
+    #detail { height: 2; color: $foreground-muted; }
     #help { height: 1fr; }
-    Footer { background: #111b22; }
+    Footer { background: $surface; }
     Screen.compact #rail { width: 20; }
     Screen.compact #history-panel { width: 34; }
     Screen.compact #toolbar #commands, Screen.compact #toolbar #profiles { display: none; }
@@ -124,6 +124,7 @@ class YoctoApp(App):
     """
     BINDINGS = [
         ("f2", "command", "Commands"), ("f3", "refresh", "Refresh"),
+        ("f7", "themes", "Themes"),
         ("f4", "profiles", "Profiles"), ("ctrl+q", "quit", "Exit"),
         ("f5", "stop_job", "Stop"), ("f6", "retry", "Retry"),
         ("ctrl+l", "log_focus", "Logs"),
@@ -136,6 +137,16 @@ class YoctoApp(App):
 
     def __init__(self, config: Path, state: Path, persistent=False):
         super().__init__()
+        from .themes import THEMES
+        for palette in THEMES.values():
+            self.register_theme(palette)
+        self.appearance_path = state / "appearance.json"
+        selected = "Bitloom"
+        try:
+            selected = json.loads(self.appearance_path.read_text()).get("theme", selected)
+        except (OSError, ValueError, AttributeError):
+            pass
+        self.theme = selected if isinstance(selected, str) and selected in self.available_themes else "Bitloom"
         self.settings = Settings(config)
         self.persistent = persistent
         if persistent:
@@ -165,6 +176,31 @@ class YoctoApp(App):
         self.config_hints = {}
         self.analysis_text = ""
 
+    def refresh_theme_colors(self):
+        self.update_telemetry()
+        self.refresh_history()
+        table = self.main_query("#health", DataTable)
+        if table.columns:
+            column = next(iter(table.columns))
+            for key in list(table.rows):
+                status = table.get_row(key)[0]
+                name = status.plain if isinstance(status, Text) else str(status)
+                color = {"OK":self.current_theme.success, "WARN":self.current_theme.warning, "INFO":self.current_theme.accent}.get(name, self.current_theme.foreground)
+                table.update_cell(key, column, Text(name, style=color))
+        self.reload_log()
+
+    def save_theme(self):
+        self.appearance_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.appearance_path.with_suffix(".tmp")
+        temporary.write_text(json.dumps({"theme": self.theme}, indent=2))
+        temporary.chmod(0o600)
+        temporary.replace(self.appearance_path)
+
+    @on(Button.Pressed, "#themes")
+    def action_themes(self):
+        from .screens import ThemeScreen
+        self.push_screen(ThemeScreen())
+
     def main_query(self, selector, expect_type=None):
         """Keep background updates on the workspace while a modal is open."""
         return self.screen_stack[0].query_one(selector, expect_type)
@@ -181,6 +217,7 @@ class YoctoApp(App):
             yield Button("[ Build ]", variant="primary", id="build")
             yield Button("Commands", id="commands")
             yield Button("Profiles", id="profiles")
+            yield Button("Themes", id="themes")
         with Horizontal(id="shell"):
             with Vertical(id="rail"):
                 yield Static("BITLOOM\nYocto / BitBake", id="brand")
@@ -397,15 +434,15 @@ class YoctoApp(App):
         recent = next((r for r in self.history_rows.values() if r["profile"] == p.name), None)
         status = active.status.upper() if active else recent["status"].upper() if recent else "IDLE"
         title = active.title if active else recent["title"] if recent else "No jobs in this profile"
-        color = "#df9a87" if status == "FAILED" else "#a6d9c8"
+        color = self.current_theme.error if status == "FAILED" else self.current_theme.success
         metric = Text("BUILD STATUS\n", style="dim", no_wrap=True, overflow="ellipsis")
         metric.append(status + "\n", style=f"bold {color}")
-        metric.append(title, style="#bdcbd2")
+        metric.append(title, style=self.current_theme.foreground)
         self.main_query("#build-metric", Static).update(metric)
         progress = active.progress if active else json.loads(recent["metadata"]).get("progress", [0, 0]) if recent else [0, 0]
         tasks = f"{progress[0]} / {progress[1]}" if progress[1] else "No task count reported"
         self.main_query("#queue-metric", Static).update(Text.from_markup(
-            f"[dim]TASKS / QUEUE[/dim]\n[bold #dfbe77]{tasks}[/]\n{queue} queued / {len(active.at_risk) if active else 0} running"))
+            f"[dim]TASKS / QUEUE[/dim]\n[bold {self.current_theme.warning}]{tasks}[/]\n{queue} queued / {len(active.at_risk) if active else 0} running"))
         self.main_query("#rail-context", Static).update(
             f"RUNTIME\n{p.mode}\n\nPROFILE\n{p.name}\n\nF2  Command center\nF4  Edit profiles"
         )
@@ -449,13 +486,13 @@ class YoctoApp(App):
             mem = {line.split(':')[0]: int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()}
             ram = 100 * (1 - mem['MemAvailable'] / mem['MemTotal'])
             self.main_query("#resource-metric", Static).update(Text.from_markup(
-                f"[dim]HOST RESOURCES[/dim]\n[bold #adc7fa]{cpu} · {ram:.0f}% RAM[/]\n{human_size((mem['MemTotal']-mem['MemAvailable'])*1024)} used"))
+                f"[dim]HOST RESOURCES[/dim]\n[bold {self.current_theme.secondary}]{cpu} · {ram:.0f}% RAM[/]\n{human_size((mem['MemTotal']-mem['MemAvailable'])*1024)} used"))
         except (OSError, ValueError, KeyError):
             self.main_query("#resource-metric", Static).update("HOST RESOURCES\nUnavailable on this host")
         try:
             disk = shutil.disk_usage(self.profile.root_path)
             self.main_query("#disk-metric", Static).update(Text.from_markup(
-                f"[dim]WORKSPACE DISK[/dim]\n[bold #a6e3cb]{human_size(disk.free)} free[/]\n{100*disk.used/disk.total:.0f}% used · host filesystem"))
+                f"[dim]WORKSPACE DISK[/dim]\n[bold {self.current_theme.success}]{human_size(disk.free)} free[/]\n{100*disk.used/disk.total:.0f}% used · host filesystem"))
         except OSError:
             self.main_query("#disk-metric", Static).update("WORKSPACE DISK\nPath unavailable")
         active = self.runner.active
@@ -485,7 +522,8 @@ class YoctoApp(App):
         preview = self.main_query("#source-preview", RichLog)
         preview.border_title = path.name
         preview.clear()
-        preview.write(Syntax(content, "yaml" if path.suffix in {".yml", ".yaml"} else "bash", theme="nord", line_numbers=True, word_wrap=False))
+        from .themes import syntax_theme
+        preview.write(Syntax(content, "yaml" if path.suffix in {".yml", ".yaml"} else "bash", theme=syntax_theme(self.theme), line_numbers=True, word_wrap=False))
 
     @work(exclusive=True, group="scan")
     async def scan_project(self):
@@ -504,7 +542,7 @@ class YoctoApp(App):
         table = self.main_query("#health", DataTable)
         table.clear()
         for status, name, detail in health:
-            table.add_row(Text(status, style={"OK": "green", "WARN": "yellow", "INFO": "cyan"}[status]), name, detail)
+            table.add_row(Text(status, style={"OK": self.current_theme.success, "WARN": self.current_theme.warning, "INFO": self.current_theme.accent}[status]), name, detail)
         self.main_query("#detail", Static).update(f"{len(entries)} local metadata entries. BitBake layer commands show evaluated configuration. Enter opens a file.")
 
     @staticmethod
@@ -591,7 +629,7 @@ class YoctoApp(App):
         for row in self.store.history():
             self.history_rows[row["id"]] = row
             status = row["status"]
-            color = {"success": "green", "failed": "red", "running": "cyan", "queued": "yellow"}.get(status, "white")
+            color = {"success": self.current_theme.success, "failed": self.current_theme.error, "running": self.current_theme.accent, "queued": self.current_theme.warning}.get(status, self.current_theme.foreground)
             elapsed = "—"
             if status != "queued":
                 start = datetime.fromisoformat(row["started"])
@@ -628,7 +666,7 @@ class YoctoApp(App):
         if self.live_lines and self.follow_log:
             log = self.main_query("#log", RichLog)
             for line in self.live_lines:
-                style = "red" if "ERROR:" in line else "yellow" if "WARNING:" in line else None
+                style = self.current_theme.error if "ERROR:" in line else self.current_theme.warning if "WARNING:" in line else None
                 log.write(Text(line, style=style))
             self.live_lines.clear()
 
@@ -664,7 +702,7 @@ class YoctoApp(App):
         log = self.main_query("#log", RichLog)
         log.clear()
         for line in text.splitlines():
-            log.write(Text(line, style="red" if "ERROR:" in line else None))
+            log.write(Text(line, style=self.current_theme.error if "ERROR:" in line else None))
 
     @on(Input.Changed, "#log-search")
     def log_filter(self):
