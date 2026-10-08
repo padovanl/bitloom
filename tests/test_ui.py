@@ -191,6 +191,10 @@ async def test_all_themes_preview_cancel_and_persist(tmp_path):
             app.screen.query_one('#theme-choice',Select).value=name
             await pilot.pause(.08)
             assert app.theme==name
+            for selector in ('#log', '#analysis-output'):
+                pane=app.screen_stack[0].query_one(selector)
+                assert pane.styles.scrollbar_background==app.screen_stack[0].query_one("#toolbar").styles.background
+                assert pane.styles.background==app.screen_stack[0].styles.background
             backgrounds.add(app.screen_stack[0].styles.background.hex)
         assert len(backgrounds)>=10
         await pilot.press('escape'); await pilot.pause(.2)
@@ -206,3 +210,37 @@ async def test_all_themes_preview_cancel_and_persist(tmp_path):
     restored=YoctoApp(config,state)
     assert restored.theme=='Paper'
     restored.store.close()
+
+async def test_responsive_terminal_sizes_preserve_log_and_navigation(tmp_path):
+    from textual.widgets import RichLog, Button
+    app=YoctoApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    async with app.run_test(size=(160,50)) as pilot:
+        await pilot.pause(.3)
+        for width,height in [(160,50),(120,36),(90,28),(80,24),(60,20),(140,20),(160,50)]:
+            await pilot.resize_terminal(width,height)
+            await pilot.pause(.2)
+            log=app.query_one('#log',RichLog)
+            assert log.region.width>15 and log.region.height>=3, (width,height,log.region)
+            build=app.query_one('#build',Button)
+            assert build.region.right<=width and build.region.bottom<=height
+            if (width,height)==(60,20):
+                from textual.containers import Vertical
+                for shortcut in ('f2','f4','f7'):
+                    await pilot.press(shortcut)
+                    await pilot.pause(.1)
+                    dialog=app.screen.query_one(Vertical).region
+                    assert dialog.x>=0 and dialog.right<=width
+                    assert dialog.y>=0 and dialog.bottom<=height
+                    await pilot.press('escape')
+                    await pilot.pause(.1)
+            if width<75 or height<22:
+                assert not app.query_one('#history-panel').display
+                assert not app.query_one('#metrics').display
+            elif height>=30 and width>=105:
+                assert app.query_one('#rail').display
+            await pilot.press('alt+2'); await pilot.pause(.1)
+            assert app.query_one('#workspace',TabbedContent).active=='metadata'
+            await pilot.press('alt+1'); await pilot.pause(.1)
+        assert app.query_one('#history-panel').display
+        assert app.query_one('#metrics').display
+    app.store.close()
