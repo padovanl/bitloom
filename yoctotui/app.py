@@ -62,6 +62,7 @@ class YoctoApp(App):
     }
     ModalScreen > Vertical { max-width: 95%; max-height: 95%; overflow-y: auto; }
     RichLog { background: $background; color: $foreground; overflow-y: auto; }
+    RichLog:focus { background-tint: transparent; border: solid $accent; }
     Screen { background: $background; color: $foreground; }
     Header { background: $surface; color: $accent; }
     #toolbar { height: 1; padding: 0 1; background: $surface; }
