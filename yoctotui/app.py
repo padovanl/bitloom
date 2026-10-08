@@ -51,6 +51,17 @@ class YoctoApp(App):
     TITLE = "Bitloom"
     SUB_TITLE = "Yocto / BitBake workspace"
     CSS = """
+    * {
+        scrollbar-background: $surface;
+        scrollbar-background-hover: $surface;
+        scrollbar-background-active: $surface;
+        scrollbar-color: $primary-muted;
+        scrollbar-color-hover: $accent;
+        scrollbar-color-active: $accent;
+        scrollbar-corner-color: $surface;
+    }
+    ModalScreen > Vertical { max-width: 95%; max-height: 95%; overflow-y: auto; }
+    RichLog { background: $background; color: $foreground; overflow-y: auto; }
     Screen { background: $background; color: $foreground; }
     Header { background: $surface; color: $accent; }
     #toolbar { height: 1; padding: 0 1; background: $surface; }
@@ -121,6 +132,21 @@ class YoctoApp(App):
     Screen.narrow #history-panel { width: 1fr; height: 7; padding-right: 0; }
     Screen.narrow #stream-panel { width: 1fr; height: 1fr; }
     Screen.narrow #task-monitor, Screen.narrow #source-preview, Screen.narrow #layer-tree { display: none; }
+    Screen.short #rail { display: none; }
+    Screen.short #workspace > ContentTabs { display: block; }
+    Screen.short #overview { display: none; }
+    Screen.short #metrics { height: 3; }
+    Screen.short #task-monitor, Screen.short #active-tasks, Screen.short #source-preview, Screen.short #layer-tree { display: none; }
+    Screen.short .section-title { display: none; }
+    Screen.short #history-panel { height: 5; }
+    Screen.tiny #metrics, Screen.tiny #history-panel { display: none; }
+    Screen.tiny #toolbar #profile, Screen.tiny #toolbar #themes, Screen.tiny #toolbar #commands, Screen.tiny #toolbar #profiles { display: none; }
+    Screen.tiny #job-state { height: 1; }
+    Screen.tiny #analysis-note, Screen.tiny #detail, Screen.tiny #scan-state { display: none; }
+    Screen.tiny #build-split { layout: vertical; }
+    Screen.tiny .tools Button { min-width: 5; padding: 0; }
+    Screen.tiny #log-follow { display: none; }
+    Screen.tiny #log-search { min-width: 8; }
     """
     BINDINGS = [
         ("f2", "command", "Commands"), ("f3", "refresh", "Refresh"),
@@ -452,7 +478,9 @@ class YoctoApp(App):
 
     def on_resize(self, event):
         self.screen_stack[0].set_class(event.size.width < 130, "compact")
-        self.screen_stack[0].set_class(event.size.width < 105, "narrow")
+        self.screen_stack[0].set_class(event.size.width < 105 or event.size.height < 30, "narrow")
+        self.screen_stack[0].set_class(event.size.height < 30, "short")
+        self.screen_stack[0].set_class(event.size.width < 75 or event.size.height < 22, "tiny")
 
     @on(Button.Pressed, "#rail Button")
     def navigate(self, event):

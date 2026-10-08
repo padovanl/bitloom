@@ -6,7 +6,7 @@
 
 ## Automated checks
 
-The expanded suite passed **38 unit and UI tests** on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.
+The expanded suite passed **51 unit and UI tests** on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.
 
 The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thread example. The same tests passed when executed outside that sandbox. This restriction is separate from application behavior.
 
@@ -100,3 +100,11 @@ The expanded suite passed 50 tests after adding twelve palettes. The theme UI te
 The documented `python -m build --no-isolation` produced the 0.1.0 wheel and source archive after satisfying the declared setuptools >=61 requirement. The wheel was installed into a fresh temporary virtual environment and imported from its site-packages while running outside the checkout; CLI help, the twelve palettes, actual TUI startup and a switch to Paper were verified. The source archive includes README, Pages/manual sources and assets, integration YAML and the profile preparation tool.
 
 `tools/prepare_validation.py` recreated the local kas profile from the recorded workspace without starting a build or deleting history. The documented TUI launch opened the actual local profile/history in a terminal and exited with Ctrl+Q; its idle service was then stopped. Build, launch, local test, fresh-machine setup, reconnect and documentation preview commands are covered in README and the user guide. These packaging checks do not claim another cold Yocto build.
+
+## Fresh demo setup and terminal resizing
+
+`setup-demo.sh --no-launch` was run against a fresh temporary source copy without `.venv`, in a directory whose name contains spaces. It created the virtual environment, installed dependencies and generated demo metadata successfully. The installed app then launched at 80 × 24 and opened its command dialog using F2. No Yocto download or image build is part of this sample setup.
+
+The responsive UI test resizes one running app through 160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20, 140 × 20 and back to 160 × 50. It checks visible build controls, usable log dimensions, section navigation and restoration of hidden panels. Small terminals hide history and metrics to preserve log space. The 60 × 20 test also opens commands, profiles and themes and checks that each dialog stays within the terminal boundaries. Scrollbar tracks and corners now use each theme's surface palette, and log panes only show vertical scrollbars when needed. Theme tests check log and analysis backgrounds and scrollbar colors across all twelve palettes.
+
+The README and landing page open with an idle demo capture. Failure captures elsewhere show the explicitly labelled diagnostic sample; they do not represent a Bitloom failure or the real kas-container build result.

@@ -8,7 +8,9 @@
 
 Python 3.10+ · Textual · Linux / WSL2 · Host · Docker · Podman · kas · kas-container
 
-![Bitloom build cockpit](docs/assets/builds.png)
+![Bitloom idle demo workspace](docs/assets/welcome.png)
+
+The opening capture shows the idle sample workspace. Error screens in the tour demonstrate an intentionally failing sample command; they are not failures of Bitloom or the verified Yocto build.
 
 ## Inspiration and thanks
 
@@ -17,11 +19,19 @@ Bitloom is inspired by the idea behind [yoctui](https://github.com/0xbadcaffe/yo
 ## Start in one minute
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-bitloom --demo
+./setup-demo.sh
 ```
+
+After cloning, run the script from the checkout. It creates or reuses `.venv`, installs Bitloom and its dependencies, prepares sample data, and opens the TUI. Requires Bash and Python 3.10+ with `venv` support on Linux or WSL2, plus internet access for the first install. Everything stays in the checkout; Docker, kas and a Yocto checkout are unnecessary for this sample demo.
+
+```bash
+./setup-demo.sh --no-launch       # Prepare only, useful over SSH or in automation
+.venv/bin/bitloom --demo          # Open the prepared demo again
+./setup-demo.sh --dev --no-launch # Also install test dependencies
+./setup-demo.sh --python python3.12 --no-launch
+```
+
+`PYTHON` also selects the interpreter when creating a new environment. Existing `.venv` environments are reused. `./setup-demo.sh --help` lists the options. For a real containerized Yocto build, follow [the local build instructions](#build-launch-and-try-the-local-yocto-workspace).
 
 The executable is `bitloom`; `yoctotui` remains available as a compatibility alias. The Python package and existing `.yoctotui` configuration/state paths retain their names.
 
@@ -86,7 +96,7 @@ The **Analysis** selector connects signature explanations, failure diagnosis, ru
 | Tab / Shift+Tab | Move focus |
 | Escape | Close a dialog |
 
-The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace; below 105 columns it switches to tabs and hides side panes. The [compact terminal capture](docs/assets/compact.png) shows the 90 × 28 layout. Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
+The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace. Below 105 columns or 30 rows, tabs replace the navigator and side panes disappear. Short terminals also hide the task monitor and overview. Below 75 columns or 22 rows, logs take priority over history and metrics; resize to restore those panels. Command, profile and theme dialogs also fit within the terminal and scroll when necessary. Navigation with **Alt+1–5**, commands with **F2**, profiles with **F4** and themes with **F7** remain available. Layout tests cover **160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20 and 140 × 20**, including restoration after resizing. See the [compact capture](docs/assets/compact.png) and [small terminal capture](docs/assets/tiny.png). Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
 
 ## Build interruption and recovery
 

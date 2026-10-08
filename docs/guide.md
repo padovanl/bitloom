@@ -1,5 +1,13 @@
 # User guide
 
+## Fresh checkout demo
+
+Run `./setup-demo.sh` from the cloned checkout to create or reuse `.venv`, install dependencies and launch the sample TUI. Requires Bash, Python 3.10+ with venv support on Linux or WSL2, and internet access for installation. No Docker, kas or Yocto installation is needed for the sample data.
+
+Use `./setup-demo.sh --no-launch` to prepare without launching, then `.venv/bin/bitloom --demo` to start later. `--dev` installs test dependencies; `--python python3.12` or `PYTHON` selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under `.yoctotui/demo` in the checkout.
+
+The terminal adapts while resizing: below 105 columns or 30 rows it hides the navigator and side panes; below 30 rows it also hides the overview. Below 75 columns or 22 rows it hides history and metrics to preserve output. Resize to restore panels. Alt+1–5 switches sections and F2/F4/F7 opens commands/profiles/themes even when toolbar controls are hidden. Verified sizes range from 60 × 20 to 160 × 50, including a wide 140 × 20 terminal.
+
 ## Profiles and paths
 
 Profiles are local JSON stored at `.yoctotui/profiles.json` by default. State is stored at `.yoctotui/`; both paths can be set on the command line. The file is atomically replaced with mode 0600. Profile names must be unique; queued jobs retain a copy of the original profile.

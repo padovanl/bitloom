@@ -30,6 +30,9 @@ async def capture():
         frames = []
         async with app.run_test(size=(140, 42)) as pilot:
             await pilot.pause(.8)
+            idle_svg = output / 'welcome.svg'
+            idle_svg.write_text(terminal_svg(app, 'Bitloom · idle demo workspace'))
+            cairosvg.svg2png(url=str(idle_svg), write_to=str(output / 'welcome.png'), scale=.8)
             # Real subprocess output provides a controlled, labelled demo failure.
             script = root / 'sample_failure.py'
             script.write_text('print("NOTE: Running task 1 of 3")\nprint("NOTE: recipe demo-agent-1.0-r0: task do_compile: Started")\nprint("agent.c:12: error: unknown type telemetry_t")\nprint("ERROR: oe_runmake failed")\nprint("ERROR: Task demo-agent:do_compile failed with exit code 1")\nexit(1)\n')
@@ -88,6 +91,8 @@ async def capture():
             app.query_one('#workspace', TabbedContent).active = 'builds'
             await pilot.resize_terminal(90, 28)
             await shot('compact', include_in_tour=False)
+            await pilot.resize_terminal(60, 20)
+            await shot('tiny', include_in_tour=False)
         app.store.close()
         # Stable dimensions; no invented terminal content.
         size = frames[0].size
