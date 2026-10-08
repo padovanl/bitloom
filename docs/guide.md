@@ -222,6 +222,8 @@ Press **F7** or the toolbar's **Themes** button. Choose a palette to preview it 
 | Theme | Character |
 | --- | --- |
 | Bitloom | Original dark terminal palette with mint and blue |
+| Soft Slate | Muted dark gray with gentle sage accents |
+| Linen | Warm light background with subdued colors |
 | Nord | Cool slate and arctic cyan |
 | Dracula | Charcoal, violet and cyan |
 | Tokyo Night | Deep blue with lavender |
@@ -236,7 +238,7 @@ Press **F7** or the toolbar's **Themes** button. Choose a palette to preview it 
 
 The choice is a UI preference stored in `appearance.json` under the selected state directory, independent of build profiles. Missing, malformed or unknown saved themes fall back to Bitloom. Themes do not change build settings or stop queued work.
 
-![Twelve actual terminal theme previews](assets/themes.gif)
+![Fourteen actual terminal theme previews](assets/themes.gif)
 
 ## Build, launch and try the local Yocto workspace
 
@@ -331,3 +333,7 @@ python -m http.server 8000 --directory docs
 ```
 
 Open `http://localhost:8000`. The Pages workflow is included, but this workspace has no GitHub remote and no public deployment yet.
+
+## Gentle colors and focus
+
+F7 offers Soft Slate, a muted dark gray palette, and Linen, a warm light palette. Focusing report or log panes highlights the border without tinting the entire background. If a true-color terminal such as Windows Terminal renders saturated blue blocks, check TERM and COLORTERM and try `COLORTERM=truecolor bitloom` with your usual profile arguments. Limited-color terminals still use their available colors.

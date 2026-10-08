@@ -29,6 +29,6 @@ async def main():
                 frames.append(Image.open(path.with_suffix('.png')).convert('RGB'))
         app.store.close()
     frames[0].save(ROOT/'docs/assets/themes.gif',save_all=True,append_images=frames[1:],duration=1200,loop=0)
-    print('Captured all 12 terminal palettes')
+    print(f'Captured all {len(THEMES)} terminal palettes')
 
 if __name__=='__main__': asyncio.run(main())

@@ -193,7 +193,7 @@ No CI claim implies a full Yocto build: unit/UI tests and the opt-in container i
 
 ## Terminal themes
 
-Press **F7** or choose **Themes** in the toolbar to preview and save one of 12 palettes: Bitloom, Nord, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox, Solarized Dark, Ocean, Forest, Ember, Paper and High Contrast. Paper is a light theme; High Contrast uses a black background and bright foreground. Cancel restores the previous palette. The choice is stored separately from build profiles in the state's `appearance.json` and is restored next launch.
+Press **F7** or choose **Themes** in the toolbar to preview and save one of 14 palettes: Bitloom, Soft Slate, Linen, Nord, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox, Solarized Dark, Ocean, Forest, Ember, Paper and High Contrast. Linen and Paper are light themes; High Contrast uses a black background and bright foreground. Cancel restores the previous palette. The choice is stored separately from build profiles in the state's `appearance.json` and is restored next launch.
 
 ![Actual terminal theme previews](docs/assets/themes.gif)
 
@@ -296,3 +296,9 @@ Open `http://localhost:8000`. The Pages workflow is included, but this workspace
 ## License
 
 Bitloom is released under the [MIT License](LICENSE). Bundled Python dependencies retain their own licenses.
+
+### Gentle colors and keyboard focus
+
+Press F7 and try **Soft Slate** (muted dark gray) or **Linen** (warm light background). **Nord** and **Catppuccin Mocha** are other softer choices. Focusing a log/report pane changes its border, keeping its background stable.
+
+If Windows Terminal/WSL shows saturated blue blocks instead of the documented colors, check `echo "$TERM / $COLORTERM"`. On a terminal supporting true color, launch with `COLORTERM=truecolor .venv/bin/bitloom --demo` (or your usual profile arguments). This declares terminal capability; it does not change the saved palette.

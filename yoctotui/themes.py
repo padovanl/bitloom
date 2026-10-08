@@ -4,6 +4,8 @@ from textual.theme import Theme
 # name, background, surface, foreground, accent, secondary, dark
 PALETTES = [
     ('Bitloom', '#0b1115', '#111b22', '#bdcbd2', '#84c9c0', '#81bdcf', True),
+    ('Soft Slate', '#252a30', '#2b3138', '#c4cbd0', '#98b9b2', '#a2b3c6', True),
+    ('Linen', '#eeeae2', '#e4dfd5', '#424740', '#52786e', '#687d96', False),
     ('Nord', '#2e3440', '#3b4252', '#eceff4', '#88c0d0', '#b48ead', True),
     ('Dracula', '#282a36', '#343746', '#f8f8f2', '#bd93f9', '#8be9fd', True),
     ('Tokyo Night', '#1a1b26', '#24283b', '#c0caf5', '#7aa2f7', '#bb9af7', True),

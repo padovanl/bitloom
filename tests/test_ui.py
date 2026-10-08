@@ -244,3 +244,22 @@ async def test_responsive_terminal_sizes_preserve_log_and_navigation(tmp_path):
         assert app.query_one('#history-panel').display
         assert app.query_one('#metrics').display
     app.store.close()
+
+async def test_report_focus_keeps_background_stable(tmp_path):
+    from textual.widgets import RichLog
+    app=YoctoApp(make_demo(tmp_path/'demo'),tmp_path/'state')
+    async with app.run_test(size=(120,36)) as pilot:
+        for name in ('Bitloom','Soft Slate','Linen'):
+            app.theme=name
+            app.query_one('#workspace',TabbedContent).active='analysis'
+            await pilot.pause(.1)
+            pane=app.query_one('#analysis-output',RichLog)
+            before=pane.styles.background
+            pane.focus()
+            await pilot.pause(.1)
+            assert pane.has_focus
+            assert pane.styles.background==before
+            assert pane.styles.background_tint.a==0
+            app.query_one('#target',Input).focus()
+            await pilot.pause(.1)
+    app.store.close()
