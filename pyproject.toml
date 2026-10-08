@@ -7,8 +7,15 @@ name = "yoctotui"
 version = "0.1.0"
 description = "A terminal cockpit for Yocto, BitBake, kas and container workflows"
 readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Luca Padovan", email = "padovan.93@gmail.com"}]
 requires-python = ">=3.10"
 dependencies = ["textual>=1.0,<2"]
+
+[project.urls]
+Homepage = "https://padovanl.github.io/bitloom/"
+Repository = "https://github.com/padovanl/bitloom"
+Issues = "https://github.com/padovanl/bitloom/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.24"]

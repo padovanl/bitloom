@@ -1,5 +1,38 @@
 # User guide
 
+## Install from a GitHub release
+
+Open the [GitHub Releases page](https://github.com/padovanl/bitloom/releases) and download the assets for the version you want. Replace `1.2.3` below with that version.
+
+### Debian / Ubuntu
+
+Download `bitloom_1.2.3_all.deb`, then install it from the download directory:
+
+```bash
+sudo apt install ./bitloom_1.2.3_all.deb
+bitloom --demo
+```
+
+Requires Python 3.10+ on Debian/Ubuntu. Python application dependencies are included under `/opt/bitloom/lib`; no pip installation is needed. The package also provides the `yoctotui` compatibility command. Docker, Podman, kas and Yocto remain separate tools for real builds. Remove Bitloom with `sudo apt remove bitloom`.
+
+### Other Linux distributions / WSL2
+
+Download `yoctotui-1.2.3.tar.gz` and install in a virtual environment:
+
+```bash
+tar -xzf yoctotui-1.2.3.tar.gz
+cd yoctotui-1.2.3
+python3 -m venv .venv
+.venv/bin/python -m pip install .
+.venv/bin/bitloom --demo
+```
+
+Alternatively, install the release wheel with `.venv/bin/python -m pip install /path/to/yoctotui-1.2.3-py3-none-any.whl`. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.
+
+### Verify downloaded assets
+
+Download `SHA256SUMS` alongside the packages, then run `sha256sum --check --ignore-missing SHA256SUMS` in the same directory. Check that the package you downloaded reports `OK`.
+
 ## Fresh checkout demo
 
 Run `./setup-demo.sh` from the cloned checkout to create or reuse `.venv`, install dependencies and launch the sample TUI. Requires Bash, Python 3.10+ with venv support on Linux or WSL2, and internet access for installation. No Docker, kas or Yocto installation is needed for the sample data.
