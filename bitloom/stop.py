@@ -25,9 +25,9 @@ class StopScreen(ModalScreen):
             yield Label("Recipe metadata is not normally changed by a build. Interrupted work directories may need cleaning; this is not proof of corruption.")
             if self.job.at_risk:
                 yield Label("Observed active recipes: " + ", ".join(sorted(self.job.at_risk)), markup=False)
-            supported = (self.job.profile.mode == "host" or bool(self.job.managed_container)) and self.job.command[0] == "bitbake"
+            supported = (self.job.profile.mode == "host" or (self.job.profile.mode == "container" and bool(self.job.managed_container))) and self.job.command[0] == "bitbake"
             if not supported:
-                yield Label("Graceful client signalling is unavailable for this runtime. Choose finish or force; container server shutdown cannot be guaranteed.")
+                yield Label("Graceful client signalling is unavailable. Force stops the named owned container when present; external server shutdown otherwise remains unconfirmed.")
             with Horizontal():
                 yield Button("Let finish", variant="primary", id="finish")
                 yield Button("Graceful stop", id="graceful", disabled=not supported)

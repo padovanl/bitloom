@@ -6,7 +6,7 @@ from .commands import invocation
 
 AGENT = r'''
 import os,sys,json,pathlib,hashlib,base64,shutil,subprocess,tempfile
-request=json.loads(sys.argv[1]); op=request['op']; p=pathlib.Path(request.get('path','.'))
+request=json.loads(sys.argv[1] if len(sys.argv)>1 else sys.stdin.read()); op=request['op']; p=pathlib.Path(request.get('path','.'))
 def git(path,*args):
  r=subprocess.run(['git','-C',str(path),*args],capture_output=True,text=True)
  return r.stdout.strip() if r.returncode==0 else None
@@ -152,20 +152,32 @@ print('BITLOOM_JSON:'+json.dumps(result))
 '''
 
 async def request(profile, op: str, path: str, **values):
-    inv = invocation(profile, ['python3', '-c', AGENT, json.dumps({'op':op,'path':path,**values})])
-    proc = await asyncio.create_subprocess_exec(*inv.argv, cwd=inv.cwd, env=inv.env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, start_new_session=True)
+    agent = AGENT
+    if op.startswith('dev-'):
+        from pathlib import Path
+        agent = Path(__file__).with_name('developer_agent.py').read_text()
+    payload = json.dumps({'op':op,'path':path,**values}).encode()
+    inv = invocation(profile, ['python3', '-c', agent])
+    if profile.mode == 'kas-container':
+        # kas-container only adds -i for a TTY by default; probes use pipes.
+        inv.argv[1:1] = ['--runtime-args', '-i']
+    proc = await asyncio.create_subprocess_exec(*inv.argv, cwd=inv.cwd, env=inv.env, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, start_new_session=True)
     try:
-        output, _ = await asyncio.wait_for(proc.communicate(), 120)
-    except asyncio.TimeoutError:
+        output, _ = await asyncio.wait_for(proc.communicate(payload), 420 if op.startswith('dev-') else 120)
+    except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
         import os, signal
-        os.killpg(proc.pid, signal.SIGTERM)
+        try: os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError: pass
         await proc.wait()
+        if isinstance(exc, asyncio.CancelledError): raise
         raise ValueError('Runtime request timed out')
     lines = output.decode(errors='replace').splitlines()
     for line in reversed(lines):
         if line.startswith('BITLOOM_JSON:') and proc.returncode == 0:
             return json.loads(line[len('BITLOOM_JSON:'):])
-    raise ValueError('Runtime request failed: ' + '\n'.join(lines[-12:]))
+    traces = [i for i, line in enumerate(lines) if 'Traceback (most recent call last)' in line]
+    diagnostic = lines[traces[-1]:traces[-1]+24] if traces else lines[-12:]
+    raise ValueError('Runtime request failed: ' + '\n'.join(line[:1000] for line in diagnostic)[-5000:])
 
 
 async def download(profile, path: str, destination):

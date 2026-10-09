@@ -158,6 +158,7 @@ class BitloomApp(App):
         ("ctrl+l", "log_focus", "Logs"),
         ("f8", "cycle_section(-1)", "Previous"),
         ("f9", "cycle_section(1)", "Next"),
+        Binding("f10", "section('developer')", "Developer", show=False),
         Binding("alt+1", "section('builds')", "Builds", show=False),
         Binding("alt+2", "section('metadata')", "Metadata", show=False),
         Binding("alt+3", "section('tasklogs')", "Tasks", show=False),
@@ -206,6 +207,8 @@ class BitloomApp(App):
         self.config_hints = {}
         self.analysis_text = ""
         self.runtime_listing_path = None
+        self.developer_busy = False
+        self.capability_cache = {}
 
     def refresh_theme_colors(self):
         self.update_telemetry()
@@ -256,7 +259,7 @@ class BitloomApp(App):
                 for title, tab in [("Builds / logs", "builds"), ("Task logs", "tasklogs")]:
                     yield Button(title, id=f"nav-{tab}")
                 yield Static("DEVELOP & INSPECT", classes="rail-label")
-                for title, tab in [("Metadata", "metadata"), ("Environment", "workbench"), ("Artifacts", "artifacts"), ("Analysis", "analysis")]:
+                for title, tab in [("Metadata", "metadata"), ("Environment", "workbench"), ("Artifacts", "artifacts"), ("Analysis", "analysis"), ("Developer", "developer")]:
                     yield Button(title, id=f"nav-{tab}")
                 yield Static("WORKSPACE", classes="rail-label")
                 for title, tab in [("Caches", "caches"), ("Configuration", "healthtab"), ("Help", "guide")]:
@@ -360,6 +363,9 @@ class BitloomApp(App):
                             yield Input(placeholder="Second manifest path", id="analysis-second")
                         yield Static("Reports and runtime tools. First field: runtime path / recipe / package. Second: comparison file / stamps path. Export saves the report.", id="analysis-note", markup=False)
                         yield RichLog(id="analysis-output", min_width=1, wrap=True, markup=False, auto_scroll=False)
+                    with TabPane("Developer", id="developer"):
+                        from .developer_ui import DeveloperPanel
+                        yield DeveloperPanel(id="developer-panel")
                     with TabPane("? Guide", id="guide"):
                         yield Markdown(HELP, id="help")
         yield Footer()
@@ -398,10 +404,39 @@ class BitloomApp(App):
         target = target if target is not None else self.main_query("#target", Input).value
         self.push_screen(ActionScreen(self.profile, action_id, target), self.command_result)
 
-    def command_result(self, result):
+    @work(group="command-validation")
+    async def command_result(self, result):
         if not result:
             return
         action, argv = result
+        if self.developer_busy:
+            self.notify("Wait for the Developer probe before queueing a command", severity="warning")
+            return
+        required = {"license":"do_create_spdx", "cve":"do_cve_check", "ptest":"do_compile_ptest_base", "testimage":"do_testimage",
+                    "kernel-diff":"do_diffconfig", "kernel-fragments":"do_kernel_configcheck", "menuconfig":"do_menuconfig"}
+        if action.id in required:
+            from .developer import inspect
+            profile = self.profile
+            recipe = argv[-1]
+            try:
+                key = (profile.name, recipe)
+                cap = self.capability_cache.get(key)
+                if cap and time.time() - cap.get('captured', 0) > 30:
+                    cap = None
+                if cap is None:
+                    if self.runner.active or any(j.status == "queued" for j in self.runner.jobs):
+                        raise ValueError("Probe Runtime capabilities in Developer while idle before queueing this optional action")
+                    self.developer_busy = True
+                    try:
+                        cap = await inspect(profile, "capabilities", recipe=recipe)
+                    finally:
+                        self.developer_busy = False
+                    self.capability_cache[key] = cap
+                if not cap.get("task_probe_ok") or required[action.id] not in cap["tasks"]:
+                    raise ValueError(required[action.id] + " is unavailable for this recipe/runtime; configure its class/prerequisites first")
+            except (ValueError, OSError) as exc:
+                self.notify(str(exc), severity="warning", timeout=12)
+                return
         if action.interactive:
             if any(j.status in {"running", "queued", "cancelling"} for j in self.runner.jobs):
                 self.notify("Wait for the active job before opening an interactive command", severity="warning")
@@ -417,15 +452,28 @@ class BitloomApp(App):
 
     @work(exclusive=True, group="terminal")
     async def run_interactive(self, argv):
+        await self.interactive(self.profile, argv)
+
+    @work(exclusive=True, group="terminal")
+    async def run_interactive_for(self, profile, argv, evidence_path=None):
+        await self.interactive(profile, argv, evidence_path)
+
+    async def interactive(self, profile, argv, evidence_path=None):
         try:
-            inv = invocation(self.profile, argv)
+            inv = invocation(profile, argv)
             # Add a tty for container shell commands when the terminal is available.
-            if self.profile.mode == "container":
+            if profile.mode == "container":
                 i = inv.argv.index("-i")
                 inv.argv[i] = "-it"
             with self.suspend():
                 result = await asyncio.to_thread(subprocess.run, inv.argv, cwd=inv.cwd, env=inv.env)
             self.notify(f"Interactive command exited: {result.returncode}")
+            if evidence_path:
+                evidence = json.loads(Path(evidence_path).read_text())
+                evidence.update(status='success' if result.returncode == 0 else 'failed', exit_code=result.returncode)
+                Path(evidence_path).write_text(json.dumps(evidence, indent=2))
+                transcript = Path(evidence['log'])
+                if transcript.exists(): transcript.chmod(0o600)
         except Exception as exc:
             self.notify(str(exc), severity="error")
 
@@ -444,6 +492,7 @@ class BitloomApp(App):
         if event.value is Select.BLANK:
             return
         self.settings.active = str(event.value)
+        self.capability_cache.clear()
         if self.is_mounted:
             self.settings.save()
             self.main_query("#target", Input).value = self.profile.targets[0] if self.profile.targets else ""
@@ -521,6 +570,7 @@ class BitloomApp(App):
             return
         entries=await asyncio.to_thread(metadata,self.profile)
         if entries!=self.entries:
+            self.capability_cache.clear()
             self.scan_project()
 
     def watch_runtime_directory(self):
@@ -1252,7 +1302,7 @@ class BitloomApp(App):
     def recovery_screen(self, job):
         from .stop import RecoveryScreen
         recipes = sorted(job.at_risk)
-        if job.profile.mode in {"kas", "kas-container"} or job.profile.container_name or not job.stop_confirmed:
+        if job.profile.mode == "kas" or job.profile.container_name or not job.stop_confirmed:
             self.notify("Shutdown unconfirmed: verify all tasks have stopped before manually queuing clean.", severity="warning", timeout=12)
             return
         if recipes:
