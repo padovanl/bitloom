@@ -46,7 +46,7 @@ HINTS = {
 
 
 def runtime_build(profile):
-    if profile.mode in {'kas', 'kas-container'}:
+    if profile.mode in {'kas', 'kas-container', 'wrapper'}:
         return '.'
     if profile.mode == 'container':
         return str(Path(profile.container_root) / profile.build_path.relative_to(profile.root_path))
@@ -179,7 +179,7 @@ def clone_profile(settings, name, build, machine='', distro=''):
     profile = copy.deepcopy(original)
     profile.name, profile.build_dir = name, str(path)
     profile.machine, profile.distro = machine or original.machine, distro or original.distro
-    if profile.mode in {'kas', 'kas-container'}:
+    if profile.mode in {'kas', 'kas-container', 'wrapper'}:
         # Keep local layer paths and source repositories from the original work
         # mount. kas-container forwards an external build directory as /build.
         profile.environment.setdefault('KAS_WORK_DIR', str(original.root_path))

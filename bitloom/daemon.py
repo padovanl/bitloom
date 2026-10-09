@@ -28,7 +28,7 @@ def socket_path(state):
     return directory/(identity+'.sock')
 
 def rpc(state, payload):
-    sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); sock.settimeout(60 if payload.get("op") == "cancel" else 5)
+    sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); sock.settimeout({"cancel": 60, "graceful": 30, "submit": 30}.get(payload.get("op"), 5))
     try:
         sock.connect(str(socket_path(state)))
         sock.sendall(json.dumps(payload).encode()+b'\n')

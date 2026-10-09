@@ -41,7 +41,7 @@ def metadata(profile: Profile) -> list[Entry]:
     # Do not traverse tmp/downloads while indexing metadata.
     skip = {profile.build_path.resolve(), cache_path(profile, "downloads").resolve(), cache_path(profile, "sstate").resolve()}
     roots = [profile.root_path]
-    if profile.mode in {"kas", "kas-container"} and profile.environment.get("KAS_WORK_DIR"):
+    if profile.mode in {"kas", "kas-container", "wrapper"} and profile.environment.get("KAS_WORK_DIR"):
         work = Path(profile.environment["KAS_WORK_DIR"]).expanduser().resolve()
         if work != profile.root_path and not work.is_relative_to(profile.root_path):
             roots.append(work)
@@ -128,8 +128,14 @@ def diagnostics(profile: Profile) -> list[tuple[str, str, str]]:
     for name in ("local.conf", "bblayers.conf"):
         p = profile.build_path / "conf" / name
         check(p.exists(), name, str(p))
-    binary = {"host": "bitbake", "kas": "kas", "container": profile.engine, "kas-container": "kas-container"}[profile.mode]
-    check(bool(shutil.which(binary)), "Runtime", f"{binary}: {shutil.which(binary) or 'not in PATH; host may need init script'}")
+    if profile.mode == "wrapper":
+        launcher = profile.launcher[0]
+        local = profile.root_path / launcher
+        found = str(local) if "/" in launcher and local.is_file() else shutil.which(launcher)
+        check(bool(found) and os.access(found, os.X_OK), "Runtime", f"launcher {launcher}: {found or 'not found from the project root or PATH'}")
+    else:
+        binary = {"host": "bitbake", "kas": "kas", "container": profile.engine, "kas-container": "kas-container"}[profile.mode]
+        check(bool(shutil.which(binary)), "Runtime", f"{binary}: {shutil.which(binary) or 'not in PATH; host may need init script'}")
     free = shutil.disk_usage(profile.root_path if profile.root_path.exists() else Path.cwd()).free
     check(free > 20 * 1024**3, "Free disk", f"{human_size(free)} available (20 GiB suggested minimum)")
     for kind in ("downloads", "sstate"):
