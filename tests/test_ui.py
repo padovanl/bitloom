@@ -75,7 +75,7 @@ async def test_terminal_navigation_preview_and_pause(tmp_path):
         await pilot.press('alt+1')
         await pilot.click('#log-follow')
         assert not app.follow_log
-        assert str(app.query_one('#log-follow', Button).label) == 'Resume'
+        assert str(app.query_one('#log-follow', Button).label).endswith('Resume')
         app.live_lines.append('saved output')
         app.flush_log()
         assert app.live_lines == ['saved output']

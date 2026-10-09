@@ -13,8 +13,9 @@ from rich.syntax import Syntax
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.css.query import NoMatches
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane, Tree
+from textual.widgets import Button, DataTable, Footer, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane, Tree
 
 from .commands import invocation
 from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, inventory, metadata, prune_cache, search_log, task_logs
@@ -22,6 +23,7 @@ from .models import Profile, Settings, read_assignments
 from .runner import Job, Runner
 from .screens import ActionScreen, FileScreen, ProfilesScreen, PruneScreen
 from .store import Store
+from .keys import FILTERS, PRIMARY, SECTION_KEYS, SECTIONS, button_hints, section_bindings
 
 HELP = """# Bitloom cockpit
 
@@ -49,6 +51,13 @@ Commands depend on the selected Yocto release and inherited classes. SPDX, ptest
 """
 
 
+class Workspace(TabbedContent):
+    """Sections change only through navigation, never because a hidden widget kept focus."""
+
+    def _on_tab_pane_focused(self, event):
+        event.stop()
+
+
 class BitloomApp(App):
     TITLE = "Bitloom"
     SUB_TITLE = "Yocto / BitBake workspace"
@@ -61,119 +70,173 @@ class BitloomApp(App):
         scrollbar-color-hover: $accent;
         scrollbar-color-active: $accent;
         scrollbar-corner-color: $surface;
+        scrollbar-size-vertical: 1;
     }
-    ModalScreen > Vertical { max-width: 95%; max-height: 95%; overflow-y: auto; }
-    RichLog { background: $background; color: $foreground; overflow-y: auto; }
-    RichLog:focus { background-tint: transparent; border: solid $accent; }
     Screen { background: $background; color: $foreground; }
-    Header { background: $surface; color: $accent; }
-    #toolbar { height: 1; padding: 0 1; background: $surface; }
+    ModalScreen > Vertical { max-width: 95%; max-height: 95%; overflow-y: auto; }
+
+    /* Top bar: identity, context and live status in one line. */
+    #topbar { height: 1; background: $surface; }
+    #brand-line { width: 1fr; height: 1; padding: 0 1; }
+    #status-line { width: auto; height: 1; padding: 0 1; }
+    #clock { width: 7; height: 1; color: $foreground-muted; }
+    #toolbar { height: 1; padding: 0 1; background: $surface; border-bottom: none; }
     #profile { width: 22; height: 1; }
     #target { width: 1fr; }
-    Button { height: 1; min-width: 8; border: none; background: $surface; color: $foreground; padding: 0 1; }
-    Button:hover, Button:focus { background: $primary-muted; color: $foreground; }
-    Button.-primary { background: $primary-muted; color: $foreground; }
+    Button { height: 1; min-width: 6; border: none; background: $surface; color: $foreground; padding: 0 1; text-style: none; }
+    Button:hover { background: $primary-muted; color: $foreground; }
+    Button.-primary { background: $primary-muted; color: $foreground; text-style: bold; }
     Button.-warning { background: $warning-muted; color: $warning; }
+    Button:disabled { color: $foreground-disabled; background: $surface; }
+    #toolbar Button { margin-left: 1; }
+    #toolbar #build { background: $accent; color: $background; text-style: bold; }
     Input { height: 1; border: none; background: $surface; padding: 0 1; }
+    Input:focus { background: $primary-muted; }
     Select { height: 1; border: none; }
     SelectCurrent { height: 1; border: none; padding: 0 1; background: $surface; }
+    Select:focus > SelectCurrent { background: $primary-muted; }
+
+    /* Navigator rail: numbered sections, selected one marked by an accent bar. */
     #shell { height: 1fr; }
-    #rail { width: 22; background: $surface; padding: 0 1; border-right: solid $primary-muted; }
-    #brand { height: 3; color: $accent; text-style: bold; padding-top: 1; }
-    .rail-label { color: $warning; height: 2; padding-top: 1; }
-    #rail Button { width: 1fr; text-align: left; height: 1; margin: 0; padding: 0 1; background: $surface; color: $foreground-muted; }
-    #rail Button.selected { background: $primary-muted; color: $foreground; text-style: bold; }
-    #rail-context { height: 1fr; color: $foreground-muted; margin-top: 2; }
-    #main { width: 1fr; }
-    #overview { height: 3; padding: 0 1; color: $foreground-muted; border-bottom: solid $primary-muted; }
-    #metrics { height: 4; }
-    .metric { width: 1fr; padding: 0 1; border-bottom: solid $primary-muted; border-right: solid $primary-muted; background: $background; }
+    #rail { width: 24; background: $surface; padding: 1 0 0 0; }
+    .rail-label { color: $foreground-muted; text-style: bold; height: 1; margin-top: 1; padding-left: 2; }
+    #rail Button { width: 1fr; height: 1; margin: 0; padding: 0 1; background: $surface; color: $foreground-muted; text-align: left; content-align: left middle; border-left: thick $surface; }
+    #rail Button:hover { background: $primary-muted; color: $foreground; }
+    #rail Button.selected { background: $primary-muted; color: $foreground; text-style: bold; border-left: thick $accent; }
+    #rail-context { height: 1fr; color: $foreground-muted; padding: 0 1 0 2; content-align: left bottom; }
+    #main { width: 1fr; padding: 0 0 0 1; }
+
+    /* Status cards. */
+    #metrics { height: 4; margin-top: 1; }
+    .metric { width: 1fr; height: 4; padding: 0 1; margin-right: 1; background: $background;
+              border: round $primary-muted; border-title-color: $foreground-muted; border-title-style: bold; }
+    #disk-metric { margin-right: 1; }
+
+    /* Panels share one frame style; the focused panel lights up. */
     #workspace { height: 1fr; }
     #workspace > ContentTabs { display: none; }
-    TabPane { padding: 0 1; }
+    TabPane { padding: 0 1 0 0; }
     .tools { height: 1; margin-bottom: 1; }
     .tools Input { width: 1fr; }
-    .tools Button { min-width: 8; }
-    DataTable { height: 1fr; border: solid $primary-muted; background: $background; }
-    DataTable > .datatable--header { background: $surface; color: $accent; text-style: bold; }
-    DataTable > .datatable--cursor { background: $primary-muted; color: $foreground; }
+    .tools Button { min-width: 6; margin-right: 1; }
+    DataTable, RichLog, Tree, #task-monitor, Markdown#help {
+        border: round $primary-muted; border-title-color: $foreground-muted; background: $background;
+    }
+    DataTable:focus, RichLog:focus, Tree:focus, Markdown#help:focus { border: round $accent; border-title-color: $accent; background-tint: transparent; }
+    RichLog { color: $foreground; overflow-y: auto; }
+    DataTable { height: 1fr; }
+    DataTable > .datatable--header { background: $background; color: $accent; text-style: bold; }
+    DataTable > .datatable--cursor { background: $primary-muted; color: $foreground; text-style: bold; }
+    DataTable > .datatable--hover { background: $surface; }
+    DataTable:blur > .datatable--cursor { background: $surface; }
+    Tree > .tree--cursor { background: $primary-muted; color: $foreground; }
+
     #build-split { height: 1fr; }
-    #history-panel { width: 40; padding-right: 1; }
+    #history-panel { width: 46; margin-right: 1; }
     #history { height: 1fr; }
-    #task-monitor { height: 9; border: solid $primary-muted; color: $success; padding: 0 1; }
+    #task-monitor { height: 8; color: $success; padding: 0 1; }
     #stream-panel { width: 1fr; }
-    .section-title { height: 2; color: $accent; padding-top: 1; }
-    #job-state { height: 2; color: $foreground-muted; }
+    #job-state { height: 1; color: $foreground-muted; }
     #progress { height: 1; margin-bottom: 1; }
-    #log { height: 1fr; border: solid $primary-muted; background: $background; }
-    #scan-state { height: 2; color: $foreground-muted; }
+    #progress Bar { width: 1fr; }
+    #progress Bar > .bar--bar { color: $accent; background: $surface; }
+    #progress Bar > .bar--complete { color: $success; background: $surface; }
+    #progress.failed Bar > .bar--bar { color: $error; }
+    #progress PercentageStatus { color: $foreground-muted; }
+    #log { height: 1fr; }
+    #scan-state { height: 1; margin-bottom: 1; color: $foreground-muted; }
     #cache-days { width: 9; }
     #cache-kind { width: 18; }
     #inspect-kind { width: 19; }
-    #analysis-kind { width: 24; }
-    #analysis-output { height: 1fr; border: solid $primary-muted; }
+    #analysis-kind { width: 26; }
+    #analysis-output { height: 1fr; }
+    #analysis-note { height: auto; max-height: 2; color: $foreground-muted; margin-bottom: 1; }
     #health { height: 1fr; }
     #metadata-split { height: 1fr; }
-    #layer-tree { width: 26; border: solid $primary-muted; background: $surface; }
-    #metadata-table { width: 3fr; }
-    #source-preview { width: 2fr; border: solid $primary-muted; background: $background; }
-    #active-tasks { height: 4; color: $success; }
-    #detail { height: 2; color: $foreground-muted; }
-    #help { height: 1fr; }
+    #layer-tree { width: 28; }
+    #metadata-table { width: 3fr; margin: 0 1; }
+    #source-preview { width: 2fr; }
+    #active-tasks { height: auto; max-height: 3; color: $success; margin-bottom: 1; }
+    #detail { height: 1; color: $foreground-muted; margin-bottom: 1; }
+    #help { height: 1fr; padding: 0 1; }
     Footer { background: $surface; }
-    Screen.compact #rail { width: 20; }
-    Screen.compact #history-panel { width: 34; }
+    Footer FooterKey .footer-key--key { color: $accent; background: $surface; text-style: bold; }
+    Footer FooterKey .footer-key--description { color: $foreground-muted; }
+
+    Screen.compact #rail { width: 21; }
+    Screen.compact #history-panel { width: 38; }
     Screen.compact #toolbar #commands, Screen.compact #toolbar #profiles { display: none; }
     Screen.narrow #rail { display: none; }
+    Screen.narrow #main { padding: 0; }
     Screen.narrow #workspace > ContentTabs { display: block; }
-    Screen.narrow #overview { height: 2; }
-    Screen.narrow #metrics { height: 3; }
-    Screen.narrow .section-title { height: 1; padding-top: 0; }
+    Screen.narrow #metrics { height: 3; margin-top: 0; }
+    Screen.narrow .metric { height: 3; border: none; border-top: round $primary-muted; padding: 0 1; }
     Screen.narrow .tools { margin-bottom: 0; }
     Screen.narrow #progress { margin-bottom: 0; }
     Screen.narrow #build-split { layout: vertical; }
-    Screen.narrow #history-panel { width: 1fr; height: 7; padding-right: 0; }
+    Screen.narrow #history-panel { width: 1fr; height: 8; margin-right: 0; }
     Screen.narrow #stream-panel { width: 1fr; height: 1fr; }
     Screen.narrow #task-monitor, Screen.narrow #source-preview, Screen.narrow #layer-tree { display: none; }
+    Screen.narrow #status-line { display: none; }
     Screen.short #rail { display: none; }
+    Screen.short #main { padding: 0; }
     Screen.short #workspace > ContentTabs { display: block; }
-    Screen.short #overview { display: none; }
-    Screen.short #metrics { height: 3; }
+    Screen.short #metrics { height: 3; margin-top: 0; }
+    Screen.short .metric { height: 3; border: none; border-top: round $primary-muted; }
     Screen.short #task-monitor, Screen.short #active-tasks, Screen.short #source-preview, Screen.short #layer-tree { display: none; }
-    Screen.short .section-title { display: none; }
-    Screen.short #history-panel { height: 5; }
+    Screen.short #history-panel { height: 6; }
     Screen.tiny #metrics, Screen.tiny #history-panel { display: none; }
     Screen.tiny #toolbar #profile, Screen.tiny #toolbar #themes, Screen.tiny #toolbar #commands, Screen.tiny #toolbar #profiles { display: none; }
-    Screen.tiny #job-state { height: 1; }
-    Screen.tiny #analysis-note, Screen.tiny #detail, Screen.tiny #scan-state { display: none; }
+    Screen.tiny #analysis-note, Screen.tiny #detail, Screen.tiny #scan-state, Screen.tiny #clock { display: none; }
     Screen.tiny #build-split { layout: vertical; }
     Screen.tiny .tools Button { min-width: 5; padding: 0; }
     Screen.tiny #log-follow { display: none; }
     Screen.tiny #log-search { min-width: 8; }
     Screen.narrow #dev-split { layout: vertical; }
-    Screen.narrow #dev-rows { width: 1fr; height: 6; }
+    Screen.narrow #dev-rows { width: 1fr; height: 7; }
     Screen.narrow #dev-detail { width: 1fr; height: 1fr; }
     Screen.narrow .dev-tools { margin-bottom: 0; }
     Screen.narrow #dev-state { height: 1; }
-    Screen.tiny #dev-rows { height: 4; }
+    Screen.tiny #dev-rows { height: 5; }
     Screen.tiny .dev-tools { margin-bottom: 0; }
     Screen.tiny #dev-state { height: 1; }
     """
     BINDINGS = [
-        ("f2", "command", "Commands"), ("f3", "refresh", "Refresh"),
-        ("f7", "themes", "Themes"),
-        ("f4", "profiles", "Profiles"), ("ctrl+q", "quit", "Exit"),
-        ("f5", "stop_job", "Stop"), ("f6", "retry", "Retry"),
-        ("ctrl+l", "log_focus", "Logs"),
-        ("f8", "cycle_section(-1)", "Previous"),
-        ("f9", "cycle_section(1)", "Next"),
+        *section_bindings(),
+        Binding("question_mark", "keys", "Keys"),
+        ("f2", "command", "Commands"),
+        Binding("ctrl+q", "quit", "Exit"),
+        Binding("f1", "keys", "Keys", show=False),
+        Binding("f3", "refresh", "Refresh", show=False),
+        Binding("f4", "profiles", "Profiles", show=False),
+        Binding("f5", "stop_job", "Stop", show=False),
+        Binding("f6", "retry", "Retry", show=False),
+        Binding("f7", "themes", "Themes", show=False),
+        Binding("ctrl+l", "log_focus", "Logs", show=False),
+        Binding("f8", "cycle_section(-1)", "Previous", show=False),
+        Binding("f9", "cycle_section(1)", "Next", show=False),
+        Binding("left_square_bracket", "cycle_section(-1)", "Previous", show=False),
+        Binding("right_square_bracket", "cycle_section(1)", "Next", show=False),
         Binding("f10", "section('developer')", "Developer", show=False),
-        Binding("alt+1", "section('builds')", "Builds", show=False),
-        Binding("alt+2", "section('metadata')", "Metadata", show=False),
-        Binding("alt+3", "section('tasklogs')", "Tasks", show=False),
-        Binding("alt+4", "section('workbench')", "Inspect", show=False),
-        Binding("alt+5", "section('caches')", "Caches", show=False),
+        *[Binding(number, f"section('{ident}')", title, show=False) for ident, number, title, _, _ in SECTIONS],
+        *[Binding(f"alt+{number}", f"section('{ident}')", title, show=False) for ident, number, title, _, _ in SECTIONS],
+        Binding("slash", "focus_filter", "Filter", show=False),
+        Binding("escape", "leave_field", "Back", show=False),
+        Binding("j", "cursor(1)", "Down", show=False),
+        Binding("k", "cursor(-1)", "Up", show=False),
+        Binding("t", "focus_target", "Target", show=False),
+        Binding("b", "quick_build", "Build", show=False),
+        Binding("P", "switch_profile", "Profile", show=False),
+        # nano habits: ^G help, ^W where is, ^Y/^V page, ^X exit.
+        Binding("ctrl+g", "keys", "Help", show=False),
+        Binding("ctrl+w", "focus_filter", "Where is", show=False),
+        Binding("ctrl+y", "page(-1)", "Page up", show=False),
+        Binding("ctrl+v", "page(1)", "Page down", show=False),
+        Binding("ctrl+x", "quit", "Exit", show=False),
     ]
+    # Actions that only make sense on the main screen with no dialog open.
+    MAIN_ONLY = {"press", "focus", "toggle_select", "open_select", "open_metadata", "build_summary", "focus_filter",
+                 "leave_field", "cursor", "page", "focus_target", "quick_build", "switch_profile", "section", "cycle_section"}
 
     def __init__(self, config: Path, state: Path, persistent=False):
         super().__init__()
@@ -253,37 +316,35 @@ class BitloomApp(App):
         return self.settings.profile
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, icon="B")
+        labels = {ident: f"{icon} {title}" for ident, _, title, icon, _ in SECTIONS}
+        with Horizontal(id="topbar"):
+            yield Static(id="brand-line")
+            yield Static(id="status-line")
+            yield Static(id="clock")
         with Horizontal(id="toolbar"):
             yield Select([(p.name, p.name) for p in self.settings.profiles], value=self.profile.name, allow_blank=False, id="profile")
-            yield Input(placeholder="Build target / recipe", value=self.profile.targets[0] if self.profile.targets else "", id="target")
-            yield Button("[ Build ]", variant="primary", id="build")
+            yield Input(placeholder="Build target / recipe  (t to edit · Enter builds)", value=self.profile.targets[0] if self.profile.targets else "", id="target")
+            yield Button("▶ Build", variant="primary", id="build")
             yield Button("Commands", id="commands")
             yield Button("Profiles", id="profiles")
             yield Button("Themes", id="themes")
         with Horizontal(id="shell"):
             with Vertical(id="rail"):
-                yield Static("BITLOOM\nYocto / BitBake", id="brand")
-                yield Static("BUILD & DIAGNOSE", classes="rail-label")
-                for title, tab in [("Builds / logs", "builds"), ("Task logs", "tasklogs")]:
-                    yield Button(title, id=f"nav-{tab}")
-                yield Static("DEVELOP & INSPECT", classes="rail-label")
-                for title, tab in [("Metadata", "metadata"), ("Environment", "workbench"), ("Artifacts", "artifacts"), ("Analysis", "analysis"), ("Developer", "developer")]:
-                    yield Button(title, id=f"nav-{tab}")
-                yield Static("WORKSPACE", classes="rail-label")
-                for title, tab in [("Caches", "caches"), ("Configuration", "healthtab"), ("Help", "guide")]:
-                    yield Button(title, id=f"nav-{tab}")
+                group = None
+                for ident, number, title, icon, section_group in SECTIONS:
+                    if section_group != group:
+                        group = section_group
+                        yield Static(group, classes="rail-label")
+                    yield Button(f"{number}  {icon} {title}", id=f"nav-{ident}")
                 yield Static(id="rail-context")
             with Vertical(id="main"):
-                yield Static(id="overview", markup=False)
                 with Horizontal(id="metrics"):
                     for ident in ("build-metric", "queue-metric", "resource-metric", "disk-metric"):
                         yield Static(id=ident, classes="metric")
-                with TabbedContent(id="workspace"):
-                    with TabPane("◈ Builds", id="builds"):
+                with Workspace(id="workspace"):
+                    with TabPane(labels["builds"], id="builds"):
                         with Horizontal(id="build-split"):
                             with Vertical(id="history-panel"):
-                                yield Static("RECENT OPERATIONS", classes="section-title")
                                 yield DataTable(id="history", cursor_type="row")
                                 with Horizontal(classes="tools"):
                                     yield Button("Stop…", variant="warning", id="stop")
@@ -291,17 +352,16 @@ class BitloomApp(App):
                                     yield Button("Export", id="export")
                                 yield Static("No observed active tasks", id="task-monitor", markup=False)
                             with Vertical(id="stream-panel"):
-                                yield Static("BUILD OUTPUT / DIAGNOSTICS", classes="section-title")
                                 yield Static("Select an operation to inspect its output", id="job-state", markup=False)
                                 yield ProgressBar(total=100, show_eta=False, id="progress")
                                 with Horizontal(classes="tools"):
-                                    yield Input(placeholder="Search output · ±3 context lines", id="log-search")
+                                    yield Input(placeholder="/ search output · ±3 context lines", id="log-search")
                                     yield Button("Errors only", id="errors")
                                     yield Button("Pause", id="log-follow")
                                 yield RichLog(id="log", min_width=1, wrap=True, highlight=False, markup=False, max_lines=5000)
-                    with TabPane("◇ Layers & recipes", id="metadata"):
+                    with TabPane(labels["metadata"], id="metadata"):
                         with Horizontal(classes="tools"):
-                            yield Input(placeholder="Search recipe, layer, append, class, kas file…", id="metadata-search")
+                            yield Input(placeholder="/ search recipe, layer, append, class, kas file…", id="metadata-search")
                             yield Button("Build recipe", id="recipe-build")
                             yield Button("Modify", id="recipe-modify")
                             yield Button("Layer actions", id="layer-actions")
@@ -312,44 +372,18 @@ class BitloomApp(App):
                             yield Tree("Workspace metadata", id="layer-tree")
                             yield DataTable(id="metadata-table", cursor_type="row")
                             yield RichLog(id="source-preview", wrap=False, max_lines=200, markup=False)
-                    with TabPane("≋ Task logs", id="tasklogs"):
+                    with TabPane(labels["tasklogs"], id="tasklogs"):
                         with Horizontal(classes="tools"):
-                            yield Input(placeholder="Filter task logs by recipe or task…", id="task-search")
+                            yield Input(placeholder="/ filter task logs by recipe or task…", id="task-search")
                             yield Button("Refresh logs", id="logs-refresh")
                             yield Button("Read selected", id="logs-read")
                             yield Button("Failed task log", id="failed-task-log")
                         yield Static("No active tasks in this TUI session.", id="active-tasks", markup=False)
                         yield DataTable(id="task-table", cursor_type="row")
-                    with TabPane("▣ Caches & downloads", id="caches"):
-                        with Horizontal(classes="tools"):
-                            yield Select([("Downloads", "downloads"), ("Shared state", "sstate")], value="downloads", allow_blank=False, id="cache-kind")
-                            yield Input(placeholder="Filter files", id="cache-search")
-                            yield Input(value="30", placeholder="Age days", id="cache-days", type="integer")
-                            yield Button("Scan", id="cache-scan")
-                            yield Button("Prune plan", variant="warning", id="cache-prune")
-                            yield Button("Fetch all", id="fetch-all")
-                        yield Static("Scan a cache to inspect files, size and age.", id="scan-state", markup=False)
-                        yield DataTable(id="cache-table", cursor_type="row")
-                    with TabPane("◉ Artifacts", id="artifacts"):
-                        with Horizontal(classes="tools"):
-                            yield Input(placeholder="Search images, SDK, manifests, licenses, SPDX, buildstats…", id="artifact-search")
-                            yield Button("Refresh", id="artifact-refresh")
-                            yield Button("Read file", id="artifact-read")
-                            yield Button("Rootfs inventory", id="image-contents")
-                        yield DataTable(id="artifact-table", cursor_type="row")
-                    with TabPane("⚙ Health & config", id="healthtab"):
-                        with Horizontal(classes="tools"):
-                            yield Button("local.conf", id="local-conf")
-                            yield Button("bblayers.conf", id="layers-conf")
-                            yield Button("Environment", id="environment")
-                            yield Button("Devtool status", id="dev-status")
-                            yield Button("Versions", id="versions")
-                            yield Button("Refresh", id="health-refresh")
-                        yield DataTable(id="health", cursor_type="row")
-                    with TabPane("⌕ Workbench", id="workbench"):
+                    with TabPane(labels["workbench"], id="workbench"):
                         with Horizontal(classes="tools"):
                             yield Select([("Environment", "env"), ("Dependencies", "graph")], value="env", allow_blank=False, id="inspect-kind")
-                            yield Input(placeholder="Filter variable/value or graph node…", id="inspect-search")
+                            yield Input(placeholder="/ filter variable/value or graph node…", id="inspect-search")
                             yield Button("Load", id="inspect-load")
                             yield Button("Resolve env", id="inspect-resolve")
                             yield Button("Env diff", id="inspect-diff")
@@ -361,10 +395,27 @@ class BitloomApp(App):
                             yield Button("Why this task?", id="dependency-context")
                             yield Button("Timings", id="task-timings")
                         yield DataTable(id="inspect-table", cursor_type="row")
-                    with TabPane("Analysis", id="analysis"):
+                    with TabPane(labels["caches"], id="caches"):
+                        with Horizontal(classes="tools"):
+                            yield Select([("Downloads", "downloads"), ("Shared state", "sstate")], value="downloads", allow_blank=False, id="cache-kind")
+                            yield Input(placeholder="/ filter files", id="cache-search")
+                            yield Input(value="30", placeholder="Age days", id="cache-days", type="integer")
+                            yield Button("Scan", id="cache-scan")
+                            yield Button("Prune plan", variant="warning", id="cache-prune")
+                            yield Button("Fetch all", id="fetch-all")
+                        yield Static("Scan a cache to inspect files, size and age.", id="scan-state", markup=False)
+                        yield DataTable(id="cache-table", cursor_type="row")
+                    with TabPane(labels["artifacts"], id="artifacts"):
+                        with Horizontal(classes="tools"):
+                            yield Input(placeholder="/ search images, SDK, manifests, licenses, SPDX, buildstats…", id="artifact-search")
+                            yield Button("Refresh", id="artifact-refresh")
+                            yield Button("Read file", id="artifact-read")
+                            yield Button("Rootfs inventory", id="image-contents")
+                        yield DataTable(id="artifact-table", cursor_type="row")
+                    with TabPane(labels["analysis"], id="analysis"):
                         with Horizontal(classes="tools"):
                             yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Create runtime file", "runtime-create"), ("Export runtime artifact", "runtime-download"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Package provenance", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
-                            yield Input(placeholder="Literal metadata search phrase", id="analysis-query")
+                            yield Input(placeholder="/ literal metadata search phrase · Enter analyzes", id="analysis-query")
                             yield Button("Analyze", id="analysis-run")
                             yield Button("Export", id="analysis-export")
                         with Horizontal(classes="tools", id="analysis-paths"):
@@ -372,10 +423,19 @@ class BitloomApp(App):
                             yield Input(placeholder="Second manifest path", id="analysis-second")
                         yield Static("Reports and runtime tools. First field: runtime path / recipe / package. Second: comparison file / stamps path. Export saves the report.", id="analysis-note", markup=False)
                         yield RichLog(id="analysis-output", min_width=1, wrap=True, markup=False, auto_scroll=False)
-                    with TabPane("Developer", id="developer"):
+                    with TabPane(labels["developer"], id="developer"):
                         from .developer_ui import DeveloperPanel
                         yield DeveloperPanel(id="developer-panel")
-                    with TabPane("? Guide", id="guide"):
+                    with TabPane(labels["healthtab"], id="healthtab"):
+                        with Horizontal(classes="tools"):
+                            yield Button("local.conf", id="local-conf")
+                            yield Button("bblayers.conf", id="layers-conf")
+                            yield Button("Environment", id="environment")
+                            yield Button("Devtool status", id="dev-status")
+                            yield Button("Versions", id="versions")
+                            yield Button("Refresh", id="health-refresh")
+                        yield DataTable(id="health", cursor_type="row")
+                    with TabPane(labels["guide"], id="guide"):
                         yield Markdown(HELP, id="help")
         yield Footer()
 
@@ -389,13 +449,28 @@ class BitloomApp(App):
             "health": ("Status", "Check", "Details"),
             "inspect-table": ("Variable / task", "Value / dependency"),
         }
+        widths = {("history", "Operation"): 17, ("history", "Status"): 11, ("history", "Elapsed"): 8}
         for ident, names in columns.items():
             table = self.main_query(f"#{ident}", DataTable)
             for name in names:
-                table.add_column(name, width=16 if ident == "history" and name == "Operation" else None)
-        self.main_query("#history", DataTable).border_title = "Persistent history"
-        self.main_query("#log", RichLog).border_title = "Live stream"
-        self.main_query("#task-monitor", Static).border_title = "Active BitBake tasks"
+                table.add_column(name, width=widths.get((ident, name)))
+        titles = {"#history": "History", "#log": "Output", "#task-monitor": "Active BitBake tasks", "#layer-tree": "Layers",
+                  "#metadata-table": "Metadata", "#source-preview": "Preview", "#task-table": "Task logs",
+                  "#inspect-table": "Environment / dependencies", "#cache-table": "Cache files", "#artifact-table": "Build outputs",
+                  "#analysis-output": "Report", "#health": "Health checks", "#help": "Guide"}
+        for selector, title in titles.items():
+            self.main_query(selector).border_title = title
+        for ident, title in (("build-metric", "Build"), ("queue-metric", "Tasks"), ("resource-metric", "Host"), ("disk-metric", "Disk")):
+            self.main_query(f"#{ident}").border_title = title
+        # Every button has a key; keep Tab for fields, tables and logs.
+        for button in self.screen_stack[0].query(Button):
+            button.can_focus = False
+        for ident, key in button_hints().items():
+            self.set_label(ident)
+        self.main_query("#build", Button).label = Text.assemble(("b", "bold underline"), " Build")
+        for ident, key in (("commands", "F2"), ("profiles", "F4"), ("themes", "F7"), ("rescan", "F3"), ("logs-refresh", "F3"), ("artifact-refresh", "F3"), ("health-refresh", "F3")):
+            button = self.main_query(f"#{ident}", Button)
+            button.label = Text.assemble((key, "bold"), " " + str(button.label))
         self.set_interval(0.2, self.flush_log)
         self.set_interval(2, self.update_telemetry)
         self.set_interval(1, self.update_elapsed)
@@ -408,6 +483,15 @@ class BitloomApp(App):
         self.update_telemetry()
         self.refresh_history()
         self.action_refresh()
+        self.main_query("#history", DataTable).focus()
+
+    def set_label(self, ident, text=None):
+        """Show a button's keyboard key in front of its label."""
+        key = button_hints().get(ident)
+        button = self.main_query(f"#{ident}", Button)
+        text = text if text is not None else getattr(button, "_plain_label", None) or str(button.label)
+        button._plain_label = text
+        button.label = Text.assemble((key, "bold underline"), " " + text) if key else text
 
     def action_command(self, action_id="build", target=None):
         target = target if target is not None else self.main_query("#target", Input).value
@@ -455,7 +539,7 @@ class BitloomApp(App):
         try:
             job = self.runner.submit(self.profile, action.title, argv, action.id)
             self.select_job(job.id, job.log)
-            self.main_query("#workspace", TabbedContent).active = "builds"
+            self.action_section("builds")
         except (ValueError, OSError) as exc:
             self.notify(str(exc), severity="error")
 
@@ -516,38 +600,78 @@ class BitloomApp(App):
         self.scan_project()
         self.refresh_history()
 
+    def status_style(self, status):
+        theme = self.current_theme
+        glyph, color = {
+            "success": ("✔", theme.success), "failed": ("✖", theme.error), "running": ("●", theme.accent),
+            "queued": ("◌", theme.warning), "cancelling": ("◐", theme.warning), "cancelled": ("■", theme.foreground),
+            "interrupted": ("⚠", theme.warning), "idle": ("○", theme.foreground),
+        }.get(status, ("·", theme.foreground))
+        return glyph, color
+
+    @staticmethod
+    def meter(fraction, width=10):
+        filled = max(0, min(width, round(fraction * width)))
+        return "━" * filled, "━" * (width - filled)
+
     def update_overview(self):
         p = self.profile
+        theme = self.current_theme
         active = self.runner.active
         queue = sum(j.status == "queued" for j in self.runner.jobs)
-        self.main_query("#overview", Static).update(
-            f"{p.name.upper()}  /  {p.mode.upper()}  ·  MACHINE={p.machine or self.config_hints.get('MACHINE', '?')}  ·  DISTRO={p.distro or self.config_hints.get('DISTRO', '?')}\n"
-            f"{p.root_path}  →  {p.build_dir}"
-        )
+        machine = p.machine or self.config_hints.get('MACHINE', '?')
+        distro = p.distro or self.config_hints.get('DISTRO', '?')
+        brand = Text.assemble((" ◆ bitloom ", f"bold {theme.background} on {theme.accent}"), "  ",
+                              (p.name, "bold"), ("  ·  ", "dim"), p.mode, ("  ·  ", "dim"), ("MACHINE ", "dim"), machine,
+                              ("  ·  ", "dim"), ("DISTRO ", "dim"), distro, no_wrap=True, overflow="ellipsis")
+        self.main_query("#brand-line", Static).update(brand)
         recent = next((r for r in self.history_rows.values() if r["profile"] == p.name), None)
-        status = active.status.upper() if active else recent["status"].upper() if recent else "IDLE"
+        status = active.status if active else recent["status"] if recent else "idle"
         title = active.title if active else recent["title"] if recent else "No jobs in this profile"
-        color = self.current_theme.error if status == "FAILED" else self.current_theme.success
-        metric = Text("BUILD STATUS\n", style="dim", no_wrap=True, overflow="ellipsis")
-        metric.append(status + "\n", style=f"bold {color}")
-        metric.append(title, style=self.current_theme.foreground)
+        glyph, color = self.status_style(status)
+        connection = ("⇄ service", theme.success) if self.persistent else ("◇ embedded", theme.foreground)
+        self.main_query("#status-line", Static).update(Text.assemble((connection[0], connection[1]), ("  ·  ", "dim"), (glyph, f"bold {color}")))
+        metric = Text(no_wrap=True, overflow="ellipsis")
+        metric.append(f"{glyph} {status.upper()}\n", style=f"bold {color}")
+        metric.append(title, style=theme.foreground)
         self.main_query("#build-metric", Static).update(metric)
-        progress = active.progress if active else json.loads(recent["metadata"]).get("progress", [0, 0]) if recent else [0, 0]
-        tasks = f"{progress[0]} / {progress[1]}" if progress[1] else "No task count reported"
-        self.main_query("#queue-metric", Static).update(Text.from_markup(
-            f"[dim]TASKS / QUEUE[/dim]\n[bold {self.current_theme.warning}]{tasks}[/]\n{queue} queued / {len(active.at_risk) if active else 0} running"))
-        self.main_query("#rail-context", Static).update(
-            f"RUNTIME\n{p.mode}\n\nPROFILE\n{p.name}\n\nF2  Command center\nF4  Edit profiles"
-        )
+        progress = active.progress if active else tuple(json.loads(recent["metadata"]).get("progress", [0, 0])) if recent else (0, 0)
+        setscene = getattr(active, "setscene", (0, 0)) if active else tuple(json.loads(recent["metadata"]).get("setscene", [0, 0])) if recent else (0, 0)
+        tasks = Text(no_wrap=True, overflow="ellipsis")
+        if progress[1]:
+            tasks.append(f"{progress[0]}/{progress[1]} run", style=f"bold {theme.warning}")
+        else:
+            tasks.append("no task count", style="dim")
+        if setscene[1]:
+            tasks.append(f"  ·  {setscene[0]}/{setscene[1]} sstate", style=theme.success)
+        running = len(active.active_recipe_tasks) if active else 0
+        tasks.append(f"\n{queue} queued · {running} running", style=theme.foreground)
+        self.main_query("#queue-metric", Static).update(tasks)
+        build = p.build_path
+        try:
+            build = build.relative_to(p.root_path)
+        except ValueError:
+            pass
+        root = str(p.root_path)
+        if len(root) > 20:
+            root = "…" + root[-19:]
+        self.main_query("#rail-context", Static).update(Text.assemble(
+            ("PROFILE  ", "dim"), (p.name, "bold"), "\n", ("RUNTIME  ", "dim"), p.mode, "\n",
+            ("ROOT     ", "dim"), root, "\n", ("BUILD    ", "dim"), str(build)[:15], "\n\n",
+            ("?", f"bold {theme.accent}"), (" keys  ", "dim"), ("F2", f"bold {theme.accent}"), (" commands", "dim"), no_wrap=True))
 
     def action_cycle_section(self, direction):
         if len(self.screen_stack)>1:
             return
         workspace=self.main_query('#workspace',TabbedContent)
         sections=[pane.id for pane in workspace.query(TabPane)]
-        workspace.active=sections[(sections.index(workspace.active)+direction)%len(sections)]
+        self.action_section(sections[(sections.index(workspace.active)+direction)%len(sections)])
 
     def update_elapsed(self):
+        # A scheduled timer may arrive while the default screen is being removed.
+        if not self.screen_stack or not len(self.screen_stack[0].query('#clock')):
+            return
+        self.main_query('#clock', Static).update(datetime.now().strftime('%H:%M'))
         table=self.main_query('#history',DataTable)
         for row in self.history_rows.values():
             if row['status']=='running' and not row['finished']:
@@ -568,7 +692,7 @@ class BitloomApp(App):
         path=Path(result['path'])
         local_metadata=path.suffix in {'.bb','.bbappend','.bbclass','.yml','.yaml'} and path.is_relative_to(self.profile.root_path)
         if self.profile.mode != 'host' or not local_metadata:
-            self.main_query('#workspace',TabbedContent).active='analysis'
+            self.action_section('analysis')
             self.main_query('#analysis-kind',Select).value='runtime-list'
             self.main_query('#analysis-first',Input).value=str(Path(result['path']).parent)
             self.run_analysis()
@@ -588,8 +712,142 @@ class BitloomApp(App):
         if self.main_query('#workspace',TabbedContent).active=='analysis' and self.main_query('#analysis-kind',Select).value=='runtime-list' and self.main_query('#analysis-first',Input).value.strip()==self.runtime_listing_path:
             self.run_analysis()
 
-    def action_section(self, tab):
+    def action_section(self, tab, focus=True):
+        # A focused widget in the old pane would make TabbedContent switch back.
+        self.screen_stack[0].set_focus(None)
         self.main_query("#workspace", TabbedContent).active = tab
+        if focus:
+            self.call_after_refresh(self.focus_primary)
+
+    @property
+    def active_section(self):
+        return self.main_query("#workspace", TabbedContent).active
+
+    def check_action(self, action, parameters):
+        if action not in self.MAIN_ONLY:
+            return True
+        if len(self.screen_stack) > 1:
+            return False
+        try:
+            section = self.active_section
+        except NoMatches:
+            return False
+        keys = SECTION_KEYS.get(section, [])
+        if action in {"focus_target", "quick_build"}:
+            letter = "t" if action == "focus_target" else "b"
+            return not any(key == letter for key, _, _, _ in keys)
+        sectional = {"press", "focus", "toggle_select", "open_select", "open_metadata", "build_summary"}
+        if action in sectional:
+            from textual.actions import parse
+            return any(parse(bound)[1:] == (action, tuple(parameters)) for _, bound, _, _ in keys)
+        return True
+
+    def action_press(self, ident):
+        button = self.main_query(f"#{ident}", Button)
+        if button.disabled:
+            self.notify(f"{button._plain_label if hasattr(button, '_plain_label') else button.label} is unavailable right now", severity="warning")
+            return
+        button.press()
+
+    def action_focus(self, selector):
+        widget = self.main_query(selector)
+        if widget.display:
+            widget.focus()
+
+    def action_toggle_select(self, selector):
+        select = self.main_query(selector, Select)
+        values = [value for _, value in select._options if value is not Select.BLANK]
+        if values:
+            select.value = values[(values.index(select.value) + 1) % len(values)] if select.value in values else values[0]
+            self.notify(f"{select.id.replace('-', ' ').title()}: {select.value}", timeout=2)
+
+    def action_open_select(self, selector):
+        select = self.main_query(selector, Select)
+        select.focus()
+        select.action_show_overlay()
+
+    def action_open_metadata(self):
+        table = self.main_query("#metadata-table", DataTable)
+        if table.row_count:
+            table.action_select_cursor()
+
+    def action_build_summary(self):
+        self.make_report("build-report")
+
+    def action_focus_filter(self):
+        section = self.active_section
+        selector = FILTERS.get(section)
+        if section == "analysis" and not self.main_query("#analysis-query").display:
+            selector = "#analysis-first"
+        if selector:
+            self.main_query(selector).focus()
+
+    def action_leave_field(self):
+        if isinstance(self.focused, (Input, Select)):
+            self.focus_primary()
+
+    def action_cursor(self, step):
+        widget = self.focused
+        if isinstance(widget, (DataTable, Tree)):
+            widget.action_cursor_down() if step > 0 else widget.action_cursor_up()
+        elif widget is not None and hasattr(widget, "scroll_down"):
+            widget.scroll_down() if step > 0 else widget.scroll_up()
+
+    def action_quick_build(self):
+        self.action_command("build")
+
+    def action_page(self, step):
+        widget = self.focused
+        if isinstance(widget, DataTable):
+            widget.action_page_down() if step > 0 else widget.action_page_up()
+        elif widget is not None and hasattr(widget, "scroll_page_down"):
+            widget.scroll_page_down() if step > 0 else widget.scroll_page_up()
+
+    def action_focus_target(self):
+        self.main_query("#target", Input).focus()
+
+    def action_switch_profile(self):
+        from .screens import ProfilePickerScreen
+        self.push_screen(ProfilePickerScreen(self.settings), self.profile_picked)
+
+    def profile_picked(self, name):
+        if name and name != self.settings.active:
+            self.main_query("#profile", Select).value = name
+
+    def action_keys(self):
+        from .screens import KeysScreen
+        if not isinstance(self.screen, KeysScreen):
+            self.push_screen(KeysScreen())
+
+    @on(Input.Submitted)
+    def field_submitted(self, event):
+        ident = event.input.id
+        if ident == "target":
+            self.action_command("build")
+        elif ident == "log-search":
+            self.main_query("#log").focus()
+        elif ident in {"analysis-query", "analysis-first", "analysis-second"}:
+            self.run_analysis()
+        elif ident in {"metadata-search", "task-search", "inspect-search", "cache-search", "artifact-search", "cache-days"}:
+            self.focus_primary()
+
+    def get_system_commands(self, screen):
+        """Expose sections, workspace actions and every operation in Ctrl+P."""
+        yield from super().get_system_commands(screen)
+        from textual.app import SystemCommand
+        from .commands import ACTIONS
+        for ident, number, title, _, _ in SECTIONS:
+            yield SystemCommand(f"Go to {title}", f"Open section {number}", lambda ident=ident: self.action_section(ident))
+        yield SystemCommand("Keyboard reference", "Every key in every section (?)", self.action_keys)
+        yield SystemCommand("Switch profile", "Choose the active profile (P)", self.action_switch_profile)
+        yield SystemCommand("Edit profiles", "JSON profile editor (F4)", self.action_profiles)
+        yield SystemCommand("Refresh workspace", "Rescan metadata, logs, artifacts (F3)", self.action_refresh)
+        yield SystemCommand("Stop selected job", "Interruption options (F5)", self.action_stop_job)
+        yield SystemCommand("Retry selected job", "Queue it again with its profile (F6)", self.action_retry)
+        for action in ACTIONS:
+            yield SystemCommand(f"Queue: {action.group} / {action.title}", " ".join([action.tool, *action.args]).strip() or action.help,
+                                lambda ident=action.id: self.action_command(ident))
+
 
     def on_resize(self, event):
         self.screen_stack[0].set_class(event.size.width < 130, "compact")
@@ -599,18 +857,28 @@ class BitloomApp(App):
 
     @on(Button.Pressed, "#rail Button")
     def navigate(self, event):
-        self.main_query("#workspace", TabbedContent).active = event.button.id[4:]
+        self.action_section(event.button.id[4:])
 
     @on(TabbedContent.TabActivated, "#workspace")
     def navigation_changed(self):
         active = self.main_query("#workspace", TabbedContent).active
         for button in self.screen_stack[0].query("#rail Button"):
             button.set_class(button.id == f"nav-{active}", "selected")
+        self.refresh_bindings()
+        if len(self.screen_stack) == 1 and not isinstance(self.focused, (Input, Select)):
+            # Land on the section's list so its single-key actions work at once.
+            self.call_after_refresh(self.focus_primary)
+
+    def focus_primary(self):
+        active = self.main_query("#workspace", TabbedContent).active
+        widget = self.main_query(PRIMARY.get(active, "#history"))
+        if widget.display and widget.can_focus:
+            widget.focus()
 
     @on(Button.Pressed, "#log-follow")
     def toggle_follow(self):
         self.follow_log = not self.follow_log
-        self.main_query("#log-follow", Button).label = "Pause" if self.follow_log else "Resume"
+        self.set_label("log-follow", "Pause" if self.follow_log else "Resume")
         if self.follow_log:
             self.live_lines.clear()
             self.reload_log()
@@ -630,22 +898,37 @@ class BitloomApp(App):
                 cpu = f"{usage:.0f}% CPU"
             self.resource_previous = current
             mem = {line.split(':')[0]: int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()}
-            ram = 100 * (1 - mem['MemAvailable'] / mem['MemTotal'])
-            self.main_query("#resource-metric", Static).update(Text.from_markup(
-                f"[dim]HOST RESOURCES[/dim]\n[bold {self.current_theme.secondary}]{cpu} · {ram:.0f}% RAM[/]\n{human_size((mem['MemTotal']-mem['MemAvailable'])*1024)} used"))
+            ram = 1 - mem['MemAvailable'] / mem['MemTotal']
+            theme = self.current_theme
+            text = Text(no_wrap=True, overflow="ellipsis")
+            if self.resource_previous and cpu != "warming up":
+                full, empty = self.meter(usage / 100, 8)
+                text.append("CPU ", style="dim").append(full, style=theme.secondary).append(empty, style="dim").append(f" {usage:3.0f}%")
+            else:
+                text.append("CPU warming up", style="dim")
+            full, empty = self.meter(ram, 8)
+            text.append("\nRAM ", style="dim").append(full, style=theme.secondary).append(empty, style="dim").append(f" {100*ram:3.0f}%")
+            text.append(f"  {human_size((mem['MemTotal']-mem['MemAvailable'])*1024)}", style="dim")
+            self.main_query("#resource-metric", Static).update(text)
         except (OSError, ValueError, KeyError):
-            self.main_query("#resource-metric", Static).update("HOST RESOURCES\nUnavailable on this host")
+            self.main_query("#resource-metric", Static).update("Unavailable on this host")
         try:
             disk = shutil.disk_usage(self.profile.root_path)
-            self.main_query("#disk-metric", Static).update(Text.from_markup(
-                f"[dim]WORKSPACE DISK[/dim]\n[bold {self.current_theme.success}]{human_size(disk.free)} free[/]\n{100*disk.used/disk.total:.0f}% used · host filesystem"))
+            used = disk.used / disk.total
+            theme = self.current_theme
+            color = theme.error if disk.free < 20 * 1024**3 else theme.warning if used > .85 else theme.success
+            full, empty = self.meter(used, 10)
+            text = Text(no_wrap=True, overflow="ellipsis")
+            text.append(full, style=color).append(empty, style="dim").append(f" {100*used:.0f}% used")
+            text.append(f"\n{human_size(disk.free)} free", style=f"bold {color}").append(" · host fs", style="dim")
+            self.main_query("#disk-metric", Static).update(text)
         except OSError:
-            self.main_query("#disk-metric", Static).update("WORKSPACE DISK\nPath unavailable")
+            self.main_query("#disk-metric", Static).update("Path unavailable")
         active = self.runner.active
         tasks = list(active.active_recipe_tasks) if active else []
-        self.main_query("#task-monitor", Static).update("\n".join(tasks[:7]) if tasks else "No observed active tasks\n\nTasks appear as BitBake reports\nStarted / Succeeded events.")
+        self.main_query("#task-monitor", Static).update("\n".join("▸ " + task for task in tasks[:6]) if tasks else "No observed active tasks\n\nTasks appear as BitBake reports\nStarted / Succeeded events.")
         self.main_query("#active-tasks", Static).update(
-            "LIVE TASKS / CURRENT SESSION\n" + ("  ·  ".join(tasks[:8]) if tasks else "No observed active tasks")
+            "Live tasks: " + ("  ·  ".join(tasks[:8]) if tasks else "none observed in this session")
         )
         self.update_overview()
 
@@ -780,14 +1063,14 @@ class BitloomApp(App):
         for row in self.store.history():
             self.history_rows[row["id"]] = row
             status = row["status"]
-            color = {"success": self.current_theme.success, "failed": self.current_theme.error, "running": self.current_theme.accent, "queued": self.current_theme.warning}.get(status, self.current_theme.foreground)
+            glyph, color = self.status_style(status)
             elapsed = "—"
             if status != "queued":
                 start = datetime.fromisoformat(row["started"])
                 end = datetime.fromisoformat(row["finished"]) if row["finished"] else datetime.now(timezone.utc)
                 seconds = max(0, int((end-start).total_seconds()))
                 elapsed = f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
-            table.add_row(row["title"], Text(status, style=color), elapsed, key=row["id"])
+            table.add_row(row["title"], Text(f"{glyph} {status}", style=color), elapsed, key=row["id"])
         if table.row_count:
             # Keep the selected job highlighted when new jobs are inserted above it.
             if self.selected_job_id in self.history_rows:
@@ -810,18 +1093,37 @@ class BitloomApp(App):
                 self.notify(f"{job.title} failed — open Errors only and Task logs", severity="error", timeout=8)
                 self.scan_project()
             if job.id == self.selected_job_id:
-                self.main_query("#job-state", Static).update(f"{job.title} · {job.status} · exit {job.code} · {job.log}")
+                glyph, color = self.status_style(job.status)
+                self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {job.status}", f"bold {color}"), "  ", (job.title, "bold"), (f"  ·  exit {job.code}  ·  {job.log}", "dim"), no_wrap=True, overflow="ellipsis"))
+        if job.id == self.selected_job_id:
+            self.main_query("#progress", ProgressBar).set_class(job.status == "failed", "failed")
         if job.id == self.selected_job_id and job.status == "success":
             self.main_query("#progress", ProgressBar).update(total=100, progress=100)
         elif job.id == self.selected_job_id and job.progress[1]:
             self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=job.progress[0])
 
+    def style_line(self, line, query=""):
+        theme = self.current_theme
+        if line.startswith("$ "):
+            text = Text(line, style=f"bold {theme.accent}")
+        elif "ERROR:" in line or "FAILED" in line or "error:" in line:
+            text = Text(line, style=theme.error)
+        elif "WARNING:" in line:
+            text = Text(line, style=theme.warning)
+        elif line.startswith("NOTE:"):
+            text = Text(line)
+            text.stylize("dim", 0, 5)
+        else:
+            text = Text(line)
+        if query:
+            text.highlight_words([query], style=f"bold reverse {theme.accent}", case_sensitive=False)
+        return text
+
     def flush_log(self):
         if self.live_lines and self.follow_log:
             log = self.main_query("#log", RichLog)
             for line in self.live_lines:
-                style = self.current_theme.error if "ERROR:" in line else self.current_theme.warning if "WARNING:" in line else None
-                log.write(Text(line, style=style))
+                log.write(self.style_line(line))
             self.live_lines.clear()
 
     def select_job(self, ident, path):
@@ -831,6 +1133,7 @@ class BitloomApp(App):
         self.reload_log()
         row = self.history_rows.get(ident)
         if row:
+            self.main_query("#progress", ProgressBar).set_class(row["status"] == "failed", "failed")
             progress = json.loads(row["metadata"]).get("progress", [0, 0])
             live = next((j for j in self.runner.jobs if j.id == ident), None)
             if live:
@@ -841,7 +1144,8 @@ class BitloomApp(App):
                 self.main_query("#progress", ProgressBar).update(total=progress[1], progress=progress[0])
             else:
                 self.main_query("#progress", ProgressBar).update(total=100, progress=0)
-            self.main_query("#job-state", Static).update(f"{row['title']} · {row['status']} · {path}")
+            glyph, color = self.status_style(row["status"])
+            self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {row['status']}", f"bold {color}"), "  ", (row["title"], "bold"), ("  ·  " + str(path), "dim"), no_wrap=True, overflow="ellipsis"))
 
     @work(exclusive=True, group="logread")
     async def reload_log(self):
@@ -856,7 +1160,7 @@ class BitloomApp(App):
         log = self.main_query("#log", RichLog)
         log.clear()
         for line in text.splitlines():
-            log.write(Text(line, style=self.current_theme.error if "ERROR:" in line else None))
+            log.write(self.style_line(line, query))
 
     @on(Input.Changed, "#log-search")
     def log_filter(self):
@@ -877,7 +1181,7 @@ class BitloomApp(App):
             e = self.file_rows[key]
             self.selected_job_id = None
             self.selected_log = e.path
-            self.main_query("#workspace", TabbedContent).active = "builds"
+            self.action_section("builds")
             self.main_query("#job-state", Static).update(str(e.path))
             self.reload_log()
         elif ident == "artifact-table":
@@ -923,7 +1227,7 @@ class BitloomApp(App):
             self.action_command("build" if ident == "recipe-build" else "dev-modify", self.selected_recipe())
         elif ident == "errors":
             self.errors_only = not self.errors_only
-            event.button.label = "All lines" if self.errors_only else "Errors only"
+            self.set_label("errors", "All lines" if self.errors_only else "Errors only")
             self.reload_log()
         elif ident == "stop":
             self.stop_build()
@@ -984,7 +1288,7 @@ class BitloomApp(App):
             for path in paths[:10]:
                 job = self.runner.submit(profile, "Failed task log: " + Path(path).name, ["cat", path], "custom")
             self.select_job(job.id, job.log)
-            self.main_query("#workspace", TabbedContent).active = "builds"
+            self.action_section("builds")
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity="error")
 
@@ -1295,7 +1599,7 @@ class BitloomApp(App):
         self.notify(f"Report exported to {destination}")
 
     def action_log_focus(self):
-        self.main_query("#workspace", TabbedContent).active = "builds"
+        self.action_section("builds", focus=False)
         self.main_query("#log-search", Input).focus()
 
     def action_stop_job(self):
