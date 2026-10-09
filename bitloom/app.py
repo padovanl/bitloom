@@ -205,6 +205,7 @@ class BitloomApp(App):
         self.inspection_rows: list[tuple[str, str]] = []
         self.config_hints = {}
         self.analysis_text = ""
+        self.runtime_listing_path = None
 
     def refresh_theme_colors(self):
         self.update_telemetry()
@@ -292,6 +293,7 @@ class BitloomApp(App):
                             yield Button("Build recipe", id="recipe-build")
                             yield Button("Modify", id="recipe-modify")
                             yield Button("Layer actions", id="layer-actions")
+                            yield Button("New file", id="new-file")
                             yield Button("Rescan", id="rescan")
                         yield Static(id="detail", markup=False)
                         with Horizontal(id="metadata-split"):
@@ -349,7 +351,7 @@ class BitloomApp(App):
                         yield DataTable(id="inspect-table", cursor_type="row")
                     with TabPane("Analysis", id="analysis"):
                         with Horizontal(classes="tools"):
-                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Export runtime artifact", "runtime-download"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Package provenance", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
+                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Create runtime file", "runtime-create"), ("Export runtime artifact", "runtime-download"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Package provenance", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
                             yield Input(placeholder="Literal metadata search phrase", id="analysis-query")
                             yield Button("Analyze", id="analysis-run")
                             yield Button("Export", id="analysis-export")
@@ -382,6 +384,8 @@ class BitloomApp(App):
         self.set_interval(0.2, self.flush_log)
         self.set_interval(2, self.update_telemetry)
         self.set_interval(1, self.update_elapsed)
+        self.set_interval(5, self.watch_metadata)
+        self.set_interval(15, self.watch_runtime_directory)
         if self.persistent:
             self.runner.start()
         self.analysis_fields()
@@ -493,6 +497,38 @@ class BitloomApp(App):
                 seconds=max(0,int((datetime.now(timezone.utc)-start).total_seconds()))
                 table.update_cell(row['id'],list(table.columns)[2],f'{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}')
 
+    @on(Button.Pressed,'#new-file')
+    def new_file(self):
+        from .screens import NewFileScreen
+        self.push_screen(NewFileScreen(self.profile),self.file_created)
+
+    def file_created(self,result):
+        if not result:
+            return
+        self.notify('Created '+result['path'])
+        self.scan_project()
+        path=Path(result['path'])
+        local_metadata=path.suffix in {'.bb','.bbappend','.bbclass','.yml','.yaml'} and path.is_relative_to(self.profile.root_path)
+        if self.profile.mode != 'host' or not local_metadata:
+            self.main_query('#workspace',TabbedContent).active='analysis'
+            self.main_query('#analysis-kind',Select).value='runtime-list'
+            self.main_query('#analysis-first',Input).value=str(Path(result['path']).parent)
+            self.run_analysis()
+
+    @work(exclusive=True,group='metadata-watch')
+    async def watch_metadata(self):
+        if len(self.screen_stack)>1:
+            return
+        entries=await asyncio.to_thread(metadata,self.profile)
+        if entries!=self.entries:
+            self.scan_project()
+
+    def watch_runtime_directory(self):
+        if len(self.screen_stack)>1 or self.runner.active:
+            return
+        if self.main_query('#workspace',TabbedContent).active=='analysis' and self.main_query('#analysis-kind',Select).value=='runtime-list' and self.main_query('#analysis-first',Input).value.strip()==self.runtime_listing_path:
+            self.run_analysis()
+
     def action_section(self, tab):
         self.main_query("#workspace", TabbedContent).active = tab
 
@@ -602,10 +638,11 @@ class BitloomApp(App):
 
     def render_layer_tree(self):
         tree = self.main_query("#layer-tree", Tree)
+        expanded={str(n.data.path) for n in tree.root.children if n.data and n.is_expanded}
         tree.clear()
         tree.show_root = False
         layers = sorted((e for e in self.entries if e.kind == "layer"), key=lambda e: len(e.path.parts), reverse=True)
-        nodes = {str(e.path): tree.root.add(e.name, data=e, expand=False) for e in layers}
+        nodes = {str(e.path): tree.root.add(e.name, data=e, expand=str(e.path) in expanded) for e in layers}
         layer_paths = {e.path: e for e in layers}
         other = tree.root.add("Workspace files", expand=True)
         for entry in self.entries:
@@ -627,6 +664,7 @@ class BitloomApp(App):
             self.read_preview(path)
 
     def render_metadata(self):
+        selected=self.selected_entry()
         query = self.main_query("#metadata-search", Input).value.casefold()
         table = self.main_query("#metadata-table", DataTable)
         table.clear()
@@ -636,6 +674,9 @@ class BitloomApp(App):
                 key = f"meta-{i}"
                 self.metadata_rows[key] = e
                 table.add_row(e.name, e.kind, e.detail or str(e.path), key=key)
+                if selected and selected.path==e.path:
+                    table.move_cursor(row=table.row_count-1)
+                    self.read_preview(e.path/'conf/layer.conf' if e.kind=='layer' else e.path)
 
     def render_logs(self):
         query = self.main_query("#task-search", Input).value.casefold()
@@ -1038,7 +1079,7 @@ class BitloomApp(App):
         self.main_query("#analysis-query", Input).display = kind == "metadata"
         self.main_query("#analysis-paths").display = kind != "metadata"
         self.main_query("#analysis-second", Input).display = kind in {"manifests", "compare", "cache-plan", "runtime-download"}
-        placeholders = {"rebuild":"Recipe to explain", "provenance":"Package name or absolute image file path", "preflight":"Runtime build path (blank uses profile default)", "runtime-list":"Runtime directory path", "runtime-read":"Runtime text file path", "runtime-edit":"Runtime text file path to edit", "runtime-download":"Runtime binary artifact path", "snapshot":"Runtime build path", "bundle":"Runtime build path", "compare":"Before snapshot JSON path", "cache-plan":"Cache directory in host or selected runtime", "devtool-review":"Runtime devtool source directory"}
+        placeholders = {"rebuild":"Recipe to explain", "provenance":"Package name or absolute image file path", "preflight":"Runtime build path (blank uses profile default)", "runtime-list":"Runtime directory path", "runtime-read":"Runtime text file path", "runtime-edit":"Runtime text file path to edit", "runtime-create":"Absolute path for a new runtime file", "runtime-download":"Runtime binary artifact path", "snapshot":"Runtime build path", "bundle":"Runtime build path", "compare":"Before snapshot JSON path", "cache-plan":"Cache directory in host or selected runtime", "devtool-review":"Runtime devtool source directory"}
         self.main_query("#analysis-first", Input).placeholder = placeholders.get(kind, "First manifest / build log path (blank uses selected log)")
         self.main_query("#analysis-second", Input).placeholder = {"cache-plan":"Stamps directory containing signature references", "runtime-download":"Local destination (blank exports into state directory)", "compare":"After snapshot JSON path"}.get(kind, "Second manifest path")
 
@@ -1064,6 +1105,10 @@ class BitloomApp(App):
                 if path is None:
                     raise ValueError("Select a build log or enter its path")
                 text = await asyncio.to_thread(sstate_report if kind == "sstate" else warning_report, path)
+            if kind=='runtime-list':
+                self.runtime_listing_path=first
+            if text==self.analysis_text:
+                return
             self.analysis_text = text
             output = self.main_query("#analysis-output", RichLog)
             output.clear()
@@ -1094,6 +1139,9 @@ class BitloomApp(App):
             if path.is_file(): data = await asyncio.to_thread(path.read_text, errors="replace")
             else: data = (await request(self.profile, "read", str(path)))["text"]
             return diagnose(data)
+        if kind == 'runtime-create':
+            self.new_file()
+            return 'Create a new file in the dialog; existing files are never replaced.'
         if kind in {"runtime-list", "runtime-read", "runtime-edit", "preflight", "devtool-review"}:
             op = {"runtime-list":"list", "runtime-read":"read", "runtime-edit":"read", "preflight":"preflight", "devtool-review":"devtool"}[kind]
             if kind == "devtool-review" and not first: raise ValueError("Enter the devtool source directory")

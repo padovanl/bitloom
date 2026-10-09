@@ -308,3 +308,13 @@ If Windows Terminal/WSL shows saturated blue blocks instead of the documented co
 F8 selects the previous workspace section; F9 selects the next, including Analysis and Help. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.
 
 For step-by-step layer creation, new recipes, .bbappend files and rebuilding with kas, follow [Hands-on kas: layers and recipes](docs/guide.md#hands-on-kas-layers-and-recipes).
+
+### Create files from the TUI
+
+In **Metadata**, choose **New file**, or select **Create runtime file** in **Analysis**. Enter an absolute path in the selected profile's filesystem, select an empty file, private example recipe or .bbappend template, edit its contents, then choose **Create file**. Missing parent directories are created. Existing files, including symlinks, are never overwritten. Creation waits for this session's build queue to be idle.
+
+For kas/container profiles, a path such as `/work/meta-bitloom/recipes-example/hello/hello_1.0.bb` is created inside that runtime; afterward Analysis opens its directory listing. Host files appear in the local Metadata browser when their location is indexed. Local metadata additions, edits and deletions are checked every five seconds. An open **Analysis → Runtime directory** listing refreshes every fifteen seconds while idle; it lists at most 2,000 entries. Modal editors pause automatic refresh. **F3** remains available for manual local rescans; **Analyze** refreshes a runtime directory immediately.
+
+Creating a recipe file does not register its layer: use **Create layer** and **Add layer**, and declare the layer in kas for reproducible configuration.
+
+![Actual new-file dialog with a sample recipe](docs/assets/file-creation.png)

@@ -265,6 +265,7 @@ class RuntimeFileScreen(ModalScreen):
             import hashlib
             self.data['sha256'] = hashlib.sha256(text.encode()).hexdigest()
             self.notify('Saved. Backup: ' + result['backup'])
+            self.app.scan_project()
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity='error')
 
@@ -320,3 +321,53 @@ class ThemeScreen(ModalScreen):
         self.app.theme = self.original
         self.app.refresh_theme_colors()
         self.dismiss(False)
+
+
+class NewFileScreen(ModalScreen):
+    """Create a file in the selected runtime without replacing existing data."""
+    DEFAULT_CSS = """
+    NewFileScreen { align: center middle; }
+    NewFileScreen > Vertical { width: 95%; height: 90%; border: solid $accent; padding: 1; background: $surface; }
+    NewFileScreen TextArea { height: 1fr; }
+    NewFileScreen Horizontal { height: 3; }
+    NewFileScreen Input, NewFileScreen Select { height: 3; }
+    """
+    BINDINGS = [('escape','dismiss','Cancel')]
+
+    def __init__(self,profile):
+        super().__init__()
+        self.profile=profile
+
+    def compose(self):
+        with Vertical():
+            yield Label('NEW FILE · selected profile runtime · missing parent folders are created')
+            yield Input(placeholder='Absolute runtime path, e.g. /work/meta-custom/recipes-example/hello/hello_1.0.bb',id='new-path')
+            yield Select([('Empty text file','text'),('Private example recipe','recipe'),('Recipe append','append')],value='text',allow_blank=False,id='new-template')
+            yield TextArea('',id='new-content',show_line_numbers=True)
+            with Horizontal():
+                yield Button('Create file',id='create-file',variant='primary')
+                yield Button('Cancel',id='cancel-new')
+
+    @on(Select.Changed,'#new-template')
+    def template(self,event):
+        samples={'text':'','recipe':'SUMMARY = "My recipe"\nLICENSE = "CLOSED"\nS = "${WORKDIR}"\n\ndo_install() {\n    install -d ${D}${datadir}/${BPN}\n    echo "Hello" > ${D}${datadir}/${BPN}/message.txt\n}\n','append':'# Extend an existing recipe using a matching .bbappend filename.\nSUMMARY:append = " (customized)"\n'}
+        if event.value in samples:
+            self.query_one('#new-content',TextArea).load_text(samples[event.value])
+
+    @on(Button.Pressed,'#create-file')
+    async def create(self):
+        from .runtime import request
+        try:
+            if self.app.runner.active or any(j.status=='queued' for j in self.app.runner.jobs):
+                raise ValueError('Wait for queued and running jobs before creating metadata')
+            path=self.query_one('#new-path',Input).value.strip()
+            if not Path(path).is_absolute():
+                raise ValueError('Enter an absolute path in the selected runtime')
+            result=await request(self.profile,'create',path,text=self.query_one('#new-content',TextArea).text)
+            self.dismiss(result)
+        except (OSError,ValueError) as exc:
+            self.notify(str(exc),severity='error')
+
+    @on(Button.Pressed,'#cancel-new')
+    def cancel(self):
+        self.dismiss(None)

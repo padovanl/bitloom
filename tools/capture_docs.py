@@ -88,6 +88,13 @@ async def capture():
             await pilot.press('f4')
             await shot('profiles')
             await pilot.press('escape')
+            app.new_file()
+            await pilot.pause(.2)
+            app.screen.query_one('#new-path', Input).value = str(root / 'demo/meta-demo/recipes-example/hello/hello_1.0.bb')
+            from textual.widgets import Select
+            app.screen.query_one('#new-template', Select).value = 'recipe'
+            await shot('file-creation')
+            await pilot.press('escape')
             app.query_one('#workspace', TabbedContent).active = 'builds'
             await pilot.resize_terminal(90, 28)
             await shot('compact', include_in_tour=False)

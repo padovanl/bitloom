@@ -53,13 +53,19 @@ def metadata(profile: Profile) -> list[Entry]:
                 p = base / name
                 if p.is_symlink():
                     continue
+                if p.suffix not in {'.bb','.bbappend','.bbclass','.yml','.yaml'} and name!='layer.conf':
+                    continue
+                try:
+                    stat=p.stat()
+                except OSError:
+                    continue
                 if name == "layer.conf" and base.name == "conf":
                     v = read_assignments(p)
-                    entries.append(Entry(base.parent.name, "layer", base.parent, detail=v.get("LAYERSERIES_COMPAT:" + base.parent.name, "See layer.conf")))
+                    entries.append(Entry(base.parent.name, "layer", base.parent, size=stat.st_size, modified=stat.st_mtime, detail=v.get("LAYERSERIES_COMPAT:" + base.parent.name, "See layer.conf")))
                 elif p.suffix in {".bb", ".bbappend", ".bbclass"}:
-                    entries.append(Entry(name, p.suffix[1:], p, detail=str(base.relative_to(root))))
+                    entries.append(Entry(name, p.suffix[1:], p, size=stat.st_size, modified=stat.st_mtime, detail=str(base.relative_to(root))))
                 elif p.suffix in {".yml", ".yaml"}:
-                    entries.append(Entry(name, "yaml", p))
+                    entries.append(Entry(name, "yaml", p, size=stat.st_size, modified=stat.st_mtime))
                 if len(entries) >= 15000:
                     return entries
     return entries

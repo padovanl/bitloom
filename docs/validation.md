@@ -120,3 +120,9 @@ The distribution, Python imports, entry point, default state directory, release 
 ## Live elapsed time and terminal navigation
 
 A regression test runs a real four-second subprocess and verifies that its history duration advances before completion and stays fixed afterward. F8/F9 navigation is exercised with keys decoded from actual terminal escape sequences, rather than synthetic Alt events. These replace Alt+number as the documented navigation keys.
+
+## TUI file creation and external refresh
+
+The new-file dialog was exercised through the real Textual app: a recipe template was edited and saved into newly created parent directories, and the file appeared in Metadata. Timer-driven tests verify externally added, edited and deleted recipes are reflected in the local index. File creation was also executed and read back inside a disposable kas container. Regression tests verify existing files and dangling symlinks cannot be overwritten. The complete suite passed 62 tests before the additional runtime-directory timer test; the subsequent 13-test UI suite passed with that timer included. A separate UI test also verifies generic text-file creation opens the containing directory.
+
+Host Metadata is a local filesystem index. Container-only files are created and edited through the runtime operations; after creation the containing runtime directory opens in Analysis. Local scans run every five seconds; open runtime directory listings refresh every fifteen seconds while idle, with a 2,000-entry limit. Automatic refresh pauses while a modal is open.
