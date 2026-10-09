@@ -168,7 +168,12 @@ async def request(profile, op: str, path: str, **values):
         import os, signal
         try: os.killpg(proc.pid, signal.SIGTERM)
         except ProcessLookupError: pass
-        await proc.wait()
+        try:
+            await asyncio.wait_for(proc.wait(), 5)
+        except asyncio.TimeoutError:
+            try: os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError: pass
+            await proc.wait()
         if isinstance(exc, asyncio.CancelledError): raise
         raise ValueError('Runtime request timed out')
     lines = output.decode(errors='replace').splitlines()

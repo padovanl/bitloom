@@ -54,7 +54,7 @@ class CloneProfileScreen(FormScreen):
                                             ('machine', 'Machine override', p.machine), ('distro', 'Distro override', p.distro)]:
                     yield Label(label)
                     yield Input(value=value, id='clone-' + name)
-                yield Label('kas profiles receive a separate KAS_WORK_DIR/KAS_BUILD_DIR. Direct containers must keep the build inside their mounted root.')
+                yield Label('kas clones keep the source work directory and use a separate KAS_BUILD_DIR. Direct containers keep the build inside their mounted root.')
             with Horizontal():
                 yield Button('Clone + select', id='clone-save', variant='primary')
                 yield Button('Cancel', id='clone-close')
@@ -254,6 +254,7 @@ class DeveloperPanel(Vertical):
     DEFAULT_CSS = '''
     DeveloperPanel { height: 1fr; }
     DeveloperPanel .dev-tools { height: 1; margin-bottom: 1; }
+    DeveloperPanel HorizontalScroll.dev-tools { scrollbar-size-horizontal: 0; }
     DeveloperPanel .dev-tools Input { width: 1fr; }
     DeveloperPanel #dev-view { width: 26; }
     DeveloperPanel #dev-operation { width: 24; }
@@ -261,12 +262,6 @@ class DeveloperPanel(Vertical):
     DeveloperPanel #dev-split { height: 1fr; }
     DeveloperPanel #dev-rows { width: 45%; }
     DeveloperPanel #dev-detail { width: 55%; height: 1fr; border: solid $primary-muted; }
-    Screen.narrow DeveloperPanel #dev-split { layout: vertical; }
-    Screen.narrow DeveloperPanel #dev-rows { width: 1fr; height: 6; }
-    Screen.narrow DeveloperPanel #dev-detail { width: 1fr; height: 1fr; }
-    Screen.tiny DeveloperPanel #dev-rows { height: 4; }
-    Screen.tiny DeveloperPanel .dev-tools { margin-bottom: 0; }
-    Screen.tiny DeveloperPanel #dev-state { height: 1; }
     '''
 
     def __init__(self, **kwargs):
@@ -306,7 +301,9 @@ class DeveloperPanel(Vertical):
             yield RichLog(id='dev-detail', wrap=True, markup=False, auto_scroll=False)
 
     def on_mount(self):
-        self.query_one('#dev-rows', DataTable).add_columns('Item', 'Value / state')
+        table = self.query_one('#dev-rows', DataTable)
+        table.add_column('Item', width=22)
+        table.add_column('Value / state')
         self.fields()
         self.set_interval(15, self.check_stale)
 

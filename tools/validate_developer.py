@@ -27,7 +27,7 @@ async def validate(args):
     args.work.mkdir(parents=True, exist_ok=True)
     os.environ['PATH'] = str(ROOT / '.venv/bin') + os.pathsep + os.environ['PATH']
     profile = Profile(name='developer-validation', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml',
-                      build_dir=str(args.work / 'build'), environment={'KAS_WORK_DIR':str(args.work), 'KAS_CONTAINER_IMAGE':KAS_IMAGE,
+                      machine='qemux86-64', distro='poky', build_dir=str(args.work / 'build'), environment={'KAS_WORK_DIR':str(args.work), 'KAS_CONTAINER_IMAGE':KAS_IMAGE,
                       'KAS_CONTAINER_ENGINE':args.engine, 'KAS_CLONE_DEPTH':'1'})
     await dev.prepare_kas_work(profile)
     results = []
@@ -62,8 +62,8 @@ async def validate(args):
         # A data-only package avoids rebuilding the cross-toolchain just for this probe.
         files[recipe_path] = ('SUMMARY = "Bitloom runtime validation"\nLICENSE = "CLOSED"\n'
                              'INHIBIT_DEFAULT_DEPS = "1"\nS = "${WORKDIR}"\n'
-                             'do_install() {\n    install -d ${D}${datadir}/bitloom\n'
-                             '    echo "Real kas-container recipe" > ${D}${datadir}/bitloom/message.txt\n}\n')
+                             'do_install() {\n    install -d ${D}${datadir}/${PN}\n'
+                             '    echo "Real kas-container recipe" > ${D}${datadir}/${PN}/message.txt\n}\n')
         await probe('scaffold', layer, files=files)
         relative = '.developer-validation/kas-' + ident + '.yml'
         config = ROOT / relative
