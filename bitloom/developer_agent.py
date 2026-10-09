@@ -435,14 +435,23 @@ def downloads(recipe, log, text=None):
                 ('DNS', r'(unable to resolve|name or service not known|temporary failure in name resolution)'),
                 ('TLS', r'(certificate.*(failed|invalid|expired)|SSL.*(error|failed))'),
                 ('access', r'(401 Unauthorized|403 Forbidden|Permission denied)'),
-                ('missing source', r'(404 Not Found|repository.*not found)'),
+                ('missing source', r'(404 Not Found|repository.*not found|Unable to find file file://)'),
                 ('proxy', r'(proxy.*(failed|refused|error))')]
     observations = []
+    next_steps = {
+        'checksum': 'Compare the fetched bytes with the authoritative upstream release; fix SRC_URI/checksum only after verifying the intended source. Never disable checksum validation.',
+        'DNS': 'Check name resolution inside this build runtime and its proxy/network settings; host resolution may differ.',
+        'TLS': 'Check runtime clock, trusted CA certificates and proxy CA configuration. Preserve TLS verification.',
+        'access': 'Verify source URL permissions and credentials in the build runtime; keep secrets out of shared reports.',
+        'missing source': 'Verify the release/tag/path and matching FILESEXTRAPATHS for local sources; inspect PREMIRRORS/MIRRORS for retained artifacts.',
+        'proxy': 'Check the actual runtime proxy configuration and reachability, then retry the fetch explicitly.',
+    }
     for name, pattern in patterns:
         lines = [line for line in text.splitlines() if re.search(pattern, line, re.I)][:10]
         if lines:
-            observations.append({'category': name, 'evidence': lines})
+            observations.append({'category': name, 'evidence': lines, 'next_step': next_steps[name]})
             rows += [{'name': name, 'value': line} for line in lines]
+            rows.append({'name': name + ' · next step', 'value': next_steps[name]})
     for uri in env.get('SRC_URI', '').split()[:100]:
         parsed = urlsplit(uri.split(';', 1)[0])
         if parsed.hostname:
@@ -473,6 +482,8 @@ def offline(recipe, full=False, prepare=False):
 
 def security(path):
     data = json.loads(read(path, LIMIT))
+    if not isinstance(data, dict) or not any(key in data for key in ('package', 'packages', 'spdxVersion')):
+        raise ValueError('Unsupported CVE/SPDX JSON report; select an actual supported report')
     packages = data.get('package', data.get('packages', []))
     if isinstance(packages, dict):
         packages = [{'name': name, **value} for name, value in packages.items()]

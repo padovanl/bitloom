@@ -25,7 +25,7 @@ from .store import Store
 
 HELP = """# Bitloom cockpit
 
-**F2** command center · **F3** refresh · **F4** profiles · **F7** themes · **Ctrl+P** Textual command palette · **Ctrl+Q** exit
+**F2** command center · **F3** refresh · **F4** profiles · **F7** themes · **F10** Developer · **Ctrl+P** Textual command palette · **Ctrl+Q** exit
 
 ## Workflow
 1. Edit profiles (F4): set root, build_dir and runtime. Host auto-discovers oe-init-build-env or poky/oe-init-build-env. kas uses your configuration; containers mount the project at /work.
@@ -33,7 +33,8 @@ HELP = """# Bitloom cockpit
 3. Select a history row to read its log. Search logs with context, isolate errors, and retry failed operations.
 4. Browse recipes/layers and task logs. Enter opens files. Select a recipe then use Build / Modify.
 5. Open Analysis for failure diagnosis, signature evidence, runtime files, package inclusion chains, preflight, snapshots and reproducibility bundles.
-6. Real CLI sessions detach on Ctrl+Q; reopen with the same --state to reconnect. Demo/--embedded sessions stop jobs on exit.
+6. Developer (F10) follows variable origins, recipes and runtime files; previews complete licensed layers; clones profiles; captures/comparisons; IDE, offline, security, kernel, performance and actual device evidence.
+7. Real CLI sessions detach on Ctrl+Q; reopen with the same --state to reconnect. Demo/--embedded sessions stop jobs on exit.
 
 ## Configuration
 The JSON profile editor supports machine, distro, environment, container_args, downloads and sstate overrides. Paths in containers must live under the mounted root. Runtime paths outside the root need explicit container mounts. Cache inventory paths refer to the host filesystem.
@@ -149,6 +150,14 @@ class BitloomApp(App):
     Screen.tiny .tools Button { min-width: 5; padding: 0; }
     Screen.tiny #log-follow { display: none; }
     Screen.tiny #log-search { min-width: 8; }
+    Screen.narrow #dev-split { layout: vertical; }
+    Screen.narrow #dev-rows { width: 1fr; height: 6; }
+    Screen.narrow #dev-detail { width: 1fr; height: 1fr; }
+    Screen.narrow .dev-tools { margin-bottom: 0; }
+    Screen.narrow #dev-state { height: 1; }
+    Screen.tiny #dev-rows { height: 4; }
+    Screen.tiny .dev-tools { margin-bottom: 0; }
+    Screen.tiny #dev-state { height: 1; }
     """
     BINDINGS = [
         ("f2", "command", "Commands"), ("f3", "refresh", "Refresh"),
@@ -607,6 +616,9 @@ class BitloomApp(App):
             self.reload_log()
 
     def update_telemetry(self):
+        # A scheduled timer may arrive while the default screen is being removed.
+        if not self.screen_stack or not len(self.screen_stack[0].query('#resource-metric')):
+            return
         # Host resources are explicitly labelled: a remote/container runtime may differ.
         try:
             values = [int(x) for x in Path("/proc/stat").read_text().splitlines()[0].split()[1:]]

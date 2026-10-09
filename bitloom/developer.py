@@ -75,12 +75,22 @@ async def prepare_kas_work(profile):
     if engine not in {'docker', 'podman'}: raise ValueError('Unsupported container engine')
     image = profile.environment.get('KAS_CONTAINER_IMAGE')
     if not image: raise ValueError('Set an explicit KAS_CONTAINER_IMAGE before preparing the workspace')
-    source = ('import os,pathlib,sys\np=pathlib.Path("/work")\nuid=int(sys.argv[1]); gid=int(sys.argv[2]); s=p.stat()\n'
-              'if s.st_uid!=uid and any(p.iterdir()):\n    raise ValueError("Workspace contains files owned by another user; review ownership manually")\n'
-              'if s.st_uid!=uid:\n    os.chown(p,uid,gid)\n    os.chmod(p,0o775)\n'
-              'print("Prepared work directory for UID",uid)')
+    mounts = ['-v', str(work) + ':/work']
+    paths = ['/work']
+    build = profile.build_path
+    if not build.is_relative_to(work):
+        if build == profile.root_path or build == Path('/'):
+            raise ValueError('Configure a separate build directory')
+        build.mkdir(parents=True, exist_ok=True)
+        mounts += ['-v', str(build) + ':/build']
+        paths.append('/build')
+    source = ('import os,pathlib,sys\nuid=int(sys.argv[1]); gid=int(sys.argv[2])\n'
+              'for name in sys.argv[3:]:\n    p=pathlib.Path(name); s=p.stat()\n'
+              '    if s.st_uid!=uid and any(p.iterdir()):\n        raise ValueError("Workspace contains files owned by another user; review ownership manually")\n'
+              '    if s.st_uid!=uid:\n        os.chown(p,uid,gid)\n        os.chmod(p,0o775)\n'
+              '    print("Prepared directory",name,"for UID",uid)')
     process = await asyncio.create_subprocess_exec(engine, 'run', '--rm', '--user', '0', '--entrypoint', 'python3',
-        '-v', str(work) + ':/work', image, '-c', source, str(os.getuid()), str(os.getgid()),
+        *mounts, image, '-c', source, str(os.getuid()), str(os.getgid()), *paths,
         env={**os.environ, **profile.environment}, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
     try:
         output, _ = await asyncio.wait_for(process.communicate(), 120)
@@ -170,7 +180,9 @@ def clone_profile(settings, name, build, machine='', distro=''):
     profile.name, profile.build_dir = name, str(path)
     profile.machine, profile.distro = machine or original.machine, distro or original.distro
     if profile.mode in {'kas', 'kas-container'}:
-        profile.environment['KAS_WORK_DIR'] = str(path.parent)
+        # Keep local layer paths and source repositories from the original work
+        # mount. kas-container forwards an external build directory as /build.
+        profile.environment.setdefault('KAS_WORK_DIR', str(original.root_path))
         profile.environment['KAS_BUILD_DIR'] = str(path)
         path.parent.mkdir(parents=True, exist_ok=True)
     profile.validate()

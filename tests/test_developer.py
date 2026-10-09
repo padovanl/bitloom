@@ -22,6 +22,21 @@ def test_device_operations_require_their_actual_backend(tmp_path):
     with pytest.raises(ValueError, match='SSH'): dev.load_devices(path)
 
 
+def test_security_does_not_present_unrelated_json_as_a_clean_report(tmp_path):
+    path = tmp_path / 'report.json'
+    path.write_text('{"unrelated": []}')
+    with pytest.raises(ValueError, match='Unsupported'): agent.security(str(path))
+
+
+def test_fetch_diagnosis_separates_observed_failures_and_preserves_verification(monkeypatch):
+    monkeypatch.setattr(agent, 'evaluated', lambda recipe: {'SRC_URI':'file://source'})
+    result = agent.downloads('hello','',text='Checksum mismatch!\nTemporary failure in name resolution\nUnable to find file file://source\n')
+    categories = {item['category']:item for item in result['observations']}
+    assert set(categories) == {'checksum','DNS','missing source'}
+    assert 'Never disable' in categories['checksum']['next_step']
+    assert 'FILESEXTRAPATHS' in categories['missing source']['next_step']
+
+
 def test_image_comparison_rejects_other_machine_and_tracks_bytes_and_modes():
     before = {'view': 'image', 'data': {'identity': {'MACHINE': 'a'}, 'image': 'minimal', 'packages': {'app': 100}, 'files': {'./bin/app': '-rwxr-xr-x app'}, 'owners': {'app': 'app-recipe'}}}
     after = {'view': 'image', 'data': {'identity': {'MACHINE': 'a'}, 'image': 'minimal', 'packages': {'app': 130, 'new': 5}, 'files': {'./bin/app': '-rwsr-xr-x app'}, 'owners': {'app': 'app-recipe'}}}
@@ -44,7 +59,8 @@ def test_clone_kas_profile_is_independent_and_rejects_shared_build(tmp_path):
     settings.active = 'base'
     with pytest.raises(ValueError, match='separate'): dev.clone_profile(settings, 'bad', str(settings.profile.build_path))
     clone = dev.clone_profile(settings, 'debug', str(tmp_path / 'debug/build'), 'qemuarm')
-    assert clone.environment['KAS_WORK_DIR'] == str(tmp_path / 'debug')
+    assert clone.environment['KAS_WORK_DIR'] == str(tmp_path / 'work')
+    assert clone.environment['KAS_BUILD_DIR'] == str(tmp_path / 'debug/build')
     clone.environment['EXTRA'] = 'new'
     assert 'EXTRA' not in settings.profiles[0].environment
     assert Settings(settings.path).active == 'debug'

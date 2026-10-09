@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 
 from textual.widgets import Button, DataTable, Input, Select, TabbedContent, TextArea
@@ -7,6 +8,7 @@ from bitloom.app import BitloomApp
 from bitloom.cli import make_demo
 from bitloom.developer_agent import report
 from bitloom.developer_ui import DeveloperPanel, ScaffoldScreen, CloneProfileScreen
+from bitloom.screens import ActionScreen
 
 
 async def test_developer_runtime_browser_enter_editor_and_small_terminal(tmp_path):
@@ -34,6 +36,25 @@ async def test_developer_runtime_browser_enter_editor_and_small_terminal(tmp_pat
         await pilot.pause()
         assert app.query_one('#dev-inspect', Button).region.right <= 60
         assert app.query_one('#dev-rows').region.bottom < 20
+        assert app.query_one('#dev-detail').region.y >= app.query_one('#dev-rows').region.bottom
+        assert app.query_one('#dev-open', Button).region.intersection(app.query_one('#dev-open', Button).parent.region).area > 0
+        assert app.query_one('#dev-detail').region.height >= 3
+        await pilot.resize_terminal(80,24)
+        await pilot.pause()
+        assert app.query_one('#dev-detail').region.height >= 3
+    app.store.close()
+
+
+async def test_optional_task_is_disabled_with_actual_missing_prerequisite(tmp_path):
+    app = BitloomApp(make_demo(tmp_path / 'demo'), tmp_path / 'state')
+    async with app.run_test(size=(80,24)) as pilot:
+        await pilot.pause(.3)
+        app.capability_cache[(app.profile.name, 'busybox')] = {'captured': time.time(), 'tasks': ['do_compile']}
+        app.push_screen(ActionScreen(app.profile, 'testimage', 'busybox'))
+        await pilot.pause()
+        assert app.screen.query_one('#submit', Button).disabled
+        assert 'do_testimage' in str(app.screen.query_one('#preview').render())
+        assert not app.runner.jobs
     app.store.close()
 
 
