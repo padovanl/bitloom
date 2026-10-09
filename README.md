@@ -24,6 +24,12 @@ The opening capture shows the idle sample workspace. Error screens in the tour d
 
 Follow the [manual testbook](README.testbook.md) from installation through kas/container builds, layer and recipe creation, devtool, caches, interruption and every implemented command. Each case specifies inputs, prerequisites and expected evidence. Optional hardware/classes are recorded as N/A when unavailable. The [Pages testbook](https://padovanl.github.io/bitloom/testbook.html) is the same document rendered for the web. Proposed daily-workflow improvements are assessed separately at the end of the book.
 
+## Developer workflow roadmap
+
+The [research and roadmap](docs/roadmap.md) connects public developer experiences with upstream Yocto documentation, reviewed on 2026-10-10. The first proposed improvements are variable assignment/override explanation, recipe navigation across host and container paths, rebuild/cache-miss evidence, and structured failed-task investigation. Further proposals cover recipe scaffolding, IDE/SDK integration, image regression comparison, runtime performance, profile/multiconfig workflows, offline preparation, CVE/SBOM review, kernel/upgrade review and board testing.
+
+These are proposals, not current capabilities or delivery promises. Each identifies the existing tools and remaining gap; the [testbook's proposal experiments](README.testbook.md#13-feature-assessment) are marked PLANNED separately from implemented acceptance cases. Read the [Pages roadmap](https://padovanl.github.io/bitloom/roadmap.html) for sources and expected interactions. Public discussions are qualitative evidence, not a representative survey.
+
 ## Inspiration and thanks
 
 Bitloom is inspired by the idea behind [yoctui](https://github.com/0xbadcaffe/yoctui): bringing everyday Yocto and BitBake work into a terminal interface. Thank you to [0xbadcaffe](https://github.com/0xbadcaffe), the author of yoctui, for the inspiration and for sharing the project with the community. Bitloom has its own implementation and interface.

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Developer workflow roadmap — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
+<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="roadmap.html">Roadmap</a></nav></header><main class="manual"><article class="doc"><h1 id="developer-workflow-roadmap">Developer workflow roadmap</h1>
+<p>Research reviewed on <strong>2026-10-10</strong>. Everything below is <strong>proposed</strong>, with no delivery date or claim of implementation. The <a href="commands.html">command reference</a>, <a href="guide.md">user guide</a> and <a href="testbook.html">manual testbook</a> describe the current application.</p>
+<h2 id="what-developers-are-struggling-with">What developers are struggling with</h2>
+<p>Public discussions describe opaque configuration, confusing errors and lengthy feedback loops. A developer learning Yocto describes difficulty understanding variables and locating the actual failure in an <a href="https://www.reddit.com/r/embedded/comments/1vdlik5/is_yocto_hard_or_am_i_dumb/">August 2026 discussion</a>. Another describes spending working days chasing configuration changes across projects in an <a href="https://www.reddit.com/r/embedded/comments/1661ico/my_job_has_become_editing_yocto_and_other_config/">August 2023 discussion</a>. A <a href="https://www.reddit.com/r/embedded/comments/1jqre2y/">March 2025 beginner discussion</a> highlights friction between an intended image change and the resulting system.</p>
+<p>These are individual experiences, not a representative developer survey. They identify problems worth investigating; they do not establish demand percentages or prove which feature is most popular. The priorities below are Bitloom's assessment of daily value, considering what the application already provides. Technical foundations are checked against upstream documentation, rather than community advice alone.</p>
+<h2 id="proposed-priorities-and-current-boundaries">Proposed priorities and current boundaries</h2>
+<table>
+<thead>
+<tr>
+<th>Proposal</th>
+<th>Priority</th>
+<th>Proposed workflow</th>
+<th>What Bitloom already provides / remaining gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P01</td>
+<td>First</td>
+<td>Explain a variable's value and winning overrides, with file/line navigation</td>
+<td>Environment filtering/diffs and raw getvar output exist; assignment history is not a navigable view.</td>
+</tr>
+<tr>
+<td>P02</td>
+<td>First</td>
+<td>A recipe context view and selectable runtime file tree</td>
+<td>Host metadata browser and runtime list/read/edit/create exist; container listings are text reports.</td>
+</tr>
+<tr>
+<td>P03</td>
+<td>First</td>
+<td>Explain rebuilds and cache misses across recorded builds</td>
+<td>Signatures, printdiff, dependency context and sstate summaries exist; no unified before/after causal view exists.</td>
+</tr>
+<tr>
+<td>P04</td>
+<td>First</td>
+<td>Connect a failed task to its script, log and source diagnostic</td>
+<td>Search, task-log retrieval and textual diagnosis exist; no structured investigation workspace exists.</td>
+</tr>
+<tr>
+<td>P05</td>
+<td>Next</td>
+<td>Create and register a complete layer/recipe with previewed changes</td>
+<td>File templates, layer commands and devtool add exist; kas registration and license checks remain separate steps.</td>
+</tr>
+<tr>
+<td>P06</td>
+<td>Next</td>
+<td>Set up an IDE and cross-development environment from a recipe</td>
+<td>devtool and SDK/eSDK commands exist; ide-sdk integration and path mapping are not built in.</td>
+</tr>
+<tr>
+<td>P07</td>
+<td>Next</td>
+<td>Compare image size, files, packages and permissions between builds</td>
+<td>Manifest diff, rootfs inventory, provenance and snapshots exist; no unified regression dashboard exists.</td>
+</tr>
+<tr>
+<td>P08</td>
+<td>Next</td>
+<td>Explain build bottlenecks using buildstats and runtime limits</td>
+<td>Host resource sampling and timestamped task reports exist; cgroup limits and buildstats aggregation are absent.</td>
+</tr>
+<tr>
+<td>P09</td>
+<td>Next</td>
+<td>Clone profiles, compare resolved kas settings and manage multiconfig contexts</td>
+<td>Named profiles, kas dump/lock and a serial queue exist; there is no profile wizard or multiconfig workspace.</td>
+</tr>
+<tr>
+<td>P10</td>
+<td>Next</td>
+<td>Diagnose fetch failures and prepare verified offline inputs</td>
+<td>Fetch, download audit, inventory and diagnosis exist; no mirror connectivity or offline-readiness report exists.</td>
+</tr>
+<tr>
+<td>P11</td>
+<td>Later</td>
+<td>Review image CVE/SBOM changes and recorded dispositions</td>
+<td>CVE/SPDX commands and artifact discovery exist; there is no vulnerability review dashboard.</td>
+</tr>
+<tr>
+<td>P12</td>
+<td>Later</td>
+<td>Review kernel fragments and recipe/layer upgrades together</td>
+<td>Kernel diff/check and devtool upgrade commands exist; there is no guided migration comparison.</td>
+</tr>
+<tr>
+<td>P13</td>
+<td>Later</td>
+<td>Track deployment, serial console and board test evidence per image</td>
+<td>devtool deploy/undeploy and testimage entry points exist; there is no board inventory or lab automation adapter.</td>
+</tr>
+<tr>
+<td>P14</td>
+<td>Foundation</td>
+<td>Probe runtime capabilities and strengthen interruption evidence</td>
+<td>Diagnostics, preflight and stop/recovery guards exist; optional tasks are not dynamically gated and kas server shutdown can remain unconfirmed.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="proposed-interactions-and-upstream-foundations">Proposed interactions and upstream foundations</h2>
+<h3 id="p01--variable-explanation">P01 — Variable explanation</h3>
+<p>Select a recipe and variable, then inspect its effective value, assignment chain, override context and source location. Keep global, recipe and task contexts explicit. Open the originating file through the selected runtime. Mark a capture stale after metadata changes. Upstream <a href="https://docs.yoctoproject.org/dev/dev-manual/debugging.html">debugging documentation</a> explains that getvar exposes assignment history and that recipe/task datastores differ. The proposed interactive presentation is Bitloom's design.</p>
+<h3 id="p02--recipe-and-runtime-navigation">P02 — Recipe and runtime navigation</h3>
+<p>Provide one keyboard-driven context for the selected provider/version, active .bbappend files, source and build directories, sysroot, task logs and editable metadata. Resolve paths from BitBake rather than assuming the checkout layout. A container-only layer should be searchable and navigable with Enter just like a local layer. The upstream <a href="https://wiki.yoctoproject.org/wiki/Technical_FAQ">Technical FAQ</a> recommends checking selected recipe versions when changes appear ineffective. Bitloom would connect that evidence to its editors.</p>
+<h3 id="p03--rebuild-explanation">P03 — Rebuild explanation</h3>
+<p>Associate a metadata edit with captured signature differences and affected task dependencies. Distinguish observed changes from an incomplete forecast; display missing comparison evidence explicitly. Explain cache misses only when metadata, logs or mirror checks support the cause. Upstream <a href="https://docs.yoctoproject.org/dev/dev-manual/debugging.html">signature debugging</a> documents diffsigs and printdiff for unexpected task execution. This would organize their output, not invent a guaranteed rebuild count or saved-time estimate.</p>
+<h3 id="p04--failed-task-investigation">P04 — Failed-task investigation</h3>
+<p>Open the failed task's log, executed script and earliest relevant diagnostic together. Navigate source locations through runtime paths, retain the original job/profile and export the investigation. Avoid treating the first generic ERROR as a proven root cause. Upstream <a href="https://docs.yoctoproject.org/dev/dev-manual/debugging.html">task-log guidance</a> identifies log.do_TASK and run.do_TASK as complementary evidence. Add structured categories for fetch, patch, compiler, packaging QA and rootfs failures around the existing diagnosis.</p>
+<h3 id="p05--layer-and-recipe-scaffolding">P05 — Layer and recipe scaffolding</h3>
+<p>Offer build-system templates, source location, license and checksum fields, layer destination and kas composition. Show a diff of every generated file and configuration change before saving. Evaluate registration and matching appends after creation. Use installed release tools instead of recreating BitBake parsing. This extends the existing New file editor and layer commands; a draft recipe alone must not be presented as a registered, buildable component.</p>
+<h3 id="p06--ide-and-faster-source-iteration">P06 — IDE and faster source iteration</h3>
+<p>Integrate devtool ide-sdk for releases and recipes that support it, including SDK configuration, IDE project location and host/container source mapping. Keep debugging symbols associated with the deployed image. Upstream <a href="https://docs.yoctoproject.org/5.0.12/sdk-manual/extensible.html">Scarthgap SDK documentation</a> describes native IDE build-tool integration and its faster iteration for supported build systems. Probe installed capabilities; do not promise support for every language, IDE or Yocto release.</p>
+<h3 id="p07--image-regression-comparison">P07 — Image regression comparison</h3>
+<p>Compare a chosen successful baseline with a new image: package size changes, added/removed files, permissions, owners and links. Connect a package to its recipe and recorded inclusion chain. Require matching machine/configuration or flag incomparable inputs. Upstream <a href="https://docs.yoctoproject.org/5.0.12/dev-manual/build-quality.html">buildhistory documentation</a> describes package size and image file metadata. The dashboard would consume that evidence, with unavailable fields labelled explicitly.</p>
+<h3 id="p08--performance-investigation">P08 — Performance investigation</h3>
+<p>Aggregate buildstats into a task timeline and duration trends; identify overlapping work without summing it into a false wall-clock duration. Show container memory/CPU limits alongside host measurements, disk/inode headroom and observable resource pressure. Suggestions for parallelism should name their evidence and tradeoffs. Upstream <a href="https://docs.yoctoproject.org/5.0.12/ref-manual/classes.html#buildstats">buildstats</a> and <a href="https://docs.yoctoproject.org/dev/dev-manual/speeding-up-build.html">build-speed guidance</a> provide the measurements and configuration controls; no automatic tuning is proposed for the first version.</p>
+<h3 id="p09--profiles-and-multiconfig">P09 — Profiles and multiconfig</h3>
+<p>Clone a profile with a distinct build directory, compare resolved kas configuration and record debug/release or machine variants together. Expose the selected multiconfig context in every recipe query and job. Preserve serialization within one build directory; independent scheduling would require additional ownership and cache coordination. Upstream <a href="https://docs.yoctoproject.org/dev/dev-manual/multiconfig.html">multiconfig documentation</a> explains configuration-specific builds. A profile matrix and BitBake multiconfig are separate concepts and should remain distinguishable.</p>
+<h3 id="p10--downloads-and-offline-preparation">P10 — Downloads and offline preparation</h3>
+<p>Show each failing URI with evidence for DNS, proxy, TLS, access, missing source or checksum failure. Suggest concrete mirror/configuration changes without silently weakening verification. For offline preparation, connect fetch-all with release-supported source mirror generation and a recorded network-disabled check. Upstream <a href="https://docs.yoctoproject.org/bitbake/bitbake-user-manual/bitbake-user-manual-fetching.html">fetching documentation</a> describes mirrors and fetcher behavior. Successful source fetching alone is not proof that a complete build needs no network.</p>
+<h3 id="p11--cve-and-sbom-review">P11 — CVE and SBOM review</h3>
+<p>Import reports for the actual built image; show package/recipe identity, vulnerability status, report/database date and changes against a baseline. Preserve evidence for reviewed exceptions and their owner/expiry separately from an upstream patch status. Upstream <a href="https://docs.yoctoproject.org/5.0.12/dev-manual/vulnerabilities.html">Scarthgap vulnerability guidance</a> notes product mapping can cause false positives and negatives. Detect the installed release's report format: current development documentation uses <a href="https://docs.yoctoproject.org/security-manual/vulnerabilities.html">SBOM-based checks</a>, which must not be assumed available in the Scarthgap test profile.</p>
+<h3 id="p12--kernel-and-upgrade-review">P12 — Kernel and upgrade review</h3>
+<p>Connect requested kernel fragment settings to the final evaluated configuration and the existing kernel_configcheck output. For recipe/layer upgrades, compare selected versions, active appends, source patches and parse/build results against a recorded baseline. Preserve kas revisions and developer source changes. This is a proposed review workflow around current commands; it cannot automatically guarantee compatibility with a new release or board.</p>
+<h3 id="p13--board-feedback-loop">P13 — Board feedback loop</h3>
+<p>Store device profiles with deployment location, serial access and test commands. Associate logs and results with an exported image hash. Integrate a labgrid adapter for configured equipment instead of inventing board-specific flash/power protocols. Upstream <a href="https://labgrid.readthedocs.io/en/latest/overview.html">labgrid documentation</a> describes resource/driver abstractions, console access and power control. Keep hardware experiments optional and expose device ownership before a deployment.</p>
+<h3 id="p14--capabilities-and-interruption-evidence">P14 — Capabilities and interruption evidence</h3>
+<p>Probe tools, release, task availability, runtime paths and terminal/device prerequisites. Explain unavailable operations before queue submission. After interruption, record client/container/server observations separately and enable recipe recovery only when shutdown is established. A wrapper exiting is insufficient evidence. Capability probes must share the queue's build-directory ownership and remain read-only; they must not race a running BitBake invocation.</p>
+<h2 id="validation-approach">Validation approach</h2>
+<p>The <a href="testbook.html#13-feature-assessment">testbook proposal section</a> defines P01–P14 experiments for future implementations. Their status is <strong>PLANNED</strong>, separate from the 69 implemented command cases. Until a proposal ships, use the current actions identified in the table to collect baseline evidence. The first implementation batch should connect variable history, recipe navigation, rebuild evidence and task failure context; P14 capability/lifetime work supports those flows.</p>
+<p>Every shipped addition should include an English workflow guide, a command/capability description, manual cases with prerequisites and expected artifacts, and screenshots from the actual running TUI when the interaction changes. Capture host and kas-container evidence, including a small terminal. Move a proposal into implemented documentation only after its behavior and limitations can be demonstrated.</p>
+</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="testbook.html">Testbook</a><a href="roadmap.html">Roadmap</a><a href="roadmap.md">Markdown source</a></footer></body></html>

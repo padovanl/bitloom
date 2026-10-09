@@ -1,5 +1,7 @@
 # User guide
 
+For a complete hands-on acceptance path, follow the [manual testbook](testbook.html). The [developer workflow roadmap](roadmap.md) documents proposed improvements, research sources and current boundaries. Its proposed views are not additional controls in the current TUI.
+
 ## Install from a GitHub release
 
 Open the [GitHub Releases page](https://github.com/padovanl/bitloom/releases) and download the assets for the version you want. Replace `1.2.3` below with that version.

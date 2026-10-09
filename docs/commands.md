@@ -3,6 +3,8 @@
 All actions use the selected profile/runtime. Required inputs appear in the command dialog.
 Commands may require classes or options supplied by your selected Yocto release.
 
+The [manual testbook](testbook.html#11-every-command-center-action) covers all 69 implemented actions. New workflow ideas are documented separately in the [roadmap](roadmap.md); proposal IDs P01–P14 are not command IDs or available operations.
+
 | ID | Group | Operation | Required input | Tool / arguments |
 | --- | --- | --- | --- | --- |
 | `build` | Build | Build target | target | `bitbake` |
