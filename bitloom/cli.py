@@ -43,6 +43,10 @@ def main():
     parser.add_argument("--embedded", action="store_true", help="Run jobs in the TUI process; exit stops jobs")
     parser.add_argument("--service-status", action="store_true")
     parser.add_argument("--service-stop", action="store_true", help="Stop an idle build service")
+    parser.add_argument("--web", action="store_true", help="Serve the web dashboard (shares the build service with the TUI)")
+    parser.add_argument("--host", default="127.0.0.1", help="Web dashboard address (default: loopback only)")
+    parser.add_argument("--port", type=int, default=8765, help="Web dashboard port (0 picks a free one)")
+    parser.add_argument("--no-browser", action="store_true", help="Do not open a browser for --web")
     args = parser.parse_args()
     if args.service_status or args.service_stop:
         from .daemon import rpc
@@ -64,6 +68,13 @@ def main():
         from .inspectors import diagnostics
         for status, name, detail in diagnostics(Settings(args.config).profile):
             print(f"{status:5} {name:20} {detail}")
+        return
+    if args.web:
+        from .web import serve
+        try:
+            serve(args.config, args.state, args.host, args.port, open_browser=not args.no_browser)
+        except (OSError, ValueError, TypeError) as exc:
+            parser.exit(1, f"bitloom: {exc}\n")
         return
     from .app import BitloomApp
     try:
