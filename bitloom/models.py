@@ -26,6 +26,7 @@ class Profile:
     environment: dict[str, str] = field(default_factory=dict)
     container_args: list[str] = field(default_factory=list)
     targets: list[str] = field(default_factory=lambda: ["core-image-minimal"])
+    source_mappings: dict[str, str] = field(default_factory=dict)
 
     @property
     def root_path(self) -> Path:
@@ -48,6 +49,8 @@ class Profile:
             raise ValueError("container_args must be an array of strings")
         if not isinstance(self.targets, list) or any(not isinstance(t, str) for t in self.targets):
             raise ValueError("targets must be an array of strings")
+        if not isinstance(self.source_mappings, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not Path(k).is_absolute() or not Path(v).is_absolute() for k, v in self.source_mappings.items()):
+            raise ValueError('source_mappings must map absolute runtime paths to absolute host paths')
         if self.mode not in {"host", "kas", "container", "kas-container"}:
             raise ValueError("Mode must be host, kas, container or kas-container")
         if self.engine not in {"docker", "podman"}:

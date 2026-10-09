@@ -14,7 +14,7 @@ from .runner import Runner, Job
 from .store import Store
 
 def encode(job):
-    keys=['id','title','command','action_id','status','started','finished','code','progress','errors','failure_logs','cancel_requested','managed_container','graceful_requested','stop_confirmed','shutdown_message','active_recipe_tasks']
+    keys=['id','title','command','action_id','status','started','finished','code','progress','errors','failure_logs','cancel_requested','managed_container','graceful_requested','stop_confirmed','shutdown_message','active_recipe_tasks','shutdown_evidence']
     return {**{k:getattr(job,k) for k in keys},'profile':job.profile.__dict__,'log':str(job.log),'at_risk':sorted(job.at_risk)}
 
 def socket_path(state):

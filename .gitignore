@@ -9,3 +9,4 @@ dist/
 .validation/
 
 .manual-testbook/
+.developer-validation/

@@ -46,6 +46,7 @@ class Job:
     shutdown_message: bool = False
     at_risk: set[str] = field(default_factory=set)
     active_recipe_tasks: dict[str, str] = field(default_factory=dict)
+    shutdown_evidence: dict = field(default_factory=dict)
 
 
 class Runner:
@@ -102,7 +103,7 @@ class Runner:
                     cache_lease = CacheLease(root)
                     cache_lease.acquire()
                     cache_leases.append(cache_lease)
-            if job.profile.mode == "container" and not job.profile.container_name:
+            if (job.profile.mode == "container" and not job.profile.container_name) or job.profile.mode == "kas-container":
                 job.managed_container = f"bitloom-{job.id}"
             inv = invocation(job.profile, job.command, job.managed_container)
             with job.log.open("w", buffering=1) as output:
@@ -175,7 +176,7 @@ class Runner:
             return
         if job.graceful_requested:
             return  # Never send an accidental second SIGINT.
-        supported = job.profile.mode == "host" or bool(job.managed_container)
+        supported = job.profile.mode == "host" or (job.profile.mode == "container" and bool(job.managed_container))
         if not supported or job.command[0] != "bitbake":
             raise ValueError("Graceful signalling requires a host or managed-container BitBake client")
         if not job.process or job.process.returncode is not None:
@@ -185,6 +186,8 @@ class Runner:
         job.cancel_requested = True
         job.graceful_requested = True
         job.status = "cancelling"
+        job.shutdown_evidence = {'client_pid': job.process.pid, 'runtime': job.profile.mode,
+                                 'owned_container': job.managed_container or None, 'server_shutdown': 'unconfirmed'}
         self.store.put(job)
         self.callback(job, None)
         try:
@@ -209,13 +212,19 @@ class Runner:
             self.callback(job, None)
             return
         job.status = "cancelling"
+        job.shutdown_evidence.update(client_pid=job.process.pid, runtime=job.profile.mode,
+                                     owned_container=job.managed_container or None, server_shutdown='unconfirmed')
         self.store.put(job)
         self.callback(job, None)
         if job.managed_container:
-            control = await asyncio.create_subprocess_exec(job.profile.engine, "stop", "--time", "10", job.managed_container, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+            engine = job.profile.environment.get('KAS_CONTAINER_ENGINE', job.profile.engine) if job.profile.mode == 'kas-container' else job.profile.engine
+            control = await asyncio.create_subprocess_exec(engine, "stop", "--time", "10", job.managed_container, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
             output, _ = await control.communicate()
             if control.returncode == 0:
                 job.stop_confirmed = True
+                job.shutdown_evidence.update(container_stop_code=0, server_shutdown='owned container stopped; namespace workers terminated')
+            else:
+                job.shutdown_evidence.update(container_stop_code=control.returncode, output=output.decode(errors='replace')[-2000:])
             if control.returncode:
                 self.callback(job, "WARNING: Container stop: " + output.decode(errors="replace"))
         elif job.profile.mode != "host":
@@ -244,6 +253,9 @@ class Runner:
                 await asyncio.wait_for(job.process.wait(), timeout)
             except asyncio.TimeoutError:
                 pass
+        job.shutdown_evidence.update(client_exit_code=job.process.returncode, interruption_log_observed=job.shutdown_message,
+                                     recovery_allowed=job.stop_confirmed)
+        self.store.put(job)
 
     async def shutdown(self):
         for job in self.jobs:

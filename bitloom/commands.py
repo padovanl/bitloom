@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shlex
 from dataclasses import dataclass
 from pathlib import Path
@@ -149,10 +150,18 @@ def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Inv
             env["KAS_DISTRO"] = profile.distro
     if argv[0] == "kas" and profile.mode != "container":
         executable = "kas-container" if profile.mode == "kas-container" else "kas"
-        return Invocation([executable, *argv[1:], profile.kas_file], root, env)
+        prefix = [executable]
+        if profile.mode == "kas-container" and managed_name:
+            if not re.fullmatch(r'bitloom-[a-f0-9]+', managed_name): raise ValueError('Invalid managed container name')
+            prefix += ['--runtime-args', '--name ' + managed_name + ' --label io.bitloom.owner=' + managed_name]
+        return Invocation([*prefix, *argv[1:], profile.kas_file], root, env)
     if profile.mode in {"kas", "kas-container"}:
         executable = "kas-container" if profile.mode == "kas-container" else "kas"
-        return Invocation([executable, "shell", profile.kas_file, "-c", shlex.join(argv)], root, env)
+        prefix = [executable]
+        if profile.mode == "kas-container" and managed_name:
+            if not re.fullmatch(r'bitloom-[a-f0-9]+', managed_name): raise ValueError('Invalid managed container name')
+            prefix += ['--runtime-args', '--name ' + managed_name + ' --label io.bitloom.owner=' + managed_name]
+        return Invocation([*prefix, "shell", profile.kas_file, "-c", shlex.join(argv)], root, env)
     script = profile.init_script
     if not script:
         for candidate in ("oe-init-build-env", "poky/oe-init-build-env"):

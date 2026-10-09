@@ -80,12 +80,22 @@ class ActionScreen(ModalScreen):
         self.update_preview()
 
     def update_preview(self):
+        submit = self.query_one('#submit', Button)
+        submit.disabled = False
         try:
             a = self.selected()
             inv = invocation(self.profile, arguments(a, self.values()))
             text = inv.display
             if a.help:
                 text += "\n" + a.help
+            required = {'license':'do_create_spdx', 'cve':'do_cve_check', 'ptest':'do_compile_ptest_base', 'testimage':'do_testimage',
+                        'kernel-diff':'do_diffconfig', 'kernel-fragments':'do_kernel_configcheck', 'menuconfig':'do_menuconfig'}
+            cap = getattr(self.app, 'capability_cache', {}).get((self.profile.name, self.values().get('target', '')))
+            import time
+            if cap and time.time() - cap.get('captured', 0) > 30: cap = None
+            if a.id in required and cap and required[a.id] not in cap.get('tasks', []):
+                submit.disabled = True
+                text += '\nUnavailable in the probed runtime: ' + required[a.id]
         except ValueError as exc:
             text = str(exc)
         self.query_one("#preview", Static).update(text)
@@ -125,7 +135,18 @@ class ProfilesScreen(ModalScreen):
             yield TextArea(json.dumps({"active": self.settings.active, "profiles": [asdict(p) for p in self.settings.profiles]}, indent=2), id="json")
             with Horizontal():
                 yield Button("Save profiles", variant="primary", id="save")
+                yield Button("Clone profile", id="profiles-clone")
                 yield Button("Close", id="close")
+
+    @on(Button.Pressed, "#profiles-clone")
+    def clone(self):
+        from .developer_ui import CloneProfileScreen
+        self.app.push_screen(CloneProfileScreen(self.settings), self.clone_result)
+
+    def clone_result(self, result):
+        if result:
+            self.query_one('#json', TextArea).load_text(json.dumps({'active': self.settings.active, 'profiles': [asdict(p) for p in self.settings.profiles]}, indent=2))
+            self.app.profiles_result(True)
 
     @on(Button.Pressed, "#save")
     def save(self):
@@ -180,7 +201,12 @@ class FileScreen(ModalScreen):
 
     @on(Button.Pressed, "#save")
     def save(self):
+        from .leases import BuildLease
+        lease = BuildLease(self.app.profile)
         try:
+            if self.app.runner.active or any(j.status == 'queued' for j in self.app.runner.jobs) or getattr(self.app, 'developer_busy', False):
+                raise ValueError('Wait for the build queue and Developer probe before editing metadata')
+            lease.acquire()
             import datetime
             text = self.query_one("#content", TextArea).text
             if self.path.exists() and self.path.read_text(errors="replace") != self.original:
@@ -195,9 +221,12 @@ class FileScreen(ModalScreen):
                 temp.chmod(self.path.stat().st_mode)
             temp.replace(self.path)
             self.original = text
+            self.app.capability_cache.clear()
             self.notify("Saved with backup")
         except (ValueError, OSError) as exc:
             self.notify(str(exc), severity="error")
+        finally:
+            lease.close()
 
     @on(Button.Pressed, "#close")
     def close(self):
@@ -242,32 +271,45 @@ class RuntimeFileScreen(ModalScreen):
     DEFAULT_CSS = FileScreen.DEFAULT_CSS.replace('FileScreen', 'RuntimeFileScreen')
     BINDINGS = [("escape", "dismiss", "Close")]
 
-    def __init__(self, profile, data):
+    def __init__(self, profile, data, editable=True, line=1):
         super().__init__()
         self.profile, self.data = profile, data
+        self.editable, self.line = editable, line
 
     def compose(self):
         with Vertical():
             yield Label(self.data['path'], markup=False)
-            yield TextArea(self.data['text'], id='content', show_line_numbers=True)
+            yield TextArea(self.data['text'], id='content', show_line_numbers=True, read_only=not self.editable)
             with Horizontal():
-                yield Button('Save + backup', id='save', variant='primary')
+                if self.editable:
+                    yield Button('Save + backup', id='save', variant='primary')
                 yield Button('Close', id='close')
+
+    def on_mount(self):
+        editor = self.query_one('#content', TextArea)
+        editor.move_cursor((max(0, min(self.line - 1, len(self.data['text'].splitlines()) - 1)), 0))
+        editor.scroll_cursor_visible()
 
     @on(Button.Pressed, '#save')
     async def save(self):
         from .runtime import request
+        from .leases import BuildLease
+        lease = BuildLease(self.profile)
         try:
-            if self.app.runner.active or any(j.status == 'queued' for j in self.app.runner.jobs):
+            if self.app.runner.active or any(j.status == 'queued' for j in self.app.runner.jobs) or getattr(self.app, 'developer_busy', False):
                 raise ValueError('Wait for queued and running jobs before editing runtime configuration')
             text = self.query_one('#content', TextArea).text
+            lease.acquire()
             result = await request(self.profile, 'write', self.data['path'], sha256=self.data['sha256'], text=text)
             import hashlib
             self.data['sha256'] = hashlib.sha256(text.encode()).hexdigest()
             self.notify('Saved. Backup: ' + result['backup'])
             self.app.scan_project()
+            self.app.capability_cache.clear()
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity='error')
+        finally:
+            lease.close()
 
     @on(Button.Pressed, '#close')
     def close(self):
@@ -357,16 +399,22 @@ class NewFileScreen(ModalScreen):
     @on(Button.Pressed,'#create-file')
     async def create(self):
         from .runtime import request
+        from .leases import BuildLease
+        lease = BuildLease(self.profile)
         try:
-            if self.app.runner.active or any(j.status=='queued' for j in self.app.runner.jobs):
+            if self.app.runner.active or any(j.status=='queued' for j in self.app.runner.jobs) or getattr(self.app, 'developer_busy', False):
                 raise ValueError('Wait for queued and running jobs before creating metadata')
             path=self.query_one('#new-path',Input).value.strip()
             if not Path(path).is_absolute():
                 raise ValueError('Enter an absolute path in the selected runtime')
+            lease.acquire()
             result=await request(self.profile,'create',path,text=self.query_one('#new-content',TextArea).text)
+            self.app.capability_cache.clear()
             self.dismiss(result)
         except (OSError,ValueError) as exc:
             self.notify(str(exc),severity='error')
+        finally:
+            lease.close()
 
     @on(Button.Pressed,'#cancel-new')
     def cancel(self):
