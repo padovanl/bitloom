@@ -47,7 +47,10 @@ def main():
     if args.service_status or args.service_stop:
         from .daemon import rpc
         import json
-        print(json.dumps(rpc(args.state, {"op": "stop" if args.service_stop else "status"}), indent=2))
+        try:
+            print(json.dumps(rpc(args.state, {"op": "stop" if args.service_stop else "status"}), indent=2))
+        except (OSError, ValueError) as exc:
+            parser.exit(1, f"bitloom: build service unavailable for {args.state}: {exc}\n")
         return
     if args.list_actions:
         from .commands import ACTIONS

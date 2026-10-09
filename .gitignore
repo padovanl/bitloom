@@ -10,3 +10,4 @@ dist/
 
 .manual-testbook/
 .developer-validation/
+.claude/settings.local.json

@@ -296,7 +296,7 @@ class BitloomApp(App):
                                 yield ProgressBar(total=100, show_eta=False, id="progress")
                                 with Horizontal(classes="tools"):
                                     yield Input(placeholder="Search output · ±3 context lines", id="log-search")
-                                    yield Button("Errors", id="errors")
+                                    yield Button("Errors only", id="errors")
                                     yield Button("Pause", id="log-follow")
                                 yield RichLog(id="log", min_width=1, wrap=True, highlight=False, markup=False, max_lines=5000)
                     with TabPane("◇ Layers & recipes", id="metadata"):
@@ -441,9 +441,9 @@ class BitloomApp(App):
                     finally:
                         self.developer_busy = False
                     self.capability_cache[key] = cap
-                if not cap.get("task_probe_ok") or required[action.id] not in cap["tasks"]:
+                if not cap.get("task_probe_ok") or required[action.id] not in cap.get("tasks", []):
                     raise ValueError(required[action.id] + " is unavailable for this recipe/runtime; configure its class/prerequisites first")
-            except (ValueError, OSError) as exc:
+            except (ValueError, OSError, KeyError, TypeError) as exc:
                 self.notify(str(exc), severity="warning", timeout=12)
                 return
         if action.interactive:
@@ -789,6 +789,9 @@ class BitloomApp(App):
                 elapsed = f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
             table.add_row(row["title"], Text(status, style=color), elapsed, key=row["id"])
         if table.row_count:
+            # Keep the selected job highlighted when new jobs are inserted above it.
+            if self.selected_job_id in self.history_rows:
+                cursor = table.get_row_index(self.selected_job_id)
             table.move_cursor(row=min(cursor, table.row_count-1))
 
     def job_update(self, job: Job, line: str | None):
@@ -953,6 +956,10 @@ class BitloomApp(App):
     def retry_job(self):
         row = self.history_rows.get(self.selected_job_id)
         if not row:
+            self.notify("Select a finished operation in history first")
+            return
+        if row["status"] in {"running", "queued", "cancelling"}:
+            self.notify("This operation is still active; stop it before retrying", severity="warning")
             return
         try:
             data = json.loads(row["metadata"])
@@ -1041,7 +1048,11 @@ class BitloomApp(App):
         if self.runner.active:
             self.notify("A build started. Prune cancelled", severity="warning")
             return
-        removed, freed = await asyncio.to_thread(prune_cache, root, entries)
+        try:
+            removed, freed = await asyncio.to_thread(prune_cache, root, entries)
+        except (OSError, ValueError) as exc:
+            self.notify(f"Prune cancelled: {exc}", severity="error", timeout=12)
+            return
         self.notify(f"Removed {removed} files, freed {human_size(freed)}")
         self.scan_cache()
 
@@ -1132,8 +1143,8 @@ class BitloomApp(App):
             dest.parent.mkdir(exist_ok=True)
             dest.write_text(text)
             self.open_file(dest)
-        except (OSError, ValueError) as exc:
-            self.notify(str(exc), severity="warning")
+        except (OSError, ValueError, EOFError, KeyError) as exc:
+            self.notify(str(exc) or type(exc).__name__, severity="warning")
 
     @on(Select.Changed, "#analysis-kind")
     def analysis_fields(self):
@@ -1176,8 +1187,8 @@ class BitloomApp(App):
             output.clear()
             output.write(Text(text))
             output.scroll_home(animate=False)
-        except (OSError, ValueError) as exc:
-            self.notify(str(exc), severity="warning")
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            self.notify(str(exc) or type(exc).__name__, severity="warning")
 
     async def workflow_report(self, kind, first, second):
         import json, re
@@ -1303,13 +1314,16 @@ class BitloomApp(App):
 
     @work(group="stop")
     async def apply_stop(self, job, choice):
-        if choice == "graceful":
-            await self.runner.graceful_stop(job)
-        elif choice == "force":
-            await self.runner.cancel(job)
-            self.recovery_screen(job)
-        elif choice == "finish":
-            self.notify("Build will finish. No interruption requested.")
+        try:
+            if choice == "graceful":
+                await self.runner.graceful_stop(job)
+            elif choice == "force":
+                await self.runner.cancel(job)
+                self.recovery_screen(job)
+            elif choice == "finish":
+                self.notify("Build will finish. No interruption requested.")
+        except (OSError, ValueError) as exc:
+            self.notify(f"Stop request failed: {exc}", severity="error", timeout=12)
 
     def recovery_screen(self, job):
         from .stop import RecoveryScreen

@@ -17,6 +17,7 @@ from .store import Store
 
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 PROGRESS = re.compile(r"Running task (\d+) of (\d+)")
+SETSCENE = re.compile(r"Running setscene task (\d+) of (\d+)")
 
 
 def now() -> str:
@@ -37,6 +38,7 @@ class Job:
     log: Path = Path()
     process: asyncio.subprocess.Process | None = None
     progress: tuple[int, int] = (0, 0)
+    setscene: tuple[int, int] = (0, 0)
     errors: list[str] = field(default_factory=list)
     failure_logs: list[str] = field(default_factory=list)
     cancel_requested: bool = False
@@ -130,6 +132,9 @@ class Runner:
                     m = PROGRESS.search(line)
                     if m:
                         job.progress = (int(m[1]), int(m[2]))
+                    m = SETSCENE.search(line)
+                    if m:
+                        job.setscene = (int(m[1]), int(m[2]))
                     if "ERROR:" in line or "FAILED" in line:
                         job.errors.append(line)
                         job.errors = job.errors[-200:]
