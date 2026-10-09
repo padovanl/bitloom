@@ -14,7 +14,7 @@ from .runner import Runner, Job
 from .store import Store
 
 def encode(job):
-    keys=['id','title','command','action_id','status','started','finished','code','progress','errors','failure_logs','cancel_requested','managed_container','graceful_requested','stop_confirmed','shutdown_message','active_recipe_tasks','shutdown_evidence']
+    keys=['id','title','command','action_id','status','started','finished','code','progress','setscene','errors','failure_logs','cancel_requested','managed_container','graceful_requested','stop_confirmed','shutdown_message','active_recipe_tasks','shutdown_evidence']
     return {**{k:getattr(job,k) for k in keys},'profile':job.profile.__dict__,'log':str(job.log),'at_risk':sorted(job.at_risk)}
 
 def socket_path(state):
@@ -89,7 +89,7 @@ class RemoteRunner:
     def update(self,data):
         byid={j.id:j for j in self.jobs}
         for raw in data['jobs']:
-            raw=dict(raw); profile=Profile(**raw.pop('profile')); raw['log']=Path(raw['log']); raw['at_risk']=set(raw['at_risk']); raw['progress']=tuple(raw['progress'])
+            raw=dict(raw); profile=Profile(**raw.pop('profile')); raw['log']=Path(raw['log']); raw['at_risk']=set(raw['at_risk']); raw['progress']=tuple(raw['progress']); raw['setscene']=tuple(raw.get('setscene',(0,0)))
             job=byid.get(raw['id']) or Job(profile,raw['title'],raw['command'])
             changed=job.status!=raw['status'] or job not in self.jobs
             for k,v in raw.items(): setattr(job,k,v)
@@ -97,18 +97,23 @@ class RemoteRunner:
             if job not in self.jobs: self.jobs.append(job)
             if changed: self.callback(job,None)
             if job.log.exists():
-                with job.log.open() as f:
+                with job.log.open('rb') as f:
                     if job.id not in self.offsets:
                         f.seek(0, 2)
                         self.offsets[job.id] = f.tell()
                     f.seek(self.offsets[job.id])
-                    for line in f: self.callback(job,line.rstrip())
-                    self.offsets[job.id]=f.tell()
+                    chunk = f.read(4 * 1024 * 1024)
+                # Consume complete lines only: the service may be mid-write, and a
+                # split UTF-8 sequence or partial line must wait for the next poll.
+                end = chunk.rfind(b'\n') + 1
+                if end:
+                    self.offsets[job.id] += end
+                    for line in chunk[:end].decode(errors='replace').splitlines(): self.callback(job,line.rstrip())
         self.active=next((j for j in self.jobs if j.id==data['active']),None)
     async def poll(self):
         while True:
             try: self.update(await asyncio.to_thread(rpc,self.store.directory,{'op':'status'}))
-            except (OSError,ValueError): pass
+            except (OSError,ValueError,KeyError,TypeError): pass  # Keep polling; the service may restart.
             await asyncio.sleep(.5)
     def start(self): self.poller=asyncio.create_task(self.poll())
     def submit(self,profile,title,command,action_id='custom'):
