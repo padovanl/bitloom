@@ -89,3 +89,9 @@ Custom task adds `-c TASK` after the target. kas commands append the selected ka
 - **Build ptest packages:** Recipe must inherit ptest and ptest must be enabled.
 - **Custom command (argument list):** Parsed as argv. Shell operators are not interpreted.
 - **Run recipe CVE check:** Requires the cve-check class and CVE database.
+
+## Developer operations and optional task capabilities
+
+The 69 actions above remain the command-center inventory. F10 adds the [Developer workbench](developer.md), including source fixtures, profile cloning, IDE SDK/export, offline mirror preparation/verification, security review and device operations. Those controls are documented separately with their input fields and evidence exports.
+
+Optional SPDX/CVE/ptest/testimage/kernel task actions check the selected recipe's actual listtasks before queueing. A recent capability result also disables an unavailable command dialog button with its prerequisite. Profile/metadata changes invalidate the short-lived cache. Missing ide-sdk, labgrid/SSH/console tools and report prerequisites are reported explicitly; they are never replaced with simulated successful jobs.

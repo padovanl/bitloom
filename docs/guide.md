@@ -1,6 +1,6 @@
 # User guide
 
-For a complete hands-on acceptance path, follow the [manual testbook](testbook.html). The [developer workflow roadmap](roadmap.md) documents proposed improvements, research sources and current boundaries. Its proposed views are not additional controls in the current TUI.
+For a complete hands-on acceptance path, follow the [manual testbook](testbook.html). The [Developer workbench guide](developer.md) documents F10, all sixteen implemented views, creation/clone workflows and evidence comparisons. The [research and implementation map](roadmap.md) retains sources and practical boundaries.
 
 ## Install from a GitHub release
 
@@ -64,6 +64,7 @@ Profiles are local JSON stored at `.bitloom/profiles.json` by default. State is 
 | `environment` | String environment variables; kas variables control kas paths/runtime |
 | `container_args` | Array of additional Docker/Podman arguments |
 | `targets` | Suggested targets; the first fills the toolbar |
+| `source_mappings` | Absolute runtime-to-host directory mappings for Developer IDE exports |
 
 `DL_DIR`/`SSTATE_DIR` in local.conf are read as literal hints. `${TOPDIR}` is expanded; other expressions require a profile path override. Runtime paths, especially kas container paths, may differ from host paths. Use **Resolve env** to inspect the authoritative result.
 
@@ -286,6 +287,8 @@ python tools/prepare_validation.py
 bitloom --config .validation/profiles.json --state .validation
 ```
 
+A recorded result is historical evidence: temporary work mounts can be removed. Check `/work/build` through the runtime before relying on it; if absent, prepare a new workspace with `python tools/validate_developer.py --build` and launch `.developer-validation/profiles.json` as explained in the testbook.
+
 The helper recreates the test profile from `.validation/result.json` when available. It preserves history and other profiles, uses the recorded workspace and does not build anything. The actual work directory is recorded in `.validation/result.json`; with Docker Snap, its contents are in the daemon's namespace and may appear empty on the host. In the container, the build directory is `/work/build`. Use Analysis runtime tools to browse it.
 
 1. Keep `core-image-minimal` in the top target field and press **Build** for an incremental image build. Existing matching task outputs are reused.
@@ -342,7 +345,7 @@ F7 offers Soft Slate, a muted dark gray palette, and Linen, a warm light palette
 
 ### Navigation and elapsed time
 
-F8 selects the previous workspace section; F9 selects the next, including Analysis and Help. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.
+F8 selects the previous workspace section; F9 selects the next, including Developer, Analysis and Help. F10 opens Developer directly. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.
 
 ## Hands-on kas: layers and recipes
 
@@ -414,3 +417,11 @@ With kas/container profiles use runtime paths, for example `/work/meta-bitloom/r
 To follow the hands-on tutorial entirely through Bitloom: use F2 Create layer for `/work/meta-bitloom`, then New file to create the .bb recipe and any .bbappend files. Create the kas experiment YAML in the host checkout using your editor, since a container profile's file dialog targets the container filesystem. Register the layer in kas as described above. Existing container files can be edited through Analysis → Edit runtime file.
 
 ![New-file editor with sample recipe](assets/file-creation.png)
+
+## Connected Developer workflows
+
+F10 opens the [Developer workbench](developer.md). Its guide documents all sixteen views, field meanings, queued operations, stale-file detection, immutable captures and baseline comparison. New layer previews complete CMake/Meson/Make/Python/Rust fixtures and registers them through a new kas composition or bitbake-layers. Clone, also in F4, preserves the original profile and selects a separate build directory. Optional `source_mappings` maps absolute runtime roots to real host-visible directories for IDE exports.
+
+New owned kas-container jobs have unique Docker/Podman names and labels. Force stop records the exact container's stop result before recipe recovery is offered. Graceful draining remains disabled for kas wrappers; native kas and external containers retain unconfirmed-server guards. Shutdown evidence displays the original job observations separately from a fresh probe namespace.
+
+After upgrading, let an existing persistent service finish its queue and stop that idle service once; the next launch loads the new code. Existing history is retained. The [Developer acceptance cases](testbook.html#13-developer-acceptance) give concrete experiments for every workflow, including optional hardware, kernel and SDK prerequisites.

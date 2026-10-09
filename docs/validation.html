@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Validation report — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="roadmap.html">Roadmap</a></nav></header><main class="manual"><article class="doc"><h1 id="validation-report">Validation report</h1>
+<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="validation-report">Validation report</h1>
 <h2 id="status">Status</h2>
 <p><strong>Completed on 2026-10-10.</strong> The real kas-container image build exited 0: all <strong>4,064 tasks succeeded</strong>, with no reused tasks. Elapsed wall time was <strong>57 minutes 10 seconds</strong> (10:41:45–11:38:55 UTC). BitBake reported <strong>20 warnings and no errors</strong>. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.</p>
 <h2 id="automated-checks">Automated checks</h2>
@@ -100,7 +100,7 @@
 <p><img src="assets/real-kas-environment.png" alt="Actual evaluated busybox environment" /></p>
 <p><img src="assets/real-kas-dependencies.png" alt="Actual container task dependency graph" /></p>
 <h2 id="documentation-site">Documentation site</h2>
-<p>The static documentation was exercised in Chromium 153 using Playwright: capability filtering, runtime profile examples, screenshot dialog, all three generated HTML manuals and a 390-pixel mobile viewport passed. No JavaScript page errors or failed resources were observed. The site and publishing workflow are committed; no GitHub remote is configured, so a public Pages deployment has not occurred.</p>
+<p>The static documentation was exercised in Chromium 153 using Playwright: capability filtering, runtime profile examples, screenshot dialog, all generated HTML manuals and a 390-pixel mobile viewport passed. No JavaScript page errors or failed resources were observed. The site and publishing workflow are committed. Local browser checks do not claim a public Pages deployment.</p>
 <h2 id="screenshots-and-gif">Screenshots and GIF</h2>
 <p>The real-kas-* images show the verified build and its actual environment/dependencies. Other media is explicitly sample data. Media in assets/ was captured from the actual Textual app with Pilot. The sample workspace and controlled failure are clearly labelled demo data. SVG is exported by Textual and cropped to the terminal grid, removing Rich's decorative desktop-window frame; PNG is rendered with a local monospace font from that grid; GIF sequences those actual captures. No generated image or invented successful build screen is used.</p>
 <h2 id="coverage-boundaries">Coverage boundaries</h2>
@@ -136,4 +136,80 @@
 <h2 id="tui-file-creation-and-external-refresh">TUI file creation and external refresh</h2>
 <p>The new-file dialog was exercised through the real Textual app: a recipe template was edited and saved into newly created parent directories, and the file appeared in Metadata. Timer-driven tests verify externally added, edited and deleted recipes are reflected in the local index. File creation was also executed and read back inside a disposable kas container. Regression tests verify existing files and dangling symlinks cannot be overwritten. The complete suite passed 62 tests before the additional runtime-directory timer test; the subsequent 13-test UI suite passed with that timer included. A separate UI test also verifies generic text-file creation opens the containing directory.</p>
 <p>Host Metadata is a local filesystem index. Container-only files are created and edited through the runtime operations; after creation the containing runtime directory opens in Analysis. Local scans run every five seconds; open runtime directory listings refresh every fifteen seconds while idle, with a 2,000-entry limit. Automatic refresh pauses while a modal is open.</p>
-</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="testbook.html">Testbook</a><a href="roadmap.html">Roadmap</a><a href="validation.md">Markdown source</a></footer></body></html>
+<h2 id="developer-workbench-validation">Developer workbench validation</h2>
+<p>The fourteen researched workflows are implemented in sixteen F10 views, with English instructions and P01–P14 manual cases. The suite now contains <strong>99 unit/UI tests</strong>; final checks cover actual backend invocation, multiconfig/virtual targets, large runtime payloads, source-preserving profile clones, no-overwrite licensed scaffolds for five build systems, variable origins, buildhistory KiB/pkgdata exact bytes, incompatible image baselines, overlapping buildstats, CVE dispositions, kernel fragments, artifact hashes, compiler path mapping, stale captures, optional task prerequisites and 60×20/80×24 Developer layout. A scheduled telemetry update during screen teardown was observed and guarded; the regression suite was repeated after the fix.</p>
+<p>Real Developer validation ran through Docker and the pinned kas 4.8.1 image on Scarthgap 5.0.8. A <strong>new dedicated work mount</strong> was used because the earlier temporary image-build mount had been removed. The earlier 4,064-task image evidence remains historical evidence; it is not a claim that that old directory is still available. No host Yocto toolchain was installed.</p>
+<table>
+<thead>
+<tr>
+<th>Actual check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Runtime capabilities</td>
+<td>BusyBox listtasks, installed tools/release, ide-sdk help and runtime prerequisites evaluated</td>
+</tr>
+<tr>
+<td>Metadata probes</td>
+<td>Variable assignment origins, selected recipe/appends/paths, runtime browser, IDE context, upgrade/layer context, mirrors/downloads and rebuild/shutdown observations executed</td>
+</tr>
+<tr>
+<td>New local layer</td>
+<td>Created inside /work and registered through a new host kas overlay/profile</td>
+</tr>
+<tr>
+<td>Small data-only recipe</td>
+<td>661 attempted tasks; 645 already current and all succeeded; exit 0</td>
+</tr>
+<tr>
+<td>Source mirror preparation</td>
+<td>Actual BitBake fetchall with BB_GENERATE_MIRROR_TARBALLS; exit 0</td>
+</tr>
+<tr>
+<td>Fetch offline</td>
+<td>BB_NO_NETWORK fetchall; 130 tasks already current, exit 0</td>
+</tr>
+<tr>
+<td>Full recipe build offline</td>
+<td>BB_NO_NETWORK build; 661 tasks already current, exit 0</td>
+</tr>
+<tr>
+<td>Controlled task failure</td>
+<td>Deliberate bbfatal in do_install; actual failed job, task log and executed script resolved</td>
+</tr>
+<tr>
+<td>Restored recipe</td>
+<td>Failing append restored with backup; 661 tasks, 657 already current, all succeeded</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Successful recipe session contained 18 recorded task stats with an observed span of 5.06 seconds; current runtime cgroup/pressure/disk evidence recorded separately</td>
+</tr>
+<tr>
+<td>Cloned kas profile</td>
+<td>Original local layer retained in /work; evaluated WORKDIR resolved under the independent /build mount</td>
+</tr>
+<tr>
+<td>Owned container stop</td>
+<td>Dedicated READY/sleep container stopped by its unique Bitloom name; stop code 0, client code 137, persisted cancelled status and confirmed recovery eligibility</td>
+</tr>
+</tbody>
+</table>
+<p>An initial validation-fixture packaging error was caught by installed-vs-shipped QA and fixed before the successful run. Its original failed log remains local. The helper's compact test recipe uses CLOSED and data-only installation to reduce build scope; complete MIT source templates are separately verified with actual no-overwrite runtime creation and parser fixtures. This run does not claim all five toolchains were compiled.</p>
+<p>Reproduction:</p>
+<pre><code class="language-bash">python tools/validate_developer.py --build
+python tools/validate_shutdown.py
+python tools/capture_developer.py
+python -m pytest -q
+python tools/check_testbook.py
+python tools/build_docs.py
+</code></pre>
+<p>Add <code>--image</code> to the first command for a new full minimal-image build. The executed <code>--build</code> run deliberately did not repeat the earlier full image build. Its image probe correctly recorded unavailable buildhistory image data in the new workspace. Image regression parsing/deltas were tested with explicit fixtures following the actual installed Scarthgap buildhistory format; no missing new image was presented as built.</p>
+<p>Local evidence: <code>.developer-validation/result.json</code>, <code>clone-result.json</code>, <code>stop-result.json</code>, individual runtime report JSON, state directories and complete logs. Probe PASS means the executable query ran; optional artifacts retain their availability flag. The stop experiment verified an owned container with a sleeping process, not draining an actual running BitBake task. Kernel compilation, interactive IDE cross-build/debugging, CVE database scanning, physical board/serial/labgrid execution and end-to-end Podman builds still require their real environments and are marked separately in the testbook.</p>
+<p><img src="assets/developer-variable.png" alt="Actual evaluated assignment history" /></p>
+<p><img src="assets/developer-performance.png" alt="Actual measured recipe build performance" /></p>
+<p><img src="assets/developer-compact.png" alt="Actual compact Developer browser and report" /></p>
+<p>The new GIF and screenshots use the actual Textual UI displaying saved real runtime reports. The layer-wizard capture is explicitly a preview, with no files created by the capture. <code>tools/check_docs.py</code> checks all six HTML manuals, feature filtering, screenshot dialogs and a mobile viewport; documentation media does not simulate a successful SDK, board operation or missing image.</p>
+</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a><a href="validation.md">Markdown source</a></footer></body></html>

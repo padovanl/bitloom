@@ -55,7 +55,7 @@ Reproduce post-build probes with `PATH="$PWD/.venv/bin:$PATH" python tools/probe
 
 ## Documentation site
 
-The static documentation was exercised in Chromium 153 using Playwright: capability filtering, runtime profile examples, screenshot dialog, all three generated HTML manuals and a 390-pixel mobile viewport passed. No JavaScript page errors or failed resources were observed. The site and publishing workflow are committed; no GitHub remote is configured, so a public Pages deployment has not occurred.
+The static documentation was exercised in Chromium 153 using Playwright: capability filtering, runtime profile examples, screenshot dialog, all generated HTML manuals and a 390-pixel mobile viewport passed. No JavaScript page errors or failed resources were observed. The site and publishing workflow are committed. Local browser checks do not claim a public Pages deployment.
 
 ## Screenshots and GIF
 
@@ -126,3 +126,49 @@ A regression test runs a real four-second subprocess and verifies that its histo
 The new-file dialog was exercised through the real Textual app: a recipe template was edited and saved into newly created parent directories, and the file appeared in Metadata. Timer-driven tests verify externally added, edited and deleted recipes are reflected in the local index. File creation was also executed and read back inside a disposable kas container. Regression tests verify existing files and dangling symlinks cannot be overwritten. The complete suite passed 62 tests before the additional runtime-directory timer test; the subsequent 13-test UI suite passed with that timer included. A separate UI test also verifies generic text-file creation opens the containing directory.
 
 Host Metadata is a local filesystem index. Container-only files are created and edited through the runtime operations; after creation the containing runtime directory opens in Analysis. Local scans run every five seconds; open runtime directory listings refresh every fifteen seconds while idle, with a 2,000-entry limit. Automatic refresh pauses while a modal is open.
+
+## Developer workbench validation
+
+The fourteen researched workflows are implemented in sixteen F10 views, with English instructions and P01–P14 manual cases. The suite now contains **99 unit/UI tests**; final checks cover actual backend invocation, multiconfig/virtual targets, large runtime payloads, source-preserving profile clones, no-overwrite licensed scaffolds for five build systems, variable origins, buildhistory KiB/pkgdata exact bytes, incompatible image baselines, overlapping buildstats, CVE dispositions, kernel fragments, artifact hashes, compiler path mapping, stale captures, optional task prerequisites and 60×20/80×24 Developer layout. A scheduled telemetry update during screen teardown was observed and guarded; the regression suite was repeated after the fix.
+
+Real Developer validation ran through Docker and the pinned kas 4.8.1 image on Scarthgap 5.0.8. A **new dedicated work mount** was used because the earlier temporary image-build mount had been removed. The earlier 4,064-task image evidence remains historical evidence; it is not a claim that that old directory is still available. No host Yocto toolchain was installed.
+
+| Actual check | Result |
+| --- | --- |
+| Runtime capabilities | BusyBox listtasks, installed tools/release, ide-sdk help and runtime prerequisites evaluated |
+| Metadata probes | Variable assignment origins, selected recipe/appends/paths, runtime browser, IDE context, upgrade/layer context, mirrors/downloads and rebuild/shutdown observations executed |
+| New local layer | Created inside /work and registered through a new host kas overlay/profile |
+| Small data-only recipe | 661 attempted tasks; 645 already current and all succeeded; exit 0 |
+| Source mirror preparation | Actual BitBake fetchall with BB_GENERATE_MIRROR_TARBALLS; exit 0 |
+| Fetch offline | BB_NO_NETWORK fetchall; 130 tasks already current, exit 0 |
+| Full recipe build offline | BB_NO_NETWORK build; 661 tasks already current, exit 0 |
+| Controlled task failure | Deliberate bbfatal in do_install; actual failed job, task log and executed script resolved |
+| Restored recipe | Failing append restored with backup; 661 tasks, 657 already current, all succeeded |
+| Performance | Successful recipe session contained 18 recorded task stats with an observed span of 5.06 seconds; current runtime cgroup/pressure/disk evidence recorded separately |
+| Cloned kas profile | Original local layer retained in /work; evaluated WORKDIR resolved under the independent /build mount |
+| Owned container stop | Dedicated READY/sleep container stopped by its unique Bitloom name; stop code 0, client code 137, persisted cancelled status and confirmed recovery eligibility |
+
+An initial validation-fixture packaging error was caught by installed-vs-shipped QA and fixed before the successful run. Its original failed log remains local. The helper's compact test recipe uses CLOSED and data-only installation to reduce build scope; complete MIT source templates are separately verified with actual no-overwrite runtime creation and parser fixtures. This run does not claim all five toolchains were compiled.
+
+Reproduction:
+
+```bash
+python tools/validate_developer.py --build
+python tools/validate_shutdown.py
+python tools/capture_developer.py
+python -m pytest -q
+python tools/check_testbook.py
+python tools/build_docs.py
+```
+
+Add `--image` to the first command for a new full minimal-image build. The executed `--build` run deliberately did not repeat the earlier full image build. Its image probe correctly recorded unavailable buildhistory image data in the new workspace. Image regression parsing/deltas were tested with explicit fixtures following the actual installed Scarthgap buildhistory format; no missing new image was presented as built.
+
+Local evidence: `.developer-validation/result.json`, `clone-result.json`, `stop-result.json`, individual runtime report JSON, state directories and complete logs. Probe PASS means the executable query ran; optional artifacts retain their availability flag. The stop experiment verified an owned container with a sleeping process, not draining an actual running BitBake task. Kernel compilation, interactive IDE cross-build/debugging, CVE database scanning, physical board/serial/labgrid execution and end-to-end Podman builds still require their real environments and are marked separately in the testbook.
+
+![Actual evaluated assignment history](assets/developer-variable.png)
+
+![Actual measured recipe build performance](assets/developer-performance.png)
+
+![Actual compact Developer browser and report](assets/developer-compact.png)
+
+The new GIF and screenshots use the actual Textual UI displaying saved real runtime reports. The layer-wizard capture is explicitly a preview, with no files created by the capture. `tools/check_docs.py` checks all six HTML manuals, feature filtering, screenshot dialogs and a mobile viewport; documentation media does not simulate a successful SDK, board operation or missing image.

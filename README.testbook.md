@@ -16,7 +16,7 @@ This is an executable learning path and acceptance checklist, not a report of te
 10. [Runtime variants and optional features](#10-runtime-variants-and-optional-features)
 11. [Every command-center action](#11-every-command-center-action)
 12. [Record results and restore the experiment](#12-record-results-and-restore-the-experiment)
-13. [Feature assessment](#13-feature-assessment)
+13. [Developer acceptance](#13-developer-acceptance)
 
 Run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.
 
@@ -78,11 +78,11 @@ python tools/prepare_validation.py
 COLORTERM=truecolor bitloom --config .validation/profiles.json --state .validation
 ```
 
-F4 is a JSON editor: duplicate an object in the profiles array, give it a unique name, set active or choose it with the top selector, then Save profiles. There is currently no dedicated cloning wizard.
+F4 provides both a JSON editor and Clone. Clone chooses a unique name and distinct absolute build directory; it preserves the original profile. Developer also provides Clone through F10.
 
 Expected: kas-integration profile, kas-container runtime, qemux86-64/poky. The helper preserves history and takes KAS_WORK_DIR from the recorded result. With Docker Snap the daemon's /tmp can differ from host /tmp. Use runtime file operations with `/work/build`; an empty host directory does not prove the container build is missing.
 
-Use this path for read-only inspection or routine rebuilds. Use K02 for tests that change configuration, devtool state or caches.
+Use this path for read-only inspection or routine rebuilds. A saved result does not prove the temporary work mount still exists: use F10 Runtime browser to check `/work/build`. If it was removed, use K02 or K04 for a fresh workspace. Use an isolated profile for tests that change configuration, devtool state or caches.
 
 ### K02 — Prepare an isolated manual-test profile
 
@@ -111,11 +111,25 @@ COLORTERM=truecolor bitloom \
   --config .manual-testbook/profiles.json --state .manual-testbook
 ```
 
-For Podman change KAS_CONTAINER_ENGINE and use podman info. This dedicated workspace may require a cold build. Existing edits to the base integration YAML are included; record its Git diff before testing.
+Before the first checkout, open F10 → Runtime capabilities → Prepare new kas workspace → Run. This prepares the dedicated empty container work directory if its daemon-side ownership differs. For Podman change KAS_CONTAINER_ENGINE and use podman info. This dedicated workspace may require a cold build. Existing edits to the base integration YAML are included; record its Git diff before testing.
 
 ### K03 — Checkout and validate configuration
 
 F2 → Checkout kas repositories; then Dump resolved kas configuration. Expected: checked-out pinned Poky revision and the merged machine/distro/target. In Analysis run Build preflight on `/work/build`; missing build configuration before the first build is a prerequisite finding, not a fake PASS. Build busybox, then core-image-minimal to populate pkgdata, artifacts and reports needed below. Run Generate kas lock file and inspect its actual output; kas release support determines the result.
+
+### K04 — Automated real Developer fixture setup
+
+For a new isolated real workspace, after installing the official wrapper above:
+
+```bash
+python tools/validate_developer.py --build
+COLORTERM=truecolor bitloom --config .developer-validation/profiles.json \
+  --state .developer-validation/manual
+```
+
+Docker is the default. `--engine podman` selects Podman; `--work /absolute/new/workspace` selects another work mount. `--image` additionally builds core-image-minimal with the generated package. The helper probes actual metadata, creates a uniquely named local layer/YAML, builds a small data-only CLOSED recipe, prepares sources, verifies fetch and recipe build with BB_NO_NETWORK, introduces/restores a controlled do_install failure, and saves result.json plus actual logs. The fixture deliberately keeps the initial build smaller than the complete image; TUI templates are separate MIT-licensed source examples. Repeating retains older evidence and creates new unique overlays/layers.
+
+Expected: every successful operation has a log/exit result. Missing image/buildhistory artifacts before `--image` remain unavailable. In F10 set recipe to `bitloom-validation-hello`, inspect Recipe context and SUMMARY, browse `/work`, then create your own fixture for chapter 13. Use a new state directory for manual work so automated history remains separate. This can take several minutes and download/build native dependencies on a cold workspace.
 
 ## 3. UI and profile acceptance
 
@@ -313,7 +327,7 @@ Expected: actual state and idle shutdown. Start/reconnect again. A stop request 
 
 On a disposable build, F5 → Let finish: job continues. Host or freshly managed direct-container profiles can expose Graceful stop: sends one SIGINT and waits, with no automatic escalation. kas wrappers and existing containers do not guarantee the client PID; Graceful stop is disabled there. Record this as expected runtime-specific behavior.
 
-Force + recovery must show observed active recipes and only offer recovery when shutdown is confirmed. With wrappers/external servers verify remaining work before manually cleaning; termination of the wrapper is not proof that BitBake stopped. Recovery uses recipe clean, not editing .bb files. An observed active recipe is not proof of corruption. Rebuild afterward and preserve interruption logs.
+Force + recovery must show observed active recipes and only offer recovery when shutdown is confirmed. Owned kas-container jobs record the exact container stop result before recovery. With native kas wrappers/external servers verify remaining work before manually cleaning; termination of the wrapper is not proof that BitBake stopped. Recovery uses recipe clean, not editing .bb files. An observed active recipe is not proof of corruption. Rebuild afterward and preserve interruption logs.
 
 ## 9. Caches
 
@@ -470,29 +484,99 @@ python tools/check_testbook.py
 python tools/build_docs.py
 ```
 
-## 13. Feature assessment
+## 13. Developer acceptance
 
-These are proposed improvements, not implemented capabilities or manual PASS claims. The [research roadmap](https://padovanl.github.io/bitloom/roadmap.html) records public developer experiences, upstream technical sources, priorities and current boundaries, reviewed on 2026-10-10. Individual discussions are qualitative evidence, not a representative demand survey. Priority reflects Bitloom's assessment of daily usefulness.
+All fourteen researched workflows are implemented in **F10 Developer**, across sixteen views. This chapter is a manual checklist; implementation does not imply you have already tested the feature. Record PASS/FAIL/N/A with evidence for each case. The [Developer guide](https://padovanl.github.io/bitloom/developer.html) gives exact field meanings and limits; the [research map](https://padovanl.github.io/bitloom/roadmap.html) retains sources. No hardware/SDK/security report is fabricated to fill a missing prerequisite.
 
-### Proposed acceptance experiments
+### Shared procedure
 
-All rows remain **PLANNED** until their feature ships. The baseline column points to experiments you can run **now** with existing features; it does not imply that the proposed UI exists. Keep proposal results separate from the implemented cases in chapters 1–12. Where an experiment modifies configuration or sources, use the isolated layer/profile from chapters 2 and 5 and restore the change after saving evidence.
+Use K02 or K04, keep the queue idle while inspecting, and record the selected profile. F10 opens Developer; Tab selects controls, arrows select rows, Enter/Open follows a runtime path. The first field changes meaning with the view; read its placeholder. Capture writes a timestamped private JSON export and fills the baseline input once. After a change/build, Inspect again and Compare; later Capture preserves the original baseline. Choose another JSON path to change it. Save the comparison export as evidence.
 
-| Proposal | Proposed workflow / priority | Baseline available now | Future experiment and expected evidence | Status |
-| --- | --- | --- | --- | --- |
-| P01 | Variable assignment and override explanation / First | A02 env filtering/diff; L04 SUMMARY append | Set SUMMARY in the test recipe and append to it in a matching .bbappend. Resolve the recipe: show final value, both assignment locations, applicable override context and runtime Enter-to-edit. Edit externally and verify the capture becomes stale. | PLANNED |
-| P02 | Recipe context and selectable runtime tree / First | L02 creation; A03 runtime listing/edit; L04 appends | Use a container-only layer. Select a recipe and navigate provider/version, active appends, source/build/temp directories and logs using the keyboard. Show evaluated paths and refresh after file creation/deletion; verify 80×24 layout. | PLANNED |
-| P03 | Rebuild and cache-miss explanation / First | C02 signature tools; A04 Why rebuilding? | Save signatures for bitloom-hello, change its installed greeting and compare the next capture. Link observed changed variables/tasks to signature evidence; an unchanged subsequent build should show no new metadata change. Mark absent signatures or unreachable mirrors as incomplete evidence, not a guessed cause. | PLANNED |
-| P04 | Structured failed-task investigation / First | A01 controlled failure, search and task-log retrieval | Add a deliberate bbfatal in a test recipe task, build, and open the failure context. Link the exact task log, executed script, diagnostic and original profile; export them. Correct it and rebuild; the old failure remains attached to its original job. | PLANNED |
-| P05 | Layer/recipe scaffolding with registration / Next | L01–L04; D02 | Create a licensed CMake fixture through the proposed wizard. Preview layer.conf, recipe, source/license inputs and kas composition; cancel creates nothing. Save/register, verify show-layers/show-appends, build and inspect the image manifest. Existing files must be preserved. | PLANNED |
-| P06 | IDE/SDK bridge / Next | D02 CMake source; X07 SDK/eSDK | On a release supporting devtool ide-sdk, generate its SDK/project configuration for the fixture. Open it in a supported IDE/container context, change the greeting and build with the cross-toolchain. Verify source/sysroot mappings and artifact architecture. Debugging requires a matching image and target. | PLANNED |
-| P07 | Image regression dashboard / Next | A03 rootfs/provenance; A04 manifest/snapshot comparison | Capture a successful image, add the test package and rebuild. Show added files/packages, package byte delta, recipe/inclusion evidence and available permission/owner changes. Remove it and repeat. Reject or clearly flag comparisons across incompatible machine/configuration baselines. | PLANNED |
-| P08 | Buildstats and runtime performance / Next | U06 host cards; A02 timings; Artifacts buildstats | Enable buildstats, run a build and display measured task durations/timeline. Repeat in a container with known memory/CPU limits: show those limits separately from host figures. Overlapping task durations must not become a false wall-clock total; absent stats are unavailable. | PLANNED |
-| P09 | Profile cloning, kas diff and multiconfig / Next | U03 JSON profile editing; K03 dump/lock | Clone a profile into a distinct build directory and compare resolved kas settings. With configured multiconfig, identify context in targets, environment captures and results. Jobs sharing a build directory remain serialized; variants keep separate history/evidence and configuration ownership. | PLANNED |
-| P10 | Fetch diagnosis and offline preparation / Next | R03 fetch/audit; A01/A04 diagnosis | Use an isolated tiny-source recipe to induce a missing-URI and then a checksum failure. Show separate evidence and recommendations. Restore it, prepare source mirrors and run a network-disabled verification in the isolated profile. Report source readiness separately from full-build offline readiness. | PLANNED |
-| P11 | Image CVE/SBOM review / Later | X12/X13 actual reports and artifact discovery | Import release-appropriate reports for two images, identify installed packages and new/changed issues, and record database date. Review an exception with owner/reason/expiry while retaining upstream status. Missing reports are unavailable; an unpatched finding alone is not proof of runtime exploitability. | PLANNED |
-| P12 | Kernel and upgrade comparison / Later | X08 fragment/check output; X15 devtool upgrade; X06 versions | Change a kernel fragment and compare requested settings with final configuration/check output. Separately upgrade a test recipe/layer in a copied profile; compare selected version/appends/patches and parse/build results against the baseline. Preserve developer edits and original kas revisions. | PLANNED |
-| P13 | Device console/deploy/test evidence / Later | X14 deployment; X10 testimage | On a dedicated test board or configured labgrid place, deploy a recorded artifact, capture serial/SSH logs and run a defined test. Link results to image hash/device/job. Disconnect it and show unavailable state. N/A without equipment; board flashing is never simulated as success. | PLANNED |
-| P14 | Runtime capabilities and shutdown evidence / Foundation | U09 doctor; A04 preflight; S02 interruption | Compare profiles with and without optional task classes or terminal/device access. Disable unsupported actions with the observed prerequisite. Exercise kas interruption and retain client/container/server evidence separately; recovery remains unavailable while server shutdown is unconfirmed. | PLANNED |
+| Case | View or control | Required fixture | Manual result |
+| --- | --- | --- | --- |
+| P01 | Variable history | Parsed recipe plus matching append | TODO |
+| P02 | Recipe context + Runtime browser | Real runtime layer | TODO |
+| P03 | Rebuild evidence | Before/after signatures | TODO |
+| P04 | Failure investigation | Controlled failed task | TODO |
+| P05 | New layer | Writable new runtime destination | TODO |
+| P06 | IDE / SDK bridge | Supported release/build system and SDK | TODO or N/A with reason |
+| P07 | Image regressions | Two actual images with buildhistory/pkgdata | TODO |
+| P08 | Build performance | Actual buildstats; cgroup-v2 if applicable | TODO |
+| P09 | Clone + Resolved kas / multiconfig | Independent profile; optional multiconfig | TODO |
+| P10 | Downloads / offline | Local source fixture and populated downloads | TODO |
+| P11 | CVE / SBOM review | Actual supported JSON reports | TODO or N/A with reason |
+| P12 | Kernel fragments + Upgrade baseline | Kernel .config/fragment; upgrade fixture | TODO or N/A with reason |
+| P13 | Board laboratory | Dedicated real SSH/serial/labgrid equipment | TODO or N/A with reason |
+| P14 | Runtime capabilities + Shutdown evidence | Optional task probes; stoppable owned job | TODO |
 
-The first batch should connect P01–P04, with P14 supporting capability checks and interruption evidence. Any implementation must preserve current backups, external-change conflict detection, build-directory ownership and clear host/runtime path labels. A shipped proposal should move into the relevant chapters with concrete steps and actual captures before its status is changed to an implemented acceptance case.
+### P01 — Follow a variable to its source
+
+Set the Developer recipe to your fixture (`bitloom-hello` after P05, or chapter 5's recipe). Select Variable history, first field `SUMMARY`, Inspect. Select assignment-origin rows: Enter opens the actual runtime file at its line. Capture. In a matching append add `SUMMARY:append = " (experiment)"`, Inspect again and verify the final value and both origins. Query PACKAGECONFIG and OVERRIDES to inspect override context; an inactive override must not be presented as winning. Edit the origin externally while idle, wait for STALE (up to fifteen seconds), and verify Capture/Compare requires a fresh Inspect. Restore your append after recording evidence. Clear the recipe for a global variable; with configured multiconfig, repeat using `mc:debug:RECIPE` and verify that datastore identity is preserved.
+
+### P02 — Navigate real runtime files
+
+Choose Recipe context for the fixture, Inspect, and inspect FILE/PV/appends/S/B/T/sysroots. Select S and Enter: Runtime browser opens the evaluated directory. Arrow/Enter through source files; open a file, save a greeting change with backup, then close and Inspect. Enter `/work/meta-bitloom-dev` in the browser's first field and `.bb` in its second field for a bounded recursive filename search. Create a file through Analysis/New file or chapter 5, refresh and verify it appears; delete your own test file externally, refresh and verify it disappears. Symlinks are labelled; edits through symlinks are refused. Repeat at 80×24 and 60×20: controls scroll, table/report remain reachable and return after resizing.
+
+### P03 — Investigate a rebuild
+
+Build your fixture, choose Rebuild evidence and Run Dump signatures. When the queue finishes, Inspect and Capture. Edit its installed greeting/source, build again and dump signatures again. Inspect, open a signature row, and save actual diffsigs/printdiff evidence. Compare the capture. Potential dependency paths are labelled as evidence, not promised rebuild totals. Repeat without changing metadata: record the real result, which may reuse tasks and may still retain the last available historical signature pair. If paired sigdata is absent, record incomplete evidence rather than claiming no change or an invented cache-miss cause.
+
+### P04 — Connect the failed task, script and log
+
+Use A01's deliberate `bbfatal` or create a matching append containing `do_install:append() { bbfatal "Bitloom controlled task failure"; }`. Force install and verify a genuinely failed history row. Select it in Builds, F10 → Failure investigation, leave the first field blank and Inspect. Open log.do_install and run.do_install rows; read the diagnostic context and Capture. Switch the active profile and inspect that selected old failure again: it must keep the original job/profile. Restore the append and rebuild successfully. The historical failure stays failed, and its captured evidence stays attached to that original job. Use an explicit runtime log path for a standalone investigation.
+
+### P05 — Create and register a licensed fixture from the TUI
+
+F10 → New layer. Enter `/work/meta-bitloom-dev`, `bitloom-hello`, collection `bitloomdev`, your copyright owner, series `scarthgap`, new host YAML `kas-bitloom-dev.yml`, and CMake. Preview: check layer.conf, MIT text/checksum, main.c, CMakeLists.txt, recipe and kas registration. Cancel first and verify nothing was created. Repeat Preview → Create + register. A new derived profile selects the new overlay; original YAML/profile remain intact. F2 → Show configured layers, Show recipe appends and Build target `bitloom-hello`: successful parsing/build verifies registration. Build core-image-minimal and inspect its manifest for the package. Runtime browser → files/source/main.c → edit greeting → save → rebuild recipe/image. Existing destinations must be refused. Repeat with unique layer/name/YAML for Meson, Make, Python and Rust; inspect each complete source/license and build it on a release with the corresponding class/toolchain. SDK/compiler dependencies can make these real builds slow.
+
+### P06 — IDE source iteration
+
+Choose IDE / SDK bridge for the CMake fixture, first field `core-image-minimal`, Inspect. Record S/B/compiler/sysroots/architecture and actual ide-sdk help. Configure F4 source_mappings only if the runtime source is truly host-visible. Run Export IDE mappings/database; inspect the export and mapped compile_commands.json if available, including -I/sysroot arguments. Generate IDE SDK queues release-native devtool ide-sdk after the probe. In the supported IDE/container context, change and build the greeting with the generated cross-toolchain; verify binary architecture and deployed image/debug symbols match. An unavailable IDE command, missing compile database or inaccessible Docker-private source is a prerequisite finding. Mark the interactive SDK/debug portion N/A until its requirements are supplied.
+
+### P07 — Compare images and trace a package
+
+In an isolated kas overlay enable `INHERIT += "buildhistory"` and build the image. F10 → Image regressions, recipe `core-image-minimal`, Inspect → Capture. Record that package sizes identify their source (exact pkgdata bytes or normalized buildhistory KiB). Add your fixture with IMAGE_INSTALL, rebuild the same image/machine/distro/libc/multiconfig, Inspect → Compare. Expect an added package with recipe owner, installed file additions and byte deltas. Select that package → Trace selected package inclusion → Run. Change a fixture-installed file mode, rebuild and compare against a new deliberate baseline; record permission/owner/link differences from buildhistory. A different-machine/image baseline must be rejected. Missing buildhistory is unavailable, not an empty successful comparison.
+
+### P08 — Find measured bottlenecks
+
+Enable buildstats in your test configuration, run a real build, then Build performance → Inspect with a blank first field for the latest session. Record slow tasks, timeline, measured task span and runtime cgroup/pressure/disk evidence. Capture, repeat a comparable build and Compare durations. Parallel durations must not be added to claim elapsed wall time. To test limits, configure a dedicated container with known cgroup-v2 CPU/memory limits and verify them separately from the host cards. Unavailable pressure/cgroup-v1 files or absent buildstats must be labelled. The probe measures its current runtime; it does not reconstruct old container usage.
+
+### P09 — Clone profiles and inspect multiconfig
+
+F10 → Clone (also F4 → Clone). Choose a unique name and a separate absolute build directory, for example `/tmp/bitloom-debug-work/build`. For kas verify KAS_WORK_DIR still points to the original source workspace and KAS_BUILD_DIR is the new absolute directory; local layers remain available and the external build mount appears as /build. Select Resolved kas / multiconfig → Inspect → Capture; change a copied composition, re-inspect and Compare the real merged dump. Check the resolved machine/distro: profile hints do not rewrite a base YAML. Run Generate kas lock and inspect the release-native result. With actual BBMULTICONFIG configured, query `mc:debug:RECIPE` in Variable history and Recipe context and build the target through F2. Capture the context. Different profiles keep original job identity; one build directory cannot be owned by two cooperating builders, and the current service queue remains serial. Preserve the original profile/settings.
+
+### P10 — Diagnose downloads and verify offline readiness
+
+Choose Downloads / offline, recipe your fixture, Inspect. Record mirror/cache/network variables and URI DNS observations. Induce a missing URI and separately a bad checksum in an isolated tiny source recipe (save its original metadata first); fetch and inspect the failed log through the first field or selected log. Expect distinct evidence categories; restore each change. Run Prepare source mirrors and wait for success; Run Verify fetch offline and separately Verify full build offline. Each job must record the actual result with BB_NO_NETWORK in its temporary BitBake configuration. A successful fetch check is not a claim that kas bootstrap or the full build needs no network. Restore the recipe and save original logs.
+
+### P11 — Review actual CVE/SPDX evidence
+
+Run supported CVE/SPDX actions after Runtime capabilities identifies their tasks. Locate the real JSON report with Runtime browser. In CVE / SBOM review enter its absolute runtime path, Inspect → Capture. Record package/version/license, upstream issue status and available report/database dates. Build/import a second actual report and Compare for new/changed statuses. Select an issue → Record selected issue review → Run; enter owner/reason/future YYYY-MM-DD expiry. Inspect again: original status is retained and the separate review appears. Missing/unsupported reports must be unavailable; a review is not a patch or proof of non-exploitability. Expired saved reviews must be visibly labelled. Record N/A without suitable reports/configuration.
+
+### P12 — Check kernel fragments and recipe upgrades
+
+For a kernel fixture, use Kernel fragments with recipe `virtual/kernel`, first field the fragment and second field final .config (or blank for evaluated B/.config). Inspect requested enabled/disabled values against actual values. Run Kernel config check, Export kernel diff and Menuconfig where actual listtasks supports them. Record mismatches and release tool results; no automatic fix is implied. Separately clone the profile, choose Upgrade baseline for a small recipe, Inspect → Capture before change; perform a controlled version/revision or devtool upgrade, parse/build, re-inspect and Compare. Versions may change while machine/distro/libc/multiconfig must remain compatible. Check active appends, patches, layer commits and dirty status; retain original kas pins and source edits. Mark unavailable kernel/upgrade operations N/A with prerequisites.
+
+### P13 — Use a real board and retain evidence
+
+F10 → Devices; configure actual SSH/serial or labgrid equipment using the Developer guide schema. Board laboratory → Inspect; Enter selects a device. Run Device status and verify actual output; disconnect it and record the failed/unavailable result. Export the artifact to a local path (Analysis Export runtime artifact), put that path in the second field, and use a real devtool workspace recipe for Deploy recipe. Inspect the evidence JSON: hash/device/job/result are recorded; deploy transfers recipe outputs and must not claim that the referenced image was flashed. Run your explicit test_argv and verify its actual exit code/log. Console uses the real terminal and records transcript/exit status. For labgrid, verify show/acquire/release and use power cycle only on your dedicated place. N/A without actual equipment; there is no simulated board PASS.
+
+### P14 — Probe optional tasks and verify stopping
+
+Runtime capabilities → Inspect your fixture and an image: record installed tools, task names, release and device/terminal prerequisites. In F2 choose an optional task absent from that probe; the recent result disables it with the missing task, or a fresh pre-submission probe refuses it before queueing. Refresh after configuration changes. Test missing ide-sdk/device tools similarly.
+
+On an expendable owned kas-container build, F5 → Let finish first; then in a separate run use Force + recovery. Record the unique Bitloom container name and Shutdown evidence observations: exact container stop result, client result and recovery eligibility. Confirm its container is gone/stopped using the same engine. Recipe recovery is offered only after confirmed termination; observed active tasks are at risk, not proof of corruption. Native kas wrappers/existing containers remain guarded when shutdown is unconfirmed. A new kas shell sees a separate namespace and must not be used as proof that an old server exited. Restart an old persistent service only after its queue is idle when installing the new version.
+
+### Developer evidence ledger
+
+Save P01–P14 results with profile/release, inputs, baseline/current captures, comparison files and job IDs/logs. Optional N/A entries must name the missing hardware, task, report or SDK. Automated reproduction complements this book:
+
+```bash
+python tools/validate_developer.py --build
+python tools/capture_developer.py
+python -m pytest -q
+python tools/check_testbook.py
+python tools/build_docs.py
+```
+
+The validation helper's `--image` opt-in builds a full fresh image; its default `--build` validates a small recipe and offline/failure recovery paths. Read result.json rather than treating executable probe PASS as proof of missing image artifacts. Restore your experimental changes and keep the original state/history as described in chapter 12.
