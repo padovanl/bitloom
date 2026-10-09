@@ -5,24 +5,141 @@ from dataclasses import asdict
 from pathlib import Path
 
 from textual import on
+from textual.binding import Binding
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, Select, Static, TextArea
+from textual.widgets import Button, Input, Label, Markdown, OptionList, Select, Static, TextArea
+from textual.widgets.option_list import Option
 
 from .commands import ACTIONS, Action, arguments, invocation
 from .models import Profile, Settings
 
 
+class FindBar(Input):
+    """nano-style "Where Is" prompt; Esc returns to the editor."""
+    BINDINGS = [("escape", "close", "Cancel")]
+
+    def action_close(self):
+        self.display = False
+        self.screen.editor().focus()
+
+
+class NanoEditor:
+    """nano keys for editor dialogs: ^O write, ^X exit, ^W where is, ^K cut, ^U uncut, ^G help."""
+    EDITOR = "#content"
+    NANO_BINDINGS = [
+        Binding("ctrl+o", "save", "Write out", priority=True),
+        Binding("ctrl+s", "save", "Save", priority=True, show=False),
+        Binding("ctrl+x", "nano_exit", "Exit", priority=True),
+        Binding("ctrl+w", "where_is", "Where is", priority=True),
+        Binding("alt+w", "find_next", "Next", priority=True, show=False),
+        Binding("ctrl+k", "cut_line", "Cut line", priority=True),
+        Binding("ctrl+u", "uncut", "Uncut", priority=True),
+        Binding("ctrl+g", "app.keys", "Help", priority=True),
+    ]
+    _nano_baseline = None
+    _nano_query = ""
+    _nano_cut = ""
+    _nano_last_cut_row = None
+    _nano_exit_armed = False
+
+    def editor(self) -> TextArea:
+        return self.query_one(self.EDITOR, TextArea)
+
+    def nano_ready(self):
+        self._nano_baseline = self.editor().text
+        bar = FindBar(placeholder="Search (Enter finds, Esc cancels)", id="find-bar")
+        bar.display = False
+        self.query_one(Vertical).mount(bar)
+
+    def nano_saved(self):
+        self._nano_baseline = self.editor().text
+        self._nano_exit_armed = False
+
+    def action_nano_exit(self):
+        if self._nano_baseline is not None and self.editor().text != self._nano_baseline and not self.editor().read_only and not self._nano_exit_armed:
+            self._nano_exit_armed = True
+            self.notify("Modified buffer not saved: ^O writes it, ^X again discards the changes", severity="warning", timeout=8)
+            return
+        self.dismiss(None)
+
+    def action_where_is(self):
+        bar = self.query_one("#find-bar", FindBar)
+        bar.value = self._nano_query
+        bar.display = True
+        bar.focus()
+
+    def on_input_submitted(self, event):
+        # A plain handler name: @on is not collected from non-widget mixins.
+        if event.input.id != "find-bar":
+            return
+        event.stop()
+        self._nano_query = event.value
+        event.input.display = False
+        self.editor().focus()
+        self.action_find_next()
+
+    def action_find_next(self):
+        query = self._nano_query.casefold()
+        if not query:
+            self.action_where_is()
+            return
+        editor = self.editor()
+        lines = editor.text.split("\n")
+        row, column = editor.selection.end
+        order = list(range(row, len(lines))) + list(range(0, row + 1))
+        for index, number in enumerate(order):
+            start = column if index == 0 else 0
+            found = lines[number].casefold().find(query, start)
+            if index == len(order) - 1 and number == row and found >= column:
+                found = -1 if index else found
+            if found >= 0:
+                from textual.widgets.text_area import Selection
+                editor.selection = Selection((number, found), (number, found + len(query)))
+                editor.scroll_cursor_visible()
+                if index and number <= row:
+                    self.notify("Search wrapped", timeout=2)
+                return
+        self.notify(f'"{self._nano_query}" not found', severity="warning", timeout=3)
+
+    def action_cut_line(self):
+        editor = self.editor()
+        if editor.read_only:
+            return
+        row = editor.cursor_location[0]
+        count = editor.document.line_count
+        line = editor.document.get_line(row)
+        # Consecutive ^K presses accumulate, like nano's cut buffer.
+        if self._nano_last_cut_row != row:
+            self._nano_cut = ""
+        self._nano_cut += line + "\n"
+        if row + 1 < count:
+            editor.delete((row, 0), (row + 1, 0))
+        else:
+            editor.delete((row, 0), (row, len(line)))
+        editor.move_cursor((min(row, editor.document.line_count - 1), 0))
+        self._nano_last_cut_row = row
+
+    def action_uncut(self):
+        editor = self.editor()
+        if editor.read_only or not self._nano_cut:
+            return
+        row = editor.cursor_location[0]
+        editor.insert(self._nano_cut, (row, 0))
+        self._nano_last_cut_row = None
+
+
 class ActionScreen(ModalScreen):
     DEFAULT_CSS = """
     ActionScreen { align: center middle; background: $background 70%; }
-    ActionScreen > Vertical { width: 88; max-height: 90%; border: round $accent; padding: 1 2; background: $surface; }
+    ActionScreen > Vertical { width: 88; max-height: 90%; border: round $accent; border-title-color: $accent; border-title-style: bold; padding: 1 2; background: $surface; }
+    ActionScreen #hint { color: $text-muted; margin-bottom: 1; }
     ActionScreen Input, ActionScreen Select { margin-bottom: 1; }
     ActionScreen #preview { height: auto; max-height: 6; color: $text-muted; margin: 1 0; }
     ActionScreen Horizontal { height: 3; }
     """
-    BINDINGS = [("escape", "dismiss", "Close")]
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True), Binding("ctrl+g", "app.keys", "Help", priority=True)]
 
     def __init__(self, profile: Profile, action_id="build", target=""):
         super().__init__()
@@ -32,10 +149,10 @@ class ActionScreen(ModalScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Label("[bold cyan]COMMAND CENTER[/]  ·  queue a Yocto operation")
+            yield Label("[dim]Type to filter · [b]↑ ↓[/b] choose · [b]Tab[/b] fields · [b]Enter[/b] queue · [b]Esc[/b] close[/]", id="hint")
             yield Input(placeholder="Filter commands by operation or group…", id="action-search")
             yield Select([(f"{a.group} / {a.title}", a.id) for a in ACTIONS], value=self.initial_action, allow_blank=False, id="action")
-            with VerticalScroll(id="fields"):
+            with VerticalScroll(id="fields", can_focus=False):
                 for key in ("target", "task", "path", "path2", "variable", "device", "source", "command"):
                     yield Input(value=self.target if key == "target" else "", placeholder=key, id=f"field-{key}")
             yield Static(id="preview", markup=False)
@@ -44,7 +161,26 @@ class ActionScreen(ModalScreen):
                 yield Button("Close", id="close")
 
     def on_mount(self):
+        self.query_one(Vertical).border_title = "Command center"
         self.update_fields()
+        self.query_one("#action-search", Input).focus()
+
+    def on_key(self, event):
+        # Arrow keys in the filter choose the operation without leaving the field.
+        if event.key in {"up", "down"} and self.focused is self.query_one("#action-search", Input):
+            select = self.query_one("#action", Select)
+            values = [value for _, value in select._options if value is not Select.BLANK]
+            if values:
+                index = values.index(select.value) if select.value in values else 0
+                select.value = values[(index + (1 if event.key == "down" else -1)) % len(values)]
+            event.stop()
+            event.prevent_default()
+
+    @on(Input.Submitted)
+    def submitted(self, event):
+        event.stop()
+        if not self.query_one("#submit", Button).disabled:
+            self.submit()
 
     @on(Input.Changed, "#action-search")
     def filter_actions(self, event):
@@ -115,14 +251,15 @@ class ActionScreen(ModalScreen):
         self.dismiss(None)
 
 
-class ProfilesScreen(ModalScreen):
+class ProfilesScreen(NanoEditor, ModalScreen):
     DEFAULT_CSS = """
     ProfilesScreen { align: center middle; }
-    ProfilesScreen > Vertical { width: 100; height: 90%; border: round $accent; padding: 1 2; background: $surface; }
+    ProfilesScreen > Vertical { width: 100; height: 90%; border: round $accent; border-title-color: $accent; border-title-style: bold; padding: 1 2; background: $surface; }
     ProfilesScreen TextArea { height: 1fr; }
     ProfilesScreen Horizontal { height: 3; margin-top: 1; }
     """
-    BINDINGS = [("escape", "dismiss", "Close")]
+    EDITOR = "#json"
+    BINDINGS = [("escape", "dismiss", "Close"), *NanoEditor.NANO_BINDINGS]
 
     def __init__(self, settings: Settings):
         super().__init__()
@@ -130,8 +267,7 @@ class ProfilesScreen(ModalScreen):
 
     def compose(self):
         with Vertical():
-            yield Label("[bold cyan]PROFILES[/]  ·  host / kas / container / kas-container")
-            yield Label("Edit JSON. Duplicate a profile with a new name; choose it with the top selector.")
+            yield Label("Modes: host · kas · container · kas-container. Edit the JSON; [b]^O[/b] saves, [b]^X[/b] exits, [b]^W[/b] searches, [b]P[/b] on the main screen switches profile.")
             yield TextArea(json.dumps({"active": self.settings.active, "profiles": [asdict(p) for p in self.settings.profiles]}, indent=2), id="json")
             with Horizontal():
                 yield Button("Save profiles", variant="primary", id="save")
@@ -147,6 +283,14 @@ class ProfilesScreen(ModalScreen):
         if result:
             self.query_one('#json', TextArea).load_text(json.dumps({'active': self.settings.active, 'profiles': [asdict(p) for p in self.settings.profiles]}, indent=2))
             self.app.profiles_result(True)
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Profiles"
+        self.query_one("#json", TextArea).focus()
+        self.nano_ready()
+
+    def action_save(self):
+        self.save()
 
     @on(Button.Pressed, "#save")
     def save(self):
@@ -175,14 +319,15 @@ class ProfilesScreen(ModalScreen):
         self.dismiss(False)
 
 
-class FileScreen(ModalScreen):
+class FileScreen(NanoEditor, ModalScreen):
     DEFAULT_CSS = """
     FileScreen { align: center middle; }
-    FileScreen > Vertical { width: 95%; height: 92%; padding: 1; border: round $accent; background: $surface; }
+    FileScreen > Vertical { width: 95%; height: 92%; padding: 0 1; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; }
+    FileScreen #file-hint { color: $text-muted; height: 1; }
     FileScreen TextArea { height: 1fr; }
     FileScreen Horizontal { height: 3; }
     """
-    BINDINGS = [("escape", "dismiss", "Close")]
+    BINDINGS = [("escape", "dismiss", "Close"), *NanoEditor.NANO_BINDINGS]
 
     def __init__(self, path: Path, editable=False):
         super().__init__()
@@ -192,12 +337,21 @@ class FileScreen(ModalScreen):
 
     def compose(self):
         with Vertical():
-            yield Label(str(self.path), markup=False)
+            yield Label(("^O write with backup · ^K cut line · ^U uncut · " if self.editable else "Read only · ") + "^W search · ^X exit · ^G help", id="file-hint")
             yield TextArea(self.original[:2_000_000], read_only=not self.editable, id="content", show_line_numbers=True)
             with Horizontal():
                 if self.editable:
                     yield Button("Save + backup", variant="primary", id="save")
                 yield Button("Close", id="close")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = str(self.path)
+        self.query_one("#content", TextArea).focus()
+        self.nano_ready()
+
+    def action_save(self):
+        if self.editable:
+            self.save()
 
     @on(Button.Pressed, "#save")
     def save(self):
@@ -221,6 +375,7 @@ class FileScreen(ModalScreen):
                 temp.chmod(self.path.stat().st_mode)
             temp.replace(self.path)
             self.original = text
+            self.nano_saved()
             self.app.capability_cache.clear()
             self.notify("Saved with backup")
         except (ValueError, OSError) as exc:
@@ -236,11 +391,11 @@ class FileScreen(ModalScreen):
 class PruneScreen(ModalScreen):
     DEFAULT_CSS = """
     PruneScreen { align: center middle; }
-    PruneScreen > Vertical { width: 85; height: auto; max-height: 85%; padding: 1 2; border: round $warning; background: $surface; }
+    PruneScreen > Vertical { width: 85; height: auto; max-height: 85%; padding: 1 2; border: round $warning; border-title-color: $warning; border-title-style: bold; background: $surface; }
     PruneScreen TextArea { height: 14; }
     PruneScreen Horizontal { height: 3; margin-top: 1; }
     """
-    BINDINGS = [("escape", "dismiss", "Close")]
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True)]
 
     def __init__(self, root: Path, entries):
         super().__init__()
@@ -249,13 +404,16 @@ class PruneScreen(ModalScreen):
     def compose(self):
         from .inspectors import human_size
         with Vertical():
-            yield Label("[bold yellow]CACHE PRUNE PLAN[/]")
             yield Label(f"{len(self.entries)} files · {human_size(sum(e.size for e in self.entries))}")
             yield Label("Only listed stale files. Locks and .done markers excluded. Stop other builders using this cache first.")
             yield TextArea("\n".join(str(e.path) for e in self.entries[:1000]), read_only=True)
             with Horizontal():
                 yield Button("Execute plan", variant="warning", id="execute")
                 yield Button("Close", id="close")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Cache prune plan"
+        self.query_one("#close", Button).focus()
 
     @on(Button.Pressed, "#execute")
     def execute(self):
@@ -266,10 +424,10 @@ class PruneScreen(ModalScreen):
         self.dismiss(False)
 
 
-class RuntimeFileScreen(ModalScreen):
+class RuntimeFileScreen(NanoEditor, ModalScreen):
     """Edit runtime files with optimistic concurrency and a preserved backup."""
     DEFAULT_CSS = FileScreen.DEFAULT_CSS.replace('FileScreen', 'RuntimeFileScreen')
-    BINDINGS = [("escape", "dismiss", "Close")]
+    BINDINGS = [("escape", "dismiss", "Close"), *NanoEditor.NANO_BINDINGS]
 
     def __init__(self, profile, data, editable=True, line=1):
         super().__init__()
@@ -278,7 +436,7 @@ class RuntimeFileScreen(ModalScreen):
 
     def compose(self):
         with Vertical():
-            yield Label(self.data['path'], markup=False)
+            yield Label(('^O write with hash check and backup · ^K cut line · ^U uncut · ' if self.editable else 'Read only · ') + '^W search · ^X exit · ^G help', id='file-hint')
             yield TextArea(self.data['text'], id='content', show_line_numbers=True, read_only=not self.editable)
             with Horizontal():
                 if self.editable:
@@ -286,9 +444,16 @@ class RuntimeFileScreen(ModalScreen):
                 yield Button('Close', id='close')
 
     def on_mount(self):
+        self.query_one(Vertical).border_title = self.data['path']
         editor = self.query_one('#content', TextArea)
         editor.move_cursor((max(0, min(self.line - 1, len(self.data['text'].splitlines()) - 1)), 0))
         editor.scroll_cursor_visible()
+        editor.focus()
+        self.nano_ready()
+
+    async def action_save(self):
+        if self.editable:
+            await self.save()
 
     @on(Button.Pressed, '#save')
     async def save(self):
@@ -303,6 +468,7 @@ class RuntimeFileScreen(ModalScreen):
             result = await request(self.profile, 'write', self.data['path'], sha256=self.data['sha256'], text=text)
             import hashlib
             self.data['sha256'] = hashlib.sha256(text.encode()).hexdigest()
+            self.nano_saved()
             self.notify('Saved. Backup: ' + result['backup'])
             self.app.scan_project()
             self.app.capability_cache.clear()
@@ -319,22 +485,29 @@ class RuntimeFileScreen(ModalScreen):
 class ThemeScreen(ModalScreen):
     DEFAULT_CSS = """
     ThemeScreen { align: center middle; }
-    ThemeScreen > Vertical { width: 64; height: auto; padding: 1 2; border: solid $accent; background: $surface; }
+    ThemeScreen > Vertical { width: 64; height: auto; padding: 1 2; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; }
     ThemeScreen Select { height: 3; margin: 1 0; }
     ThemeScreen Horizontal { height: 3; }
     """
-    BINDINGS = [("escape", "cancel", "Cancel")]
+    BINDINGS = [("escape", "cancel", "Cancel"), Binding("ctrl+x", "cancel", "Cancel", priority=True),
+                Binding("ctrl+o", "save", "Save", priority=True), Binding("ctrl+s", "save", "Save", priority=True, show=False)]
 
     def __init__(self):
         super().__init__()
         self.original = None
 
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Themes"
+        self.query_one('#theme-choice', Select).focus()
+
+    def action_save(self):
+        self.save()
+
     def compose(self):
         from .themes import THEMES
         self.original = self.app.theme
         with Vertical():
-            yield Label('BITLOOM THEMES')
-            yield Label('Preview a palette. Save keeps it for future sessions.')
+            yield Label('Enter opens the list; the palette previews live. ^O saves it for future sessions; Esc or ^X restores the previous one.')
             choices = [(name, name) for name in THEMES]
             if self.original not in THEMES:
                 choices.insert(0, (self.original, self.original))
@@ -365,16 +538,17 @@ class ThemeScreen(ModalScreen):
         self.dismiss(False)
 
 
-class NewFileScreen(ModalScreen):
+class NewFileScreen(NanoEditor, ModalScreen):
     """Create a file in the selected runtime without replacing existing data."""
     DEFAULT_CSS = """
     NewFileScreen { align: center middle; }
-    NewFileScreen > Vertical { width: 95%; height: 90%; border: solid $accent; padding: 1; background: $surface; }
+    NewFileScreen > Vertical { width: 95%; height: 90%; border: round $accent; border-title-color: $accent; border-title-style: bold; padding: 0 1; background: $surface; }
     NewFileScreen TextArea { height: 1fr; }
     NewFileScreen Horizontal { height: 3; }
     NewFileScreen Input, NewFileScreen Select { height: 3; }
     """
-    BINDINGS = [('escape','dismiss','Cancel')]
+    EDITOR = '#new-content'
+    BINDINGS = [('escape','dismiss','Cancel'), *NanoEditor.NANO_BINDINGS]
 
     def __init__(self,profile):
         super().__init__()
@@ -382,13 +556,21 @@ class NewFileScreen(ModalScreen):
 
     def compose(self):
         with Vertical():
-            yield Label('NEW FILE · selected profile runtime · missing parent folders are created')
+            yield Label('Selected profile runtime · missing parent folders are created · ^O create · ^X cancel · ^W search · ^K/^U cut/uncut')
             yield Input(placeholder='Absolute runtime path, e.g. /work/meta-custom/recipes-example/hello/hello_1.0.bb',id='new-path')
             yield Select([('Empty text file','text'),('Private example recipe','recipe'),('Recipe append','append')],value='text',allow_blank=False,id='new-template')
             yield TextArea('',id='new-content',show_line_numbers=True)
             with Horizontal():
                 yield Button('Create file',id='create-file',variant='primary')
                 yield Button('Cancel',id='cancel-new')
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title='New file'
+        self.query_one('#new-path',Input).focus()
+        self.nano_ready()
+
+    async def action_save(self):
+        await self.create()
 
     @on(Select.Changed,'#new-template')
     def template(self,event):
@@ -419,3 +601,77 @@ class NewFileScreen(ModalScreen):
     @on(Button.Pressed,'#cancel-new')
     def cancel(self):
         self.dismiss(None)
+
+
+class KeysScreen(ModalScreen):
+    """Keyboard reference generated from the same map that defines the bindings."""
+    DEFAULT_CSS = """
+    KeysScreen { align: center middle; background: $background 60%; }
+    KeysScreen > Vertical { width: 84; height: 90%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    KeysScreen VerticalScroll { height: 1fr; }
+    KeysScreen Markdown { background: $surface; margin: 0; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), ("q", "dismiss", "Close"), ("question_mark", "dismiss", "Close"),
+                Binding("ctrl+x", "dismiss", "Close", priority=True), Binding("ctrl+g", "dismiss", "Close", priority=True),
+                Binding("ctrl+v", "page(1)", "Page down", priority=True), Binding("ctrl+y", "page(-1)", "Page up", priority=True),
+                ("j", "scroll(1)", "Down"), ("k", "scroll(-1)", "Up")]
+
+    def compose(self):
+        from .keys import reference_markdown
+        with Vertical():
+            with VerticalScroll(id="keys-scroll"):
+                yield Markdown(reference_markdown().split("\n", 2)[2])
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Keyboard reference · Esc closes"
+        self.query_one("#keys-scroll").focus()
+
+    def action_page(self, step):
+        scroll = self.query_one("#keys-scroll")
+        scroll.scroll_page_down() if step > 0 else scroll.scroll_page_up()
+
+    def action_scroll(self, step):
+        scroll = self.query_one("#keys-scroll")
+        scroll.scroll_down() if step > 0 else scroll.scroll_up()
+
+
+class ProfilePickerScreen(ModalScreen):
+    """Fast keyboard profile switcher: arrows/j/k, Enter selects."""
+    DEFAULT_CSS = """
+    ProfilePickerScreen { align: center middle; background: $background 60%; }
+    ProfilePickerScreen > Vertical { width: 76; height: auto; max-height: 80%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    ProfilePickerScreen OptionList { height: auto; max-height: 20; border: none; background: $surface; }
+    ProfilePickerScreen #picker-hint { color: $text-muted; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                ("j", "move(1)", "Down"), ("k", "move(-1)", "Up")]
+
+    def __init__(self, settings: Settings):
+        super().__init__()
+        self.settings = settings
+
+    def compose(self):
+        from rich.text import Text
+        options = []
+        for p in self.settings.profiles:
+            label = Text.assemble(("● " if p.name == self.settings.active else "  ", "bold"), (p.name, "bold"),
+                                  ("  " + p.mode, "dim"), ("  " + (p.machine or "") + "  " + str(p.build_path), "dim"))
+            options.append(Option(label, id=p.name))
+        with Vertical():
+            yield Label("↑ ↓ choose · Enter switch · Esc cancel · F4 edits profiles", id="picker-hint")
+            yield OptionList(*options, id="picker")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Switch profile"
+        picker = self.query_one("#picker", OptionList)
+        names = [p.name for p in self.settings.profiles]
+        picker.highlighted = names.index(self.settings.active) if self.settings.active in names else 0
+        picker.focus()
+
+    def action_move(self, step):
+        picker = self.query_one("#picker", OptionList)
+        picker.action_cursor_down() if step > 0 else picker.action_cursor_up()
+
+    @on(OptionList.OptionSelected, "#picker")
+    def chosen(self, event):
+        self.dismiss(event.option.id)

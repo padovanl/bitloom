@@ -14,6 +14,7 @@ from pathlib import Path
 
 from rich.text import Text
 from textual import on, work
+from textual.binding import Binding
 from textual.containers import Horizontal, HorizontalScroll, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Input, Label, RichLog, Select, Static, TextArea, TabbedContent
@@ -26,14 +27,22 @@ from .models import Profile
 class FormScreen(ModalScreen):
     DEFAULT_CSS = '''
     FormScreen { align: center middle; }
-    FormScreen > Vertical { width: 90; max-width: 95%; height: 90%; background: $surface; border: solid $accent; padding: 1; }
+    FormScreen > Vertical { width: 90; max-width: 95%; height: 90%; background: $surface; border: round $accent; padding: 0 1; }
     FormScreen VerticalScroll { height: 1fr; }
     FormScreen Label { height: auto; }
     FormScreen Input, FormScreen Select { height: 3; margin-bottom: 1; }
     FormScreen Horizontal { height: 3; }
     FormScreen TextArea { height: 1fr; }
     '''
-    BINDINGS = [('escape', 'dismiss', 'Close')]
+    BINDINGS = [('escape', 'dismiss', 'Close'), Binding('ctrl+x', 'dismiss', 'Close', priority=True),
+                Binding('ctrl+o', 'primary', 'Confirm', priority=True), Binding('ctrl+g', 'app.keys', 'Help', priority=True)]
+
+    def action_primary(self):
+        """^O runs the main enabled button (Clone, Preview/Create, Record, Save)."""
+        buttons = [b for b in self.query(Button) if not b.disabled and b.display and b.id and not b.id.endswith(('close', 'back'))]
+        primary = next((b for b in buttons if b.variant == 'primary'), buttons[0] if buttons else None)
+        if primary:
+            primary.press()
 
     def idle(self):
         if self.app.runner.active or any(j.status in {'queued', 'cancelling'} for j in self.app.runner.jobs) or self.app.developer_busy:
@@ -183,6 +192,9 @@ class ScaffoldScreen(FormScreen):
 
 
 class DevicesScreen(FormScreen):
+    def on_mount(self):
+        self.query_one('#devices-json', TextArea).focus()
+
     def __init__(self, directory):
         super().__init__()
         self.path = Path(directory) / 'devices.json'
@@ -261,7 +273,7 @@ class DeveloperPanel(Vertical):
     DeveloperPanel #dev-state { height: 2; color: $text-muted; }
     DeveloperPanel #dev-split { height: 1fr; }
     DeveloperPanel #dev-rows { width: 45%; }
-    DeveloperPanel #dev-detail { width: 55%; height: 1fr; border: solid $primary-muted; }
+    DeveloperPanel #dev-detail { width: 55%; height: 1fr; margin-left: 1; }
     '''
 
     def __init__(self, **kwargs):
@@ -304,6 +316,8 @@ class DeveloperPanel(Vertical):
         table = self.query_one('#dev-rows', DataTable)
         table.add_column('Item', width=22)
         table.add_column('Value / state')
+        table.border_title = 'Evidence'
+        self.query_one('#dev-detail', RichLog).border_title = 'Detail'
         self.fields()
         self.set_interval(15, self.check_stale)
 
