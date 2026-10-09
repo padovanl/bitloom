@@ -22,13 +22,17 @@ The opening capture shows the idle sample workspace. Error screens in the tour d
 
 ## Learn and test Bitloom
 
-Follow the [manual testbook](README.testbook.md) from installation through kas/container builds, layer and recipe creation, devtool, caches, interruption and every implemented command. Each case specifies inputs, prerequisites and expected evidence. Optional hardware/classes are recorded as N/A when unavailable. The [Pages testbook](https://padovanl.github.io/bitloom/testbook.html) is the same document rendered for the web. Proposed daily-workflow improvements are assessed separately at the end of the book.
+Follow the [manual testbook](README.testbook.md) from installation through kas/container builds, layer and recipe creation, devtool, caches, interruption and every implemented command. Each case specifies inputs, prerequisites and expected evidence. Optional hardware/classes are recorded as N/A when unavailable. The [Pages testbook](https://padovanl.github.io/bitloom/testbook.html) is the same document rendered for the web. Chapter 13 covers the implemented Developer workflows in addition to all 69 command-center actions.
 
-## Developer workflow roadmap
+## Developer workbench
 
-The [research and roadmap](docs/roadmap.md) connects public developer experiences with upstream Yocto documentation, reviewed on 2026-10-10. The first proposed improvements are variable assignment/override explanation, recipe navigation across host and container paths, rebuild/cache-miss evidence, and structured failed-task investigation. Further proposals cover recipe scaffolding, IDE/SDK integration, image regression comparison, runtime performance, profile/multiconfig workflows, offline preparation, CVE/SBOM review, kernel/upgrade review and board testing.
+Press **F10** for sixteen connected developer views: variable origins and overrides, recipe/runtime navigation, rebuild signatures, failed-task investigation, IDE/SDK setup, image regressions, buildstats and container pressure, kas/multiconfig, downloads/offline verification, CVE/SPDX review, kernel fragments, upgrade baselines, devices and shutdown evidence.
 
-These are proposals, not current capabilities or delivery promises. Each identifies the existing tools and remaining gap; the [testbook's proposal experiments](README.testbook.md#13-feature-assessment) are marked PLANNED separately from implemented acceptance cases. Read the [Pages roadmap](https://padovanl.github.io/bitloom/roadmap.html) for sources and expected interactions. Public discussions are qualitative evidence, not a representative survey.
+Create complete MIT-licensed **CMake, Meson, Make, Python or Rust** layer/recipe fixtures with Preview → Create + register. Clone profiles into separate build directories, edit container files with backups, capture evidence and compare it after a change. Device profiles connect actual SSH/labgrid tests and recorded consoles to job/artifact references. Optional tasks are probed against the selected release before submission.
+
+Follow the [Developer guide](docs/developer.md) for every input and operation, and [chapter 13 of the testbook](README.testbook.md#13-developer-acceptance) for all fourteen acceptance experiments. The [research and implementation map](docs/roadmap.md) retains upstream sources and practical limits. Public discussions are qualitative evidence, not a representative survey.
+
+![Actual Developer workbench tour using real kas-container evidence](docs/assets/developer-tour.gif)
 
 ## Inspiration and thanks
 
@@ -139,7 +143,8 @@ The **Analysis** selector connects signature explanations, failure diagnosis, ru
 | F5 | Open build interruption options |
 | F6 | Retry the selected job |
 | F7 | Preview and save a terminal theme |
-| F8 / F9 | Previous / next section, including Analysis and Help |
+| F8 / F9 | Previous / next section, including Developer, Analysis and Help |
+| F10 | Open Developer workbench |
 | Ctrl+L | Focus build log search |
 | Ctrl+P | Textual command palette |
 | Ctrl+Q | Detach from service and exit; embedded/demo stops owned jobs |
@@ -157,7 +162,7 @@ The interface uses compact single-line controls, a terminal navigator, split his
 - **Graceful stop** sends exactly one SIGINT to the host BitBake client, or to the main process of a fresh container managed by Bitloom. BitBake can finish its currently executing tasks. The TUI does not escalate this request automatically.
 - **Force + recovery** terminates the managed process/container and offers `bitbake -c clean` for recipes observed running in the log. Finished tasks are removed from that active set. Recovery is withheld if runtime shutdown is unconfirmed. Work files may contain developer edits: the recovery dialog makes the selection explicit.
 
-kas wrappers and pre-existing containers do not expose a guaranteed client PID. Graceful stop is disabled there; forced client termination requires checking the external build server before manually cleaning. A build interruption does not normally rewrite `.bb` files, and an observed active recipe is **not proof of corruption**. Task detection depends on standard BitBake log messages.
+New kas-container jobs have uniquely named, owned containers: force stop records termination of that exact container before offering recovery. Native kas wrappers and pre-existing containers do not expose a guaranteed client PID; their external server still needs verification. Graceful draining remains disabled for kas wrappers. A build interruption does not normally rewrite `.bb` files, and an observed active recipe is **not proof of corruption**. Task detection depends on standard BitBake log messages.
 
 ## Real Yocto validation
 
@@ -253,6 +258,8 @@ python tools/prepare_validation.py
 bitloom --config .validation/profiles.json --state .validation
 ```
 
+A recorded result is historical evidence: temporary work mounts can be removed. Check `/work/build` through the runtime before relying on it; if absent, prepare a new workspace with `python tools/validate_developer.py --build` and launch `.developer-validation/profiles.json` as explained in the testbook.
+
 The helper recreates the test profile from `.validation/result.json` when available. It preserves history and other profiles, uses the recorded workspace and does not build anything. The actual work directory is recorded in `.validation/result.json`; with Docker Snap, its contents are in the daemon's namespace and may appear empty on the host. In the container, the build directory is `/work/build`. Use Analysis runtime tools to browse it.
 
 1. Keep `core-image-minimal` in the top target field and press **Build** for an incremental image build. Existing matching task outputs are reused.
@@ -315,7 +322,7 @@ If Windows Terminal/WSL shows saturated blue blocks instead of the documented co
 
 ### Navigation and elapsed time
 
-F8 selects the previous workspace section; F9 selects the next, including Analysis and Help. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.
+F8 selects the previous workspace section; F9 selects the next, including Developer, Analysis and Help. F10 opens Developer directly. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.
 
 For step-by-step layer creation, new recipes, .bbappend files and rebuilding with kas, follow [Hands-on kas: layers and recipes](docs/guide.md#hands-on-kas-layers-and-recipes).
 
@@ -328,3 +335,17 @@ For kas/container profiles, a path such as `/work/meta-bitloom/recipes-example/h
 Creating a recipe file does not register its layer: use **Create layer** and **Add layer**, and declare the layer in kas for reproducible configuration.
 
 ![Actual new-file dialog with a sample recipe](docs/assets/file-creation.png)
+
+## Reproduce Developer experiments in a fresh kas container
+
+After `./setup-demo.sh --dev --no-launch`, activate the venv and install the official kas-container wrapper as described in the [testbook](README.testbook.md#2-launch-with-kas-container). Docker/Podman must already work:
+
+```bash
+source .venv/bin/activate
+python tools/validate_developer.py --build
+COLORTERM=truecolor bitloom --config .developer-validation/profiles.json --state .developer-validation/manual
+```
+
+The helper prepares a dedicated work directory, probes actual BitBake metadata, creates/registers a test layer, builds a small data-only recipe, checks fetch/full-recipe offline execution, and introduces/restores a controlled task failure. It saves `.developer-validation/result.json` and real logs. Use `--engine podman` for Podman, `--work /absolute/new/workspace` for another workspace, or `--image` for a full core-image-minimal build with the generated package. A fresh workspace downloads sources and can take substantial time; the toolchain stays inside the pinned kas container. Repeated runs create uniquely named layers/overlays and retain earlier state. The test fixture uses CLOSED and data-only installation to keep validation smaller; the TUI wizard generates complete MIT-licensed source fixtures.
+
+For your own source iteration, open F10 → New layer, preview a CMake recipe, create/register it, build its recipe and image, edit source through Runtime browser, then rebuild. The [Developer guide](docs/developer.md) explains captures, image/package comparisons, IDE mappings, security reviews and device evidence. With an existing persistent service, finish its queue and use `bitloom --state <state> --service-stop` once after upgrading so the next launch loads the new code.

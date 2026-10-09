@@ -7,13 +7,40 @@ PLAYWRIGHT_BROWSERS_PATH=/tmp/bitloom-browsers python tools/check_docs.py
 import functools
 import http.server
 import threading
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def check_links():
+    class Links(HTMLParser):
+        def __init__(self):
+            super().__init__(); self.references = []; self.ids = set()
+        def handle_starttag(self, tag, attributes):
+            values = dict(attributes)
+            if values.get('id'): self.ids.add(values['id'])
+            self.references += [values[key] for key in ('href', 'src', 'data-image') if values.get(key)]
+    pages = {}
+    for path in (ROOT / 'docs').glob('*.html'):
+        page = Links(); page.feed(path.read_text()); pages[path.resolve()] = page
+    count = 0
+    for path, page in pages.items():
+        for reference in page.references:
+            url = urlsplit(reference)
+            if url.scheme or url.netloc: continue
+            target = (path.parent / unquote(url.path)).resolve() if url.path else path
+            assert target.exists(), f'Missing local link: {path.name} → {reference}'
+            if url.fragment and target in pages:
+                assert unquote(url.fragment) in pages[target].ids, f'Missing anchor: {path.name} → {reference}'
+            count += 1
+    print(f'PASS: {count} local documentation links and anchors')
+
+
 def check():
+    check_links()
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(ROOT / 'docs'))
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -30,6 +57,9 @@ def check():
             page.locator('#feature-search').fill('sstate')
             assert page.locator('#feature-cards article:visible').count() == 1
             page.locator('#feature-search').fill('')
+            page.locator('#feature-search').fill('developer')
+            assert page.locator('#feature-cards article:visible').count() == 1
+            page.locator('#feature-search').fill('')
             page.locator('[data-runtime="kas-container"]').click()
             assert 'KAS_CONTAINER_ENGINE' in page.locator('#runtime-code').inner_text()
             page.locator('[data-image="assets/profiles.png"]').click()
@@ -37,7 +67,7 @@ def check():
             page.keyboard.press('Escape')
             assert not page.locator('#lightbox').is_visible()
             page.screenshot(path=str(ROOT / 'docs/assets/docs-site.png'), full_page=True)
-            for name in ('guide', 'commands', 'validation', 'testbook', 'roadmap'):
+            for name in ('guide', 'commands', 'validation', 'testbook', 'roadmap', 'developer'):
                 page.goto(f'{url}/{name}.html', wait_until='networkidle')
                 assert page.locator('h1').count() == 1
             page.set_viewport_size({'width': 390, 'height': 844})
