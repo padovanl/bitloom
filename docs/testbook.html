@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bitloom manual testbook — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
+<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a></nav></header><main class="manual"><article class="doc"><h1 id="bitloom-manual-testbook">Bitloom manual testbook</h1>
+<p>This is an executable learning path and acceptance checklist, not a report of tests already performed. Run it yourself against your environment. All project text and evidence should remain in English. Record PASS, FAIL or N/A with the reason and a log/screenshot. Do not count an unavailable device, class or runtime as a successful test.</p>
+<h2 id="contents">Contents</h2>
+<ol>
+<li><a href="#1-build-and-installation">Build and installation</a></li>
+<li><a href="#2-launch-with-kas-container">Launch with kas-container</a></li>
+<li><a href="#3-ui-and-profile-acceptance">UI and profile acceptance</a></li>
+<li><a href="#4-build-downloads-and-recipe-tasks">Build, downloads and recipe tasks</a></li>
+<li><a href="#5-create-a-layer-and-recipes-from-the-tui">Create a layer and recipes from the TUI</a></li>
+<li><a href="#6-editing-and-devtool">Editing and devtool</a></li>
+<li><a href="#7-logs-reports-and-analysis">Logs, reports and analysis</a></li>
+<li><a href="#8-state-reconnect-and-interruption">State, reconnect and interruption</a></li>
+<li><a href="#9-caches">Caches</a></li>
+<li><a href="#10-runtime-variants-and-optional-features">Runtime variants and optional features</a></li>
+<li><a href="#11-every-command-center-action">Every command-center action</a></li>
+<li><a href="#12-record-results-and-restore-the-experiment">Record results and restore the experiment</a></li>
+<li><a href="#13-feature-assessment">Feature assessment</a></li>
+</ol>
+<p>Run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.</p>
+<h2 id="1-build-and-installation">1. Build and installation</h2>
+<h3 id="b01--fresh-checkout-and-demo">B01 — Fresh checkout and demo</h3>
+<p>Requires Linux/WSL2, Bash, Python 3.10+ with venv support and internet access.</p>
+<pre><code class="language-bash">./setup-demo.sh --dev --no-launch
+source .venv/bin/activate
+bitloom --help
+python -m bitloom --list-actions
+COLORTERM=truecolor bitloom --demo
+</code></pre>
+<p>Expected: .venv is created/reused, the executable and module work, and the demo opens. The demo provides sample files; it does not provide BitBake or fabricate successful Yocto builds. Exit with Ctrl+Q; Esc closes a dialog first. Repeat setup: existing sample files are retained.</p>
+<h3 id="b02--wheel-and-source-archive">B02 — Wheel and source archive</h3>
+<pre><code class="language-bash">python -m pip install build wheel
+python -m build --no-isolation
+</code></pre>
+<p>Expected: <code>dist/bitloom-&lt;project-version&gt;.tar.gz</code> and <code>dist/bitloom-&lt;project-version&gt;-py3-none-any.whl</code>. Install the wheel into a separate venv and run its bitloom --help from outside the checkout. Extract the source archive and verify LICENSE, setup-demo.sh, this testbook, examples, tools and docs are present.</p>
+<h3 id="b03--debian-release-package">B03 — Debian release package</h3>
+<p>On a system providing dpkg-deb:</p>
+<pre><code class="language-bash">python tools/build_release.py 0.9.0 --output dist/manual-release-0.9.0
+(cd dist/manual-release-0.9.0 &amp;&amp; sha256sum --check SHA256SUMS)
+dpkg-deb --info dist/manual-release-0.9.0/bitloom_0.9.0_all.deb
+</code></pre>
+<p>Use a new output directory if repeating. Expected: source, wheel, .deb and checksums use version 0.9.0; the checkout's version stays unchanged. Install the .deb in a disposable Debian/Ubuntu machine/container with Python 3.10+ using <code>sudo apt install ./bitloom_0.9.0_all.deb</code>. Run <code>/usr/bin/bitloom --help</code> from /tmp; verify dependencies under /opt/bitloom/lib and MIT license under /usr/share/doc/bitloom/copyright. Remove with <code>sudo apt remove bitloom</code>. Publishing a GitHub release is a separate operator action and is not required by this testbook.</p>
+<h2 id="2-launch-with-kas-container">2. Launch with kas-container</h2>
+<p>Docker or Podman must already work. Keep Yocto work files on a Linux filesystem. Bitloom itself can reside in the current checkout. The pinned kas image provides the Yocto toolchain dependencies.</p>
+<pre><code class="language-bash">source .venv/bin/activate
+curl -fL https://raw.githubusercontent.com/siemens/kas/4.8.1/kas-container \
+  -o .venv/bin/kas-container
+chmod +x .venv/bin/kas-container
+docker info
+</code></pre>
+<h3 id="k01--reuse-this-checkouts-verified-build">K01 — Reuse this checkout's verified build</h3>
+<p>If <code>.validation/result.json</code> exists:</p>
+<pre><code class="language-bash">python tools/prepare_validation.py
+COLORTERM=truecolor bitloom --config .validation/profiles.json --state .validation
+</code></pre>
+<p>F4 is a JSON editor: duplicate an object in the profiles array, give it a unique name, set active or choose it with the top selector, then Save profiles. There is currently no dedicated cloning wizard.</p>
+<p>Expected: kas-integration profile, kas-container runtime, qemux86-64/poky. The helper preserves history and takes KAS_WORK_DIR from the recorded result. With Docker Snap the daemon's /tmp can differ from host /tmp. Use runtime file operations with <code>/work/build</code>; an empty host directory does not prove the container build is missing.</p>
+<p>Use this path for read-only inspection or routine rebuilds. Use K02 for tests that change configuration, devtool state or caches.</p>
+<h3 id="k02--prepare-an-isolated-manual-test-profile">K02 — Prepare an isolated manual-test profile</h3>
+<p>Run from the checkout with the venv activated. This writes a new state/configuration directory, without touching <code>.validation</code> or the integration YAML:</p>
+<pre><code class="language-bash">python - &lt;&lt;'PY'
+from pathlib import Path
+from bitloom.models import Profile, Settings
+root = Path.cwd().resolve()
+settings = Settings(root / '.manual-testbook/profiles.json')
+if settings.path.exists():
+    raise SystemExit('Manual profiles already exist; reuse them or choose a new state directory.')
+settings.profiles = [Profile(
+    name='manual-kas', root=str(root), mode='kas-container',
+    kas_file='tests/integration/kas-minimal.yml', machine='qemux86-64', distro='poky',
+    targets=['core-image-minimal'], environment={
+        'KAS_CONTAINER_ENGINE': 'docker',
+        'KAS_WORK_DIR': '/tmp/bitloom-manual-work',
+        'KAS_CONTAINER_IMAGE': 'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476',
+    })]
+settings.active = 'manual-kas'
+settings.save()
+PY
+COLORTERM=truecolor bitloom \
+  --config .manual-testbook/profiles.json --state .manual-testbook
+</code></pre>
+<p>For Podman change KAS_CONTAINER_ENGINE and use podman info. This dedicated workspace may require a cold build. Existing edits to the base integration YAML are included; record its Git diff before testing.</p>
+<h3 id="k03--checkout-and-validate-configuration">K03 — Checkout and validate configuration</h3>
+<p>F2 → Checkout kas repositories; then Dump resolved kas configuration. Expected: checked-out pinned Poky revision and the merged machine/distro/target. In Analysis run Build preflight on <code>/work/build</code>; missing build configuration before the first build is a prerequisite finding, not a fake PASS. Build busybox, then core-image-minimal to populate pkgdata, artifacts and reports needed below. Run Generate kas lock file and inspect its actual output; kas release support determines the result.</p>
+<h2 id="3-ui-and-profile-acceptance">3. UI and profile acceptance</h2>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Steps</th>
+<th>Expected result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U01</td>
+<td>F8/F9 through all sections, including Analysis and Help; Ctrl+L; Ctrl+P</td>
+<td>Navigation works; log focus and command palette open. Alt+number is optional terminal-dependent behavior, not the primary shortcut.</td>
+</tr>
+<tr>
+<td>U02</td>
+<td>F2 filter by fetch, layer and devtool; choose an action; leave a required field blank</td>
+<td>Matching actions appear; missing input is rejected before submission; preview matches argv.</td>
+</tr>
+<tr>
+<td>U03</td>
+<td>F4 duplicate manual-kas, rename it, edit targets/environment and select it</td>
+<td>Named profile persists after restart; the selected profile drives new jobs. Invalid mode/duplicate names/environment types are rejected.</td>
+</tr>
+<tr>
+<td>U04</td>
+<td>Resize to 160×50, 120×36, 90×28, 80×24, 60×20, 140×20, then back</td>
+<td>Logs remain usable, secondary panels disappear, and panels return when space is available. F2/F4/F7 dialogs fit at 60×20.</td>
+</tr>
+<tr>
+<td>U05</td>
+<td>F7 preview all fourteen themes, Cancel; repeat, Save Soft Slate or Linen and restart with the same state</td>
+<td>Cancel restores the old palette; Save persists. Focus a report pane: the border changes, its background stays stable.</td>
+</tr>
+<tr>
+<td>U06</td>
+<td>Inspect CPU/RAM and filesystem cards</td>
+<td>Values update and are labelled host measurements, including with container profiles. Machine/distro header reflects explicit/literal settings; evaluated environment remains authoritative.</td>
+</tr>
+<tr>
+<td>U07</td>
+<td>Run a several-second job and watch history, then wait after completion</td>
+<td>Elapsed advances every second while running, stops at completion; status, exit code and logs agree.</td>
+</tr>
+<tr>
+<td>U09</td>
+<td>Configuration → Refresh; run <code>bitloom --config .manual-testbook/profiles.json --doctor</code></td>
+<td>Actual diagnostics distinguish missing host-visible files/tools from available ones; runtime preflight tests container paths separately.</td>
+</tr>
+<tr>
+<td>U08</td>
+<td>Open Profiles or Themes while a job emits output; close it</td>
+<td>Output continues; returning to Builds shows accumulated logs, without widget errors.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-build-downloads-and-recipe-tasks">4. Build, downloads and recipe tasks</h2>
+<h3 id="r01--incremental-recipe-and-image-builds">R01 — Incremental recipe and image builds</h3>
+<p>Set top target to busybox. Run Build target twice. Expected: successful jobs in history and less work on the second build. Run List recipe tasks, Dry run and Parse metadata. Progress represents task messages observed in logs, not CPU usage or an exact remaining-time estimate. Setscene and normal task phases may have different counters; a 100% observed counter alone does not mean the process exited.</p>
+<p>Run Fetch recipe sources, Unpack recipe, Apply recipe patches, Configure recipe, Compile recipe, Install recipe and Package recipe on busybox. Force compile should execute compilation even when otherwise current. Run custom task with target busybox and task <code>listtasks</code> and check the generated command.</p>
+<p>Set core-image-minimal: Build target and Build root filesystem. Verify completion by success/exit 0, then locate the image manifest and rootfs archive through Runtime directory at <code>/work/build/tmp/deploy/images/qemux86-64</code>.</p>
+<h3 id="r02--cleanup-behavior">R02 — Cleanup behavior</h3>
+<p>On the dedicated workspace, run Clean recipe work directory on busybox, then rebuild. Record work/sstate reuse. Run Clean recipe + sstate and rebuild; local recipe sstate is removed, while configured mirrors may still supply results. Run Clean recipe + sstate + downloads only when you deliberately want source removal and refetch; record the affected recipe and rebuild afterward. It does not mean delete every shared cache file.</p>
+<h3 id="r03--fetch-and-download-audit">R03 — Fetch and download audit</h3>
+<p>Run Fetch all target dependencies on core-image-minimal. Inspect downloads through Runtime directory, and run Download audit in Workbench for host-visible cache paths. Expected: fetch success and actual inventory/report. Host cache inventory cannot discover Docker-private files by guessing host paths; use runtime operations when that filesystem is not mounted on the host.</p>
+<h2 id="5-create-a-layer-and-recipes-from-the-tui">5. Create a layer and recipes from the TUI</h2>
+<h3 id="l01--layer-creation-and-registration">L01 — Layer creation and registration</h3>
+<p>F2 → Create layer, path <code>/work/meta-bitloom</code>. Expected: conf/layer.conf and generated skeleton. Inspect it with Analysis → Runtime file. Show layers and priorities does not list the new layer until registered.</p>
+<p>F2 → Add layer with the same path; Show layers and priorities should include it. Also test Show recipes, Show recipe appends, Show overlaid recipes and Show cross-layer dependencies. An empty report can be correct; record it rather than inventing conflicts.</p>
+<p>Remove layer, confirm it disappears, then add it again. Removal unregisters the layer; it does not delete its files. Generated bblayers.conf changes may be replaced by kas, so make registration reproducible in L03.</p>
+<h3 id="l02--new-recipe-and-file-handling">L02 — New recipe and file handling</h3>
+<p>Metadata → New file, or Analysis → Create runtime file. Enter:</p>
+<pre><code class="language-text">/work/meta-bitloom/recipes-example/bitloom-hello/bitloom-hello_1.0.bb
+</code></pre>
+<p>Choose a recipe template, then replace its content with:</p>
+<pre><code class="language-bitbake">SUMMARY = &quot;Bitloom manual acceptance recipe&quot;
+LICENSE = &quot;CLOSED&quot;
+S = &quot;${WORKDIR}&quot;
+do_install() {
+    install -d ${D}${bindir}
+    printf '#!/bin/sh\necho &quot;Hello from Bitloom v1&quot;\n' &gt; ${D}${bindir}/bitloom-hello
+    chmod 0755 ${D}${bindir}/bitloom-hello
+}
+</code></pre>
+<p>CLOSED is only for this private test fixture. Use the actual license and checksums in distributable recipes.</p>
+<p>Expected: missing parent folders are created, the recipe is saved inside the selected runtime, and its containing directory opens in Analysis. Repeat creation at the same path: an error appears and existing content remains unchanged. Cancel another unsaved file: it must not exist. Also create a notes.txt using the empty template and verify its directory listing.</p>
+<p>Edit the saved recipe with Edit runtime file; change v1 to v2. Verify a backup is reported. Open an editor, change the same file externally before saving, then Save: the hash conflict must reject the stale edit. Creating/editing metadata while this session has a queued/running build is rejected.</p>
+<h3 id="l03--persist-the-layer-and-image-customization-in-kas">L03 — Persist the layer and image customization in kas</h3>
+<p>On the HOST, create <code>kas-testbook.yml</code> at the checkout root using your IDE. Alternatively create it from New file with a host profile pointed at the checkout. A kas/container file dialog targets the container, so do not assume a host path is available there.</p>
+<pre><code class="language-yaml">header:
+  version: 14
+  includes:
+    - tests/integration/kas-minimal.yml
+repos:
+  manual-experiment:
+    path: /work/meta-bitloom
+local_conf_header:
+  manual-experiment: |
+    IMAGE_INSTALL:append = &quot; bitloom-hello&quot;
+</code></pre>
+<p>Duplicate manual-kas in F4, call it manual-layer, keep the same KAS_WORK_DIR and container environment, and set kas_file to kas-testbook.yml. Run Build kas configuration. Expected: kas registers the layer and the image manifest contains bitloom-hello. Build bitloom-hello separately, edit its greeting and rebuild both recipe/image. Changes should be detected without cleaning every time.</p>
+<h3 id="l04--bbappend-and-external-refresh">L04 — .bbappend and external refresh</h3>
+<p>Use New file → Recipe append to create <code>/work/meta-bitloom/recipes-core/busybox/busybox_%.bbappend</code>:</p>
+<pre><code class="language-bitbake">SUMMARY:append = &quot; (manual experiment)&quot;
+</code></pre>
+<p>Show recipe appends should match it. Resolve busybox environment and verify SUMMARY. Run Explain sstate differences before/after a metadata change and inspect what actually changed; a SUMMARY-only change need not force compilation.</p>
+<p>With a HOST profile, select a locally indexed layer/recipe and create, edit, then delete a .bb file from your IDE. Within five seconds Metadata should reflect each change. Its selected file/layer expansion should survive changes when still present. Container-only metadata is viewed through runtime operations: open Runtime directory and add/remove a file through a second kas shell. Within fifteen seconds while idle the listing should refresh. Automatic scans pause with a modal open. F3 rescans local metadata; Analyze refreshes a runtime directory immediately.</p>
+<h2 id="6-editing-and-devtool">6. Editing and devtool</h2>
+<h3 id="d01--existing-recipe-development">D01 — Existing recipe development</h3>
+<p>On busybox: Workspace status → Modify recipe → Workspace status → Build workspace recipe. Inspect the source directory reported by devtool; use Devtool review on that directory for status, commit and diff evidence. Make a source change with the runtime editor or an available editor in Open kas shell. Devtool build and Build image with workspace recipes should use the workspace.</p>
+<p>Commit source changes in the devtool source repository before Finish recipe into layer, destination <code>/work/meta-bitloom</code>. Inspect the emitted .bbappend/patches, then rebuild. Reset workspace recipe removes workspace integration; inspect retained source files separately. Use Update recipe from source as an alternative export experiment and inspect its actual destination/output. Do not run finish/update blindly against upstream layers.</p>
+<h3 id="d02--create-a-source-based-recipe">D02 — Create a source-based recipe</h3>
+<p>Using New file, create these files under <code>/work/bitloom-source</code>:</p>
+<p>CMakeLists.txt:</p>
+<pre><code class="language-cmake">cmake_minimum_required(VERSION 3.16)
+project(bitloom_dev C)
+add_executable(bitloom-dev main.c)
+install(TARGETS bitloom-dev DESTINATION bin)
+</code></pre>
+<p>main.c:</p>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+int main(void) { puts(&quot;Bitloom devtool fixture&quot;); return 0; }
+</code></pre>
+<p>Add a LICENSE file containing your chosen actual license. Run Add source as recipe with target bitloom-dev and path /work/bitloom-source. Expected: devtool creates workspace metadata; Build workspace recipe succeeds. Inspect the generated recipe rather than assuming the automatic license/build-system detection is correct. Finish into your layer and inspect exported files. Also run Create recipe from URL/source with source /work/bitloom-source: inspect the generated recipe output; this action does not promise to save it at a destination filename.</p>
+<h3 id="d03--interactive-terminal-handoff">D03 — Interactive terminal handoff</h3>
+<p>Open kas shell: run pwd and a read-only bitbake-layers show-layers, then exit. Expected: the terminal is handed off and the TUI returns. Open recipe development shell on busybox, then exit. Run Configure help on a compatible recipe and inspect the options. Menuconfig and QEMU are covered in optional tests below.</p>
+<h2 id="7-logs-reports-and-analysis">7. Logs, reports and analysis</h2>
+<h3 id="a01--logs-and-controlled-failure">A01 — Logs and controlled failure</h3>
+<p>Through Custom command run <code>python3 -c 'print(&quot;ERROR: manual diagnostic fixture&quot;); raise SystemExit(7)'</code>. Expected: failed job, exit 7, actual log content and notification. This is an intentional test failure, not a successful Yocto build. Retry with F6: the same argv/profile is used, even after changing the active profile.</p>
+<p>Select a build log, search error with different case, clear search, toggle Errors and Pause/Resume. Expected: matching context, paused display with continued capture, and accumulated output after resume. Export log and verify the local file. In Task logs, filter/select/read a real task log; Failed task log requires a actual BitBake failure with a reported task-log path. Temporarily add a failing do_install body to bitloom-hello, build it, inspect the task log/notification, then restore the recipe and rebuild. Review backups rather than editing them as recipes.</p>
+<h3 id="a02--workbench">A02 — Workbench</h3>
+<p>Resolve busybox environment; filter PN, PV, WORKDIR, S, B and MACHINE. Load recorded output, save/resolve a second environment after a metadata change, then Env diff: changes should match the experiment. Resolve one BitBake variable with variable MACHINE. Generate graph for core-image-minimal, load Dependencies and inspect direct, reverse and transitive edges using Why this task? Missing edges are reported as missing evidence, not proof of no dependency.</p>
+<p>Build history diff requires buildhistory commits; inspect its Git diff after image package changes. Build report should describe selected log status/task/sstate/warnings. Timings requires available timestamps/buildstats evidence; missing timing data should be reported. Download audit requires accessible cache paths.</p>
+<h3 id="a03--runtime-files-artifacts-and-package-ownership">A03 — Runtime files, artifacts and package ownership</h3>
+<p>Runtime directory <code>/work/build/tmp/deploy/images/qemux86-64</code> → choose an actual artifact path. Runtime file previews text manifests; binary files should be exported through Export runtime artifact, first field runtime path, second field a new LOCAL destination. Expected: SHA-256 verified export; existing destinations rejected. Text previews are limited to 2 MiB, binary export to 1 GiB, listings to 2,000 entries.</p>
+<p>Use Artifacts → Read file and Rootfs inventory for HOST-visible artifacts. For a container-only rootfs, export it first and inspect the local copy with a host profile. Tar inventory is read-only and does not extract symlinks into the filesystem.</p>
+<p>List built packages, List package files with target busybox, Find package owning a path with <code>/bin/sh</code>, and Find recipe for package with busybox. For Package provenance set top target core-image-minimal and first field /bin/sh. Expected: pkgdata owner, recipe and available inclusion chains; alternatives and package-manager decisions can limit the explanation.</p>
+<h3 id="a04--every-analysis-report">A04 — Every Analysis report</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Inputs/fixture</th>
+<th>Expected result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Search metadata</td>
+<td>Search a known local recipe text</td>
+<td>File/line matches; container-only files are not silently treated as host files.</td>
+</tr>
+<tr>
+<td>Compare manifests</td>
+<td>Two LOCAL exported manifests, before/after bitloom-hello inclusion</td>
+<td>Added/removed/version/architecture changes agree with files.</td>
+</tr>
+<tr>
+<td>Sstate efficiency</td>
+<td>Selected real build log or LOCAL log path</td>
+<td>Observed hit/miss statistics, with unavailable data distinguished.</td>
+</tr>
+<tr>
+<td>Warning groups</td>
+<td>A real log with repeated warnings</td>
+<td>Grouped counts, not invented warnings.</td>
+</tr>
+<tr>
+<td>Failure diagnosis</td>
+<td>Select controlled failed job</td>
+<td>Diagnosis from actual captured text; sensitive values redacted in exported bundles.</td>
+</tr>
+<tr>
+<td>Runtime directory / file / edit / create / export</td>
+<td>L02 and A03</td>
+<td>Covered creation, limits, backup, conflicts, refresh and hash checks.</td>
+</tr>
+<tr>
+<td>Build preflight</td>
+<td>/work/build</td>
+<td>Permissions, disk/inodes and config presence; advisory thresholds labelled.</td>
+</tr>
+<tr>
+<td>Capture snapshot</td>
+<td>/work/build, before/after image change</td>
+<td>JSON saved locally; configs/revisions/manifests/artifacts and observed image identity where available. Note the saved paths.</td>
+</tr>
+<tr>
+<td>Compare snapshots</td>
+<td>First and second LOCAL snapshot JSON paths</td>
+<td>Differences reflect your recorded change.</td>
+</tr>
+<tr>
+<td>Reproducibility bundle</td>
+<td>/work/build</td>
+<td>Local JSON bundle with actual profile/config/revision evidence and redaction; add a synthetic API_TOKEN=testbook-not-a-secret to the profile and verify redaction. It does not promise reproducible binaries by itself.</td>
+</tr>
+<tr>
+<td>Why rebuilding?</td>
+<td>First field busybox</td>
+<td>Captures printdiff/signature context while idle; conclusion respects available evidence.</td>
+</tr>
+<tr>
+<td>Package provenance</td>
+<td>Image target core-image-minimal; first /bin/sh</td>
+<td>Actual pkgdata owner/recipe/chains as above.</td>
+</tr>
+<tr>
+<td>Devtool review</td>
+<td>Actual devtool source directory</td>
+<td>Commit/status/diff, including uncommitted changes.</td>
+</tr>
+<tr>
+<td>Cache reference plan</td>
+<td>Runtime cache directory; second actual stamps directory</td>
+<td>Referenced/unproven classifications; no automatic deletion based on one build's references.</td>
+</tr>
+</tbody>
+</table>
+<p>Click Export on reports and verify local content and path. Close/reopen a modal during background output and ensure the report/log widgets still work.</p>
+<h2 id="8-state-reconnect-and-interruption">8. State, reconnect and interruption</h2>
+<h3 id="s01--queue-history-and-reconnect">S01 — Queue, history and reconnect</h3>
+<p>Submit two short jobs; expected serial execution, queued/running transitions, correct final status. Start a longer recipe task, Ctrl+Q, reopen with exactly the same --state. Expected: persistent service and build continue, history/logs reconnect. Clients attached to the same service share its serial queue. For the overlap test, start a separate service with a DIFFERENT --state directory but the same profile/build directory: exclusive build ownership should reject simultaneous execution rather than race BitBake. Compare F6 retry after changing profiles: original job profile must be retained.</p>
+<p>After jobs finish, from another terminal:</p>
+<pre><code class="language-bash">bitloom --state .manual-testbook --service-status
+bitloom --state .manual-testbook --service-stop
+</code></pre>
+<p>Expected: actual state and idle shutdown. Start/reconnect again. A stop request while work is active must not silently terminate it. Test --embedded with a separate state and short job: Ctrl+Q stops owned jobs, unlike the default persistent session. Demo also uses embedded behavior.</p>
+<h3 id="s02--interruption-and-recovery">S02 — Interruption and recovery</h3>
+<p>On a disposable build, F5 → Let finish: job continues. Host or freshly managed direct-container profiles can expose Graceful stop: sends one SIGINT and waits, with no automatic escalation. kas wrappers and existing containers do not guarantee the client PID; Graceful stop is disabled there. Record this as expected runtime-specific behavior.</p>
+<p>Force + recovery must show observed active recipes and only offer recovery when shutdown is confirmed. With wrappers/external servers verify remaining work before manually cleaning; termination of the wrapper is not proof that BitBake stopped. Recovery uses recipe clean, not editing .bb files. An observed active recipe is not proof of corruption. Rebuild afterward and preserve interruption logs.</p>
+<h2 id="9-caches">9. Caches</h2>
+<h3 id="c01--inventory-and-reviewed-prune">C01 — Inventory and reviewed prune</h3>
+<p>Create deliberately disposable HOST cache fixtures from the checkout:</p>
+<pre><code class="language-bash">python - &lt;&lt;'PY'
+from pathlib import Path
+import os, time
+root = Path('.manual-testbook/cache-fixture').resolve()
+for sub, names in {'downloads': ['example.tar.gz', 'example.tar.gz.done', 'partial.part', 'orphan.done'], 'sstate': ['example.siginfo']}.items():
+    folder = root / sub
+    folder.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        path = folder / name
+        if path.exists():
+            continue
+        path.write_text('Disposable manual cache fixture; not reusable Yocto data\n')
+        old = time.time() - 40 * 86400
+        os.utime(path, (old, old))
+print(root)
+PY
+</code></pre>
+<p>In F4 add a host profile using the checkout root and set downloads/sstate to those printed absolute folders. It is for inventory/prune tests, not Yocto builds. Choose age 30 days. The fixture files are synthetic and must be labelled as such in evidence.</p>
+<p>For a HOST-visible dedicated cache, configure the profile's downloads/sstate paths. In Caches select Downloads or Shared state, Scan, filter by filename and choose an age. Expected: real counts/sizes/mtime, concrete candidates, cancellation leaves files intact. Confirm only against disposable fixture files, then rescan and verify those exact files are gone. Paths/symlinks outside the selected root must not be deleted. Running/queued jobs and advisory cache leases must prevent unsafe conflicting operations.</p>
+<p>For kas container-private paths, use Runtime directory and Cache reference plan. The local prune UI does not magically mount daemon-private storage. Download audit should distinguish source files, done markers, partial files and orphan markers when observed.</p>
+<h3 id="c02--signatures">C02 — Signatures</h3>
+<p>Dump signatures and Explain sstate differences on busybox. Find actual .siginfo/.sigdata paths using runtime directories, then Read signature file and Compare signature files with two real files. Expected: parsed signature evidence; no change can legitimately produce no difference. Run Cache reference plan with <code>/work/build/sstate-cache</code> only if that is the actual cache location (resolve SSTATE_DIR first), and second <code>/work/build/tmp/stamps</code> if present. Unproven entries are not declared safe to delete.</p>
+<h2 id="10-runtime-variants-and-optional-features">10. Runtime variants and optional features</h2>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Setup and action</th>
+<th>Expected / N/A condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X01 Host</td>
+<td>F4 host profile, valid root/build_dir and oe-init-build-env; Parse, build recipe, env and New file</td>
+<td>Commands use initialized host environment. N/A if host Yocto toolchain intentionally absent.</td>
+</tr>
+<tr>
+<td>X02 Native kas</td>
+<td>kas installed locally, mode kas and valid YAML; dump/shell/build</td>
+<td>Same arguments routed through local kas. N/A if only container tooling installed.</td>
+</tr>
+<tr>
+<td>X03 Fresh direct container</td>
+<td>mode container, engine/image/container_root/init_script and correct mounts</td>
+<td>Parse/build/runtime files run inside managed fresh container; stop options reflect managed PID. Requires a suitable Yocto image.</td>
+</tr>
+<tr>
+<td>X04 Existing container</td>
+<td>Configure container_name for a running compatible container</td>
+<td>docker/podman exec routing works; no claim of owning external server lifetime.</td>
+</tr>
+<tr>
+<td>X05 Podman</td>
+<td>Repeat kas-container/directed container profile with Podman</td>
+<td>Real command succeeds on working runtime; otherwise record unavailable runtime.</td>
+</tr>
+<tr>
+<td>X06 Release context</td>
+<td>Configuration → Versions; change local layer branch/revision in isolated profile</td>
+<td>Actual branches/tags/revisions/dirty trees and literal layer-series checks; container-private Git trees require runtime snapshot/review.</td>
+</tr>
+<tr>
+<td>X07 SDK/eSDK</td>
+<td>Build SDK / Build extensible SDK on image</td>
+<td>SDK artifacts created; installer paths visible/exportable. Long test; disk/time required.</td>
+</tr>
+<tr>
+<td>X08 Kernel</td>
+<td>linux-yocto target; Kernel menuconfig, Export kernel config changes, Validate kernel config fragments</td>
+<td>Terminal handoff and actual fragment/diff output; task availability depends on kernel recipe/classes.</td>
+</tr>
+<tr>
+<td>X09 QEMU</td>
+<td>Built compatible image with a bootable runqemu-supported rootfs format (the base tar.bz2 alone is insufficient), usable QEMU/KVM/display permissions; Boot image with QEMU</td>
+<td>Guest boots; stop/exit guest and return to TUI. Container wrapper arguments/device support may need custom configuration.</td>
+</tr>
+<tr>
+<td>X10 testimage</td>
+<td>Configure testimage class and usable target runner</td>
+<td>Tests run and results reported. N/A until runner/class prerequisites exist.</td>
+</tr>
+<tr>
+<td>X11 ptest</td>
+<td>Recipe inherits ptest and image/distro enables it</td>
+<td>compile_ptest_base succeeds. Missing task is a prerequisite failure/N/A, not PASS.</td>
+</tr>
+<tr>
+<td>X12 CVE</td>
+<td>cve-check class and database/network configured</td>
+<td>Real check output/database/artifacts. Record date/database revision because results change.</td>
+</tr>
+<tr>
+<td>X13 SPDX</td>
+<td>create-spdx class configured</td>
+<td>Actual SPDX task/artifacts; generated format depends on Yocto release.</td>
+</tr>
+<tr>
+<td>X14 Device deploy</td>
+<td>Accessible SSH target, dedicated test device and built devtool recipe</td>
+<td>Deploy/undeploy changes actual target; record device/path. N/A without device.</td>
+</tr>
+<tr>
+<td>X15 Recipe upgrade</td>
+<td>Suitable upstream recipe/version/network; latest-version, check-upgrade-status, upgrade</td>
+<td>Actual available version/status and workspace diff. Pick a supported recipe; empty or unsupported result is documented.</td>
+</tr>
+<tr>
+<td>X16 Configuration editing</td>
+<td>Host local.conf/bblayers.conf editor; runtime editor for container files</td>
+<td>Backups and external-change conflicts work. Evaluated env reflects deliberate change; kas YAML remains the source of regenerated configuration.</td>
+</tr>
+<tr>
+<td>X17 Custom argv</td>
+<td>Custom command with a space-containing argument; then quoted literal shell operator</td>
+<td>Argument boundary preserved; shell operators are not executed unless you explicitly invoke a shell yourself.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-every-command-center-action">11. Every command-center action</h2>
+<p>The following ledger is generated from the current ACTIONS list. Match each title in F2; check preview, supplied inputs, status/exit code and log. In the Result column record PASS/FAIL/N/A and evidence. A prerequisite skip is not action coverage. All actions producing queued jobs must also appear in persistent history; interactive actions hand off and return to the terminal.</p>
+<table>
+<thead>
+<tr>
+<th>Case / action ID</th>
+<th>F2 title</th>
+<th>Inputs</th>
+<th>Scenario / prerequisites</th>
+<th>Expected evidence</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CMD001 / <code>build</code></td>
+<td>Build target</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD002 / <code>dry-run</code></td>
+<td>Dry run</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD003 / <code>parse</code></td>
+<td>Parse metadata</td>
+<td>none</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD004 / <code>fetch</code></td>
+<td>Fetch recipe sources</td>
+<td>target=busybox</td>
+<td>R03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD005 / <code>fetch-all</code></td>
+<td>Fetch all target dependencies</td>
+<td>target=core-image-minimal</td>
+<td>R03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD006 / <code>unpack</code></td>
+<td>Unpack recipe</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD007 / <code>patch</code></td>
+<td>Apply recipe patches</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD008 / <code>configure</code></td>
+<td>Configure recipe</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD009 / <code>compile</code></td>
+<td>Compile recipe</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD010 / <code>force-compile</code></td>
+<td>Force compile</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD011 / <code>install</code></td>
+<td>Install recipe</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD012 / <code>package</code></td>
+<td>Package recipe</td>
+<td>target=busybox</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD013 / <code>rootfs</code></td>
+<td>Build root filesystem</td>
+<td>target=core-image-minimal</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD014 / <code>sdk</code></td>
+<td>Build SDK</td>
+<td>target=core-image-minimal</td>
+<td>X07; long image build</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD015 / <code>esdk</code></td>
+<td>Build extensible SDK</td>
+<td>target=core-image-minimal</td>
+<td>X07; long image build</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD016 / <code>task</code></td>
+<td>Run custom task</td>
+<td>target=busybox; task=listtasks</td>
+<td>R01</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD017 / <code>clean</code></td>
+<td>Clean recipe work directory</td>
+<td>target=busybox</td>
+<td>R02</td>
+<td>Work files removed; subsequent build may reuse sstate.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD018 / <code>cleansstate</code></td>
+<td>Clean recipe + sstate</td>
+<td>target=busybox</td>
+<td>R02</td>
+<td>Recipe work/local sstate removed; rebuild succeeds.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD019 / <code>cleanall</code></td>
+<td>Clean recipe + sstate + downloads</td>
+<td>target=busybox</td>
+<td>R02</td>
+<td>Recipe downloads removed as well; refetch/rebuild succeeds.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD020 / <code>environment</code></td>
+<td>Resolve recipe environment</td>
+<td>target=busybox</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD021 / <code>tasks</code></td>
+<td>List recipe tasks</td>
+<td>target=busybox</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD022 / <code>graph</code></td>
+<td>Generate dependency graph</td>
+<td>target=core-image-minimal</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD023 / <code>signatures</code></td>
+<td>Dump signatures</td>
+<td>target=busybox</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD024 / <code>sig-diff</code></td>
+<td>Explain sstate differences</td>
+<td>target=busybox</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD025 / <code>layers</code></td>
+<td>Show layers and priorities</td>
+<td>none</td>
+<td>L01/L04</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD026 / <code>recipes</code></td>
+<td>Show recipes</td>
+<td>none</td>
+<td>L01/L04</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD027 / <code>appends</code></td>
+<td>Show recipe appends</td>
+<td>none</td>
+<td>L01/L04</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD028 / <code>overlay</code></td>
+<td>Show overlaid recipes</td>
+<td>none</td>
+<td>L01/L04</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD029 / <code>layer-add</code></td>
+<td>Add layer</td>
+<td>path=/work/meta-bitloom</td>
+<td>L01/L04</td>
+<td>Layer appears in show-layers.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD030 / <code>layer-remove</code></td>
+<td>Remove layer</td>
+<td>path=/work/meta-bitloom</td>
+<td>L01/L04</td>
+<td>Layer unregistered; files retained.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD031 / <code>layer-create</code></td>
+<td>Create layer</td>
+<td>path=/work/meta-bitloom</td>
+<td>L01/L04</td>
+<td>New conf/layer.conf and skeleton exist.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD032 / <code>layer-depends</code></td>
+<td>Show cross-layer dependencies</td>
+<td>none</td>
+<td>L01/L04</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD033 / <code>dev-status</code></td>
+<td>Workspace status</td>
+<td>none</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD034 / <code>dev-modify</code></td>
+<td>Modify recipe</td>
+<td>target=busybox</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD035 / <code>dev-add</code></td>
+<td>Add source as recipe</td>
+<td>target=bitloom-dev; path=/work/bitloom-source</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD036 / <code>dev-build</code></td>
+<td>Build workspace recipe</td>
+<td>target=bitloom-dev</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD037 / <code>dev-image</code></td>
+<td>Build image with workspace recipes</td>
+<td>target=core-image-minimal</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD038 / <code>dev-reset</code></td>
+<td>Reset workspace recipe</td>
+<td>target=bitloom-dev</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Workspace recipe removed; inspect retained sources.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD039 / <code>dev-finish</code></td>
+<td>Finish recipe into layer</td>
+<td>target=bitloom-dev; path=/work/meta-bitloom</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Committed changes exported into destination layer.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD040 / <code>dev-update</code></td>
+<td>Update recipe from source</td>
+<td>target=busybox</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD041 / <code>dev-upgrade</code></td>
+<td>Upgrade recipe</td>
+<td>target=busybox</td>
+<td>X15; select suitable upstream recipe</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD042 / <code>dev-latest</code></td>
+<td>Check upstream version</td>
+<td>target=busybox</td>
+<td>X15; select suitable upstream recipe</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD043 / <code>dev-deploy</code></td>
+<td>Deploy to device</td>
+<td>target=busybox; device=root@YOUR_TEST_DEVICE</td>
+<td>X14; actual SSH device required</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD044 / <code>dev-undeploy</code></td>
+<td>Undeploy from device</td>
+<td>target=busybox; device=root@YOUR_TEST_DEVICE</td>
+<td>X14; actual SSH device required</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD045 / <code>dev-config</code></td>
+<td>Configure help</td>
+<td>target=busybox</td>
+<td>D01/D02; X14/X15 when applicable</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD046 / <code>dev-upgrade-status</code></td>
+<td>Check recipe upgrade status</td>
+<td>target=busybox</td>
+<td>X15; select suitable upstream recipe</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD047 / <code>recipe-create</code></td>
+<td>Create recipe from URL/source</td>
+<td>source=/work/bitloom-source</td>
+<td>D02</td>
+<td>Generated recipe output inspected; no assumed destination file.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD048 / <code>packages</code></td>
+<td>List built packages</td>
+<td>none</td>
+<td>A03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD049 / <code>package-files</code></td>
+<td>List package files</td>
+<td>target=busybox</td>
+<td>A03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD050 / <code>find-path</code></td>
+<td>Find package owning a path</td>
+<td>path=/bin/sh</td>
+<td>A03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD051 / <code>package-recipe</code></td>
+<td>Find recipe for package</td>
+<td>target=busybox</td>
+<td>A03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD052 / <code>license</code></td>
+<td>Generate SPDX SBOM</td>
+<td>target=core-image-minimal</td>
+<td>X13; create-spdx configured</td>
+<td>Configured SPDX task produces actual artifacts.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD053 / <code>testimage</code></td>
+<td>Run image tests</td>
+<td>target=core-image-minimal</td>
+<td>X10/X11</td>
+<td>Configured runner produces actual test results.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD054 / <code>ptest</code></td>
+<td>Build ptest packages</td>
+<td>target=busybox</td>
+<td>X11; enabled ptest-capable recipe</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD055 / <code>devshell</code></td>
+<td>Open recipe development shell</td>
+<td>target=busybox</td>
+<td>D03/X08/X09</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD056 / <code>menuconfig</code></td>
+<td>Kernel menuconfig</td>
+<td>target=linux-yocto</td>
+<td>D03/X08/X09</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD057 / <code>qemu</code></td>
+<td>Boot image with QEMU</td>
+<td>target=qemux86-64</td>
+<td>D03/X08/X09</td>
+<td>Guest boots with supported rootfs format and runtime devices.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD058 / <code>kas-build</code></td>
+<td>Build kas configuration</td>
+<td>none</td>
+<td>K03/L03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD059 / <code>kas-checkout</code></td>
+<td>Checkout kas repositories</td>
+<td>none</td>
+<td>K03/L03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD060 / <code>kas-dump</code></td>
+<td>Dump resolved kas configuration</td>
+<td>none</td>
+<td>K03/L03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD061 / <code>kas-shell</code></td>
+<td>Open kas shell</td>
+<td>none</td>
+<td>K03/L03</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD062 / <code>custom</code></td>
+<td>Custom command (argument list)</td>
+<td>command=python3 -c 'print(&quot;manual argv test&quot;)'</td>
+<td>X17</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD063 / <code>getvar</code></td>
+<td>Resolve one BitBake variable</td>
+<td>variable=MACHINE</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD064 / <code>dumpsig</code></td>
+<td>Read signature file</td>
+<td>path=actual runtime path from the preceding test</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD065 / <code>diffsigs</code></td>
+<td>Compare signature files</td>
+<td>path=actual runtime path from the preceding test; path2=second actual runtime path</td>
+<td>A02/C02</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD066 / <code>kernel-diff</code></td>
+<td>Export kernel config changes</td>
+<td>target=linux-yocto</td>
+<td>X08</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD067 / <code>kernel-fragments</code></td>
+<td>Validate kernel config fragments</td>
+<td>target=linux-yocto</td>
+<td>X08</td>
+<td>Actual command output; exit/status agrees with the operation and its prerequisites.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD068 / <code>cve</code></td>
+<td>Run recipe CVE check</td>
+<td>target=busybox</td>
+<td>X12</td>
+<td>Configured CVE task/database produces actual results.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD069 / <code>kas-lock</code></td>
+<td>Generate kas lock file</td>
+<td>none</td>
+<td>K03/L03</td>
+<td>Lock output/revision matches installed kas behavior.</td>
+<td>TODO</td>
+</tr>
+</tbody>
+</table>
+<p>Rows are not a single destructive execution sequence. Recreate the relevant workspace state before devtool finish/reset/update/upgrade, and choose actual signature/artifact paths where requested. Mark direct hardware and unsupported runtime tests N/A with prerequisites recorded.</p>
+<h2 id="12-record-results-and-restore-the-experiment">12. Record results and restore the experiment</h2>
+<p>Use one row per case in your own result file:</p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>PASS / FAIL / N/A</th>
+<th>Runtime and profile</th>
+<th>Evidence path</th>
+<th>Notes / missing prerequisite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B01</td>
+<td>TODO</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Record Git commit, Python/Textual versions, Docker/Podman and kas versions, image digest, Poky commit, MACHINE/DISTRO, cache/mirror configuration and modified YAML. Preserve selected job IDs, exported logs/reports/snapshots and screenshots. A successful command entry point alone is not proof that its intended artifact was created.</p>
+<p>After testing, finish or reset devtool work deliberately, remove experiment appends/recipes only after saving wanted work, switch back to the base kas profile, and rebuild. Removing a package from IMAGE_INSTALL and rebuilding should remove it from the image manifest. Stop the service only when idle. Keep the manual work directory until evidence is saved; do not delete .validation or a shared cache as cleanup for this book.</p>
+<p>Automated implementation checks are complementary:</p>
+<pre><code class="language-bash">python -m pytest -q
+python tools/check_testbook.py
+python tools/build_docs.py
+</code></pre>
+<h2 id="13-feature-assessment">13. Feature assessment</h2>
+<p>These are proposed improvements, not implemented capabilities and not manual PASS claims.</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Proposed improvement</th>
+<th>Daily benefit</th>
+<th>Current boundary to test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Selectable runtime file tree with Enter-to-edit and runtime metadata indexing</td>
+<td>Navigate container-only layers as directly as local files.</td>
+<td>Runtime directory is currently a report; local Metadata indexes host-visible files.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Profile cloning wizard and resolved kas configuration diff</td>
+<td>Compare MACHINE/DISTRO/layers without editing a large profile JSON blindly.</td>
+<td>F4 edits named profiles; kas dump and snapshots provide separate evidence.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Layer/recipe scaffolding wizard with license checks and kas registration preview</td>
+<td>Create a buildable, registered component with fewer manual steps.</td>
+<td>New file provides templates; layer creation/registration and kas YAML remain separate actions.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Build-to-build package size and rootfs change dashboard</td>
+<td>Explain image growth and unexpected packages quickly.</td>
+<td>Manifests, snapshots and provenance provide evidence; no unified size regression dashboard exists.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Download failure classifier with bounded retry and mirror recommendations</td>
+<td>Distinguish DNS, proxy, checksum and missing upstream failures.</td>
+<td>Diagnosis/log search exists; no automatic network retry policy is implemented.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Per-runtime capability probing and disabled unsupported actions</td>
+<td>Avoid attempting absent ptest/CVE/SPDX tasks or unavailable terminals.</td>
+<td>Optional actions are command entry points and rely on release/classes/configuration.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Stronger kas build-server lifetime evidence for stop/recovery</td>
+<td>Make wrapper interruptions easier to assess.</td>
+<td>Wrapper termination is not proof of server shutdown; recovery can be withheld.</td>
+</tr>
+</tbody>
+</table>
+<p>The first three address navigation and setup friction most directly. Implementing them should preserve concrete previews, backups and clear host/runtime path ownership.</p>
+</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="https://github.com/padovanl/bitloom/blob/main/README.testbook.md">Markdown source</a></footer></body></html>

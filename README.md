@@ -20,6 +20,10 @@ Python 3.10+ · Textual · Linux / WSL2 · Host · Docker · Podman · kas · ka
 
 The opening capture shows the idle sample workspace. Error screens in the tour demonstrate an intentionally failing sample command; they are not failures of Bitloom or the verified Yocto build.
 
+## Learn and test Bitloom
+
+Follow the [manual testbook](README.testbook.md) from installation through kas/container builds, layer and recipe creation, devtool, caches, interruption and every implemented command. Each case specifies inputs, prerequisites and expected evidence. Optional hardware/classes are recorded as N/A when unavailable. The [Pages testbook](https://padovanl.github.io/bitloom/testbook.html) is the same document rendered for the web. Proposed daily-workflow improvements are assessed separately at the end of the book.
+
 ## Inspiration and thanks
 
 Bitloom is inspired by the idea behind [yoctui](https://github.com/0xbadcaffe/yoctui): bringing everyday Yocto and BitBake work into a terminal interface. Thank you to [0xbadcaffe](https://github.com/0xbadcaffe), the author of yoctui, for the inspiration and for sharing the project with the community. Bitloom has its own implementation and interface.

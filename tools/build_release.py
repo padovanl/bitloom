@@ -48,7 +48,7 @@ def build(version: str, output: Path) -> None:
         source = workspace / 'source'
         source.mkdir()
         # Copy project sources only: never include local state, caches or virtualenvs.
-        for name in ('LICENSE', 'README.md', 'pyproject.toml', 'MANIFEST.in', 'setup-demo.sh',
+        for name in ('LICENSE', 'README.md', 'README.testbook.md', 'pyproject.toml', 'MANIFEST.in', 'setup-demo.sh',
                      'bitloom', 'docs', 'tools', 'tests', 'examples', '.github'):
             origin, target = ROOT / name, source / name
             if origin.is_dir():

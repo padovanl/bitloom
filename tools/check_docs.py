@@ -37,7 +37,7 @@ def check():
             page.keyboard.press('Escape')
             assert not page.locator('#lightbox').is_visible()
             page.screenshot(path=str(ROOT / 'docs/assets/docs-site.png'), full_page=True)
-            for name in ('guide', 'commands', 'validation'):
+            for name in ('guide', 'commands', 'validation', 'testbook'):
                 page.goto(f'{url}/{name}.html', wait_until='networkidle')
                 assert page.locator('h1').count() == 1
             page.set_viewport_size({'width': 390, 'height': 844})
