@@ -1,0 +1,31 @@
+# Optional snippets. Review against your release and resources before applying.
+# Edit local.conf from Health & config; the editor creates timestamped backups.
+
+# Build history and task statistics
+INHERIT += "buildhistory buildstats"
+BUILDHISTORY_COMMIT = "1"
+
+# Shared downloads and state (use writable Linux filesystem paths)
+DL_DIR = "/work/shared/downloads"
+SSTATE_DIR = "/work/shared/sstate-cache"
+
+# Source mirror artifacts
+BB_GENERATE_MIRROR_TARBALLS = "1"
+
+# Network-free builds after all required sources have been fetched
+# BB_NO_NETWORK = "1"
+
+# Optional source mirror
+# INHERIT += "own-mirrors"
+# SOURCE_MIRROR_URL = "https://your-internal-mirror/sources/"
+
+# Optional shared-state mirror
+# SSTATE_MIRRORS = "file://.* https://your-internal-mirror/sstate/PATH;downloadfilename=PATH"
+
+# Adjust concurrency for your available RAM and CPU
+BB_NUMBER_THREADS = "8"
+PARALLEL_MAKE = "-j8"
+
+# Image QA, CVE and SBOM features depend on the selected release
+# INHERIT += "testimage cve-check create-spdx"
+# DISTRO_FEATURES:append = " ptest"

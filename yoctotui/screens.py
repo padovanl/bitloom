@@ -34,9 +34,10 @@ class ActionScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical():
             yield Label("[bold cyan]COMMAND CENTER[/]  ·  queue a Yocto operation")
+            yield Input(placeholder="Filter commands by operation or group…", id="action-search")
             yield Select([(f"{a.group} / {a.title}", a.id) for a in ACTIONS], value=self.initial_action, allow_blank=False, id="action")
             with VerticalScroll(id="fields"):
-                for key in ("target", "task", "path", "device", "source", "command"):
+                for key in ("target", "task", "path", "path2", "variable", "device", "source", "command"):
                     yield Input(value=self.target if key == "target" else "", placeholder=key, id=f"field-{key}")
             yield Static(id="preview", markup=False)
             with Horizontal():
@@ -45,6 +46,17 @@ class ActionScreen(ModalScreen):
 
     def on_mount(self):
         self.update_fields()
+
+    @on(Input.Changed, "#action-search")
+    def filter_actions(self, event):
+        query = event.value.casefold()
+        matches = [a for a in ACTIONS if query in f"{a.group} {a.title} {a.id}".casefold()]
+        if not matches:
+            return
+        select = self.query_one("#action", Select)
+        previous = str(select.value)
+        select.set_options([(f"{a.group} / {a.title}", a.id) for a in matches])
+        select.value = previous if previous in {a.id for a in matches} else matches[0].id
 
     @on(Select.Changed, "#action")
     def action_changed(self):
@@ -56,7 +68,8 @@ class ActionScreen(ModalScreen):
 
     def selected(self) -> Action:
         from .commands import BY_ID
-        return BY_ID[str(self.query_one("#action", Select).value)]
+        value = str(self.query_one("#action", Select).value)
+        return BY_ID.get(value, BY_ID[self.initial_action])
 
     def values(self):
         return {key: self.query_one(f"#field-{key}", Input).value for key in self.selected().inputs}
