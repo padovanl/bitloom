@@ -42,7 +42,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
     "metadata": [
         ("b", "press('recipe-build')", "Build", "recipe-build"), ("m", "press('recipe-modify')", "Modify", "recipe-modify"),
         ("l", "press('layer-actions')", "Layers", "layer-actions"), ("n", "press('new-file')", "New file", "new-file"),
-        ("o", "open_metadata", "Open", ""), ("t", "focus('#layer-tree')", "Tree", ""),
+        ("o", "open_metadata", "Open", ""), ("t", "focus('#layer-tree')", "Tree", ""), ("c", "press('studio')", "Studio", "studio"),
     ],
     "tasklogs": [
         ("o", "press('logs-read')", "Open", "logs-read"), ("f", "press('failed-task-log')", "Failed log", "failed-task-log"),

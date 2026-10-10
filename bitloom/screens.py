@@ -948,3 +948,160 @@ class SbomSettingsScreen(ModalScreen):
     @on(Button.Pressed, "#sbom-close")
     def close_pressed(self):
         self.action_close()
+
+
+class StudioScreen(ModalScreen):
+    """Create a product layer, distribution, machine, image, recipe or append with explained fields."""
+    DEFAULT_CSS = """
+    StudioScreen { align: center middle; background: $background 60%; }
+    StudioScreen > Vertical { width: 98%; height: 96%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    StudioScreen #studio-hint { color: $text-muted; height: 1; }
+    StudioScreen #studio-split { height: 1fr; }
+    StudioScreen #studio-kinds { width: 30; height: 1fr; border: round $primary-muted; background: $surface; }
+    StudioScreen #studio-kinds:focus { border: round $accent; }
+    StudioScreen #studio-form { width: 1fr; height: 1fr; margin: 0 1; border: round $primary-muted; padding: 0 1; }
+    StudioScreen #studio-form:focus-within { border: round $accent; }
+    StudioScreen #studio-preview { width: 1fr; height: 1fr; border: round $primary-muted; }
+    StudioScreen .field-label { margin-top: 1; text-style: bold; height: 1; }
+    StudioScreen .field-info { color: $text-muted; height: auto; }
+    StudioScreen SelectionList { height: auto; max-height: 8; border: none; background: $surface; }
+    StudioScreen Input, StudioScreen Select { height: 1; }
+    StudioScreen #studio-notes { height: auto; max-height: 3; color: $warning; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                Binding("ctrl+o", "create", "Create", priority=True), Binding("ctrl+s", "create", "Create", priority=True, show=False),
+                Binding("ctrl+g", "app.keys", "Help", priority=True)]
+
+    def __init__(self, profile, release, layers):
+        super().__init__()
+        self.profile, self.release, self.target_layers = profile, release, layers
+        self.kind = "distro"
+        self.plan = None
+        self.ready = False
+
+    def compose(self):
+        from textual.containers import VerticalScroll
+        from textual.widgets import RichLog
+        from .studio import KINDS
+        with Vertical():
+            yield Label("↑↓ choose what to create · Tab to the form · every field explains itself · ^O creates (never overwrites) · Esc closes", id="studio-hint")
+            with Horizontal(id="studio-split"):
+                yield OptionList(*[Option(f"{title}", id=kind) for kind, (title, _) in KINDS.items()], id="studio-kinds")
+                yield VerticalScroll(id="studio-form")
+                yield RichLog(id="studio-preview", wrap=False, markup=False, auto_scroll=False)
+            yield Static(id="studio-notes", markup=False)
+
+    def on_mount(self):
+        from .versions import describe
+        self.query_one(Vertical).border_title = f"Studio · {self.profile.name} · {describe(self.release)}"
+        self.query_one("#studio-kinds").border_title = "Create"
+        self.query_one("#studio-preview").border_title = "Files to create"
+        kinds = self.query_one("#studio-kinds", OptionList)
+        kinds.highlighted = list(__import__("bitloom.studio", fromlist=["KINDS"]).KINDS).index(self.kind)
+        kinds.focus()
+        self.run_worker(self.build_form(), exclusive=True, group="studio-form")
+        # Ignore the OptionList's initial highlight; afterwards arrows switch the form.
+        self.call_after_refresh(lambda: setattr(self, "ready", True))
+
+    def on_option_list_option_highlighted(self, event):
+        if self.ready and event.option_list.id == "studio-kinds" and event.option.id != self.kind:
+            self.kind = event.option.id
+            self.run_worker(self.build_form(), exclusive=True, group="studio-form")
+
+    def on_option_list_option_selected(self, event):
+        if event.option_list.id == "studio-kinds":
+            self.call_after_refresh(lambda: self.query_one("#studio-form").focus_next())
+
+    async def build_form(self):
+        from textual.widgets import Checkbox, SelectionList
+        from .studio import KINDS, fields
+        form = self.query_one("#studio-form")
+        await form.remove_children()
+        title, description = KINDS[self.kind]
+        form.border_title = title
+        widgets = [Static(description, classes="field-info")]
+        for field in fields(self.kind, self.release, self.target_layers):
+            widgets.append(Label(field.label + (" *" if field.required else ""), classes="field-label"))
+            if field.kind == "choice":
+                widgets.append(Select([(c, c) for c in field.choices], value=field.default, allow_blank=False, id="f-" + field.id))
+            elif field.kind == "multi":
+                chosen = set(field.default.split())
+                widgets.append(SelectionList(*[(c, c, c in chosen) for c in field.choices], id="f-" + field.id))
+            elif field.kind == "bool":
+                widgets.append(Checkbox("enabled", value=field.default == "1", id="f-" + field.id))
+            else:
+                widgets.append(Input(value=field.default, id="f-" + field.id))
+            if field.info:
+                widgets.append(Static(field.info, classes="field-info"))
+        if self.kind in {"distro", "machine"} and self.profile.mode in {"host", "container"}:
+            widgets += [Label("Use for this profile", classes="field-label"),
+                        Checkbox("set " + ("DISTRO" if self.kind == "distro" else "MACHINE") + " of " + self.profile.name, value=True, id="f-use")]
+        await form.mount_all(widgets)
+        self.refresh_preview()
+
+    def values(self):
+        from textual.widgets import Checkbox, SelectionList
+        result = {}
+        for widget in self.query("#studio-form *"):
+            ident = (widget.id or "")
+            if not ident.startswith("f-"):
+                continue
+            key = ident[2:]
+            if isinstance(widget, SelectionList):
+                result[key] = " ".join(widget.selected)
+            elif isinstance(widget, Checkbox):
+                result[key] = "1" if widget.value else ""
+            elif isinstance(widget, Select):
+                result[key] = str(widget.value)
+            elif isinstance(widget, Input):
+                result[key] = widget.value
+        return result
+
+    def on_input_changed(self, event):
+        self.refresh_preview()
+
+    def on_select_changed(self, event):
+        self.refresh_preview()
+
+    def on_selection_list_selected_changed(self, event):
+        self.refresh_preview()
+
+    def on_checkbox_changed(self, event):
+        self.refresh_preview()
+
+    def refresh_preview(self):
+        from rich.text import Text
+        from textual.widgets import RichLog
+        from .studio import plan
+        log = self.query_one("#studio-preview", RichLog)
+        log.clear()
+        try:
+            self.plan = plan(self.kind, self.values(), self.profile, self.release)
+        except ValueError as exc:
+            self.plan = None
+            log.write(Text("✖ " + str(exc), style=self.app.current_theme.error))
+            self.query_one("#studio-notes", Static).update("")
+            return
+        root = self.plan["layer"]
+        log.write(Text(("NEW LAYER " if self.plan["new_layer"] else "INTO ") + root, style=f"bold {self.app.current_theme.accent}"))
+        for name, text in self.plan["files"].items():
+            log.write(Text("\n+++ " + name, style=f"bold {self.app.current_theme.success}"))
+            log.write(Text(text))
+        log.scroll_home(animate=False)
+        self.query_one("#studio-notes", Static).update("  ".join("⚠ " + n for n in self.plan["notes"]))
+
+    def action_create(self):
+        from .studio import create
+        app = self.app
+        if not self.plan:
+            self.notify("Fix the highlighted field first", severity="warning")
+            return
+        if app.runner.active or any(j.status == "queued" for j in app.runner.jobs):
+            self.notify("Wait for the build queue before changing metadata", severity="warning")
+            return
+        try:
+            written = create(self.profile, self.plan)
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error", timeout=10)
+            return
+        self.dismiss({"plan": self.plan, "written": [str(p) for p in written], "use": self.values().get("use") == "1"})
