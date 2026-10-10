@@ -83,14 +83,26 @@ class Profile:
 
 
 class Settings:
+    """Personal profiles plus read-only team profiles from "include" files.
+
+    Includes are JSON files with a "profiles" array, typically on NFS or in a
+    shared repository. Relative include paths resolve from this file's folder.
+    """
     def __init__(self, path: Path):
         self.path = path
         self.profiles: list[Profile] = []
         self.active = "default"
+        self.include: list[str] = []
+        self.shared: dict[str, str] = {}
+        self.include_warnings: list[str] = []
         if path.exists():
             data = json.loads(path.read_text())
             self.active = data.get("active", "default")
             self.profiles = [Profile(**p) for p in data.get("profiles", [])]
+            self.include = data.get("include", [])
+            if not isinstance(self.include, list) or any(not isinstance(i, str) for i in self.include):
+                raise ValueError("include must be an array of file paths")
+        self.load_shared()
         if not self.profiles:
             self.profiles = [Profile(root=str(Path.cwd()))]
         for profile in self.profiles:
@@ -99,6 +111,34 @@ class Settings:
             raise ValueError("Profile names must be unique")
         if self.active not in {p.name for p in self.profiles}:
             raise ValueError("Active profile must exist")
+
+    def include_path(self, value: str) -> Path:
+        path = Path(os.path.expandvars(value)).expanduser()
+        return (path if path.is_absolute() else self.path.parent / path).resolve()
+
+    def load_shared(self) -> None:
+        own = {p.name for p in self.profiles if p.name not in self.shared}
+        self.profiles = [p for p in self.profiles if p.name not in self.shared]
+        self.shared, self.include_warnings = {}, []
+        for value in self.include:
+            source = self.include_path(value)
+            try:
+                data = json.loads(source.read_text())
+                for raw in data.get("profiles", []):
+                    profile = Profile(**raw)
+                    profile.validate()
+                    if profile.name in own or profile.name in self.shared:
+                        self.include_warnings.append(f"{source}: profile '{profile.name}' already defined; kept the first")
+                        continue
+                    self.shared[profile.name] = str(source)
+                    self.profiles.append(profile)
+            except (OSError, ValueError, TypeError, AttributeError) as exc:
+                # An unreachable NFS share must not prevent personal profiles from loading.
+                self.include_warnings.append(f"{source}: {exc}")
+
+    @property
+    def own_profiles(self) -> list[Profile]:
+        return [p for p in self.profiles if p.name not in self.shared]
 
     @property
     def profile(self) -> Profile:
@@ -111,7 +151,10 @@ class Settings:
             p.validate()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_suffix(".tmp")
-        temporary.write_text(json.dumps({"active": self.active, "profiles": [asdict(p) for p in self.profiles]}, indent=2))
+        data = {"active": self.active, "profiles": [asdict(p) for p in self.own_profiles]}
+        if self.include:
+            data["include"] = self.include
+        temporary.write_text(json.dumps(data, indent=2))
         os.chmod(temporary, 0o600)
         temporary.replace(self.path)
 

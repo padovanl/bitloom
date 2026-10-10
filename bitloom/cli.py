@@ -40,7 +40,16 @@ def main():
     parser.add_argument("--config", type=Path, default=Path(".bitloom/profiles.json"))
     parser.add_argument("--state", type=Path, default=Path(".bitloom"))
     parser.add_argument("--demo", action="store_true", help="Create an isolated sample workspace; no fake build execution")
-    parser.add_argument("--doctor", action="store_true", help="Print profile diagnostics without opening the TUI")
+    parser.add_argument("--doctor", action="store_true", help="Print host setup and profile diagnostics without opening the TUI")
+    ci = parser.add_argument_group("CI/CD (headless, serial)")
+    ci.add_argument("--ci", action="append", metavar="ACTION[:TARGET]", help="Run an operation without the TUI; repeat for several (e.g. --ci kas-build --ci build:core-image-minimal)")
+    ci.add_argument("--profile", action="append", metavar="NAME", help="Profile for --ci; repeat for a profile matrix (default: active profile)")
+    ci.add_argument("--junit", metavar="FILE", help="Write a JUnit XML report")
+    ci.add_argument("--summary", metavar="FILE", help="Write a JSON summary (status, sstate reuse, warnings, failed tasks, images)")
+    ci.add_argument("--annotations", choices=["auto", "github", "gitlab", "plain"], default="auto", help="Log sections and error annotations")
+    ci.add_argument("--fail-fast", action="store_true", help="Stop the matrix at the first failure")
+    parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
+    parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
     parser.add_argument("--list-actions", action="store_true", help="List all available operations")
     parser.add_argument("--embedded", action="store_true", help="Run jobs in the TUI process; exit stops jobs")
     parser.add_argument("--service-status", action="store_true")
@@ -58,6 +67,12 @@ def main():
         except (OSError, ValueError) as exc:
             parser.exit(1, f"bitloom: build service unavailable for {args.state}: {exc}\n")
         return
+    if args.ci:
+        from .ci import main as ci_main
+        raise SystemExit(ci_main(args))
+    if args.fleet:
+        from .fleet import main as fleet
+        raise SystemExit(fleet(args.state))
     if args.list_actions:
         from .commands import ACTIONS
         for a in ACTIONS:
@@ -68,8 +83,16 @@ def main():
     if args.doctor:
         from .models import Settings
         from .inspectors import diagnostics
-        for status, name, detail in diagnostics(Settings(args.config).profile):
-            print(f"{status:5} {name:20} {detail}")
+        profile = Settings(args.config).profile
+        rows = diagnostics(profile)
+        for status, name, detail in rows:
+            print(f"{status:5} {name:24} {detail}")
+        if args.network:
+            from .infra import network_report
+            print()
+            print(network_report(profile))
+        if any(status == "WARN" for status, _, _ in rows):
+            parser.exit(2)
         return
     if args.web:
         from .web import serve

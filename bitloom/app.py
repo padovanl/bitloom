@@ -413,6 +413,7 @@ class BitloomApp(App):
                             yield Button("Refresh", id="artifact-refresh")
                             yield Button("Read file", id="artifact-read")
                             yield Button("Rootfs inventory", id="image-contents")
+                            yield Button("Image matrix", id="image-matrix")
                         yield DataTable(id="artifact-table", cursor_type="row")
                     with TabPane(labels["analysis"], id="analysis"):
                         with Horizontal(classes="tools"):
@@ -435,6 +436,7 @@ class BitloomApp(App):
                             yield Button("Environment", id="environment")
                             yield Button("Devtool status", id="dev-status")
                             yield Button("Versions", id="versions")
+                            yield Button("Network check", id="network-check")
                             yield Button("Refresh", id="health-refresh")
                         yield DataTable(id="health", cursor_type="row")
                     with TabPane(labels["guide"], id="guide"):
@@ -991,8 +993,9 @@ class BitloomApp(App):
         self.render_artifacts()
         table = self.main_query("#health", DataTable)
         table.clear()
+        health = list(health) + [("WARN", "Team profiles", warning) for warning in self.settings.include_warnings]
         for status, name, detail in health:
-            table.add_row(Text(status, style={"OK": self.current_theme.success, "WARN": self.current_theme.warning, "INFO": self.current_theme.accent}[status]), name, detail)
+            table.add_row(Text(status, style={"OK": self.current_theme.success, "WARN": self.current_theme.warning, "INFO": self.current_theme.accent}[status]), name, Text(detail, overflow="ellipsis"))
         self.main_query("#detail", Static).update(f"{len(entries)} local metadata entries. BitBake layer commands show evaluated configuration. Enter opens a file.")
 
     @staticmethod
@@ -1273,7 +1276,7 @@ class BitloomApp(App):
             self.version_report()
         elif ident == "inspect-load":
             self.load_inspection()
-        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report", "dependency-context", "image-contents", "task-timings"}:
+        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report", "dependency-context", "image-contents", "task-timings", "network-check", "image-matrix"}:
             self.make_report(ident)
         elif ident in {"logs-read", "artifact-read"}:
             table = self.main_query("#task-table" if ident == "logs-read" else "#artifact-table", DataTable)
@@ -1459,6 +1462,13 @@ class BitloomApp(App):
                 text = env_diff(first, second)
             elif ident == "buildhistory-report":
                 text = await asyncio.to_thread(build_history, self.profile)
+            elif ident == "image-matrix":
+                from .reports import image_matrix
+                text = await asyncio.to_thread(image_matrix, self.profile)
+            elif ident == "network-check":
+                from .infra import network_report
+                self.notify("Probing mirrors and build services…", timeout=3)
+                text = await asyncio.to_thread(network_report, self.profile)
             elif ident == "download-audit":
                 root = cache_path(self.profile, "downloads")
                 entries = await asyncio.to_thread(inventory, root)

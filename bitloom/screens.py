@@ -268,7 +268,9 @@ class ProfilesScreen(NanoEditor, ModalScreen):
     def compose(self):
         with Vertical():
             yield Label("Modes: host · kas · container · kas-container · wrapper (project launcher script). Edit the JSON; [b]^O[/b] saves, [b]^X[/b] exits, [b]^W[/b] searches, [b]P[/b] on the main screen switches profile.")
-            yield TextArea(json.dumps({"active": self.settings.active, "profiles": [asdict(p) for p in self.settings.profiles]}, indent=2), id="json")
+            if self.settings.shared:
+                yield Label("[dim]Read-only team profiles from include files: " + ", ".join(sorted(self.settings.shared)) + " · clone one to customise it[/]")
+            yield TextArea(self.document(), id="json")
             with Horizontal():
                 yield Button("Save profiles", variant="primary", id="save")
                 yield Button("Clone profile", id="profiles-clone")
@@ -279,9 +281,13 @@ class ProfilesScreen(NanoEditor, ModalScreen):
         from .developer_ui import CloneProfileScreen
         self.app.push_screen(CloneProfileScreen(self.settings), self.clone_result)
 
+    def document(self):
+        data = {"active": self.settings.active, "include": self.settings.include, "profiles": [asdict(p) for p in self.settings.own_profiles]}
+        return json.dumps(data, indent=2)
+
     def clone_result(self, result):
         if result:
-            self.query_one('#json', TextArea).load_text(json.dumps({'active': self.settings.active, 'profiles': [asdict(p) for p in self.settings.profiles]}, indent=2))
+            self.query_one('#json', TextArea).load_text(self.document())
             self.app.profiles_result(True)
 
     def on_mount(self):
@@ -297,18 +303,24 @@ class ProfilesScreen(NanoEditor, ModalScreen):
         try:
             data = json.loads(self.query_one("#json", TextArea).text)
             profiles = [Profile(**p) for p in data["profiles"]]
-            if not profiles or data["active"] not in {p.name for p in profiles}:
-                raise ValueError("Active profile must exist")
-            if len({p.name for p in profiles}) != len(profiles):
-                raise ValueError("Profile names must be unique")
+            include = data.get("include", [])
+            if not isinstance(include, list) or any(not isinstance(i, str) for i in include):
+                raise ValueError("include must be an array of file paths")
             for p in profiles:
                 p.validate()
-            old_profiles, old_active = self.settings.profiles, self.settings.active
-            self.settings.profiles, self.settings.active = profiles, data["active"]
+            old = self.settings.profiles, self.settings.active, self.settings.include, self.settings.shared
+            self.settings.profiles, self.settings.include, self.settings.shared = profiles, include, {}
+            self.settings.load_shared()
+            names = [p.name for p in self.settings.profiles]
             try:
+                if not names or data["active"] not in names:
+                    raise ValueError("Active profile must exist (personal or included)")
+                if len(set(names)) != len(names):
+                    raise ValueError("Profile names must be unique")
+                self.settings.active = data["active"]
                 self.settings.save()
             except Exception:
-                self.settings.profiles, self.settings.active = old_profiles, old_active
+                self.settings.profiles, self.settings.active, self.settings.include, self.settings.shared = old
                 raise
             self.dismiss(True)
         except (ValueError, TypeError, KeyError, OSError) as exc:
@@ -655,7 +667,7 @@ class ProfilePickerScreen(ModalScreen):
         options = []
         for p in self.settings.profiles:
             label = Text.assemble(("● " if p.name == self.settings.active else "  ", "bold"), (p.name, "bold"),
-                                  ("  " + p.mode, "dim"), ("  " + (p.machine or "") + "  " + str(p.build_path), "dim"))
+                                  ("  team" if p.name in self.settings.shared else "", "italic"), ("  " + p.mode, "dim"), ("  " + (p.machine or "") + "  " + str(p.build_path), "dim"))
             options.append(Option(label, id=p.name))
         with Vertical():
             yield Label("↑ ↓ choose · Enter switch · Esc cancel · F4 edits profiles", id="picker-hint")
