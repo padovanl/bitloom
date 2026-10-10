@@ -94,6 +94,8 @@ class YoctoApp(App):
     #cache-days { width: 9; }
     #cache-kind { width: 18; }
     #inspect-kind { width: 19; }
+    #analysis-kind { width: 24; }
+    #analysis-output { height: 1fr; border: solid #30444e; }
     #health { height: 1fr; }
     #metadata-split { height: 1fr; }
     #layer-tree { width: 26; border: solid #30444e; background: #0d171d; }
@@ -152,6 +154,7 @@ class YoctoApp(App):
         self.file_rows: dict[str, Entry] = {}
         self.inspection_rows: list[tuple[str, str]] = []
         self.config_hints = {}
+        self.analysis_text = ""
 
     def main_query(self, selector, expect_type=None):
         """Keep background updates on the workspace while a modal is open."""
@@ -176,7 +179,7 @@ class YoctoApp(App):
                 for title, tab in [("Builds / logs", "builds"), ("Task logs", "tasklogs")]:
                     yield Button(title, id=f"nav-{tab}")
                 yield Static("DEVELOP & INSPECT", classes="rail-label")
-                for title, tab in [("Metadata", "metadata"), ("Environment", "workbench"), ("Artifacts", "artifacts")]:
+                for title, tab in [("Metadata", "metadata"), ("Environment", "workbench"), ("Artifacts", "artifacts"), ("Analysis", "analysis")]:
                     yield Button(title, id=f"nav-{tab}")
                 yield Static("WORKSPACE", classes="rail-label")
                 for title, tab in [("Caches", "caches"), ("Configuration", "healthtab"), ("Help", "guide")]:
@@ -268,6 +271,17 @@ class YoctoApp(App):
                             yield Button("Why this task?", id="dependency-context")
                             yield Button("Timings", id="task-timings")
                         yield DataTable(id="inspect-table", cursor_type="row")
+                    with TabPane("Analysis", id="analysis"):
+                        with Horizontal(classes="tools"):
+                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings")], value="metadata", allow_blank=False, id="analysis-kind")
+                            yield Input(placeholder="Literal metadata search phrase", id="analysis-query")
+                            yield Button("Analyze", id="analysis-run")
+                            yield Button("Export", id="analysis-export")
+                        with Horizontal(classes="tools", id="analysis-paths"):
+                            yield Input(placeholder="First manifest / build log path (blank uses selected log)", id="analysis-first")
+                            yield Input(placeholder="Second manifest path", id="analysis-second")
+                        yield Static("Read-only reports. Manifest paths must be visible on the host; logs are persisted from every runtime.", id="analysis-note", markup=False)
+                        yield RichLog(id="analysis-output", min_width=1, wrap=True, markup=False)
                     with TabPane("? Guide", id="guide"):
                         yield Markdown(HELP, id="help")
         yield Footer()
@@ -291,6 +305,7 @@ class YoctoApp(App):
         self.main_query("#task-monitor", Static).border_title = "Active BitBake tasks"
         self.set_interval(0.2, self.flush_log)
         self.set_interval(2, self.update_telemetry)
+        self.analysis_fields()
         self.navigation_changed()
         self.update_telemetry()
         self.refresh_history()
@@ -919,6 +934,50 @@ class YoctoApp(App):
             self.open_file(dest)
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity="warning")
+
+    @on(Select.Changed, "#analysis-kind")
+    def analysis_fields(self):
+        kind = str(self.main_query("#analysis-kind", Select).value)
+        self.main_query("#analysis-query", Input).display = kind == "metadata"
+        self.main_query("#analysis-paths").display = kind != "metadata"
+        self.main_query("#analysis-second", Input).display = kind == "manifests"
+
+    @on(Button.Pressed, "#analysis-run")
+    @work(exclusive=True, group="analysis")
+    async def run_analysis(self):
+        from .analysis import metadata_search, manifest_diff, sstate_report, warning_report
+        try:
+            kind = str(self.main_query("#analysis-kind", Select).value)
+            first = self.main_query("#analysis-first", Input).value.strip()
+            second = self.main_query("#analysis-second", Input).value.strip()
+            if kind == "metadata":
+                text = await asyncio.to_thread(metadata_search, list(self.entries), self.main_query("#analysis-query", Input).value)
+            elif kind == "manifests":
+                if not first or not second:
+                    raise ValueError("Enter both manifest paths, before then after")
+                text = await asyncio.to_thread(manifest_diff, Path(first).expanduser(), Path(second).expanduser())
+            else:
+                path = Path(first).expanduser() if first else self.selected_log
+                if path is None:
+                    raise ValueError("Select a build log or enter its path")
+                text = await asyncio.to_thread(sstate_report if kind == "sstate" else warning_report, path)
+            self.analysis_text = text
+            output = self.main_query("#analysis-output", RichLog)
+            output.clear()
+            output.write(Text(text))
+            output.scroll_home(animate=False)
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="warning")
+
+    @on(Button.Pressed, "#analysis-export")
+    def export_analysis(self):
+        if not self.analysis_text:
+            self.notify("Run an analysis first", severity="warning")
+            return
+        destination = self.store.directory / "exports" / f"analysis-{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}.txt"
+        destination.parent.mkdir(exist_ok=True)
+        destination.write_text(self.analysis_text)
+        self.notify(f"Report exported to {destination}")
 
     def action_log_focus(self):
         self.main_query("#workspace", TabbedContent).active = "builds"

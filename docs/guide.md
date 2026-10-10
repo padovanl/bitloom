@@ -80,6 +80,17 @@ The Workbench build report extracts warnings, errors, task summaries, failed tas
 
 Select a tar rootfs archive in Artifacts and use Rootfs inventory. The report lists file type, mode, numeric UID/GID, size and link targets. Archives are never extracted and links are never followed. The inventory is bounded to 20,000 entries. Other image formats require their own tooling.
 
+## Analysis reports
+
+Open **Analysis** in the navigator or tab bar, choose a report, and press Analyze. Export saves the displayed report under the state directory's exports folder.
+
+- **Search metadata:** enter a literal phrase. Search is case-insensitive and covers indexed recipes, appends, classes, kas YAML and layer.conf, including inactive layers. Results contain paths and line numbers. Files above 2 MB or unreadable files are skipped; output stops at 1,000 matches. Container-only metadata must be made host-visible to be indexed.
+- **Compare manifests:** enter before and after image manifest paths. Standard `package architecture version` rows and two-column `package version` rows are supported. Added/removed packages and changed versions are listed separately; architecture is part of identity. Conflicting versions and malformed rows are rejected. Each manifest is limited to 100,000 lines. Paths refer to host-visible files, including copied container artifacts.
+- **Sstate efficiency:** leave the first path blank to use the selected build log, or enter another log path. The report reads actual Sstate summary counts and computes hit rate for wanted tasks and coverage including current tasks. A zero denominator or missing count is shown as unavailable. This does not establish which cache objects are safe to remove.
+- **Warning groups:** select or enter a build log. Identical messages are counted after removing the timestamp/logger prefix; the 200 most frequent groups are shown. Different recipe paths and message text remain distinct.
+
+Reports are read-only and can use persisted build logs from host, kas and container runtimes. Export is explicit and does not modify recipes, artifacts or caches.
+
 ## Cache and download maintenance
 
 Scan either Downloads or Shared state to view names, size, age and relative paths. Inventory is capped at 20,000 files. The scan total is the indexed total, not necessarily the entire cache. Set an age of at least one day and open Prune plan. It lists concrete files and estimated bytes; nothing is removed before Execute plan.
