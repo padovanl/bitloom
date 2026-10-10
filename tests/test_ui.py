@@ -150,3 +150,26 @@ async def test_analysis_content_search_log_report_and_export(tmp_path):
         await app.workers.wait_for_complete()
         assert '50.0%' in app.analysis_text
     app.store.close()
+
+async def test_persistent_tui_detaches_and_reconnects(tmp_path):
+    import sys
+    from yoctotui.daemon import rpc
+    config=make_demo(tmp_path/'demo'); state=tmp_path/'persistent'
+    app=YoctoApp(config,state,persistent=True)
+    async with app.run_test(size=(140,42)) as pilot:
+        await pilot.pause(.3)
+        job=app.runner.submit(app.profile,'Detached UI probe',[sys.executable,'-c','import time; time.sleep(1); print("completed without UI")'])
+        app.action_quit()
+        await pilot.pause(.3)
+    await asyncio.sleep(1)
+    reopened=YoctoApp(config,state,persistent=True)
+    try:
+        async with reopened.run_test(size=(140,42)) as pilot:
+            await pilot.pause(.8)
+            current=next(j for j in reopened.runner.jobs if j.id==job.id)
+            assert current.status=='success'
+            assert reopened.history_rows[job.id]['status']=='success'
+            reopened.action_quit()
+            await pilot.pause(.3)
+    finally:
+        await asyncio.to_thread(rpc,state,{'op':'stop'})

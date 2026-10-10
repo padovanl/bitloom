@@ -258,6 +258,8 @@ class RuntimeFileScreen(ModalScreen):
     async def save(self):
         from .runtime import request
         try:
+            if self.app.runner.active or any(j.status == 'queued' for j in self.app.runner.jobs):
+                raise ValueError('Wait for queued and running jobs before editing runtime configuration')
             text = self.query_one('#content', TextArea).text
             result = await request(self.profile, 'write', self.data['path'], sha256=self.data['sha256'], text=text)
             import hashlib

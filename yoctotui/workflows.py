@@ -5,8 +5,8 @@ import json
 import re
 from pathlib import Path
 
-SECRET = re.compile(r'(?i)(password|passwd|token|secret|credential|private.key|authorization)')
-URL_AUTH = re.compile(r'(https?://)[^/\s@]+@')
+SECRET = re.compile(r'(?i)(password|passwd|token|secret|credential|private.key|authorization|access.?key|api.?key|netrc)')
+URL_AUTH = re.compile(r'((?:https?|ftp|git|ssh)://)[^/\s@]+@')
 
 def redact(value):
     if isinstance(value, dict):
@@ -20,20 +20,40 @@ def redact(value):
 def bundle(profile, snapshot, image_identity=None):
     data = {'schema':1,'profile':profile.__dict__, 'snapshot':snapshot, 'container_identity':image_identity,
             'limitations':['Dirty repositories require separate patch export.', 'Redacted credentials must be supplied separately.', 'A tag without an image digest is not an exact container pin.']}
+    safe_env = {'MACHINE','DISTRO','BB_NUMBER_THREADS','PARALLEL_MAKE','BB_ENV_PASSTHROUGH_ADDITIONS','KAS_WORK_DIR','KAS_BUILD_DIR','KAS_MACHINE','KAS_DISTRO','KAS_CONTAINER_ENGINE','KAS_CONTAINER_IMAGE','KAS_CLONE_DEPTH'}
+    data['profile'] = dict(profile.__dict__)
+    data['omitted_environment_keys'] = sorted(set(profile.environment) - safe_env)
+    data['profile']['environment'] = {k:v for k,v in profile.environment.items() if k in safe_env}
+    data['profile']['container_args'] = []
+    if profile.container_args: data['limitations'].append('Custom container arguments omitted because they may contain credentials; reconfigure them separately.')
     return redact(data)
 
 def compare(before, after):
+    before = {**before.get('snapshot',before), 'container_identity':before.get('container_identity')}
+    after = {**after.get('snapshot',after), 'container_identity':after.get('container_identity')}
     lines=['BUILD SNAPSHOT COMPARISON']
+    def manifests(values):
+        normalized={}
+        for path,text in sorted((values or {}).items()):
+            name=re.sub(r'-[0-9]{14}(?=\.manifest$)','',Path(path).name)
+            normalized[name]=text
+        return normalized
     for section in ['configs','layers','manifests','artifacts','container_identity','metrics','package_sizes']:
         a,b=before.get(section),after.get(section)
+        if section=='manifests': a,b=manifests(a),manifests(b)
+        if section=='layers': a={row['path']:row for row in a or []}; b={row['path']:row for row in b or []}
+        if section=='artifacts': a={row['path']:row['size'] for row in a or []}; b={row['path']:row['size'] for row in b or []}
         if a==b: lines.append(f'{section}: unchanged'); continue
         lines.append(f'{section}: changed')
-        if section=='configs':
+        if section in {'configs','manifests'}:
             import difflib
             for name in sorted(set(a or {})|set(b or {})):
                 lines.extend(difflib.unified_diff((a or {}).get(name,'').splitlines(),(b or {}).get(name,'').splitlines(),fromfile='before/'+name,tofile='after/'+name,lineterm=''))
-        else:
-            lines.extend(['before: '+json.dumps(a,sort_keys=True),'after: '+json.dumps(b,sort_keys=True)])
+        elif isinstance(a,dict) and isinstance(b,dict):
+            keys=[key for key in sorted(a.keys()|b.keys()) if a.get(key)!=b.get(key)]
+            for key in keys[:1000]: lines.append(f'{key}: {json.dumps(a.get(key),sort_keys=True)} → {json.dumps(b.get(key),sort_keys=True)}')
+            if len(keys)>1000: lines.append(f'{len(keys)-1000} additional changes omitted; inspect exported JSON')
+        else: lines.extend(['before: '+json.dumps(a,sort_keys=True),'after: '+json.dumps(b,sort_keys=True)])
     return '\n'.join(lines)
 
 def diagnose(text):
@@ -75,3 +95,16 @@ def cache_plan(cache: Path, stamps: Path):
             entries.append({'path':str(p),'size':p.stat().st_size,'classification':'referenced' if any(h in references for h in hashes) else 'unproven','sha256':hashlib.sha256(p.read_bytes()).hexdigest() if p.stat().st_size<2097152 else None})
         if len(entries)>=20000: break
     return {'cache':str(cache.resolve()),'stamps':str(stamps.resolve()),'reference_hashes':len(references),'entries':entries,'deletion_allowed':False,'reason':'Absence from one build stamps directory does not prove absence from other builders. Coordinate all users; use the Yocto release cache-management script for removal.'}
+
+
+def provenance_report(data):
+    lines = ["IMAGE: " + data['image'], "QUERY: " + data['query'], "", "PACKAGE → RECIPE · FILE BYTES"]
+    for package, recipe in data['owners'].items():
+        lines.append(f"{package} → {recipe or 'unknown'} · {data['sizes'].get(package, 'unavailable')}")
+    if not data['owners']: lines.append("No file owner was found in runtime pkgdata.")
+    lines += ["", "INCLUSION CHAINS"]
+    lines += [" → ".join(path) for path in data['inclusion_paths']] or ["No inclusion chain found; inspect providers and package-manager decisions."]
+    lines += ["", "DIRECT DEPENDENTS"]
+    for package, deps in data['direct_dependents'].items(): lines.append(package + " ← " + (", ".join(deps) or "none recorded"))
+    lines += ["", "IMAGE_INSTALL: " + (data.get('image_install') or "unavailable"), "PACKAGE_INSTALL: " + (data.get('package_install') or "unavailable"), "", data['policy']]
+    return "\n".join(lines)

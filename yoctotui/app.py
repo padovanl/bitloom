@@ -30,7 +30,9 @@ HELP = """# Bitloom cockpit
 1. Edit profiles (F4): set root, build_dir and runtime. Host auto-discovers oe-init-build-env or poky/oe-init-build-env. kas uses your configuration; containers mount the project at /work.
 2. Queue commands (F2). The preview shows exact arguments. Jobs run serially and keep their own profile snapshot.
 3. Select a history row to read its log. Search logs with context, isolate errors, and retry failed operations.
-4. Browse local recipes/layers and task logs. Enter opens files. Select a recipe then use Build / Modify.
+4. Browse recipes/layers and task logs. Enter opens files. Select a recipe then use Build / Modify.
+5. Open Analysis for failure diagnosis, signature evidence, runtime files, package inclusion chains, preflight, snapshots and reproducibility bundles.
+6. Real CLI sessions detach on Ctrl+Q; reopen with the same --state to reconnect. Demo/--embedded sessions stop jobs on exit.
 
 ## Configuration
 The JSON profile editor supports machine, distro, environment, container_args, downloads and sstate overrides. Paths in containers must live under the mounted root. Runtime paths outside the root need explicit container mounts. Cache inventory paths refer to the host filesystem.
@@ -38,7 +40,7 @@ The JSON profile editor supports machine, distro, environment, container_args, d
 Local configuration editor makes timestamped backups and checks for external changes. Use **bitbake -e** to inspect evaluated variables; local.conf literals are only hints.
 
 ## Maintenance
-Cache scans are bounded to 20,000 files. Pruning uses age, previews a concrete list, excludes locks/markers and rechecks files before deletion. No attempt is made to determine reachability of shared-state objects. Do not prune a cache used by other builders.
+Cache scans are bounded to 20,000 files. Pruning uses age, previews a concrete list, excludes locks/markers and rechecks files before deletion. The Analysis reference plan identifies known signatures but never treats missing references as safe to delete. Advisory shared cache locks coordinate cooperating Bitloom builders; external builders still require coordination.
 
 ## Compatibility
 Commands depend on the selected Yocto release and inherited classes. SPDX, ptest and testimage require configuration. Container images, repositories and kas must be installed separately. No fake successful builds: demo mode supplies a sample workspace only.
@@ -280,7 +282,7 @@ class YoctoApp(App):
                         yield DataTable(id="inspect-table", cursor_type="row")
                     with TabPane("Analysis", id="analysis"):
                         with Horizontal(classes="tools"):
-                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Package provenance", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
+                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Export runtime artifact", "runtime-download"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Package provenance", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
                             yield Input(placeholder="Literal metadata search phrase", id="analysis-query")
                             yield Button("Analyze", id="analysis-run")
                             yield Button("Export", id="analysis-export")
@@ -288,7 +290,7 @@ class YoctoApp(App):
                             yield Input(placeholder="First manifest / build log path (blank uses selected log)", id="analysis-first")
                             yield Input(placeholder="Second manifest path", id="analysis-second")
                         yield Static("Reports and runtime tools. First field: runtime path / recipe / package. Second: comparison file / stamps path. Export saves the report.", id="analysis-note", markup=False)
-                        yield RichLog(id="analysis-output", min_width=1, wrap=True, markup=False)
+                        yield RichLog(id="analysis-output", min_width=1, wrap=True, markup=False, auto_scroll=False)
                     with TabPane("? Guide", id="guide"):
                         yield Markdown(HELP, id="help")
         yield Footer()
@@ -949,7 +951,11 @@ class YoctoApp(App):
         kind = str(self.main_query("#analysis-kind", Select).value)
         self.main_query("#analysis-query", Input).display = kind == "metadata"
         self.main_query("#analysis-paths").display = kind != "metadata"
-        self.main_query("#analysis-second", Input).display = kind in {"manifests", "compare", "cache-plan"}
+        self.main_query("#analysis-second", Input).display = kind in {"manifests", "compare", "cache-plan", "runtime-download"}
+        placeholders = {"rebuild":"Recipe to explain", "provenance":"Package name or absolute image file path", "preflight":"Runtime build path (blank uses profile default)", "runtime-list":"Runtime directory path", "runtime-read":"Runtime text file path", "runtime-edit":"Runtime text file path to edit", "runtime-download":"Runtime binary artifact path", "snapshot":"Runtime build path", "bundle":"Runtime build path", "compare":"Before snapshot JSON path", "cache-plan":"Cache directory in host or selected runtime", "devtool-review":"Runtime devtool source directory"}
+        self.main_query("#analysis-first", Input).placeholder = placeholders.get(kind, "First manifest / build log path (blank uses selected log)")
+        self.main_query("#analysis-second", Input).placeholder = {"cache-plan":"Stamps directory containing signature references", "runtime-download":"Local destination (blank exports into state directory)", "compare":"After snapshot JSON path"}.get(kind, "Second manifest path")
+
 
     @on(Button.Pressed, "#analysis-run")
     @work(exclusive=True, group="analysis")
@@ -984,12 +990,18 @@ class YoctoApp(App):
         import json, re
         from .runtime import request
         from .workflows import diagnose, compare, bundle, preflight_report, cache_plan
-        build = "/work/build" if self.profile.mode == "kas-container" else str(self.profile.build_path)
+        build = "." if self.profile.mode in {"kas", "kas-container"} else str(self.profile.build_path)
         if self.profile.mode == "container":
             try:
                 build = str(Path(self.profile.container_root) / self.profile.build_path.relative_to(self.profile.root_path))
             except ValueError:
                 raise ValueError("Build directory must be inside the mounted project")
+        if kind == "runtime-download":
+            if not first: raise ValueError("Enter the absolute runtime artifact path")
+            from .runtime import download
+            destination = Path(second).expanduser() if second else self.store.directory / "exports" / Path(first).name
+            result = await download(self.profile, first, destination)
+            return "Exported to: " + str(destination) + "\n" + json.dumps(result, indent=2)
         if kind == "diagnose":
             path = Path(first) if first else self.selected_log
             if path is None: raise ValueError("Select a failed build or enter a task log path")
@@ -1007,39 +1019,62 @@ class YoctoApp(App):
             if kind == "preflight": return preflight_report(result)
             if kind == "runtime-read": return result["text"] + "\nSHA256: " + result["sha256"]
             if kind == "devtool-review":
-                return json.dumps(result,indent=2) + "\nFinish transfers committed recipe/source changes to the destination layer. Reset removes workspace metadata; source directories are retained. Review uncommitted changes and the destination layer before running either action."
-            return json.dumps(result, indent=2)
+                return "SOURCE: " + result["path"] + "\nCOMMIT: " + str(result["commit"]) + "\n\nGIT STATUS\n" + (result["status"] or "clean or unavailable") + "\n\nRECENT COMMITS\n" + (result["commits"] or "unavailable") + "\n\nDIFF STAT\n" + (result["diff"] or "none") + "\n\nUNCOMMITTED PATCH\n" + (result["patch_preview"] or "none") + "\nFinish transfers committed recipe/source changes to the destination layer. Reset removes workspace metadata; source directories are retained. Review uncommitted changes and the destination layer before running either action."
+            return "RUNTIME DIRECTORY\nTYPE       BYTES  PATH\n" + "\n".join(f"{'link' if entry['symlink'] else 'directory' if entry['directory'] else 'file':9} {entry['size']:9}  {entry['path']}" for entry in result)
         if kind in {"snapshot", "bundle"}:
             result = await request(self.profile, "snapshot", first or build)
             from .workflows import redact
+            result["kas_configs"] = {}
+            for name in self.profile.kas_file.split(":") if self.profile.mode in {"kas", "kas-container"} else []:
+                path = self.profile.root_path / name
+                if path.is_file() and path.stat().st_size < 2097152:
+                    result["kas_configs"][name] = path.read_text(errors="replace")
             if self.selected_log and self.selected_log.is_file():
                 from .analysis import sstate_report, warning_report
                 from .reports import task_timings
                 result["metrics"] = {"sstate":sstate_report(self.selected_log), "warnings":warning_report(self.selected_log), "timings":task_timings(self.selected_log)}
                 result["metrics_source"] = str(self.selected_log)
-            if kind == "bundle": result = bundle(self.profile, result, self.profile.image or self.profile.environment.get("KAS_CONTAINER_IMAGE"))
+            if kind == "bundle":
+                from .runtime import image_identity
+                result = bundle(self.profile, result, await image_identity(self.profile))
             else: result = redact(result)
             destination = self.store.directory / "exports" / (kind + "-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json")
             destination.parent.mkdir(parents=True,exist_ok=True)
             destination.write_text(json.dumps(result, indent=2)); destination.chmod(0o600)
-            return "Saved: " + str(destination) + "\n" + json.dumps(result,indent=2)
+            summary = result.get("snapshot", result)
+            return "Saved: " + str(destination) + "\n\nCAPTURED EVIDENCE\n" + "\n".join(f"{key}: {len(summary.get(key, []))}" for key in ["configs", "layers", "manifests", "artifacts", "package_sizes"]) + "\n\nREPOSITORIES\n" + "\n".join(f"{repo['path']} · {repo['commit']} · {'dirty' if repo['dirty'] else 'clean'}" for repo in summary.get("layers", [])) + "\n" + "\n".join(result.get("limitations", []))
         if kind == "compare":
             if not first or not second: raise ValueError("Enter before and after snapshot JSON paths")
             return compare(json.loads(Path(first).read_text()),json.loads(Path(second).read_text()))
         if kind == "cache-plan":
-            if not first or not second: raise ValueError("Enter host-visible cache and stamps paths")
-            return json.dumps(await asyncio.to_thread(cache_plan,Path(first),Path(second)),indent=2)
+            if not first or not second: raise ValueError("Enter cache and stamps paths")
+            plan = await asyncio.to_thread(cache_plan,Path(first),Path(second)) if Path(first).is_dir() and Path(second).is_dir() else await request(self.profile, "cache-plan", first, stamps=second)
+            return json.dumps(plan,indent=2)
         if kind == "provenance":
             image = self.main_query("#target", Input).value.strip()
             if not first or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*", image):
                 raise ValueError("Enter a package or absolute file path; set the top target field to an image recipe")
             if self.runner.active or any(j.status == "queued" for j in self.runner.jobs):
                 raise ValueError("Wait for the build queue before evaluating image package metadata")
-            return json.dumps(await request(self.profile, "provenance", build, package=first, image=image), indent=2)
+            from .workflows import provenance_report
+            return provenance_report(await request(self.profile, "provenance", build, package=first, image=image))
         if kind == "rebuild":
             if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9+_.-]*",first): raise ValueError("Enter one recipe name")
+            rows = [row for row in self.store.history() if row['profile'] == self.profile.name and row['status'] == 'success' and json.loads(row['argv']) == ['bitbake','-S','printdiff',first]]
+            if rows:
+                if self.runner.active: raise ValueError("Wait for the running job before inspecting runtime signature files")
+                row = rows[0]
+                evidence = Path(row['log']).read_text(errors='replace')
+                context = await request(self.profile, "signature-context", build, recipe=first)
+                from .reports import environment_jobs, environment
+                evaluated = environment_jobs(self.store, self.profile, first)
+                values = environment(Path(evaluated[0]['log'])) if evaluated else {}
+                names = set(re.findall(r"Variable ([A-Za-z0-9_:.-]+)",json.dumps(context)))
+                linked = {name:values.get(name, "Not available in a stored evaluated environment") for name in sorted(names)}
+                return "PRINTDIFF CAPTURE: " + row['started'] + "\n" + evidence + "\nSIGNATURE CONTEXT\n" + json.dumps(context,indent=2) + "\nEVALUATED VARIABLES\n" + json.dumps(linked,indent=2) + "\nRun Explain sstate differences from F2 to capture a new comparison."
             job = self.runner.submit(self.profile, "Why rebuilding: " + first, ["bitbake", "-S", "printdiff", first], kind)
-            return "Queued signature evidence: " + job.id + "\nRead the job log in Builds. printdiff compares current signatures against the closest cache/stamp signature. Use signature diff and evaluated environment to investigate reported variable and dependency changes."
+            self.runner.submit(self.profile, "Rebuild environment: " + first, ["bitbake", "-e", first], "environment")
+            return "Queued signature evidence: " + job.id + "\nRead the job log in Builds, then Analyze again to link stored printdiff, available signature pairs and evaluated variables."
         raise ValueError("Unknown workflow")
 
     @on(Button.Pressed, "#analysis-export")

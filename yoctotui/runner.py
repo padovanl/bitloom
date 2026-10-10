@@ -85,14 +85,23 @@ class Runner:
                 self.queue.task_done()
 
     async def execute(self, job: Job):
+        job.log.touch(mode=0o600)
         job.status = "running"
         job.started = now()
         self.store.put(job)
         self.callback(job, None)
-        from .leases import BuildLease
+        from .leases import BuildLease, CacheLease
         lease = BuildLease(job.profile)
+        cache_leases = []
         try:
             lease.acquire()
+            from .inspectors import cache_path
+            for kind in ("downloads", "sstate"):
+                root = cache_path(job.profile, kind)
+                if root.is_dir():
+                    cache_lease = CacheLease(root)
+                    cache_lease.acquire()
+                    cache_leases.append(cache_lease)
             if job.profile.mode == "container" and not job.profile.container_name:
                 job.managed_container = f"yoctotui-{job.id}"
             inv = invocation(job.profile, job.command, job.managed_container)
@@ -137,6 +146,8 @@ class Runner:
             job.errors.append(message)
             self.callback(job, message)
         finally:
+            for cache_lease in cache_leases:
+                cache_lease.close()
             lease.close()
             job.finished = now()
             self.store.put(job)
