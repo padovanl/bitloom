@@ -33,6 +33,15 @@ class Profile:
     launcher: list[str] = field(default_factory=list)
     launcher_shell: list[str] = field(default_factory=lambda: ["shell", "-c", "{command}"])
 
+    @classmethod
+    def from_dict(cls, data: dict, unknown: list | None = None) -> "Profile":
+        """Build from stored JSON, ignoring keys from newer or older Bitloom versions."""
+        from dataclasses import fields
+        known = {f.name for f in fields(cls)}
+        if unknown is not None:
+            unknown.extend(sorted(set(data) - known))
+        return cls(**{k: v for k, v in data.items() if k in known})
+
     @property
     def root_path(self) -> Path:
         return Path(self.root).expanduser().resolve()
@@ -95,10 +104,13 @@ class Settings:
         self.include: list[str] = []
         self.shared: dict[str, str] = {}
         self.include_warnings: list[str] = []
+        self.ignored_keys: list[str] = []
         if path.exists():
             data = json.loads(path.read_text())
             self.active = data.get("active", "default")
-            self.profiles = [Profile(**p) for p in data.get("profiles", [])]
+            ignored = []
+            self.profiles = [Profile.from_dict(p, ignored) for p in data.get("profiles", [])]
+            self.ignored_keys = sorted(set(ignored))
             self.include = data.get("include", [])
             if not isinstance(self.include, list) or any(not isinstance(i, str) for i in self.include):
                 raise ValueError("include must be an array of file paths")
@@ -125,7 +137,7 @@ class Settings:
             try:
                 data = json.loads(source.read_text())
                 for raw in data.get("profiles", []):
-                    profile = Profile(**raw)
+                    profile = Profile.from_dict(raw)
                     profile.validate()
                     if profile.name in own or profile.name in self.shared:
                         self.include_warnings.append(f"{source}: profile '{profile.name}' already defined; kept the first")

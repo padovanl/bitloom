@@ -107,7 +107,9 @@ class Dashboard:
         profile = settings.profile
         try:
             service = self.rpc({"op": "status"})
-            service = {"pid": service["pid"], "active": service["active"],
+            from . import __version__
+            service = {"pid": service["pid"], "active": service["active"], "version": service.get("version", "unknown"),
+                       "outdated": service.get("version", "unknown") != __version__,
                        "jobs": {j["id"]: {"status": j["status"], "progress": j["progress"], "setscene": j.get("setscene", [0, 0]),
                                           "tasks": sorted(j["active_recipe_tasks"])} for j in service["jobs"]}}
         except (OSError, ValueError) as exc:

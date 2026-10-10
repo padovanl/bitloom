@@ -1,0 +1,36 @@
+# Yocto Project 6.0 "Wrynose" (LTS until April 2030). The combined poky
+# repository ends with 5.x: from 6.0 bitbake, openembedded-core and meta-yocto
+# are separate repositories. Commits are the yocto-6.0.2 tags.
+header:
+  version: 14
+build_system: openembedded
+machine: qemux86-64
+distro: poky
+target: core-image-minimal
+repos:
+  bitbake:
+    url: https://git.openembedded.org/bitbake
+    tag: yocto-6.0.2
+    commit: 178b39316042fd71d46e82ba6889e3b824024bb0
+    layers:
+      .: disabled
+  openembedded-core:
+    url: https://git.openembedded.org/openembedded-core
+    tag: yocto-6.0.2
+    commit: 8ecd6056805602dc99c4cd110b04e39ae5424610
+    layers:
+      meta:
+  meta-yocto:
+    url: https://git.yoctoproject.org/meta-yocto
+    tag: yocto-6.0.2
+    commit: c81e26bda0cacc3e13b1fee7a98faadc449841bc
+    layers:
+      meta-poky:
+      meta-yocto-bsp:
+local_conf_header:
+  cockpit-validation: |
+    BB_NUMBER_THREADS = "8"
+    PARALLEL_MAKE = "-j8"
+    IMAGE_FSTYPES = "tar.bz2"
+    INHERIT += "buildstats buildhistory"
+    BUILDHISTORY_COMMIT = "1"
