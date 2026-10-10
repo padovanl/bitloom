@@ -110,7 +110,7 @@
 <li><strong>Sstate efficiency:</strong> leave the first path blank to use the selected build log, or enter another log path. The report reads actual Sstate summary counts and computes hit rate for wanted tasks and coverage including current tasks. A zero denominator or missing count is shown as unavailable. This does not establish which cache objects are safe to remove.</li>
 <li><strong>Warning groups:</strong> select or enter a build log. Identical messages are counted after removing the timestamp/logger prefix; the 200 most frequent groups are shown. Different recipe paths and message text remain distinct.</li>
 </ul>
-<p>Reports are read-only and can use persisted build logs from host, kas and container runtimes. Export is explicit and does not modify recipes, artifacts or caches.</p>
+<p>Metadata, manifest, efficiency and warning reports read persisted data from the selected paths. Runtime tools below also provide explicit editing and artifact export.</p>
 <h2 id="cache-and-download-maintenance">Cache and download maintenance</h2>
 <p>Scan either Downloads or Shared state to view names, size, age and relative paths. Inventory is capped at 20,000 files. The scan total is the indexed total, not necessarily the entire cache. Set an age of at least one day and open Prune plan. It lists concrete files and estimated bytes; nothing is removed before Execute plan.</p>
 <p>Pruning excludes symlinks, <code>.lock</code>/<code>.done</code> markers, Git checkout internals and files whose sibling lock exists. Each file's path, size, modification time and sibling lock are checked again at deletion. Only files inside the selected root can be deleted. The TUI refuses a plan while its own jobs are active/queued. Other machines/builders cannot be detected.</p>
@@ -136,4 +136,68 @@
 </ul>
 <h2 id="documentation-and-verification">Documentation and verification</h2>
 <p><code>python tools/capture_docs.py</code> captures the real Textual interface with Pilot and exports SVG/PNG/GIF. It uses labelled demo data. <code>python tools/validate_kas.py</code> executes a real image build through Runner and records a JSON result. Read validation.md for evidence from the current development session.</p>
+<h2 id="persistent-build-service-and-reconnecting">Persistent build service and reconnecting</h2>
+<p>Real launches now use an independent local build service by default. Closing the TUI, pressing Ctrl+Q, or losing the terminal detaches the client: queued and running jobs remain owned by the service. Reopen Bitloom with the same <code>--state</code> directory to reconnect. Jobs retain their original profile, commands and complete logs. Multiple clients can observe the same service.</p>
+<pre><code class="language-bash">bitloom --config .yoctotui/profiles.json --state .yoctotui
+bitloom --state .yoctotui --service-status
+bitloom --state .yoctotui --service-stop  # idle service only
+bitloom --embedded                     # exit stops owned jobs
+</code></pre>
+<p>Demo mode remains embedded. F5 still explicitly interrupts a selected job through the service. The service refuses an idle-stop request when jobs remain queued/running; use F5 first if interruption is intended. A Unix socket in a private Linux <code>/tmp/bitloom-services-UID</code> directory works even when the project lives on a WSL Windows mount. Connections are restricted to the same UID. History remains under the selected state directory. This is local persistence, not reboot recovery or a distributed scheduler: a crashed service marks incomplete history interrupted on its next start and does not automatically replay work.</p>
+<h2 id="runtime-filesystem-and-artifacts">Runtime filesystem and artifacts</h2>
+<p>The Analysis selector now provides <strong>Runtime directory</strong>, <strong>Runtime file</strong>, <strong>Edit runtime file</strong> and <strong>Export runtime artifact</strong>. Enter an absolute path as seen by the selected runtime, such as <code>/work/build/conf/local.conf</code> in kas-container. These operations run Python inside that runtime through the same command routing as builds. Python 3 must exist there.</p>
+<p>Directory previews stop at 2,000 entries; text previews/edits at 2 MiB. Runtime editing opens an actual editor, rejects files changed since the preview, refuses symlink edits, preserves the original file in a content-addressed backup and replaces the file atomically. Saving is blocked while this client's build queue is active. External programs remain responsible for their own edits.</p>
+<p>Binary export streams a file up to 1 GiB into a temporary local file and verifies both SHA-256 and byte count before committing it. The second path is the local destination; leaving it blank uses the state's exports directory. Existing destinations are never overwritten. This handles artifacts visible only inside the container, including a Docker Snap daemon's private filesystem. It does not require mounting or extracting an image.</p>
+<h2 id="evidence-workflows">Evidence workflows</h2>
+<table>
+<thead>
+<tr>
+<th>Analysis choice</th>
+<th>Input and result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Why rebuilding?</td>
+<td>Enter one recipe; queue release-native <code>bitbake -S printdiff</code> and evaluated environment. Analyze again after completion to link the stored explanation, the two newest available sigdata files per task/work variant, release-native signature comparisons and referenced variable values. The chosen signature timestamps must match your intended before/after states. Use F2 to capture a fresh printdiff; a matching cache can legitimately report no difference.</td>
+</tr>
+<tr>
+<td>Failure diagnosis</td>
+<td>Select a build log or enter a runtime task log path. Classify fetch/patch/compile/QA/rootfs evidence and show the first diagnostic with context and reported task-log paths. Suggestions are troubleshooting steps, not automatic fixes.</td>
+</tr>
+<tr>
+<td>Package provenance</td>
+<td>Set the top target field to an image recipe and enter a package or absolute installed file path. Evaluate the image, read runtime pkgdata, map files to packages/recipes and show a shortest path from PACKAGE_INSTALL/IMAGE_INSTALL through runtime dependencies.</td>
+</tr>
+<tr>
+<td>Build preflight</td>
+<td>Enter a runtime build directory or leave blank. Check writable parent, disk headroom, free inodes and configuration presence in the actual filesystem. BLOCK and WARN are distinct; this advisory report does not intercept queued commands.</td>
+</tr>
+<tr>
+<td>Devtool review</td>
+<td>Enter the runtime source Git directory. Review status, uncommitted diff, commits and patch text before using build/deploy/finish/reset from F2. It does not calculate the release-specific final patch transfer set.</td>
+</tr>
+<tr>
+<td>Capture snapshot</td>
+<td>Record runtime configurations, repository commits/dirty state, image manifests, artifact sizes and package file sizes into JSON. If a log is selected, include its measured warning, timing and sstate reports; select the correct build log yourself.</td>
+</tr>
+<tr>
+<td>Compare snapshots</td>
+<td>Enter before and after JSON paths. Compare configuration diffs, layer commits, package manifests, package/artifact sizes and recorded metrics. Unavailable metrics remain absent; a snapshot records capture time state, not an automatically reconstructed historic build.</td>
+</tr>
+<tr>
+<td>Reproducibility bundle</td>
+<td>Export a reference JSON bundle with original profile, runtime snapshot, available kas configurations and resolved cached container image digests. Dirty sources require a separate patch export; this is not a self-contained source archive or one-command replay.</td>
+</tr>
+<tr>
+<td>Cache reference plan</td>
+<td>Enter host-visible or runtime cache and stamps directories. Index 64-character signature hashes and classify files as referenced or unproven. No deletion follows from a missing reference.</td>
+</tr>
+</tbody>
+</table>
+<p>Package inclusion follows both RDEPENDS and RRECOMMENDS. Virtual providers, renaming, package-manager choices, exclusions and optional recommendations can complicate the chain; absent evidence is explicitly not proof of absence. The evaluated image operation requires an idle queue. Mirror reachability and layer compatibility are not proven by filesystem preflight; use BitBake metadata parsing, layer inspection and fetch actions.</p>
+<p>Reproducibility exports redact credential-named configuration lines and URL userinfo. Profile environment uses a small build-control allowlist; unknown keys and custom container arguments are omitted. Supply those separately. Inspect any bundle before sharing because project-specific secrets embedded under innocuous configuration names cannot be recognized reliably. An unresolved container tag is explicitly reported and is not treated as an exact digest.</p>
+<h2 id="coordinating-shared-caches">Coordinating shared caches</h2>
+<p>Bitloom builders take a shared <code>.bitloom-coordination.lock</code> on host-visible download and sstate directories. Maintenance takes an exclusive lock, so cooperating services cannot prune while another Bitloom builder uses the cache. A separate build-directory lease prevents duplicate builders across local state directories. Existing <code>.lock</code> and <code>.done</code> protection also applies when executing a plan directly.</p>
+<p>These are advisory locks. External BitBake processes, container-only cache paths and builders that do not take the same lock are not coordinated. Signature reference plans are conservative: one build's stamps are not an exhaustive record of every cache user. For release-specific removal, coordinate all builders and use that release's <code>scripts/sstate-cache-management.sh</code> after inspecting its own help/options. Bitloom does not infer reachability from age or silently invoke a destructive cache script.</p>
 </article></main><footer><a href="index.html">← Back to the cockpit</a><a href="guide.md">Markdown source</a></footer></body></html>
