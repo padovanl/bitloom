@@ -310,17 +310,21 @@ async def test_create_recipe_from_tui_and_detect_external_file(tmp_path):
         await pilot.pause(.8)
         assert path.exists()
         assert any(e.path==path for e in app.entries)
+        async def eventually(condition, timeout=20):
+            # The watcher polls every 5 s; allow for a loaded machine.
+            for _ in range(int(timeout/.25)):
+                if condition():
+                    return True
+                await pilot.pause(.25)
+            return condition()
         external=path.with_name('external_1.0.bb')
         external.write_text('SUMMARY = "Created externally"\n')
-        await pilot.pause(5.5)
-        assert any(e.path==external for e in app.entries)
+        assert await eventually(lambda: any(e.path==external for e in app.entries))
         previous=next(e.size for e in app.entries if e.path==external)
         external.write_text('SUMMARY = "Externally modified recipe content"\n')
-        await pilot.pause(5.5)
-        assert next(e.size for e in app.entries if e.path==external)!=previous
+        assert await eventually(lambda: next((e.size for e in app.entries if e.path==external), previous)!=previous)
         external.unlink()
-        await pilot.pause(5.5)
-        assert not any(e.path==external for e in app.entries)
+        assert await eventually(lambda: not any(e.path==external for e in app.entries))
     app.store.close()
 
 async def test_open_runtime_directory_refreshes_automatically(tmp_path):

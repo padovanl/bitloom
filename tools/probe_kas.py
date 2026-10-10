@@ -17,7 +17,7 @@ async def probe():
     result = json.loads((state / 'result.json').read_text())
     if result['status'] != 'success' or not result.get('artifact_verified'):
         raise RuntimeError('Complete and verify the real image build before running probes')
-    profile = Profile(name='kas-integration', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml', environment={'KAS_WORK_DIR': result['work'], 'KAS_CONTAINER_ENGINE': 'docker', 'KAS_CLONE_DEPTH': '1', 'KAS_CONTAINER_IMAGE': 'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'})
+    profile = Profile(name='kas-scarthgap', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml', environment={'KAS_WORK_DIR': result['work'], 'KAS_CONTAINER_ENGINE': 'docker', 'KAS_CLONE_DEPTH': '1', 'KAS_CONTAINER_IMAGE': 'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'})
     store = Store(state)
     runner = Runner(store, lambda job, line: print(f'{job.title}: {job.status}', flush=True) if line is None else None)
     commands = [

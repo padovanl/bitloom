@@ -7,41 +7,42 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from bitloom.models import Profile, Settings
-from tools.validate_kas import KAS_IMAGE
+from tools.releases import LEGACY_PROFILE, RELEASES, add_arguments, profile
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--work', type=Path, help='Linux build workspace; defaults to the recorded validation workspace')
+    add_arguments(parser, both=True)
+    parser.add_argument('--work', type=Path, help='Scarthgap workspace; defaults to the recorded validation workspace')
+    parser.add_argument('--wrynose-work', type=Path, help='Wrynose workspace; defaults to the recorded one or /tmp/bitloom-kas-wrynose')
     parser.add_argument('--engine', choices=['docker', 'podman'], default='docker')
     args = parser.parse_args()
     state = ROOT / '.validation'
-    work = args.work
-    if work is None:
-        result = state / 'result.json'
-        if result.exists():
-            work = Path(json.loads(result.read_text())['work'])
-        else:
-            work = Path('/tmp/bitloom-kas-validation')
-    work = work.expanduser().resolve()
     settings = Settings(state / 'profiles.json')
-    existing = settings.profiles if settings.path.exists() else []
-    profile = Profile(
-        name='kas-integration', root=str(ROOT), mode='kas-container',
-        kas_file='tests/integration/kas-minimal.yml', machine='qemux86-64', distro='poky',
-        targets=['core-image-minimal'], environment={
-            'KAS_WORK_DIR':str(work), 'KAS_CONTAINER_ENGINE':args.engine,
-            'KAS_CONTAINER_IMAGE':KAS_IMAGE,
-        },
-    )
-    settings.profiles = [p for p in existing if p.name != profile.name] + [profile]
-    settings.active = 'kas-integration'
+    existing = settings.own_profiles if settings.path.exists() else []
+    # Profiles created before the release split keep their settings under the new name.
+    for item in existing:
+        if item.name == LEGACY_PROFILE:
+            item.name = RELEASES['scarthgap']['profile']
+    wanted = ['scarthgap', 'wrynose'] if args.release == 'both' else [args.release]
+    created = []
+    for release in wanted:
+        spec = RELEASES[release]
+        work = args.work if release == 'scarthgap' else args.wrynose_work
+        if work is None:
+            result = state / spec['result']
+            work = Path(json.loads(result.read_text())['work']) if result.exists() else spec['work']
+        created.append(profile(release, work, args.engine))
+    names = {p.name for p in created}
+    settings.profiles = [p for p in existing if p.name not in names] + created
+    settings.active = created[0].name
     settings.save()
-    print(f'Profile: {settings.path}')
-    print(f'Runtime workspace: {work} (container daemon filesystem)')
+    print(f'Profiles: {settings.path}')
+    for item, release in zip(created, wanted):
+        print(f'  {item.name:15} {RELEASES[release]["tag"]:12} {item.environment["KAS_WORK_DIR"]}  ({RELEASES[release]["note"]})')
     print('Launch from the repository with the virtual environment activated:')
-    print('bitloom --config .validation/profiles.json --state .validation')
-    print('This only writes the profile; it does not start a build or change workspace ownership.')
+    print('bitloom --config .validation/profiles.json --state .validation   # P switches between the releases')
+    print('This only writes profiles; it does not start a build or change workspace ownership.')
 
 
 if __name__ == '__main__':
