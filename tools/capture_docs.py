@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from yoctotui.app import YoctoApp
+from terminal_capture import terminal_svg
 from yoctotui.cli import make_demo
 from textual.widgets import Input, TabbedContent
 
@@ -39,7 +40,7 @@ async def capture():
             async def shot(name):
                 await pilot.pause(.25)
                 svg = output / f'{name}.svg'
-                svg.write_text(app.export_screenshot(title='YoctoTUI · demo workspace'))
+                svg.write_text(terminal_svg(app, 'YoctoTUI · demo workspace'))
                 png = output / f'{name}.png'
                 cairosvg.svg2png(url=str(svg), write_to=str(png), scale=.8)
                 frames.append(Image.open(png).convert('RGB'))

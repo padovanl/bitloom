@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from yoctotui.app import YoctoApp
+from terminal_capture import terminal_svg
 from yoctotui.models import Profile, Settings
 from textual.widgets import Input
 
@@ -33,10 +34,9 @@ async def capture():
         job = jobs[0]
         app.select_job(job['id'], job['log'])
         app.query_one('#log-search', Input).value = 'Tasks Summary'
-        app.query_one('#progress').update(total=100, progress=100)
         await pilot.pause(.5)
         svg = ROOT / 'docs/assets/real-kas-build.svg'
-        svg.write_text(app.export_screenshot(title='YoctoTUI · actual kas-container image build'))
+        svg.write_text(terminal_svg(app, 'YoctoTUI · actual kas-container image build'))
         cairosvg.svg2png(url=str(svg), write_to=str(svg.with_suffix('.png')), scale=.8)
     app.store.close()
     print('Captured verified real image build from persisted history')

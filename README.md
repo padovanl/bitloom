@@ -31,16 +31,16 @@ yoctotui --config .yoctotui/profiles.json
 
 | Area | Capabilities |
 | --- | --- |
-| Builds | Serial queue, persistent SQLite history, streaming logs, task progress, exit status, retries with original profile, cancellation, SDK/eSDK, recipe tasks, forced compile, dry runs, parsing |
+| Builds | Serial queue, persistent SQLite history, streaming logs, observed live recipe tasks, task progress, exit status, retries with original profile, cancellation, SDK/eSDK, recipe tasks, forced compile, dry runs, parsing |
 | Runtimes | Initialized host environment; kas config composition; fresh Docker/Podman containers; existing containers; official kas-container wrapper |
-| Layers | Search local layers, priorities through BitBake, add/remove/create, overlays, appends, cross-layer dependencies, edit metadata with backups |
+| Layers | Expandable layer tree, search local layers, priorities through BitBake, add/remove/create, overlays, appends, cross-layer dependencies, edit metadata with backups |
 | Recipes | Browse `.bb`, `.bbappend`, `.bbclass` and kas YAML, compile/patch/package individual recipes, list tasks, evaluate environment |
 | Development | devtool modify/add/build/build-image/reset/finish/update/upgrade, upstream version checks, device deployment, devshell, kernel menuconfig and config checks |
-| Errors and logs | Build and task log browsers, case-insensitive search with context, error-only view, failure notifications, exports, build summary reports |
+| Errors and logs | Build and task log browsers, case-insensitive search with context, error-only view, pause/resume, failure notifications, exports, build summary and timestamped slow-task reports |
 | Downloads | Fetch a recipe or all target dependencies, size/age inventory, orphan marker and partial-download audit, concrete prune plans |
 | Shared state | Local inventory, age-based prune plans, recipe cleansstate, signature dumps/diffs, `-S printdiff` |
-| Workbench | Filter evaluated environment variables, compare two snapshots, browse generated dependency edges, buildhistory Git diff |
-| Outputs | Discover images, SDKs, manifests, licenses, SBOMs, buildstats and buildhistory files; text preview and binary artifact paths |
+| Workbench | Filter evaluated environment variables, compare two snapshots, browse generated dependency edges and transitive/reverse dependency context, buildhistory Git diff |
+| Outputs | Discover images, SDKs, manifests, licenses, SBOMs, buildstats and buildhistory files; text preview, read-only tar rootfs inventory (permissions, owners, links), and binary artifact paths |
 | Configuration | Multiple named profiles, custom environment/runtime arguments, local.conf and bblayers.conf editor, backups, external-change detection, diagnostics |
 | Releases | Local branch/revision/tag report, dirty-tree status and literal layer-series compatibility checks; separate profiles and build directories per release |
 | Testing and security | testimage, ptest, CVE and SPDX command entry points when the required classes/configuration exist |
@@ -55,6 +55,7 @@ The [command reference](docs/commands.md) documents every built-in action. The [
 | F2 | Search and queue a command |
 | F3 | Refresh local metadata, logs, diagnostics and artifacts |
 | F4 | Edit profiles |
+| Alt+1…5 | Builds, metadata, task logs, workbench, caches |
 | Ctrl+L | Focus build log search |
 | Ctrl+P | Textual command palette |
 | Ctrl+Q | Stop active jobs and exit |
@@ -62,7 +63,7 @@ The [command reference](docs/commands.md) documents every built-in action. The [
 | Tab / Shift+Tab | Move focus |
 | Escape | Close a dialog |
 
-A terminal of at least **140 columns × 42 rows** is recommended for the complete toolbar. Smaller terminals can navigate widgets with Tab and use F2/F4.
+The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace; below 105 columns it switches to tabs and hides side panes. Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
 
 ## Build interruption and recovery
 
