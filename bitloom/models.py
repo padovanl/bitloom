@@ -12,7 +12,7 @@ class Profile:
     name: str = "default"
     root: str = "."
     build_dir: str = "build"
-    mode: str = "host"  # host, kas, container, kas-container
+    mode: str = "host"  # host, kas, container, kas-container, wrapper
     init_script: str = ""
     kas_file: str = "kas.yml"
     engine: str = "docker"
@@ -27,6 +27,11 @@ class Profile:
     container_args: list[str] = field(default_factory=list)
     targets: list[str] = field(default_factory=lambda: ["core-image-minimal"])
     source_mappings: dict[str, str] = field(default_factory=dict)
+    # wrapper mode: a project launcher script that runs kas for you.
+    # kas subcommands become launcher + [subcommand]; other commands use
+    # launcher + launcher_shell with {command} replaced by the quoted argv.
+    launcher: list[str] = field(default_factory=list)
+    launcher_shell: list[str] = field(default_factory=lambda: ["shell", "-c", "{command}"])
 
     @property
     def root_path(self) -> Path:
@@ -35,7 +40,7 @@ class Profile:
     @property
     def build_path(self) -> Path:
         value = self.build_dir
-        if self.mode in {"kas", "kas-container"} and self.build_dir == "build":
+        if self.mode in {"kas", "kas-container", "wrapper"} and self.build_dir == "build":
             value = self.environment.get("KAS_BUILD_DIR") or str(Path(self.environment.get("KAS_WORK_DIR", str(self.root_path))) / "build")
         p = Path(value).expanduser()
         return p.resolve() if p.is_absolute() else self.root_path / p
@@ -51,8 +56,17 @@ class Profile:
             raise ValueError("targets must be an array of strings")
         if not isinstance(self.source_mappings, dict) or any(not isinstance(k, str) or not isinstance(v, str) or not Path(k).is_absolute() or not Path(v).is_absolute() for k, v in self.source_mappings.items()):
             raise ValueError('source_mappings must map absolute runtime paths to absolute host paths')
-        if self.mode not in {"host", "kas", "container", "kas-container"}:
-            raise ValueError("Mode must be host, kas, container or kas-container")
+        if self.mode not in {"host", "kas", "container", "kas-container", "wrapper"}:
+            raise ValueError("Mode must be host, kas, container, kas-container or wrapper")
+        if not isinstance(self.launcher, list) or any(not isinstance(a, str) for a in self.launcher):
+            raise ValueError("launcher must be an array of strings")
+        if not isinstance(self.launcher_shell, list) or any(not isinstance(a, str) for a in self.launcher_shell):
+            raise ValueError("launcher_shell must be an array of strings")
+        if self.mode == "wrapper":
+            if not self.launcher or not self.launcher[0].strip():
+                raise ValueError('wrapper mode needs a launcher, e.g. ["./scripts/kas-wrapper.sh"]')
+            if not any("{command}" in part for part in self.launcher_shell):
+                raise ValueError("launcher_shell must contain {command}")
         if self.engine not in {"docker", "podman"}:
             raise ValueError("Container engine must be docker or podman")
         if self.mode == "container" and not (self.image or self.container_name):

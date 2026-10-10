@@ -267,7 +267,7 @@ class ProfilesScreen(NanoEditor, ModalScreen):
 
     def compose(self):
         with Vertical():
-            yield Label("Modes: host · kas · container · kas-container. Edit the JSON; [b]^O[/b] saves, [b]^X[/b] exits, [b]^W[/b] searches, [b]P[/b] on the main screen switches profile.")
+            yield Label("Modes: host · kas · container · kas-container · wrapper (project launcher script). Edit the JSON; [b]^O[/b] saves, [b]^X[/b] exits, [b]^W[/b] searches, [b]P[/b] on the main screen switches profile.")
             yield TextArea(json.dumps({"active": self.settings.active, "profiles": [asdict(p) for p in self.settings.profiles]}, indent=2), id="json")
             with Horizontal():
                 yield Button("Save profiles", variant="primary", id="save")

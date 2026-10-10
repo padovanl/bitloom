@@ -143,6 +143,12 @@ def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Inv
     passthrough.update(profile.environment)
     passthrough.update(k for k, v in (("MACHINE", profile.machine), ("DISTRO", profile.distro)) if v)
     env["BB_ENV_PASSTHROUGH_ADDITIONS"] = " ".join(sorted(passthrough))
+    if profile.mode == "wrapper":
+        # The project script owns the kas configuration (often via environment).
+        if argv[0] == "kas":
+            return Invocation([*profile.launcher, *argv[1:]], root, env)
+        command = shlex.join(argv)
+        return Invocation([*profile.launcher, *(part.replace("{command}", command) for part in profile.launcher_shell)], root, env)
     if profile.mode in {"kas", "kas-container"}:
         if profile.machine:
             env["KAS_MACHINE"] = profile.machine

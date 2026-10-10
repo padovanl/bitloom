@@ -1110,9 +1110,10 @@ class BitloomApp(App):
             text = Text(line, style=theme.error)
         elif "WARNING:" in line:
             text = Text(line, style=theme.warning)
-        elif line.startswith("NOTE:"):
+        elif "NOTE:" in line:
+            # kas prefixes "date - INFO - "; dim everything up to the message.
             text = Text(line)
-            text.stylize("dim", 0, 5)
+            text.stylize("dim", 0, line.index("NOTE:") + 5)
         else:
             text = Text(line)
         if query:
@@ -1498,7 +1499,7 @@ class BitloomApp(App):
         import json, re
         from .runtime import request
         from .workflows import diagnose, compare, bundle, preflight_report, cache_plan
-        build = "." if self.profile.mode in {"kas", "kas-container"} else str(self.profile.build_path)
+        build = "." if self.profile.mode in {"kas", "kas-container", "wrapper"} else str(self.profile.build_path)
         if self.profile.mode == "container":
             try:
                 build = str(Path(self.profile.container_root) / self.profile.build_path.relative_to(self.profile.root_path))

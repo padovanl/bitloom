@@ -274,7 +274,7 @@ function renderLog(target, text, query, append = false) {
     if (line.startsWith("$ ")) span.className = "l-cmd";
     else if (/ERROR:|FAILED|error:/.test(line)) span.className = "l-err";
     else if (line.includes("WARNING:")) span.className = "l-warn";
-    else if (line.startsWith("NOTE:")) span.className = "l-note";
+    else if (line.includes("NOTE:")) span.className = "l-note";
     if (needle) {
       let rest = line, index;
       while ((index = rest.toLowerCase().indexOf(needle)) >= 0) {

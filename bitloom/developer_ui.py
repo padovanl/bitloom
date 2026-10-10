@@ -466,7 +466,7 @@ class DeveloperPanel(Vertical):
             cap = await request(profile, 'dev-capabilities', '', recipe=recipe)
             rows = [{'name': 'multiconfig', 'value': value} for value in cap.get('multiconfig', [])]
             rows += [{'name': name, 'value': str(value)} for name, value in cap.get('identity', {}).items()]
-            if profile.mode not in {'kas', 'kas-container'}:
+            if profile.mode not in {'kas', 'kas-container', 'wrapper'}:
                 return report('PROFILE / MULTICONFIG CONTEXT', rows, json.dumps(asdict(profile), indent=2), identity=cap['identity'])
             inv = invocation(profile, ['kas', 'dump'])
             process = await asyncio.create_subprocess_exec(*inv.argv, cwd=inv.cwd, env=inv.env,
