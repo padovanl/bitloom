@@ -425,7 +425,7 @@ class DeveloperPanel(Vertical):
                         history = next((row for row in self.app.store.history() if row['id'] == self.app.selected_job_id), None)
                         if history:
                             metadata = json.loads(history['metadata'])
-                            profile = Profile(**metadata['profile'])
+                            profile = Profile.from_dict(metadata['profile'])
                             job = {'id': history['id'], 'log': history['log'], 'status': history['status']}
                     if Path(path).is_file(): kwargs['text'] = Path(path).read_text(errors='replace')[:32*1024*1024]
                 if view == 'downloads' and path and Path(path).is_file(): kwargs['text'] = Path(path).read_text(errors='replace')[:32*1024*1024]; path = ''

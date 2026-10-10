@@ -85,3 +85,12 @@ async def test_failed_prune_and_stop_notify_instead_of_crashing(tmp_path):
         await pilot.pause(.1)
         assert app.is_running
     app.store.close()
+
+
+def test_profiles_from_other_versions_load(tmp_path):
+    from bitloom.models import Settings
+    config = tmp_path / 'profiles.json'
+    config.write_text(json.dumps({'active': 'a', 'profiles': [{'name': 'a', 'root': str(tmp_path), 'future_field': 1}]}))
+    settings = Settings(config)
+    assert settings.profile.name == 'a' and settings.ignored_keys == ['future_field']
+    assert Profile.from_dict({'name': 'b', 'launcher': ['x'], 'unknown': 2}).launcher == ['x']

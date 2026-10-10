@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from . import __version__
 from .models import Profile
 from .runner import Runner, Job
 from .store import Store
@@ -65,14 +66,14 @@ async def serve(state):
             peer=writer.get_extra_info('socket').getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12)
             if struct.unpack('3i',peer)[1]!=os.getuid(): raise ValueError('Different user rejected')
             payload=json.loads(await asyncio.wait_for(reader.readline(),5)); op=payload['op']
-            if op=='submit': result={'job':encode(runner.submit(Profile(**payload['profile']),payload['title'],payload['command'],payload.get('action_id','custom')))}
+            if op=='submit': result={'job':encode(runner.submit(Profile.from_dict(payload['profile']),payload['title'],payload['command'],payload.get('action_id','custom')))}
             elif op in ['cancel','graceful']:
                 job=next(j for j in runner.jobs if j.id==payload['id'])
                 await (runner.cancel(job) if op=='cancel' else runner.graceful_stop(job)); result={'job':encode(job)}
             elif op=='stop':
                 if runner.active or any(j.status=='queued' for j in runner.jobs): raise ValueError('Stop jobs explicitly before stopping service')
                 stop.set(); result={'stopped':True}
-            elif op=='status': result={'pid':os.getpid(),'jobs':[encode(j) for j in runner.jobs],'active':runner.active.id if runner.active else None}
+            elif op=='status': result={'pid':os.getpid(),'version':__version__,'jobs':[encode(j) for j in runner.jobs],'active':runner.active.id if runner.active else None}
             else: raise ValueError('Unknown operation')
         except Exception as exc: result={'error':str(exc)}
         writer.write(json.dumps(result).encode()+b'\n'); await writer.drain(); writer.close(); await writer.wait_closed()
@@ -86,10 +87,11 @@ async def serve(state):
 class RemoteRunner:
     def __init__(self,store,callback):
         self.store=store; self.callback=callback; self.jobs=[]; self.active=None; self.offsets={}; self.poller=None
+        self.service_version=None  # None until the first status; 'unknown' for services older than this field
     def update(self,data):
         byid={j.id:j for j in self.jobs}
         for raw in data['jobs']:
-            raw=dict(raw); profile=Profile(**raw.pop('profile')); raw['log']=Path(raw['log']); raw['at_risk']=set(raw['at_risk']); raw['progress']=tuple(raw['progress']); raw['setscene']=tuple(raw.get('setscene',(0,0)))
+            raw=dict(raw); profile=Profile.from_dict(raw.pop('profile')); raw['log']=Path(raw['log']); raw['at_risk']=set(raw['at_risk']); raw['progress']=tuple(raw['progress']); raw['setscene']=tuple(raw.get('setscene',(0,0)))
             job=byid.get(raw['id']) or Job(profile,raw['title'],raw['command'])
             changed=job.status!=raw['status'] or job not in self.jobs
             for k,v in raw.items(): setattr(job,k,v)
@@ -110,6 +112,7 @@ class RemoteRunner:
                     self.offsets[job.id] += end
                     for line in chunk[:end].decode(errors='replace').splitlines(): self.callback(job,line.rstrip())
         self.active=next((j for j in self.jobs if j.id==data['active']),None)
+        if 'pid' in data: self.service_version=data.get('version','unknown')
     async def poll(self):
         while True:
             try: self.update(await asyncio.to_thread(rpc,self.store.directory,{'op':'status'}))

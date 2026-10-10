@@ -17,6 +17,7 @@ from textual.css.query import NoMatches
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, DataTable, Footer, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane, Tree
 
+from . import __version__
 from .commands import invocation
 from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, inventory, metadata, prune_cache, search_log, task_logs
 from .models import Profile, Settings, read_assignments
@@ -643,6 +644,13 @@ class BitloomApp(App):
         title = active.title if active else recent["title"] if recent else "No jobs in this profile"
         glyph, color = self.status_style(status)
         connection = ("⇄ service", theme.success) if self.persistent else ("◇ embedded", theme.foreground)
+        service_version = getattr(self.runner, "service_version", None)
+        if self.persistent and service_version not in {None, __version__}:
+            connection = (f"⇄ service {service_version} (restart when idle)", theme.warning)
+            if not getattr(self, "_version_warned", False):
+                self._version_warned = True
+                self.notify(f"The build service runs Bitloom {service_version}, this TUI {__version__}. Stop it when idle "
+                            "(bitloom --service-stop) so the next launch starts the current version.", severity="warning", timeout=20)
         self.main_query("#status-line", Static).update(Text.assemble((connection[0], connection[1]), ("  ·  ", "dim"), (glyph, f"bold {color}")))
         metric = Text(no_wrap=True, overflow="ellipsis")
         metric.append(f"{glyph} {status.upper()}\n", style=f"bold {color}")
@@ -1005,6 +1013,8 @@ class BitloomApp(App):
         table = self.main_query("#health", DataTable)
         table.clear()
         health = list(health) + [("WARN", "Team profiles", warning) for warning in self.settings.include_warnings]
+        if self.settings.ignored_keys:
+            health.append(("WARN", "Profile keys", "ignored unknown keys (typo or another Bitloom version): " + ", ".join(self.settings.ignored_keys)))
         for status, name, detail in health:
             table.add_row(Text(status, style={"OK": self.current_theme.success, "WARN": self.current_theme.warning, "INFO": self.current_theme.accent}[status]), name, Text(detail, overflow="ellipsis"))
         self.main_query("#detail", Static).update(f"{len(entries)} local metadata entries. BitBake layer commands show evaluated configuration. Enter opens a file.")
@@ -1340,7 +1350,7 @@ class BitloomApp(App):
             return
         try:
             data = json.loads(row["metadata"])
-            p = Profile(**data["profile"])
+            p = Profile.from_dict(data["profile"])
             job = self.runner.submit(p, row["title"], json.loads(row["argv"]), data.get("action", "custom"))
             self.select_job(job.id, job.log)
         except Exception as exc:
@@ -1357,7 +1367,7 @@ class BitloomApp(App):
             self.notify("No failure logfile path was reported by this build", severity="warning")
             return
         try:
-            profile = Profile(**metadata["profile"])
+            profile = Profile.from_dict(metadata["profile"])
             for path in paths[:10]:
                 job = self.runner.submit(profile, "Failed task log: " + Path(path).name, ["cat", path], "custom")
             self.select_job(job.id, job.log)

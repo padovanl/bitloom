@@ -301,7 +301,7 @@ function renderState() {
   if (!$("target").dataset.touched && p) $("target").value = (p.targets || [])[0] || "";
   const service = state.service;
   $("service-dot").className = "dot " + (service.error ? "err" : "ok");
-  $("service-label").textContent = service.error ? "service unavailable" : "service pid " + service.pid;
+  $("service-label").textContent = service.error ? "service unavailable" : "service pid " + service.pid + (service.outdated ? ` · older version ${service.version}: restart when idle` : "");
   const rows = state.history.filter((row) => !p || row.profile === p.name);
   const recent = rows[0];
   $("c-status").textContent = recent ? (GLYPH[recent.status] || "·") + " " + recent.status.toUpperCase() : "IDLE";
