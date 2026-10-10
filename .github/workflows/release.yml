@@ -1,0 +1,59 @@
+name: Release Bitloom
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Stable version without v prefix (for example 1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bitloom-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Validate version and reject existing tags
+        run: |
+          python -c 'import os; from tools.build_release import release_version; release_version(os.environ["RELEASE_VERSION"])'
+          if git ls-remote --exit-code --tags origin "refs/tags/v${RELEASE_VERSION}"; then
+            echo 'This release tag already exists. Choose a new version.' >&2
+            exit 1
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+      - name: Install build and test dependencies
+        run: python -m pip install -e '.[dev]' build wheel
+      - name: Test
+        run: python -m pytest -q
+      - name: Build source archive, wheel and Debian package
+        run: python tools/build_release.py "$RELEASE_VERSION" --output dist/release
+      - name: Verify Debian installation
+        run: |
+          sudo dpkg -i "dist/release/bitloom_${RELEASE_VERSION}_all.deb"
+          cd /tmp
+          /usr/bin/bitloom --help
+          /usr/bin/yoctotui --help
+          /usr/bin/python3 -c 'import os, sys; sys.path.insert(0, "/opt/bitloom/lib"); import yoctotui; assert yoctotui.__version__ == os.environ["RELEASE_VERSION"]'
+      - name: Publish GitHub release
+        run: |
+          gh release create "v${RELEASE_VERSION}" dist/release/* \
+            --target "$GITHUB_SHA" --title "Bitloom ${RELEASE_VERSION}" --generate-notes
