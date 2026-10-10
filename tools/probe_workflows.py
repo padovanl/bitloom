@@ -14,7 +14,7 @@ from bitloom.workflows import bundle,compare,preflight_report
 async def main():
     evidence=json.loads((ROOT/'.validation/result.json').read_text())
     if not evidence.get('artifact_verified'): raise ValueError('Verified real build required')
-    p=Profile(name='kas-integration',root=str(ROOT),mode='kas-container',kas_file='tests/integration/kas-minimal.yml',targets=['core-image-minimal'],environment={'KAS_WORK_DIR':evidence['work'],'KAS_CONTAINER_ENGINE':'docker','KAS_CONTAINER_IMAGE':'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'})
+    p=Profile(name='kas-scarthgap',root=str(ROOT),mode='kas-container',kas_file='tests/integration/kas-minimal.yml',targets=['core-image-minimal'],environment={'KAS_WORK_DIR':evidence['work'],'KAS_CONTAINER_ENGINE':'docker','KAS_CONTAINER_IMAGE':'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'})
     report={}
     report['preflight']=preflight_report(await request(p,'preflight','/work/build'))
     snapshot=await request(p,'snapshot','/work/build')

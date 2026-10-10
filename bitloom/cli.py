@@ -4,7 +4,58 @@ import argparse
 from pathlib import Path
 
 
-def make_demo(directory: Path):
+DEMO_TOOL = "Bitloom demo sample - not produced by a real build"
+
+
+def release_samples(release: str) -> dict[str, str]:
+    """Release-specific sample files: core layer series, SBOM format and CVE evidence."""
+    import json
+    image = "build/tmp/deploy/images/qemux86-64/demo-image-qemux86-64.rootfs"
+    if release == "scarthgap":
+        sbom = {"spdxVersion": "SPDX-2.2", "name": "demo-image (demo sample)", "creationInfo": {"created": "2026-01-01T00:00:00Z", "creators": ["Tool: " + DEMO_TOOL]},
+                "packages": [{"name": "busybox", "versionInfo": "1.36.1", "licenseConcluded": "GPL-2.0-only", "supplier": "Organization: Demo Corp",
+                              "externalRefs": [{"referenceCategory": "SECURITY", "referenceType": "cpe23Type", "referenceLocator": "cpe:2.3:a:busybox:busybox:1.36.1:*:*:*:*:*:*:*"}]},
+                             {"name": "openssh", "versionInfo": "9.6p1", "licenseConcluded": "BSD-2-Clause",
+                              "externalRefs": [{"referenceCategory": "SECURITY", "referenceType": "cpe23Type", "referenceLocator": "cpe:2.3:a:openbsd:openssh:9.6p1:*:*:*:*:*:*:*"}]},
+                             {"name": "demo-agent", "versionInfo": "1.0", "licenseConcluded": "NOASSERTION"}]}
+        return {"poky/meta/conf/layer.conf": 'BBFILE_COLLECTIONS += "core"\nLAYERSERIES_CORENAMES = "scarthgap"\n',
+                image + ".spdx.json": json.dumps(sbom, indent=1),
+                "build/tmp/log/cve/cve-summary.json": json.dumps({"note": DEMO_TOOL, "package": [{"name": "openssh", "issue": [{"id": "CVE-0000-0001", "status": "Unpatched"}]}]}, indent=1)}
+    graph = [{"type": "CreationInfo", "@id": "_:c", "created": "2026-06-01T00:00:00Z", "createdUsing": ["tool"]},
+             {"type": "Tool", "spdxId": "tool", "name": DEMO_TOOL}]
+    for index, (name, version, purl, supplier) in enumerate([("busybox", "1.37.0", True, True), ("openssh", "10.0p1", True, True), ("demo-agent", "1.0", False, False)]):
+        package = {"type": "software_Package", "spdxId": f"p{index}", "name": name, "software_packageVersion": version}
+        if purl:
+            package["externalIdentifier"] = [{"type": "ExternalIdentifier", "externalIdentifierType": "packageUrl", "identifier": f"pkg:yocto/{name}@{version}"}]
+        if supplier:
+            package["suppliedBy"] = "demo-corp"
+        graph.append(package)
+    graph += [{"type": "simplelicensing_LicenseExpression", "spdxId": "l0", "simplelicensing_licenseExpression": "GPL-2.0-only"},
+              {"type": "Relationship", "spdxId": "r0", "relationshipType": "hasConcludedLicense", "from": "p0", "to": ["l0"]},
+              {"type": "Relationship", "spdxId": "r1", "relationshipType": "hasConcludedLicense", "from": "p1", "to": ["l0"]}]
+    for index, (cve, kind, package) in enumerate([("CVE-0000-0001", "Affected", "p1"), ("CVE-0000-0002", "Fixed", "p0"), ("CVE-0000-0003", "NotAffected", "p0")]):
+        graph += [{"type": "security_Vulnerability", "spdxId": f"v{index}", "externalIdentifier": [{"externalIdentifierType": "cve", "identifier": cve}]},
+                  {"type": f"security_Vex{kind}VulnAssessmentRelationship", "spdxId": f"x{index}", "from": f"v{index}", "to": [package]}]
+    return {"layers/openembedded-core/meta/conf/layer.conf": 'BBFILE_COLLECTIONS += "core"\nLAYERSERIES_CORENAMES = "wrynose"\n',
+            image + ".spdx.json": json.dumps({"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld", "@graph": graph}, indent=1),
+            image + ".sbom-cve-check.yocto.json": json.dumps({"note": DEMO_TOOL, "affected": ["CVE-0000-0001"]}, indent=1)}
+
+
+def prepare_demo(state: Path) -> Path:
+    """Generic demo plus Scarthgap and Wrynose sample workspaces as extra profiles."""
+    from .models import Profile, Settings
+    config = make_demo(state / "demo")
+    settings = Settings(config)
+    names = {p.name for p in settings.profiles}
+    for release in ("scarthgap", "wrynose"):
+        root = make_demo(state / f"demo-{release}", release=release).parents[1]
+        if f"demo-{release}" not in names:
+            settings.profiles.append(Profile(name=f"demo-{release}", root=str(root.resolve()), targets=["demo-image"]))
+    settings.save()
+    return config
+
+
+def make_demo(directory: Path, release: str | None = None):
     directory.mkdir(parents=True, exist_ok=True)
     files = {
         "meta-demo/conf/layer.conf": 'BBFILE_COLLECTIONS += "demo"\nBBFILE_PRIORITY_demo = "6"\nLAYERSERIES_COMPAT_demo = "scarthgap"\n',
@@ -20,6 +71,8 @@ def make_demo(directory: Path):
         "build/sstate-cache/ab/example.siginfo": 'Demo signature, not reusable sstate\n',
         "kas.yml": 'header:\n  version: 14\nmachine: qemux86-64\ndistro: poky\ntarget: demo-image\n',
     }
+    if release:
+        files.update(release_samples(release))
     for name, content in files.items():
         p = directory / name
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -81,7 +134,7 @@ def main():
             print(f"{a.id:20} {a.group:12} {a.title}")
         return
     if args.demo:
-        args.config = make_demo(args.state / "demo")
+        args.config = prepare_demo(args.state)
     if args.sbom or args.cra:
         from .models import Settings
         from .sbom import cra_report, sbom_report

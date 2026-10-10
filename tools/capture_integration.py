@@ -21,8 +21,8 @@ async def capture():
         raise RuntimeError('A successfully built and verified rootfs is required before making this capture')
     config = state / 'profiles.json'
     settings = Settings(config)
-    settings.profiles = [Profile(name='kas-integration', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml', machine='qemux86-64', distro='poky', environment={'KAS_WORK_DIR': report['work'], 'KAS_CONTAINER_ENGINE': 'docker', 'KAS_CONTAINER_IMAGE':'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'}, targets=['core-image-minimal'])]
-    settings.active = 'kas-integration'
+    settings.profiles = [Profile(name='kas-scarthgap', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml', machine='qemux86-64', distro='poky', environment={'KAS_WORK_DIR': report['work'], 'KAS_CONTAINER_ENGINE': 'docker', 'KAS_CONTAINER_IMAGE':'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'}, targets=['core-image-minimal'])]
+    settings.active = 'kas-scarthgap'
     settings.save()
     os.environ.pop('NO_COLOR', None)
     app = BitloomApp(config, state)

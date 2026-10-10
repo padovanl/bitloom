@@ -18,7 +18,7 @@ from bitloom.runner import Runner
 from bitloom.store import Store
 
 
-KAS_IMAGE = 'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'
+from tools.releases import KAS_IMAGE, RELEASES, add_arguments, profile as release_profile
 
 
 def collect_evidence(args):
@@ -53,31 +53,27 @@ async def validate(args):
     args.work.mkdir(parents=True, exist_ok=True)
     state = ROOT / '.validation'
     if args.verify_only:
-        report = json.loads((state / 'result.json').read_text())
+        report = json.loads((state / RELEASES[args.release]['result']).read_text())
         evidence = await asyncio.to_thread(collect_evidence, args)
         report['artifact_evidence'] = evidence
         report['artifacts'] = [str(Path('.validation/artifacts') / item['name']) for item in evidence]
         report['artifact_verified'] = bool(evidence) and all(a['has_shell'] for a in evidence)
-        (state / 'result.json').write_text(json.dumps(report, indent=2))
+        (state / RELEASES[args.release]['result']).write_text(json.dumps(report, indent=2))
         print(json.dumps(report, indent=2))
         return 0 if report['status'] == 'success' and report['artifact_verified'] else 1
     store = Store(state)
-    profile = Profile(
-        name='kas-integration', root=str(ROOT), mode='kas-container',
-        kas_file='tests/integration/kas-minimal.yml', build_dir='build',
-        environment={'KAS_WORK_DIR': str(args.work.resolve()), 'KAS_CONTAINER_ENGINE': args.engine, 'KAS_CLONE_DEPTH': '1', 'KAS_CONTAINER_IMAGE': KAS_IMAGE},
-    )
+    profile = release_profile(args.release, args.work, args.engine, clone_depth=True)
     def event(job, line):
         if line is not None:
             print(line, flush=True)
     runner = Runner(store, event)
-    job = runner.submit(profile, 'Integration: core-image-minimal (kas container)', ['kas', 'build'], 'kas-build')
+    job = runner.submit(profile, f'Integration {args.release}: core-image-minimal (kas container)', ['kas', 'build'], 'kas-build')
     try:
         await runner.consumer
     except asyncio.CancelledError:
         await runner.shutdown()
         raise
-    report = {'status': job.status, 'exit_code': job.code, 'started': job.started, 'finished': job.finished, 'log': str(job.log.relative_to(ROOT)), 'work': str(args.work), 'target': 'core-image-minimal', 'machine': 'qemux86-64', 'release_tag': 'yocto-5.0.8', 'runtime': 'kas-container', 'artifacts': [str(p) for p in args.work.glob('build/tmp/deploy/images/qemux86-64/*.tar.bz2')]}
+    report = {'status': job.status, 'exit_code': job.code, 'started': job.started, 'finished': job.finished, 'log': str(job.log.relative_to(ROOT)), 'work': str(args.work), 'target': 'core-image-minimal', 'machine': 'qemux86-64', 'release': args.release, 'release_tag': RELEASES[args.release]['tag'], 'runtime': 'kas-container', 'artifacts': [str(p) for p in args.work.glob('build/tmp/deploy/images/qemux86-64/*.tar.bz2')]}
     if job.status == 'success':
         try:
             report['artifact_evidence'] = await asyncio.to_thread(collect_evidence, args)
@@ -86,7 +82,7 @@ async def validate(args):
         except Exception as exc:
             report['artifact_verified'] = False
             report['verification_error'] = str(exc)
-    (state / 'result.json').write_text(json.dumps(report, indent=2))
+    (state / RELEASES[args.release]['result']).write_text(json.dumps(report, indent=2))
     store.close()
     print(json.dumps(report, indent=2))
     return 0 if job.status == 'success' and report.get('artifact_verified') else 1
@@ -94,7 +90,10 @@ async def validate(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work', type=Path, default=Path('/tmp/bitloom-kas-validation'))
+    add_arguments(parser)
+    parser.add_argument('--work', type=Path, help='Linux build workspace (default per release, see tools/releases.py)')
     parser.add_argument('--verify-only', action='store_true', help='Verify/export artifacts from a completed recorded build')
     parser.add_argument('--engine', choices=['docker', 'podman'], default='docker')
-    raise SystemExit(asyncio.run(validate(parser.parse_args())))
+    arguments = parser.parse_args()
+    arguments.work = arguments.work or RELEASES[arguments.release]['work']
+    raise SystemExit(asyncio.run(validate(arguments)))
