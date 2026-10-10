@@ -187,3 +187,82 @@ def test_kas_external_work_directory(tmp_path):
     assert p.build_path == Path('/tmp/separate-work/build')
     p.environment['KAS_BUILD_DIR'] = '/tmp/custom-build'
     assert p.build_path == Path('/tmp/custom-build')
+
+
+async def test_force_stop_uses_bitbake_second_interrupt(tmp_path):
+    bin_dir = tmp_path / 'bin'
+    bin_dir.mkdir()
+    client = bin_dir / 'bitbake'
+    client.write_text('#!' + sys.executable + '\n' + '''import signal, time
+count = 0
+def handler(sig, frame):
+    global count
+    count += 1
+    print(f"interrupt={count}", flush=True)
+    if count == 2:
+        print("Execution was interrupted, returning a non-zero exit code.", flush=True)
+        raise SystemExit(1)
+signal.signal(signal.SIGINT, handler)
+print("NOTE: recipe busybox-1.36.1-r0: task do_compile: Started", flush=True)
+while True:
+    time.sleep(.1)
+''')
+    client.chmod(0o755)
+    store = Store(tmp_path / 'state')
+    runner = Runner(store, lambda *_: None)
+    profile = Profile(root=str(tmp_path), environment={'PATH': str(bin_dir) + ':' + os.environ['PATH']})
+    job = runner.submit(profile, 'build', ['bitbake', 'busybox'])
+    for _ in range(50):
+        if job.at_risk:
+            break
+        await asyncio.sleep(.02)
+    assert job.at_risk == {'busybox'}
+    await runner.cancel(job)
+    await runner.consumer
+    assert job.status == 'cancelled' and job.stop_confirmed
+    assert 'interrupt=2' in job.log.read_text()
+    store.close()
+
+
+def test_kas_action_runs_inside_generic_container(tmp_path):
+    p = Profile(root=str(tmp_path), mode='container', image='kas:local', kas_file='kas/board.yml')
+    inv = invocation(p, ['kas', 'build'])
+    assert inv.argv[0] == 'docker'
+    assert inv.argv[-1] == 'cd /work && exec kas build kas/board.yml'
+
+
+def test_kas_profile_machine_override(tmp_path):
+    p = Profile(root=str(tmp_path), mode='kas-container', machine='qemuarm', distro='poky')
+    env = invocation(p, ['bitbake', 'image']).env
+    assert env['KAS_MACHINE'] == 'qemuarm' and env['KAS_DISTRO'] == 'poky'
+
+
+def test_prune_rechecks_new_lock(tmp_path):
+    p = tmp_path / 'source.tar.gz'
+    p.write_text('source')
+    e = Entry(p.name, '', p, p.stat().st_size, p.stat().st_mtime)
+    p.with_name(p.name + '.lock').touch()
+    assert prune_cache(tmp_path, [e]) == (0, 0)
+    assert p.exists()
+
+
+async def test_failed_task_log_path_survives_history(tmp_path):
+    store = Store(tmp_path / 'state')
+    runner = Runner(store, lambda *_: None)
+    job = runner.submit(Profile(root=str(tmp_path)), 'failed compile', [sys.executable, '-c', 'print("ERROR: Logfile of failure stored in: /work/build/tmp/work/test/temp/log.do_compile.42"); exit(1)'])
+    await runner.consumer
+    assert job.failure_logs == ['/work/build/tmp/work/test/temp/log.do_compile.42']
+    saved = json.loads(store.history()[0]['metadata'])
+    assert saved['failure_logs'] == job.failure_logs
+    store.close()
+
+
+def test_kas_metadata_indexes_external_checkout(tmp_path):
+    project = tmp_path / 'project'
+    project.mkdir()
+    work = tmp_path / 'work'
+    conf = work / 'poky/meta/conf'
+    conf.mkdir(parents=True)
+    (conf / 'layer.conf').write_text('')
+    profile = Profile(root=str(project), mode='kas', environment={'KAS_WORK_DIR': str(work)})
+    assert any(e.name == 'meta' and e.kind == 'layer' for e in metadata(profile))

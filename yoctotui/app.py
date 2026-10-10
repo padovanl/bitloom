@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -13,7 +12,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane
 
-from .commands import BY_ID, invocation
+from .commands import invocation
 from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, inventory, metadata, prune_cache, search_log, task_logs
 from .models import Profile, Settings
 from .runner import Job, Runner
@@ -89,9 +88,7 @@ class YoctoApp(App):
         self.artifacts: list[Entry] = []
         self.selected_log: Path | None = None
         self.selected_job_id: str | None = None
-        self.active_target = ""
         self.errors_only = False
-        self.scan_generation = 0
         self.last_line = ""
         self.live_lines: list[str] = []
         self.history_rows: dict[str, dict] = {}
@@ -138,6 +135,7 @@ class YoctoApp(App):
                     yield Input(placeholder="Filter task logs by recipe or task…", id="task-search")
                     yield Button("Refresh logs", id="logs-refresh")
                     yield Button("Read selected", id="logs-read")
+                    yield Button("Failed task log", id="failed-task-log")
                 yield DataTable(id="task-table", cursor_type="row")
             with TabPane("▣ Caches & downloads", id="caches"):
                 with Horizontal(classes="tools"):
@@ -472,6 +470,8 @@ class YoctoApp(App):
             self.stop_build()
         elif ident == "retry":
             self.retry_job()
+        elif ident == "failed-task-log":
+            self.read_failed_task()
         elif ident == "export":
             self.export_log()
         elif ident == "cache-scan":
@@ -506,6 +506,25 @@ class YoctoApp(App):
         except Exception as exc:
             self.notify(str(exc), severity="error")
 
+    def read_failed_task(self):
+        row = self.history_rows.get(self.selected_job_id)
+        if not row:
+            self.notify("Select a failed build in history first")
+            return
+        metadata = json.loads(row["metadata"])
+        paths = metadata.get("failure_logs", [])
+        if not paths:
+            self.notify("No failure logfile path was reported by this build", severity="warning")
+            return
+        try:
+            profile = Profile(**metadata["profile"])
+            for path in paths[:10]:
+                job = self.runner.submit(profile, "Failed task log: " + Path(path).name, ["cat", path], "custom")
+            self.select_job(job.id, job.log)
+            self.query_one("#workspace", TabbedContent).active = "builds"
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error")
+
     @work(exclusive=True, group="export")
     async def export_log(self):
         if not self.selected_log or not self.selected_log.exists():
@@ -522,7 +541,7 @@ class YoctoApp(App):
         p = cache_path(self.profile, kind)
         self.query_one("#scan-state", Static).update(f"Scanning {p}…")
         entries = await asyncio.to_thread(inventory, p)
-        if kind != str(self.query_one("#cache-kind", Select).value):
+        if kind != str(self.query_one("#cache-kind", Select).value) or p != cache_path(self.profile, kind):
             return
         self.cache_entries = entries
         self.render_cache()
@@ -660,8 +679,8 @@ class YoctoApp(App):
     def recovery_screen(self, job):
         from .stop import RecoveryScreen
         recipes = sorted(job.at_risk)
-        if job.profile.mode in {"kas", "kas-container"} or job.profile.container_name:
-            self.notify("External runtime: verify all tasks have stopped before manually queuing clean.", severity="warning", timeout=12)
+        if job.profile.mode in {"kas", "kas-container"} or job.profile.container_name or not job.stop_confirmed:
+            self.notify("Shutdown unconfirmed: verify all tasks have stopped before manually queuing clean.", severity="warning", timeout=12)
             return
         if recipes:
             self.push_screen(RecoveryScreen(recipes), lambda chosen: self.recover(job, chosen))

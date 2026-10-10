@@ -28,7 +28,7 @@ class Store:
         self.db.execute("INSERT OR REPLACE INTO jobs VALUES (?,?,?,?,?,?,?,?,?,?)", (
             job.id, job.profile.name, job.title, json.dumps(job.command), job.status,
             job.started, job.finished, job.code, str(job.log),
-            json.dumps({"profile": job.profile.__dict__, "action": job.action_id}),
+            json.dumps({"profile": job.profile.__dict__, "action": job.action_id, "failure_logs": job.failure_logs}),
         ))
         self.db.commit()
 

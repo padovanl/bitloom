@@ -40,22 +40,28 @@ def metadata(profile: Profile) -> list[Entry]:
     entries = []
     # Do not traverse tmp/downloads while indexing metadata.
     skip = {profile.build_path.resolve(), cache_path(profile, "downloads").resolve(), cache_path(profile, "sstate").resolve()}
-    for directory, dirs, files in os.walk(profile.root_path, followlinks=False):
-        base = Path(directory)
-        dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".yoctotui", "tmp", "sstate-cache", "downloads"} and (base / d).resolve() not in skip)
-        for name in sorted(files):
-            p = base / name
-            if p.is_symlink():
-                continue
-            if name == "layer.conf" and base.name == "conf":
-                v = read_assignments(p)
-                entries.append(Entry(base.parent.name, "layer", base.parent, detail=v.get("LAYERSERIES_COMPAT:" + base.parent.name, "See layer.conf")))
-            elif p.suffix in {".bb", ".bbappend", ".bbclass"}:
-                entries.append(Entry(name, p.suffix[1:], p, detail=str(base.relative_to(profile.root_path))))
-            elif p.suffix in {".yml", ".yaml"}:
-                entries.append(Entry(name, "yaml", p))
-            if len(entries) >= 15000:
-                return entries
+    roots = [profile.root_path]
+    if profile.mode in {"kas", "kas-container"} and profile.environment.get("KAS_WORK_DIR"):
+        work = Path(profile.environment["KAS_WORK_DIR"]).expanduser().resolve()
+        if work != profile.root_path and not work.is_relative_to(profile.root_path):
+            roots.append(work)
+    for root in roots:
+        for directory, dirs, files in os.walk(root, followlinks=False):
+            base = Path(directory)
+            dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".yoctotui", "tmp", "sstate-cache", "downloads"} and (base / d).resolve() not in skip)
+            for name in sorted(files):
+                p = base / name
+                if p.is_symlink():
+                    continue
+                if name == "layer.conf" and base.name == "conf":
+                    v = read_assignments(p)
+                    entries.append(Entry(base.parent.name, "layer", base.parent, detail=v.get("LAYERSERIES_COMPAT:" + base.parent.name, "See layer.conf")))
+                elif p.suffix in {".bb", ".bbappend", ".bbclass"}:
+                    entries.append(Entry(name, p.suffix[1:], p, detail=str(base.relative_to(root))))
+                elif p.suffix in {".yml", ".yaml"}:
+                    entries.append(Entry(name, "yaml", p))
+                if len(entries) >= 15000:
+                    return entries
     return entries
 
 
@@ -185,7 +191,7 @@ def prune_cache(root: Path, entries: list[Entry]) -> tuple[int, int]:
     removed = freed = 0
     for entry in entries:
         p = entry.path
-        if p.is_symlink() or not p.is_file():
+        if p.is_symlink() or not p.is_file() or p.with_name(p.name + ".lock").exists():
             continue
         try:
             p.resolve().relative_to(root)
