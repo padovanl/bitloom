@@ -119,6 +119,40 @@ def task_logs(profile: Profile) -> list[Entry]:
     return sorted(items, key=lambda e: e.modified, reverse=True)[:3000]
 
 
+def console_logs(profile: Profile, limit: int = 200) -> list[Entry]:
+    """BitBake's own console log of every build (BB_CONSOLELOG), including builds
+    started outside Bitloom: terminal, scripts or CI using the same build directory."""
+    root = profile.build_path / "tmp/log/cooker"
+    items = []
+    if root.is_dir():
+        for machine in root.iterdir():
+            if not machine.is_dir() or machine.is_symlink():
+                continue
+            for path in machine.glob("*.log"):
+                try:
+                    if path.is_symlink():
+                        continue
+                    s = path.stat()
+                    items.append(Entry(path.name, machine.name, path, s.st_size, s.st_mtime, console_status(path)))
+                except OSError:
+                    pass
+    return sorted(items, key=lambda e: e.modified, reverse=True)[:limit]
+
+
+def console_status(path: Path) -> str:
+    """Classify from the log tail: BitBake prints its task summary last."""
+    with path.open("rb") as stream:
+        stream.seek(max(0, path.stat().st_size - 8192))
+        tail = stream.read().decode(errors="replace")
+    if re.search(r"Summary: There (?:was|were) \d+ ERROR", tail) or "failed with exit code" in tail or "Summary: 1 task failed" in tail or re.search(r"Summary: \d+ tasks? failed", tail):
+        return "failed"
+    if "all succeeded" in tail or "didn't need to be rerun" in tail:
+        return "success"
+    if "Execution was interrupted" in tail:
+        return "interrupted"
+    return "unknown"
+
+
 def diagnostics(profile: Profile) -> list[tuple[str, str, str]]:
     results = []
     def check(ok, name, detail):

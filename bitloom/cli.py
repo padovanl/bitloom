@@ -13,6 +13,8 @@ def make_demo(directory: Path):
         "build/conf/local.conf": 'MACHINE = "qemux86-64"\nDISTRO = "poky"\nBB_NUMBER_THREADS = "8"\nPARALLEL_MAKE = "-j8"\nINHERIT += "buildhistory buildstats"\n',
         "build/conf/bblayers.conf": 'BBLAYERS = "${TOPDIR}/../meta-demo"\n',
         "build/tmp/work/core2-64-poky-linux/demo-agent/1.0-r0/temp/log.do_compile.1234": 'NOTE: Starting compile\nagent.c:12: error: unknown type name telemetry_t\nERROR: oe_runmake failed\nERROR: Task demo-agent:do_compile failed with exit code 1\n',
+        # Sample of BitBake's console log (BB_CONSOLELOG) for a build started outside Bitloom.
+        "build/tmp/log/cooker/qemux86-64/20260101120000.log": 'NOTE: Demo sample console log, not an actual build\nNOTE: Running task 1 of 2 (/demo/meta-demo/recipes-apps/demo-agent/demo-agent_1.0.bb:do_compile)\nNOTE: recipe demo-agent-1.0-r0: task do_compile: Started\nERROR: demo-agent-1.0-r0 do_compile: oe_runmake failed\nERROR: Logfile of failure stored in: /demo/build/tmp/work/core2-64-poky-linux/demo-agent/1.0-r0/temp/log.do_compile.1234\nNOTE: recipe demo-agent-1.0-r0: task do_compile: Failed\nNOTE: Tasks Summary: Attempted 2 tasks of which 0 didn\'t need to be rerun and 1 failed.\n\nSummary: 1 task failed:\n  /demo/meta-demo/recipes-apps/demo-agent/demo-agent_1.0.bb:do_compile\n',
         "build/tmp/deploy/images/qemux86-64/demo-image.manifest": 'busybox 1.36.1\nopenssh 9.6p1\ndemo-agent 1.0\n',
         "build/downloads/example-source.tar.gz.done": 'Demo marker, not an actual download\n',
         "build/sstate-cache/ab/example.siginfo": 'Demo signature, not reusable sstate\n',

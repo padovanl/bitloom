@@ -23,7 +23,7 @@ from .models import Profile, Settings, read_assignments
 from .runner import Job, Runner
 from .screens import ActionScreen, FileScreen, ProfilesScreen, PruneScreen
 from .store import Store
-from .keys import FILTERS, PRIMARY, SECTION_KEYS, SECTIONS, button_hints, section_bindings
+from .keys import FILTERS, PRIMARY, SECTION_KEYS, SECTIONS, button_hints, section_bindings, sectional_actions
 
 HELP = """# Bitloom cockpit
 
@@ -235,8 +235,9 @@ class BitloomApp(App):
         Binding("ctrl+x", "quit", "Exit", show=False),
     ]
     # Actions that only make sense on the main screen with no dialog open.
-    MAIN_ONLY = {"press", "focus", "toggle_select", "open_select", "open_metadata", "build_summary", "focus_filter",
-                 "leave_field", "cursor", "page", "focus_target", "quick_build", "switch_profile", "section", "cycle_section"}
+    SECTIONAL = sectional_actions()
+    MAIN_ONLY = SECTIONAL | {"focus_filter", "leave_field", "cursor", "page", "focus_target", "quick_build", "switch_profile",
+                             "section", "cycle_section"}
 
     def __init__(self, config: Path, state: Path, persistent=False):
         super().__init__()
@@ -350,6 +351,7 @@ class BitloomApp(App):
                                     yield Button("Stop…", variant="warning", id="stop")
                                     yield Button("Retry", id="retry")
                                     yield Button("Export", id="export")
+                                    yield Button("Console", id="console-builds")
                                 yield Static("No observed active tasks", id="task-monitor", markup=False)
                             with Vertical(id="stream-panel"):
                                 yield Static("Select an operation to inspect its output", id="job-state", markup=False)
@@ -736,8 +738,7 @@ class BitloomApp(App):
         if action in {"focus_target", "quick_build"}:
             letter = "t" if action == "focus_target" else "b"
             return not any(key == letter for key, _, _, _ in keys)
-        sectional = {"press", "focus", "toggle_select", "open_select", "open_metadata", "build_summary"}
-        if action in sectional:
+        if action in self.SECTIONAL:
             from textual.actions import parse
             return any(parse(bound)[1:] == (action, tuple(parameters)) for _, bound, _, _ in keys)
         return True
@@ -773,6 +774,25 @@ class BitloomApp(App):
 
     def action_build_summary(self):
         self.make_report("build-report")
+
+    def action_console_builds(self):
+        from .screens import ConsoleBuildsScreen
+        self.push_screen(ConsoleBuildsScreen(self.profile), self.open_console_build)
+
+    def open_console_build(self, entry):
+        """Show a build started outside Bitloom with the same search, filters and reports."""
+        if not entry:
+            return
+        self.selected_job_id = None
+        self.selected_log = entry.path
+        self.live_lines.clear()
+        self.action_section("builds")
+        glyph, color = self.status_style(entry.detail)
+        self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {entry.detail}", f"bold {color}"), "  ", ("console build " + entry.name, "bold"),
+                                                                   ("  ·  " + str(entry.path), "dim"), no_wrap=True, overflow="ellipsis"))
+        self.main_query("#progress", ProgressBar).set_class(entry.detail == "failed", "failed")
+        self.main_query("#progress", ProgressBar).update(total=100, progress=100 if entry.detail == "success" else 0)
+        self.reload_log()
 
     def action_focus_filter(self):
         section = self.active_section
@@ -841,6 +861,7 @@ class BitloomApp(App):
         yield SystemCommand("Keyboard reference", "Every key in every section (?)", self.action_keys)
         yield SystemCommand("Switch profile", "Choose the active profile (P)", self.action_switch_profile)
         yield SystemCommand("Edit profiles", "JSON profile editor (F4)", self.action_profiles)
+        yield SystemCommand("Console builds", "Builds started outside Bitloom (BitBake console logs)", self.action_console_builds)
         yield SystemCommand("Refresh workspace", "Rescan metadata, logs, artifacts (F3)", self.action_refresh)
         yield SystemCommand("Stop selected job", "Interruption options (F5)", self.action_stop_job)
         yield SystemCommand("Retry selected job", "Queue it again with its profile (F6)", self.action_retry)
@@ -1238,6 +1259,8 @@ class BitloomApp(App):
             self.read_failed_task()
         elif ident == "export":
             self.export_log()
+        elif ident == "console-builds":
+            self.action_console_builds()
         elif ident == "cache-scan":
             self.scan_cache()
         elif ident == "cache-prune":
