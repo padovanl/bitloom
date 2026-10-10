@@ -60,7 +60,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
     ],
     "artifacts": [
         ("o", "press('artifact-read')", "Open", "artifact-read"), ("i", "press('image-contents')", "Rootfs", "image-contents"),
-        ("m", "press('image-matrix')", "Image matrix", "image-matrix"),
+        ("m", "press('image-matrix')", "Image matrix", "image-matrix"), ("s", "press('sbom-report')", "SBOM quality", "sbom-report"),
     ],
     "analysis": [
         ("t", "open_select('#analysis-kind')", "Type", ""), ("a", "press('analysis-run')", "Analyze", "analysis-run"),
@@ -77,6 +77,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
         ("l", "press('local-conf')", "local.conf", "local-conf"), ("y", "press('layers-conf')", "bblayers", "layers-conf"),
         ("e", "press('environment')", "bitbake -e", "environment"), ("d", "press('dev-status')", "devtool", "dev-status"),
         ("v", "press('versions')", "Versions", "versions"), ("n", "press('network-check')", "Network", "network-check"),
+        ("s", "press('sbom-settings')", "SBOM settings", "sbom-settings"), ("c", "press('cra-report')", "CRA readiness", "cra-report"),
     ],
     "guide": [],
 }

@@ -20,6 +20,10 @@ class Action:
     inputs: tuple[str, ...] = ()
     help: str = ""
     interactive: bool = False
+    task: str = ""      # optional runtime task probed before queueing (class/config dependent)
+    since: str = ""     # first Yocto series providing it
+    until: str = ""     # last Yocto series providing it
+    instead: str = ""   # action id to suggest when this release lacks it
 
 
 ACTIONS = [
@@ -74,11 +78,11 @@ ACTIONS = [
     Action("package-files", "Packages", "List package files", "oe-pkgdata-util", ("list-pkg-files",), ("target",)),
     Action("find-path", "Packages", "Find package owning a path", "oe-pkgdata-util", ("find-path",), ("path",)),
     Action("package-recipe", "Packages", "Find recipe for package", "oe-pkgdata-util", ("lookup-recipe",), ("target",)),
-    Action("license", "Inspect", "Generate SPDX SBOM", "bitbake", ("-c", "create_spdx"), ("target",), help="Requires create-spdx in your image configuration."),
-    Action("testimage", "Testing", "Run image tests", "bitbake", ("-c", "testimage"), ("target",), help="Requires testimage configuration and suitable target runner."),
-    Action("ptest", "Testing", "Build ptest packages", "bitbake", ("-c", "compile_ptest_base"), ("target",), help="Recipe must inherit ptest and ptest must be enabled."),
+    Action("license", "Inspect", "Generate SPDX SBOM", "bitbake", ("-c", "create_spdx"), ("target",), help="Requires create-spdx in your image configuration.", task="do_create_spdx"),
+    Action("testimage", "Testing", "Run image tests", "bitbake", ("-c", "testimage"), ("target",), help="Requires testimage configuration and suitable target runner.", task="do_testimage"),
+    Action("ptest", "Testing", "Build ptest packages", "bitbake", ("-c", "compile_ptest_base"), ("target",), help="Recipe must inherit ptest and ptest must be enabled.", task="do_compile_ptest_base"),
     Action("devshell", "Terminal", "Open recipe development shell", "bitbake", ("-c", "devshell"), ("target",), interactive=True),
-    Action("menuconfig", "Terminal", "Kernel menuconfig", "bitbake", ("-c", "menuconfig"), ("target",), interactive=True),
+    Action("menuconfig", "Terminal", "Kernel menuconfig", "bitbake", ("-c", "menuconfig"), ("target",), interactive=True, task="do_menuconfig"),
     Action("qemu", "Terminal", "Boot image with QEMU", "runqemu", inputs=("target",), interactive=True),
     Action("kas-build", "Kas", "Build kas configuration", "kas", ("build",)),
     Action("kas-checkout", "Kas", "Checkout kas repositories", "kas", ("checkout",)),
@@ -90,12 +94,32 @@ ACTIONS.extend([
     Action("getvar", "Inspect", "Resolve one BitBake variable", "bitbake-getvar", inputs=("variable",)),
     Action("dumpsig", "Inspect", "Read signature file", "bitbake-dumpsig", inputs=("path",)),
     Action("diffsigs", "Inspect", "Compare signature files", "bitbake-diffsigs", inputs=("path", "path2")),
-    Action("kernel-diff", "Kernel", "Export kernel config changes", "bitbake", ("-c", "diffconfig"), ("target",)),
-    Action("kernel-fragments", "Kernel", "Validate kernel config fragments", "bitbake", ("-c", "kernel_configcheck"), ("target",)),
-    Action("cve", "Security", "Run recipe CVE check", "bitbake", ("-c", "cve_check"), ("target",), help="Requires the cve-check class and CVE database."),
+    Action("kernel-diff", "Kernel", "Export kernel config changes", "bitbake", ("-c", "diffconfig"), ("target",), task="do_diffconfig"),
+    Action("kernel-fragments", "Kernel", "Validate kernel config fragments", "bitbake", ("-c", "kernel_configcheck"), ("target",), task="do_kernel_configcheck"),
+    Action("cve", "Security", "Run recipe CVE check (cve-check)", "bitbake", ("-c", "cve_check"), ("target",), help="Requires the cve-check class and CVE database. Removed in 6.0 Wrynose: use sbom-cve-check.",
+           task="do_cve_check", until="whinlatter", instead="sbom-cve-recipe"),
     Action("kas-lock", "Kas", "Generate kas lock file", "kas", ("lock",)),
+    Action("sbom-cve-recipe", "Security", "Recipe CVE analysis from its SBOM (sbom-cve-check)", "bitbake", ("-c", "sbom_cve_check_recipe"), ("target",),
+           help="Analyses the recipe SBOM without building the software. The recipe must inherit sbom-cve-check-recipe; reports go to DEPLOY_DIR_IMAGE.",
+           task="do_sbom_cve_check_recipe", since="wrynose", instead="cve"),
+    Action("recipe-sbom", "Security", "Create recipe SBOM (SPDX 3)", "bitbake", ("-c", "create_recipe_sbom"), ("target",),
+           help="Recipe-level SBOM used by sbom-cve-check-recipe.", task="do_create_recipe_sbom", since="wrynose", instead="license"),
+    Action("vex", "Security", "Generate VEX metadata", "bitbake", ("-c", "generate_vex"), ("target",),
+           help='Requires INHERIT += "vex". Produces per-recipe and image VEX reports in DEPLOY_DIR_IMAGE.', task="do_generate_vex"),
+    Action("sbom-cve-enable", "Security", "Enable sbom-cve-check for image builds", "bitbake-config-build", ("enable-fragment", "core/yocto/sbom-cve-check"),
+           help="Every image build then analyses its SPDX 3 SBOM for CVEs. Reports go to DEPLOY_DIR_IMAGE.", since="wrynose", instead="cve"),
+    Action("sbom-cve-disable", "Security", "Disable sbom-cve-check fragment", "bitbake-config-build", ("disable-fragment", "core/yocto/sbom-cve-check"), since="wrynose"),
 ])
 BY_ID = {a.id: a for a in ACTIONS}
+
+
+def availability(action: Action, series: str | None) -> tuple[bool | None, str]:
+    """Release check with a pointer to the alternative this release offers."""
+    from .versions import support
+    ok, reason = support(series, action.since, action.until)
+    if ok is False and action.instead in BY_ID:
+        reason += f"; use “{BY_ID[action.instead].title}” instead"
+    return ok, reason
 
 
 def arguments(action: Action, values: dict[str, str]) -> list[str]:

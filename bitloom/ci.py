@@ -77,10 +77,10 @@ def deployed_images(profile, since: float) -> list[dict]:
 class Output:
     """Collapsible sections and annotations for the CI service in use."""
 
-    def __init__(self, style='auto', stream=sys.stdout):
+    def __init__(self, style='auto', stream=None):
         if style == 'auto':
             style = 'github' if os.environ.get('GITHUB_ACTIONS') else 'gitlab' if os.environ.get('GITLAB_CI') else 'plain'
-        self.style, self.stream, self.section = style, stream, 0
+        self.style, self.stream, self.section = style, stream or sys.stdout, 0
 
     def write(self, text):
         self.stream.write(text + '\n')
@@ -110,13 +110,16 @@ class Output:
 
 
 def junit(results: list[dict]) -> bytes:
-    suites = ET.Element('testsuites', name='bitloom', tests=str(len(results)), failures=str(sum(r['status'] != 'success' for r in results)))
+    suites = ET.Element('testsuites', name='bitloom', tests=str(len(results)), failures=str(sum(r['status'] not in {'success', 'skipped'} for r in results)))
     for profile in dict.fromkeys(r['profile'] for r in results):
         rows = [r for r in results if r['profile'] == profile]
-        suite = ET.SubElement(suites, 'testsuite', name=profile, tests=str(len(rows)),
-                              failures=str(sum(r['status'] != 'success' for r in rows)), time=f'{sum(r["seconds"] for r in rows):.1f}')
+        suite = ET.SubElement(suites, 'testsuite', name=profile, tests=str(len(rows)), skipped=str(sum(r['status'] == 'skipped' for r in rows)),
+                              failures=str(sum(r['status'] not in {'success', 'skipped'} for r in rows)), time=f'{sum(r["seconds"] for r in rows):.1f}')
         for row in rows:
             case = ET.SubElement(suite, 'testcase', classname=f'bitloom.{profile}', name=row['title'], time=f'{row["seconds"]:.1f}')
+            if row['status'] == 'skipped':
+                ET.SubElement(case, 'skipped', message=row['reason'])
+                continue
             if row['status'] != 'success':
                 failure = ET.SubElement(case, 'failure', message=f'{row["status"]} (exit {row["code"]})', type=row['status'])
                 failure.text = '\n'.join([*row['failed_tasks'], *row['errors'], *('Task log: ' + p for p in row['failure_logs'])])
@@ -144,8 +147,20 @@ async def run(config: Path, state: Path, specs: list[str], profiles: list[str], 
     runner = Runner(store, stream)
     results = []
     try:
+        from .commands import availability
+        from .versions import detect_release
+        releases = {profile.name: detect_release(profile) for profile, _, _ in plan}
         for index, (profile, action, argv) in enumerate(plan, 1):
             title = f'{action.title} · {argv[-1]}' if action.inputs else action.title
+            ok, reason = availability(action, releases[profile.name])
+            if ok is False:
+                # Do what this release can do: skip with the alternative instead of failing the matrix.
+                output.annotate('warning', f'{profile.name}: {title} skipped', reason)
+                results.append({'profile': profile.name, 'action': action.id, 'title': title, 'argv': argv, 'status': 'skipped',
+                                'reason': reason, 'release': releases[profile.name], 'code': None, 'seconds': 0.0, 'log': '', 'progress': [0, 0],
+                                'setscene': [0, 0], 'failure_logs': [], 'warnings': 0, 'distinct_warnings': [], 'errors': [],
+                                'failed_tasks': [], 'sstate': None, 'images': []})
+                continue
             output.start(f'[{index}/{len(plan)}] {profile.name}: {title}')
             started = time.time()
             job = runner.submit(profile, title, argv, action.id)
@@ -156,7 +171,7 @@ async def run(config: Path, state: Path, specs: list[str], profiles: list[str], 
             row = {'profile': profile.name, 'action': action.id, 'title': title, 'argv': argv, 'status': job.status, 'code': job.code,
                    'seconds': round(time.time() - started, 1), 'log': str(job.log), 'progress': list(job.progress),
                    'setscene': list(job.setscene), 'failure_logs': job.failure_logs, **facts,
-                   'images': deployed_images(profile, started) if job.status == 'success' else []}
+                   'images': deployed_images(profile, started) if job.status == 'success' else [], 'release': releases[profile.name]}
             results.append(row)
             if job.status != 'success':
                 detail = '; '.join(row['failed_tasks'][:5]) or (row['errors'][-1] if row['errors'] else f'exit {job.code}')
@@ -188,7 +203,7 @@ def main(args) -> int:
         return 2
     finally:
         loop.close()
-    summary = {'generated': datetime.now(timezone.utc).isoformat(timespec='seconds'), 'ok': all(r['status'] == 'success' for r in results),
+    summary = {'generated': datetime.now(timezone.utc).isoformat(timespec='seconds'), 'ok': all(r['status'] in {'success', 'skipped'} for r in results),
                'jobs': results}
     if args.summary:
         Path(args.summary).write_text(json.dumps(summary, indent=2))
@@ -197,6 +212,9 @@ def main(args) -> int:
     output.write('')
     for row in results:
         hit = row['sstate']['hit_rate'] if row['sstate'] else None
+        if row['status'] == 'skipped':
+            output.write(f'SKIP  {row["profile"]}: {row["title"]}  {row["reason"]}')
+            continue
         output.write(f'{"PASS" if row["status"] == "success" else "FAIL"}  {row["profile"]}: {row["title"]}  '
                      f'{row["seconds"]:.0f}s  warnings {row["warnings"]}' + (f'  sstate {100 * hit:.0f}%' if hit is not None else ''))
-    return 0 if summary['ok'] and results else 1
+    return 0 if summary['ok'] and any(r['status'] == 'success' for r in results) else 1
