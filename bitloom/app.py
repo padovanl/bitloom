@@ -282,6 +282,7 @@ class BitloomApp(App):
         self.runtime_listing_path = None
         self.developer_busy = False
         self.capability_cache = {}
+        self.release = None
 
     def refresh_theme_colors(self):
         self.update_telemetry()
@@ -414,6 +415,7 @@ class BitloomApp(App):
                             yield Button("Read file", id="artifact-read")
                             yield Button("Rootfs inventory", id="image-contents")
                             yield Button("Image matrix", id="image-matrix")
+                            yield Button("SBOM quality", id="sbom-report")
                         yield DataTable(id="artifact-table", cursor_type="row")
                     with TabPane(labels["analysis"], id="analysis"):
                         with Horizontal(classes="tools"):
@@ -437,6 +439,8 @@ class BitloomApp(App):
                             yield Button("Devtool status", id="dev-status")
                             yield Button("Versions", id="versions")
                             yield Button("Network check", id="network-check")
+                            yield Button("SBOM settings", id="sbom-settings")
+                            yield Button("CRA readiness", id="cra-report")
                             yield Button("Refresh", id="health-refresh")
                         yield DataTable(id="health", cursor_type="row")
                     with TabPane(labels["guide"], id="guide"):
@@ -509,9 +513,12 @@ class BitloomApp(App):
         if self.developer_busy:
             self.notify("Wait for the Developer probe before queueing a command", severity="warning")
             return
-        required = {"license":"do_create_spdx", "cve":"do_cve_check", "ptest":"do_compile_ptest_base", "testimage":"do_testimage",
-                    "kernel-diff":"do_diffconfig", "kernel-fragments":"do_kernel_configcheck", "menuconfig":"do_menuconfig"}
-        if action.id in required:
+        from .commands import availability
+        ok, reason = availability(action, self.release)
+        if ok is False:
+            self.notify(f"{action.title}: {reason}", severity="warning", timeout=12)
+            return
+        if action.task:
             from .developer import inspect
             profile = self.profile
             recipe = argv[-1]
@@ -529,8 +536,8 @@ class BitloomApp(App):
                     finally:
                         self.developer_busy = False
                     self.capability_cache[key] = cap
-                if not cap.get("task_probe_ok") or required[action.id] not in cap.get("tasks", []):
-                    raise ValueError(required[action.id] + " is unavailable for this recipe/runtime; configure its class/prerequisites first")
+                if not cap.get("task_probe_ok") or action.task not in cap.get("tasks", []):
+                    raise ValueError(action.task + " is unavailable for this recipe/runtime; configure its class/prerequisites first")
             except (ValueError, OSError, KeyError, TypeError) as exc:
                 self.notify(str(exc), severity="warning", timeout=12)
                 return
@@ -619,6 +626,7 @@ class BitloomApp(App):
         return "━" * filled, "━" * (width - filled)
 
     def update_overview(self):
+        from .versions import describe
         p = self.profile
         theme = self.current_theme
         active = self.runner.active
@@ -627,7 +635,8 @@ class BitloomApp(App):
         distro = p.distro or self.config_hints.get('DISTRO', '?')
         brand = Text.assemble((" ◆ bitloom ", f"bold {theme.background} on {theme.accent}"), "  ",
                               (p.name, "bold"), ("  ·  ", "dim"), p.mode, ("  ·  ", "dim"), ("MACHINE ", "dim"), machine,
-                              ("  ·  ", "dim"), ("DISTRO ", "dim"), distro, no_wrap=True, overflow="ellipsis")
+                              ("  ·  ", "dim"), ("DISTRO ", "dim"), distro, ("  ·  ", "dim"), (describe(self.release), "italic"),
+                              no_wrap=True, overflow="ellipsis")
         self.main_query("#brand-line", Static).update(brand)
         recent = next((r for r in self.history_rows.values() if r["profile"] == p.name), None)
         status = active.status if active else recent["status"] if recent else "idle"
@@ -986,6 +995,8 @@ class BitloomApp(App):
         )
         self.entries, self.logs, self.artifacts = entries, logs, artifacts
         self.config_hints = await asyncio.to_thread(read_assignments, p.build_path / "conf/local.conf")
+        from .versions import detect_release
+        self.release = await asyncio.to_thread(detect_release, p, entries)
         self.update_overview()
         self.render_metadata()
         self.render_layer_tree()
@@ -1264,6 +1275,9 @@ class BitloomApp(App):
             self.export_log()
         elif ident == "console-builds":
             self.action_console_builds()
+        elif ident == "sbom-settings":
+            from .screens import SbomSettingsScreen
+            self.push_screen(SbomSettingsScreen(self.profile, self.release), self.sbom_settings_result)
         elif ident == "cache-scan":
             self.scan_cache()
         elif ident == "cache-prune":
@@ -1276,13 +1290,45 @@ class BitloomApp(App):
             self.version_report()
         elif ident == "inspect-load":
             self.load_inspection()
-        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report", "dependency-context", "image-contents", "task-timings", "network-check", "image-matrix"}:
+        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report", "dependency-context", "image-contents", "task-timings", "network-check", "image-matrix", "sbom-report", "cra-report"}:
             self.make_report(ident)
         elif ident in {"logs-read", "artifact-read"}:
             table = self.main_query("#task-table" if ident == "logs-read" else "#artifact-table", DataTable)
             if table.row_count:
                 key = table.coordinate_to_cell_key(table.cursor_coordinate).row_key
                 table.post_message(DataTable.RowSelected(table, table.cursor_row, key))
+
+    def sbom_settings_result(self, result):
+        if not result:
+            return
+        profile = self.profile
+        try:
+            if "verify" in result:
+                argv = ["bitbake-config-build", "list-fragments"] if result["fragment"] else ["bitbake-getvar", result["verify"]]
+                job = self.runner.submit(profile, "Verify " + (" ".join(argv[1:])), argv, "getvar")
+                self.select_job(job.id, job.log)
+                self.action_section("builds")
+                return
+            message = f"Saved {result['path']}" + (f" · backup {result['backup']}" if result["backup"] else "")
+            if result.get("kas_file"):
+                if profile.name in self.settings.shared:
+                    message += " · team profile: clone it to include bitloom-sbom.yml"
+                else:
+                    profile.kas_file = result["kas_file"]
+                    self.settings.save()
+                    message += f" · kas_file is now {profile.kas_file}"
+            elif profile.mode == "wrapper":
+                message += " · add bitloom-sbom.yml to the configuration your launcher passes to kas"
+            from .commands import BY_ID, arguments
+            for ident in result["fragments"]:
+                action = BY_ID[ident]
+                self.runner.submit(profile, action.title, arguments(action, {}), ident)
+                message += f" · queued {action.title}"
+            self.capability_cache.clear()
+            self.notify(message, timeout=15)
+            self.scan_project()
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error", timeout=12)
 
     def retry_job(self):
         row = self.history_rows.get(self.selected_job_id)
@@ -1462,6 +1508,12 @@ class BitloomApp(App):
                 text = env_diff(first, second)
             elif ident == "buildhistory-report":
                 text = await asyncio.to_thread(build_history, self.profile)
+            elif ident == "sbom-report":
+                from .sbom import sbom_report
+                text = await asyncio.to_thread(sbom_report, self.profile)
+            elif ident == "cra-report":
+                from .sbom import cra_report
+                text = await asyncio.to_thread(cra_report, self.profile, self.store.directory)
             elif ident == "image-matrix":
                 from .reports import image_matrix
                 text = await asyncio.to_thread(image_matrix, self.profile)

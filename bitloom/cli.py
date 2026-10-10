@@ -48,6 +48,8 @@ def main():
     ci.add_argument("--summary", metavar="FILE", help="Write a JSON summary (status, sstate reuse, warnings, failed tasks, images)")
     ci.add_argument("--annotations", choices=["auto", "github", "gitlab", "plain"], default="auto", help="Log sections and error annotations")
     ci.add_argument("--fail-fast", action="store_true", help="Stop the matrix at the first failure")
+    parser.add_argument("--sbom", action="store_true", help="Print SBOM quality (SPDX 3/2.2: identifiers, licences, suppliers, VEX)")
+    parser.add_argument("--cra", action="store_true", help="Print CRA readiness evidence; exit 2 when a check warns")
     parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
     parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
     parser.add_argument("--list-actions", action="store_true", help="List all available operations")
@@ -80,6 +82,15 @@ def main():
         return
     if args.demo:
         args.config = make_demo(args.state / "demo")
+    if args.sbom or args.cra:
+        from .models import Settings
+        from .sbom import cra_report, sbom_report
+        profile = Settings(args.config).profile
+        text = sbom_report(profile) if args.sbom else ""
+        if args.cra:
+            text = (text + "\n\n" if text else "") + cra_report(profile, args.state)
+        print(text)
+        raise SystemExit(2 if args.cra and "\nWARN " in "\n" + text else 0)
     if args.doctor:
         from .models import Settings
         from .inspectors import diagnostics

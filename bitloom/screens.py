@@ -151,7 +151,7 @@ class ActionScreen(ModalScreen):
         with Vertical():
             yield Label("[dim]Type to filter · [b]↑ ↓[/b] choose · [b]Tab[/b] fields · [b]Enter[/b] queue · [b]Esc[/b] close[/]", id="hint")
             yield Input(placeholder="Filter commands by operation or group…", id="action-search")
-            yield Select([(f"{a.group} / {a.title}", a.id) for a in ACTIONS], value=self.initial_action, allow_blank=False, id="action")
+            yield Select([(self.option_label(a), a.id) for a in ACTIONS], value=self.initial_action, allow_blank=False, id="action")
             with VerticalScroll(id="fields", can_focus=False):
                 for key in ("target", "task", "path", "path2", "variable", "device", "source", "command"):
                     yield Input(value=self.target if key == "target" else "", placeholder=key, id=f"field-{key}")
@@ -190,7 +190,7 @@ class ActionScreen(ModalScreen):
             return
         select = self.query_one("#action", Select)
         previous = str(select.value)
-        select.set_options([(f"{a.group} / {a.title}", a.id) for a in matches])
+        select.set_options([(self.option_label(a), a.id) for a in matches])
         select.value = previous if previous in {a.id for a in matches} else matches[0].id
 
     @on(Select.Changed, "#action")
@@ -200,6 +200,11 @@ class ActionScreen(ModalScreen):
     @on(Input.Changed)
     def values_changed(self):
         self.update_preview()
+
+    def option_label(self, action):
+        from .commands import availability
+        ok, _ = availability(action, getattr(self.app, 'release', None))
+        return f"{action.group} / {action.title}" + ("  (not in this release)" if ok is False else "")
 
     def selected(self) -> Action:
         from .commands import BY_ID
@@ -224,14 +229,21 @@ class ActionScreen(ModalScreen):
             text = inv.display
             if a.help:
                 text += "\n" + a.help
-            required = {'license':'do_create_spdx', 'cve':'do_cve_check', 'ptest':'do_compile_ptest_base', 'testimage':'do_testimage',
-                        'kernel-diff':'do_diffconfig', 'kernel-fragments':'do_kernel_configcheck', 'menuconfig':'do_menuconfig'}
+            from .commands import availability
+            from .versions import describe
+            release = getattr(self.app, 'release', None)
+            ok, reason = availability(a, release)
+            if ok is False:
+                submit.disabled = True
+                text += '\n✖ Not available: ' + reason
+            elif a.since or a.until:
+                text += '\n✔ Available in ' + describe(release) if ok else '\n? ' + reason
             cap = getattr(self.app, 'capability_cache', {}).get((self.profile.name, self.values().get('target', '')))
             import time
             if cap and time.time() - cap.get('captured', 0) > 30: cap = None
-            if a.id in required and cap and required[a.id] not in cap.get('tasks', []):
+            if a.task and cap and a.task not in cap.get('tasks', []):
                 submit.disabled = True
-                text += '\nUnavailable in the probed runtime: ' + required[a.id]
+                text += '\nUnavailable in the probed runtime: ' + a.task
         except ValueError as exc:
             text = str(exc)
         self.query_one("#preview", Static).update(text)
@@ -739,3 +751,200 @@ class ConsoleBuildsScreen(ModalScreen):
     @on(OptionList.OptionSelected, "#console-list")
     def chosen(self, event):
         self.dismiss(self.entries[int(event.option.id)])
+
+
+class SbomSettingsScreen(ModalScreen):
+    """SBOM, vulnerability and traceability options with explanations and release checks."""
+    DEFAULT_CSS = """
+    SbomSettingsScreen { align: center middle; background: $background 60%; }
+    SbomSettingsScreen > Vertical { width: 96%; height: 92%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    SbomSettingsScreen #sbom-hint { color: $text-muted; height: auto; }
+    SbomSettingsScreen #sbom-split { height: 1fr; }
+    SbomSettingsScreen #sbom-options { width: 3fr; height: 1fr; }
+    SbomSettingsScreen #sbom-side { width: 2fr; height: 1fr; margin-left: 1; }
+    SbomSettingsScreen #sbom-info { height: 1fr; background: $surface; border: round $primary-muted; padding: 0 1; }
+    SbomSettingsScreen #sbom-preview { height: auto; max-height: 12; border: round $primary-muted; color: $text-muted; padding: 0 1; }
+    SbomSettingsScreen #sbom-text { display: none; }
+    SbomSettingsScreen Horizontal.buttons { height: 1; margin-top: 1; }
+    SbomSettingsScreen Horizontal.buttons Button { margin-right: 1; }
+    """
+    BINDINGS = [("escape", "close", "Close"), Binding("ctrl+x", "close", "Close", priority=True),
+                Binding("ctrl+o", "apply", "Apply", priority=True), Binding("ctrl+s", "apply", "Apply", priority=True, show=False),
+                ("space", "toggle", "Toggle"), ("v", "verify", "Verify"), ("j", "move(1)", "Down"), ("k", "move(-1)", "Up")]
+
+    def __init__(self, profile, release):
+        super().__init__()
+        from .sbom_settings import current
+        self.profile, self.release = profile, release
+        self.managed, self.elsewhere = current(profile)
+        self.values = dict(self.managed)
+        self.initial = dict(self.managed)
+
+    def compose(self):
+        from textual.widgets import DataTable
+        with Vertical():
+            yield Label("Enter/Space toggles or edits · v verifies a variable in the runtime (bitbake-getvar) · ^O applies with a backup · Esc closes without changes", id="sbom-hint")
+            with Horizontal(id="sbom-split"):
+                yield DataTable(id="sbom-options", cursor_type="row")
+                with Vertical(id="sbom-side"):
+                    yield Markdown(id="sbom-info")
+                    yield Static(id="sbom-preview", markup=False)
+            yield Input(placeholder="Organisation name (Enter saves, Esc cancels)", id="sbom-text")
+            with Horizontal(classes="buttons"):
+                yield Button("^O Apply", id="sbom-apply", variant="primary")
+                yield Button("v Verify", id="sbom-verify")
+                yield Button("Esc Close", id="sbom-close")
+
+    def on_mount(self):
+        from .sbom_settings import target
+        from .versions import describe
+        self.query_one(Vertical).border_title = f"SBOM & CRA settings · {describe(self.release)} · {target(self.profile)}"
+        table = self.query_one("#sbom-options")
+        for name, width in (("State", 14), ("Option", 44), ("Release", 18)):
+            table.add_column(name, width=width)
+        table.border_title = "Options"
+        self.query_one("#sbom-preview").border_title = "Managed block preview"
+        self.refresh_rows()
+        table.focus()
+
+    def state(self, option):
+        from .sbom_settings import availability
+        ok, _ = availability(option, self.release)
+        value = self.values.get(option.id)
+        if ok is False:
+            return "n/a" + (" (set!)" if value or option.id in self.elsewhere else "")
+        if value:
+            return value if option.kind in {"choice", "text"} else "on"
+        if option.id in self.elsewhere:
+            return "on (local.conf)" if option.kind != "choice" else self.elsewhere[option.id] + " (local)"
+        return "off"
+
+    def refresh_rows(self):
+        from rich.text import Text
+        from .sbom_settings import OPTIONS, availability
+        table = self.query_one("#sbom-options")
+        row = table.cursor_row
+        table.clear()
+        theme = self.app.current_theme
+        for option in OPTIONS:
+            ok, _ = availability(option, self.release)
+            state = self.state(option)
+            color = theme.error if ok is False else theme.success if state not in {"off"} else theme.foreground
+            span = (option.since or "any") + ("…" + option.until if option.until else "+")
+            table.add_row(Text(state, style=color), option.title, Text(span + ("" if option.verified else " ?"), style="dim"), key=option.id)
+        table.move_cursor(row=min(row, len(OPTIONS) - 1))
+        self.show_info()
+
+    def selected(self):
+        from .sbom_settings import OPTIONS
+        return OPTIONS[self.query_one("#sbom-options").cursor_row]
+
+    def show_info(self):
+        from .sbom_settings import info_markdown, preview
+        option = self.selected()
+        self.query_one("#sbom-info", Markdown).update(info_markdown(option, self.release, self.state(option)))
+        self.query_one("#sbom-preview", Static).update(preview(self.profile, self.values))
+
+    def on_data_table_row_highlighted(self, event):
+        self.show_info()
+
+    def on_data_table_row_selected(self, event):
+        self.action_toggle()
+
+    def action_move(self, step):
+        table = self.query_one("#sbom-options")
+        table.action_cursor_down() if step > 0 else table.action_cursor_up()
+
+    def action_toggle(self):
+        from .sbom_settings import availability
+        option = self.selected()
+        ok, reason = availability(option, self.release)
+        if ok is False and not self.values.get(option.id):
+            self.notify(f"{option.title}: {reason}", severity="warning", timeout=10)
+            return
+        if option.kind == "text":
+            field = self.query_one("#sbom-text", Input)
+            field.value = self.values.get(option.id, "")
+            field.display = True
+            field.focus()
+            return
+        if option.kind == "choice":
+            choices = list(option.choices)
+            now = self.values.get(option.id, "")
+            self.values[option.id] = choices[(choices.index(now) + 1) % len(choices)] if now in choices else choices[0]
+        elif self.values.get(option.id):
+            self.values.pop(option.id)
+        else:
+            self.values[option.id] = "1"
+        self.refresh_rows()
+
+    def on_input_submitted(self, event):
+        if event.input.id != "sbom-text":
+            return
+        event.stop()
+        option = self.selected()
+        if event.value.strip():
+            self.values[option.id] = event.value.strip()
+        else:
+            self.values.pop(option.id, None)
+        event.input.display = False
+        self.query_one("#sbom-options").focus()
+        self.refresh_rows()
+
+    def on_key(self, event):
+        field = self.query_one("#sbom-text", Input)
+        if event.key == "escape" and field.display:
+            field.display = False
+            self.query_one("#sbom-options").focus()
+            event.stop()
+            event.prevent_default()
+
+    def action_close(self):
+        if self.values != self.initial:
+            self.notify("Changes discarded (^O applies them)", timeout=4)
+        self.dismiss(None)
+
+    def action_verify(self):
+        option = self.selected()
+        name = "INHERIT" if option.kind == "inherit" else option.name + ("_name" if option.kind == "text" else "")
+        self.dismiss({"verify": name, "fragment": option.kind == "fragment"})
+
+    def action_apply(self):
+        from .sbom_settings import BY_ID, apply, availability, kas_files_with_overlay
+        from .leases import BuildLease
+        app = self.app
+        if app.runner.active or any(j.status == "queued" for j in app.runner.jobs) or getattr(app, "developer_busy", False):
+            self.notify("Wait for the build queue before changing build configuration", severity="warning")
+            return
+        blocked = [BY_ID[k].title for k, v in self.values.items() if v and availability(BY_ID[k], self.release)[0] is False and self.initial.get(k) != v]
+        if blocked:
+            self.notify("Not available in this release: " + ", ".join(blocked), severity="error", timeout=10)
+            return
+        lease = BuildLease(self.profile)
+        try:
+            lease.acquire()
+            path, backup = apply(self.profile, self.values)
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error", timeout=10)
+            return
+        finally:
+            lease.close()
+        result = {"path": str(path), "backup": str(backup) if backup else None, "fragments": []}
+        fragment = BY_ID["sbom-cve-check"]
+        if bool(self.values.get(fragment.id)) != bool(self.initial.get(fragment.id)):
+            result["fragments"].append("sbom-cve-enable" if self.values.get(fragment.id) else "sbom-cve-disable")
+        if self.profile.mode in {"kas", "kas-container"}:
+            result["kas_file"] = kas_files_with_overlay(self.profile)
+        self.dismiss(result)
+
+    @on(Button.Pressed, "#sbom-apply")
+    def apply_pressed(self):
+        self.action_apply()
+
+    @on(Button.Pressed, "#sbom-verify")
+    def verify_pressed(self):
+        self.action_verify()
+
+    @on(Button.Pressed, "#sbom-close")
+    def close_pressed(self):
+        self.action_close()

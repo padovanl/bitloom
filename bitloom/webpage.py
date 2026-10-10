@@ -297,7 +297,7 @@ function renderState() {
   }
   select.value = state.profiles.some((p) => p.name === current) ? current : state.active;
   const p = profile();
-  $("context").textContent = p ? `${p.mode} · MACHINE ${p.machine || "?"} · DISTRO ${p.distro || "?"} · ${p.build}` : "";
+  $("context").textContent = p ? `${p.mode} · MACHINE ${p.machine || "?"} · DISTRO ${p.distro || "?"} · ${p.release}${p.shared ? " · team profile" : ""} · ${p.build}` : "";
   if (!$("target").dataset.touched && p) $("target").value = (p.targets || [])[0] || "";
   const service = state.service;
   $("service-dot").className = "dot " + (service.error ? "err" : "ok");

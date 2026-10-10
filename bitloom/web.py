@@ -117,12 +117,14 @@ class Dashboard:
             live = service["jobs"].get(row["id"])
             if live:
                 row.update(status=live["status"], progress=live["progress"], setscene=live["setscene"], tasks=live["tasks"])
+        from .versions import describe, detect_release
         hints = {p.name: read_assignments(p.build_path / "conf/local.conf") for p in settings.profiles}
         return {
             "active": settings.active,
             "profiles": [{"name": p.name, "mode": p.mode, "machine": p.machine or hints[p.name].get("MACHINE", ""),
                           "distro": p.distro or hints[p.name].get("DISTRO", ""), "root": str(p.root_path),
-                          "build": str(p.build_path), "targets": p.targets} for p in settings.profiles],
+                          "build": str(p.build_path), "targets": p.targets, "release": describe(detect_release(p)),
+                          "shared": p.name in settings.shared} for p in settings.profiles],
             "service": {k: v for k, v in service.items() if k != "jobs"},
             "history": rows,
             "host": host_metrics(profile.root_path),
@@ -130,14 +132,23 @@ class Dashboard:
 
     def actions(self):
         return [{"id": a.id, "group": a.group, "title": a.title, "inputs": list(a.inputs), "help": a.help,
-                 "interactive": a.interactive} for a in ACTIONS]
+                 "interactive": a.interactive, "since": a.since, "until": a.until} for a in ACTIONS]
+
+    def release_check(self, action, profile):
+        from .commands import availability
+        from .versions import detect_release
+        return availability(action, detect_release(profile))
 
     def preview(self, body):
         action = BY_ID.get(body.get("action", ""))
         if action is None:
             raise ValueError("Unknown operation")
+        profile = self.profile(body.get("profile"))
         argv = arguments(action, body.get("values", {}))
-        return {"command": invocation(self.profile(body.get("profile")), argv).display, "help": action.help}
+        ok, reason = self.release_check(action, profile)
+        if ok is False:
+            raise ValueError("Not available: " + reason)
+        return {"command": invocation(profile, argv).display, "help": action.help + (("\n" + reason) if reason else "")}
 
     def submit(self, body):
         action = BY_ID.get(body.get("action", ""))
@@ -147,6 +158,9 @@ class Dashboard:
             raise ValueError("Interactive terminal operations run from the TUI")
         profile = self.profile(body.get("profile"))
         argv = arguments(action, body.get("values", {}))
+        ok, reason = self.release_check(action, profile)
+        if ok is False:
+            raise ValueError("Not available: " + reason)
         invocation(profile, argv)
         from dataclasses import asdict
         result = self.rpc({"op": "submit", "profile": asdict(profile), "title": action.title + (" · " + argv[-1] if action.inputs else ""),
