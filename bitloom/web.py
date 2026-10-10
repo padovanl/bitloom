@@ -76,6 +76,22 @@ class Dashboard:
     def __init__(self, config: Path, state: Path, token: str | None = None):
         self.config, self.state = Path(config), Path(state).resolve()
         self.token = token or secrets.token_urlsafe(24)
+        self.cpu_sample = None
+        self.cpu_history: list[float] = []
+
+    def cpu(self):
+        """Host CPU utilisation between two polls (labelled host: a container runtime may differ)."""
+        try:
+            values = [int(x) for x in Path("/proc/stat").read_text().splitlines()[0].split()[1:]]
+        except (OSError, ValueError, IndexError):
+            return None
+        sample = (sum(values[:8]), values[3] + values[4])
+        previous, self.cpu_sample = self.cpu_sample, sample
+        if previous and sample[0] > previous[0]:
+            usage = 100 * (1 - (sample[1] - previous[1]) / (sample[0] - previous[0]))
+            self.cpu_history = (self.cpu_history + [round(usage, 1)])[-60:]
+            return round(usage, 1)
+        return None
 
     # Service access is isolated here so tests can substitute it.
     def rpc(self, payload):
@@ -129,7 +145,7 @@ class Dashboard:
                           "shared": p.name in settings.shared} for p in settings.profiles],
             "service": {k: v for k, v in service.items() if k != "jobs"},
             "history": rows,
-            "host": host_metrics(profile.root_path),
+            "host": {**host_metrics(profile.root_path), "cpu": self.cpu(), "cpu_history": self.cpu_history},
         }
 
     def actions(self):
@@ -239,6 +255,67 @@ class Dashboard:
     def console_report(self, query):
         return job_report(self.console_entry(query))
 
+    def compliance(self, query):
+        from .sbom import DEADLINES, analyse, cra_checks, sbom_files
+        from .sbom_settings import OPTIONS, availability, current
+        from .versions import INFO, describe, detect_release
+        profile = self.profile(query.get("profile", [""])[0])
+        series = detect_release(profile)
+        sboms = []
+        for path in sbom_files(profile)[:3]:
+            try:
+                sboms.append(analyse(path))
+            except (OSError, ValueError) as exc:
+                sboms.append({"file": str(path), "error": str(exc)})
+        managed, elsewhere = current(profile)
+        options = []
+        for option in OPTIONS:
+            ok, reason = availability(option, series)
+            options.append({"id": option.id, "title": option.title, "name": option.name, "kind": option.kind, "info": option.info, "cra": option.cra,
+                            "available": ok, "reason": reason, "value": managed.get(option.id) or elsewhere.get(option.id) or "",
+                            "since": option.since, "until": option.until, "verified": option.verified})
+        support = INFO.get(series)
+        return {"release": describe(series), "series": series, "support_until": support[1].isoformat() if support else None, "lts": bool(support and support[2]),
+                "sboms": sboms, "checks": [{"status": s, "item": i, "detail": d} for s, i, d in cra_checks(profile, self.state)],
+                "timeline": [{"date": when.isoformat(), "text": text} for when, text in DEADLINES], "options": options}
+
+    def studio_fields(self, query):
+        from dataclasses import asdict
+        from .studio import KINDS, fields, product_layers
+        from .versions import detect_release
+        profile = self.profile(query.get("profile", [""])[0])
+        kind = query.get("kind", ["distro"])[0]
+        if kind not in KINDS:
+            raise ValueError("Unknown kind")
+        layers = product_layers(metadata(profile), profile)
+        return {"kinds": [{"id": k, "title": t, "description": d} for k, (t, d) in KINDS.items()],
+                "fields": [asdict(f) for f in fields(kind, detect_release(profile), layers)], "mode": profile.mode}
+
+    def studio_plan(self, body):
+        from .studio import plan
+        from .versions import detect_release
+        profile = self.profile(body.get("profile"))
+        values = body.get("values", {})
+        if not isinstance(values, dict) or any(not isinstance(v, str) for v in values.values()):
+            raise ValueError("values must be strings")
+        return profile, plan(body.get("kind", ""), values, profile, detect_release(profile))
+
+    def studio_preview(self, body):
+        return self.studio_plan(body)[1]
+
+    def studio_create(self, body):
+        from .studio import create, register
+        profile, result = self.studio_plan(body)
+        written = create(profile, result)
+        settings = self.settings()
+        profile = next(p for p in settings.profiles if p.name == profile.name)
+
+        def submit(job_profile, title, argv, action):
+            from dataclasses import asdict
+            self.rpc({"op": "submit", "profile": asdict(job_profile), "title": title, "command": argv, "action_id": action})
+        messages, target = register(settings, profile, result, body.get("use") is True, submit)
+        return {"written": [str(p) for p in written], "messages": messages, "target": target}
+
     def health(self, query):
         profile = self.profile(query.get("profile", [""])[0])
         return {"checks": [{"status": s, "name": n, "detail": d} for s, n, d in diagnostics(profile)]}
@@ -344,6 +421,14 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.task_logs(query)
                 elif route == ("GET", "tasklog"):
                     payload = dashboard.task_log(query)
+                elif route == ("GET", "compliance"):
+                    payload = dashboard.compliance(query)
+                elif route == ("GET", "studio", "fields"):
+                    payload = dashboard.studio_fields(query)
+                elif route == ("POST", "studio", "preview"):
+                    payload = dashboard.studio_preview(self.body())
+                elif route == ("POST", "studio", "create"):
+                    payload = dashboard.studio_create(self.body())
                 elif route == ("GET", "console"):
                     payload = dashboard.console(query)
                 elif route == ("GET", "console", "log"):

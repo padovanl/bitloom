@@ -329,3 +329,37 @@ def kas_overlay(profile: Profile, result: dict) -> tuple[str, str]:
         # Existing layers are already part of the configuration; adding them again would duplicate them.
         lines += ["repos:", f"  {root.name.replace('-', '_')}:", f"    path: {json.dumps(relative)}"]
     return name, "\n".join(lines) + "\n"
+
+
+def register(settings, profile: Profile, result: dict, use: bool, submit) -> tuple[list[str], str | None]:
+    """Make the created files effective; submit(profile, title, argv, action) queues commands.
+    Returns (messages, build target to suggest)."""
+    messages = []
+    if profile.mode in {"kas", "kas-container", "wrapper"} and (result["new_layer"] or result["activate"]):
+        name, text = kas_overlay(profile, result)
+        path = profile.root_path / name
+        if path.exists():
+            messages.append(f"{name} exists; add the layer/selection to it by hand")
+        else:
+            path.write_text(text)
+            if profile.mode == "wrapper":
+                messages.append(f"add {name} to the configuration your launcher passes to kas")
+            elif profile.name in settings.shared:
+                messages.append(f"team profile: clone it and append {name} to kas_file")
+            else:
+                profile.kas_file = ":".join([*profile.kas_file.split(":"), name])
+                settings.save()
+                messages.append(f"kas_file is now {profile.kas_file}")
+    else:
+        if result["new_layer"]:
+            submit(profile, "Register layer " + Path(result["layer"]).name, ["bitbake-layers", "add-layer", runtime_path(profile, result["layer"])], "layer-add")
+            messages.append("queued bitbake-layers add-layer")
+        if use and (result["activate"].get("distro") or result["activate"].get("machine")):
+            profile.distro = result["activate"].get("distro", profile.distro)
+            profile.machine = result["activate"].get("machine", profile.machine)
+            settings.save()
+            messages.append(f"profile now uses DISTRO={profile.distro or 'default'} MACHINE={profile.machine or 'default'}")
+    target = result["activate"].get("target")
+    if target:
+        messages.append(f"build target: {target}")
+    return messages, target
