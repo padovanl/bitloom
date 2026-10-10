@@ -129,3 +129,18 @@ async def test_create_runtime_file_is_atomic_and_never_overwrites(tmp_path):
     with pytest.raises(ValueError):
         await request(profile,'create',str(link),text='overwrite')
     assert link.is_symlink() and not (tmp_path/'missing.bb').exists()
+
+
+def test_diagnosis_points_at_root_causes():
+    # Shapes taken from a real kas-container perl failure and common build failures.
+    perl = ('WARNING: Setting ABSTRACT via file failed\nWriting Makefile for Perl::OSType\n==> Your Makefile has been rebuilt. <==\n'
+            '==> Please rerun the make command.  <==\nfalse\nmake[2]: *** [Makefile:738: Makefile] Error 1\n'
+            "ERROR: Task (/work/poky/meta/recipes-devtools/perl/perl_5.38.2.bb:do_compile) failed with exit code '1'\n")
+    report = diagnose(perl)
+    assert 'Category: race' in report and 'Your Makefile has been rebuilt' in report and 'Setting ABSTRACT' not in report
+    assert 'perl_5.38.2.bb:do_compile' in report and 'Retry the task' in report
+    oom = 'x86_64-poky-linux-g++: fatal error: Killed signal terminated program cc1plus\nmake: *** [all] Error 1\n'
+    assert 'Category: resources' in diagnose(oom) and 'PARALLEL_MAKE' in diagnose(oom)
+    fetch = 'WARNING: Failed to fetch URL https://x/y.tar.gz\nERROR: Fetcher failure: Unable to find revision\n'
+    assert 'Category: fetch' in diagnose(fetch)
+    assert 'Category: link' in diagnose('foo.o: undefined reference to `bar\'\ncollect2: error: ld returned 1 exit status\n')

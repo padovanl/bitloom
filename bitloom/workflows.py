@@ -56,19 +56,54 @@ def compare(before, after):
         else: lines.extend(['before: '+json.dumps(a,sort_keys=True),'after: '+json.dumps(b,sort_keys=True)])
     return '\n'.join(lines)
 
+# Known causes, most specific first: (category, pattern, explanation and next step).
+KNOWN_CAUSES = [
+    ('resources', r'(Killed signal terminated program|fatal error: Killed|virtual memory exhausted|Cannot allocate memory|out of memory)',
+     'The compiler was killed, usually by the out-of-memory killer. Lower PARALLEL_MAKE / BB_NUMBER_THREADS for this recipe '
+     '(PARALLEL_MAKE:pn-<recipe> = "-j4"), add swap or memory, then retry.'),
+    ('resources', r'No space left on device', 'The disk is full. Free space (Caches → prune plan, rm_work) and retry.'),
+    ('race', r'Your Makefile has been rebuilt|Please rerun the make command',
+     'ExtUtils::MakeMaker regenerated a Makefile during a parallel build (timestamp race, common in perl). Retry the task; '
+     'if it repeats, check for clock skew or files with future timestamps in the work directory.'),
+    ('race', r'(Text file busy|Resource temporarily unavailable)', 'A transient resource conflict. Retry the task; if it repeats, reduce parallelism.'),
+    ('pseudo', r'pseudo: (path mismatch|inode mismatch)|pseudo abort',
+     'The pseudo database no longer matches the work directory (files changed outside BitBake). Clean the recipe (bitbake -c clean) and rebuild.'),
+    ('fetch', r'(Fetcher failure|Unable to fetch URL|unable to fetch|do_fetch.*failed|Checksum mismatch|checksums? (?:do|does) not match)',
+     'Check the URL, proxy and PREMIRRORS/MIRRORS, and the SRC_URI checksums; run the fetch task alone before rebuilding.'),
+    ('patch', r'(Applying patch .* failed|Patch .* does not apply|Hunk #\d+ FAILED|do_patch.*failed)',
+     'A patch no longer applies to this source revision. Refresh it in a devtool workspace (devtool modify, rebase, devtool update-recipe).'),
+    ('metadata', r'(Nothing PROVIDES|Nothing RPROVIDES|ParseError|ExpansionError|was skipped: )',
+     'A recipe or provider is missing, or metadata does not parse. Check layer configuration (bitbake-layers show-layers) and the named variable.'),
+    ('QA', r'(QA Issue|do_package_qa.*failed)', 'A packaging QA rule failed. Read the named rule; fix the recipe rather than relaxing ERROR_QA.'),
+    ('rootfs', r'(do_rootfs.*failed|unable to install packages|Could not invoke dnf|nothing provides)',
+     'The image package set cannot be installed. Inspect runtime dependencies and package feeds in the rootfs log.'),
+    ('link', r'(undefined reference to|ld: cannot find|collect2: error)', 'Linking failed: a library or symbol is missing. Check DEPENDS and the link flags.'),
+    ('compile', r'(:\d+:\d+: error:|:\d+: error:|fatal error: [^K]|error: )', 'Inspect the first compiler error and its include paths.'),
+]
+ROOT_SIGNALS = re.compile(r'(:\d+(?::\d+)?: (?:fatal )?error:|undefined reference to|Killed signal|No space left|Your Makefile has been rebuilt|'
+                          r'Fetcher failure|Hunk #\d+ FAILED|Nothing PROVIDES|QA Issue|pseudo abort|make(?:\[\d+\])?: \*\*\* )')
+
+
 def diagnose(text):
-    lines=text.splitlines(); evidence=[]
-    patterns=[('fetch',r'(fetcher failure|unable to fetch|do_fetch.*failed)'),('patch',r'(patch.*failed|hunk.*failed|do_patch.*failed)'),('QA',r'(QA Issue|do_package_qa.*failed)'),('rootfs',r'(do_rootfs.*failed|unable to install packages)'),('compile',r'(error:|undefined reference|do_compile.*failed)')]
-    category='unclassified'
-    for i,line in enumerate(lines):
-        if line.startswith('$ '): continue
-        if re.search(r'(error:|ERROR:|fatal:|FAILED|Hunk.*FAILED)',line,re.I):
-            evidence=lines[max(0,i-3):i+8]; break
-    for name,pattern in patterns:
-        if re.search(pattern,text,re.I): category=name; break
-    suggestions={'fetch':'Check the failing URL, proxy/mirror settings and checksums; retry fetch before rebuilding.', 'patch':'Inspect the rejected hunk and source revision; refresh patches in a devtool workspace.', 'QA':'Inspect the named QA rule and package contents before changing ERROR_QA.', 'rootfs':'Inspect package manager output and runtime dependency conflicts.', 'compile':'Inspect the compiler command, include paths and first source diagnostic.', 'unclassified':'Open the reported task log; the build stream alone may omit the cause.'}
-    paths=re.findall(r'Logfile of failure stored in:\s*(\S+)',text)
-    return f'FAILURE DIAGNOSIS\nCategory: {category}\nReported task logs: '+(', '.join(paths) or 'none')+'\nFirst diagnostic context:\n'+'\n'.join(evidence or ['No diagnostic found.'])+'\nNext step: '+suggestions[category]
+    """Point at the root cause, not the first line that mentions failure."""
+    lines = text.splitlines()
+    category, advice = 'unclassified', 'Open the reported task log; the build stream alone may omit the cause.'
+    for name, pattern, hint in KNOWN_CAUSES:
+        if re.search(pattern, text):
+            category, advice = name, hint
+            break
+    anchor = next((i for i, line in enumerate(lines) if not line.startswith('$ ') and 'WARNING:' not in line and ROOT_SIGNALS.search(line)), None)
+    if anchor is None:
+        anchor = next((i for i, line in enumerate(lines) if not line.startswith('$ ') and re.search(r'\b(ERROR:|FAILED|fatal:)', line)), None)
+    # The first make "***" line follows its cause; show the lines leading up to it.
+    before = 10 if anchor is not None and '***' in lines[anchor] else 3
+    evidence = [line for line in lines[max(0, anchor - before):anchor + 6] if 'WARNING:' not in line] if anchor is not None else []
+    paths = list(dict.fromkeys(re.findall(r'Logfile of failure stored in:\s*(\S+)', text)))
+    failed = sorted(set(re.findall(r'Task \(?([^)\s]+)\)? failed', text)))
+    return ('FAILURE DIAGNOSIS\nCategory: ' + category + '\nFailed tasks: ' + (', '.join(failed) or 'not reported') +
+            '\nReported task logs: ' + (', '.join(paths) or 'none') + '\nRoot-cause context:\n' +
+            '\n'.join(line[:400] for line in evidence or ['No diagnostic found.']) + '\nNext step: ' + advice)
+
 
 def preflight_report(data):
     items=[]
