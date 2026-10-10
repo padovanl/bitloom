@@ -24,12 +24,73 @@ VEX_TYPES = {
 
 
 def sbom_files(profile: Profile) -> list[Path]:
-    """Image/SDK SBOMs in deploy directories, newest first (symlinked stable names skipped)."""
+    """Image/SDK SBOMs in deploy directories, newest first (symlinked stable names skipped).
+
+    SPDX 3 images ship one IMAGE.spdx.json. SPDX 2.2 images (up to 5.0) ship an
+    IMAGE.spdx.tar.zst archive; its image manifest stands in for it, joined with the
+    per-package documents in tmp/deploy/spdx, so no zstd tooling is needed."""
     found = []
     for folder in (profile.build_path / "tmp/deploy/images", profile.build_path / "tmp/deploy/sdk"):
-        if folder.is_dir():
-            found += [p for p in folder.rglob("*.spdx.json") if p.is_file() and not p.is_symlink()]
+        if not folder.is_dir():
+            continue
+        found += [p for p in folder.rglob("*.spdx.json") if p.is_file() and not p.is_symlink()]
+        for archive in folder.rglob("*.spdx.tar.zst"):
+            manifest = archive.with_name(archive.name[:-len(".spdx.tar.zst")] + ".manifest")
+            if archive.is_file() and not archive.is_symlink() and manifest.is_file() and manifest not in found:
+                found.append(manifest)
     return sorted(found, key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def _deploy_spdx(manifest: Path) -> Path:
+    # tmp/deploy/images/<machine>/<image>.manifest → tmp/deploy/spdx
+    return manifest.parents[2] / "spdx"
+
+
+def _analyse_spdx2_image(manifest: Path) -> dict:
+    spdx = _deploy_spdx(manifest)
+    pkgdata = manifest.parents[3] / "pkgdata"
+    arches = [p for p in spdx.iterdir() if p.is_dir() and p.name not in {"by-hash", "by-namespace"}] if spdx.is_dir() else []
+    rows, fixed, missing = [], set(), 0
+    recipes = {}
+    for line in manifest.read_text(errors="replace").splitlines():
+        fields = line.split()
+        if len(fields) < 3:
+            continue
+        name, arch, version = fields[0], fields[1], fields[2]
+        candidates = [spdx / arch / "packages" / f"{name}.spdx.json", spdx / arch.replace("_", "-") / "packages" / f"{name}.spdx.json"]
+        candidates += [folder / "packages" / f"{name}.spdx.json" for folder in arches]
+        path = next((c for c in candidates if c.is_file()), None)
+        if path is None:
+            missing += 1
+            rows.append({"name": name, "version": version, "purl": False, "cpe": False, "license": False, "supplier": False})
+            continue
+        package = (json.loads(path.read_text(errors="replace")).get("packages") or [{}])[0]
+        recipe_name = name
+        for reverse in pkgdata.glob(f"*/runtime-reverse/{name}"):
+            match = re.search(r"^PN: (\S+)", reverse.read_text(errors="replace"), re.M)
+            if match:
+                recipe_name = match[1]
+                break
+        if recipe_name not in recipes:
+            recipe_path = path.parents[1] / "recipes" / f"recipe-{recipe_name}.spdx.json"
+            recipe = (json.loads(recipe_path.read_text(errors="replace")).get("packages") or [{}])[0] if recipe_path.is_file() else {}
+            recipes[recipe_name] = recipe
+            info = recipe.get("sourceInfo", "")
+            if info.startswith("CVEs fixed:"):
+                fixed.update(info.split(":", 1)[1].split())
+        recipe = recipes[recipe_name]
+        refs = recipe.get("externalRefs", []) + package.get("externalRefs", [])
+        supplier = package.get("supplier") or recipe.get("supplier")
+        rows.append({"name": name, "version": package.get("versionInfo") or version,
+                     "purl": any("purl" in str(r.get("referenceType", "")).lower() for r in refs),
+                     "cpe": any("cpe" in str(r.get("referenceType", "")).lower() for r in refs),
+                     "license": any(package.get(k) not in MISSING for k in ("licenseConcluded", "licenseDeclared")),
+                     # The OpenEmbedded placeholder does not identify the manufacturer.
+                     "supplier": supplier not in MISSING and "OpenEmbedded ()" not in str(supplier)})
+    summary = _summary(manifest, "SPDX 2.2 (image manifest + per-package documents)", None, ["OpenEmbedded create-spdx 2.2"], rows,
+                       Counter({"CVEs recorded fixed by recipes": len(fixed)}) if fixed else Counter(), {"CVEs recorded fixed by recipes": sorted(fixed)[:15]} if fixed else {})
+    summary["unresolved_packages"] = missing
+    return summary
 
 
 def _types(element) -> set[str]:
@@ -39,6 +100,8 @@ def _types(element) -> set[str]:
 
 def analyse(path: Path) -> dict:
     """Package identity, licensing, supplier and vulnerability coverage of one SBOM."""
+    if path.name.endswith(".manifest"):
+        return _analyse_spdx2_image(path)
     if path.stat().st_size > MAX_BYTES:
         raise ValueError(f"{path} exceeds {MAX_BYTES // 1024 // 1024} MiB")
     data = json.loads(path.read_text(errors="replace"))
@@ -56,8 +119,8 @@ def _analyse_spdx2(path, data):
     for package in packages:
         refs = package.get("externalRefs", [])
         rows.append({"name": package.get("name"), "version": package.get("versionInfo"),
-                     "purl": any(r.get("referenceType") == "purl" for r in refs),
-                     "cpe": any(str(r.get("referenceType", "")).startswith("cpe") for r in refs),
+                     "purl": any("purl" in str(r.get("referenceType", "")).lower() for r in refs),
+                     "cpe": any("cpe" in str(r.get("referenceType", "")).lower() for r in refs),
                      "license": package.get("licenseConcluded") not in MISSING or package.get("licenseDeclared") not in MISSING,
                      "supplier": package.get("supplier") not in MISSING})
     created = data.get("creationInfo", {})
@@ -135,6 +198,8 @@ def sbom_report(profile: Profile, limit=6) -> str:
                     lines.append(f"    {status}: " + ", ".join(s["vex_examples"][status]))
         else:
             lines.append("  VEX      none in this document (Wrynose: sbom-cve-check / vex class; older: cve-check)")
+        if s.get("unresolved_packages"):
+            lines.append(f"  {s['unresolved_packages']} installed packages without an SPDX document in tmp/deploy/spdx")
         if s["missing_license"]:
             lines.append("  no licence: " + ", ".join(s["missing_license"]))
         if s["missing_identity"]:

@@ -200,7 +200,8 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
                 lines += [f'SPDX_PACKAGE_SUPPLIER_name = "{supplier}"', 'SPDX_PACKAGE_SUPPLIER_type = "organization"',
                           f'SPDX_IMAGE_SUPPLIER_name = "{supplier}"', 'SPDX_IMAGE_SUPPLIER_type = "organization"']
             elif supplier:
-                notes.append("Supplier fields need SPDX 3 (5.1 Styhead or newer); not written for this release.")
+                # SPDX 2.2 releases: replace the 'Organization: OpenEmbedded ()' placeholder.
+                lines.append(f'SPDX_SUPPLIER = "Organization: {supplier}"')
         files[f"conf/distro/{values['name']}.conf"] = "\n".join(lines) + "\n"
         activate["distro"] = values["name"]
     elif kind == "machine":
