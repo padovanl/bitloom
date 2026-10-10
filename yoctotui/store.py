@@ -7,14 +7,20 @@ from pathlib import Path
 
 
 class Store:
-    def __init__(self, directory: Path):
+    def __init__(self, directory: Path, readonly=False):
         directory.mkdir(parents=True, exist_ok=True)
         self.directory = directory
+        self.lock = None
+        if readonly:
+            self.db = sqlite3.connect(f"file:{directory.resolve() / 'history.sqlite3'}?mode=ro", uri=True)
+            self.db.row_factory = sqlite3.Row
+            return
         self.lock = (directory / "session.lock").open("a")
         try:
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            self.lock.close()
+            if self.lock:
+                self.lock.close()
             raise ValueError("Another YoctoTUI session is using this state directory") from exc
         self.db = sqlite3.connect(directory / "history.sqlite3")
         self.db.row_factory = sqlite3.Row
@@ -37,4 +43,5 @@ class Store:
 
     def close(self):
         self.db.close()
-        self.lock.close()
+        if self.lock:
+            self.lock.close()
