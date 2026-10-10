@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/bitloom-icon.svg" width="120" height="120" alt="Bitloom woven B icon"></p>
+
 # Bitloom
 
 **A terminal cockpit for everyday Yocto and BitBake development.** Build images, inspect recipes, develop with devtool, follow failures, and manage local caches from one keyboard-friendly interface.
@@ -74,6 +76,7 @@ The **Analysis** selector connects signature explanations, failure diagnosis, ru
 | F4 | Edit profiles |
 | F5 | Open build interruption options |
 | F6 | Retry the selected job |
+| F7 | Preview and save a terminal theme |
 | Alt+1…5 | Builds, metadata, task logs, workbench, caches |
 | Ctrl+L | Focus build log search |
 | Ctrl+P | Textual command palette |
@@ -135,3 +138,11 @@ The static [documentation site](docs/index.html) is ready for GitHub Pages. The 
 This is an initial functional release. Each command remains subject to the selected Yocto release, runtime, device access and configuration. Inventory scans are bounded, age-based pruning does not perform signature reachability analysis, and no cache is pruned automatically. External builders sharing a cache cannot be detected reliably. Logs and profiles can contain proprietary paths or credentials; review exports before sharing them. Custom commands accept argv, not shell expressions.
 
 No CI claim implies a full Yocto build: unit/UI tests and the opt-in container integration are separate validations.
+
+## Terminal themes
+
+Press **F7** or choose **Themes** in the toolbar to preview and save one of 12 palettes: Bitloom, Nord, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox, Solarized Dark, Ocean, Forest, Ember, Paper and High Contrast. Paper is a light theme; High Contrast uses a black background and bright foreground. Cancel restores the previous palette. The choice is stored separately from build profiles in the state's `appearance.json` and is restored next launch.
+
+![Actual terminal theme previews](docs/assets/themes.gif)
+
+The [Bitloom icon](docs/assets/bitloom-icon.svg) combines a woven B with horizontal layer threads and a vertical build thread. SVG is the source; PNG variants provide favicon, touch-icon and sharing support.
