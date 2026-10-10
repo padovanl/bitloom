@@ -56,6 +56,7 @@ async def validate(args):
         report = json.loads((state / 'result.json').read_text())
         evidence = await asyncio.to_thread(collect_evidence, args)
         report['artifact_evidence'] = evidence
+        report['artifacts'] = [str(Path('.validation/artifacts') / item['name']) for item in evidence]
         report['artifact_verified'] = bool(evidence) and all(a['has_shell'] for a in evidence)
         (state / 'result.json').write_text(json.dumps(report, indent=2))
         print(json.dumps(report, indent=2))
@@ -80,6 +81,7 @@ async def validate(args):
     if job.status == 'success':
         try:
             report['artifact_evidence'] = await asyncio.to_thread(collect_evidence, args)
+            report['artifacts'] = [str(Path('.validation/artifacts') / item['name']) for item in report['artifact_evidence']]
             report['artifact_verified'] = bool(report['artifact_evidence']) and all(a['has_shell'] for a in report['artifact_evidence'])
         except Exception as exc:
             report['artifact_verified'] = False

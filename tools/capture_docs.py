@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 from yoctotui.app import YoctoApp
 from terminal_capture import terminal_svg
 from yoctotui.cli import make_demo
-from textual.widgets import Input, TabbedContent
+from textual.widgets import Input, TabbedContent, Tree, DataTable
 
 
 async def capture():
@@ -37,17 +37,23 @@ async def capture():
             app.select_job(job.id, job.log)
             await app.runner.consumer
             await pilot.pause(.6)
-            async def shot(name):
+            async def shot(name, include_in_tour=True):
                 await pilot.pause(.25)
                 svg = output / f'{name}.svg'
                 svg.write_text(terminal_svg(app, 'YoctoTUI · demo workspace'))
                 png = output / f'{name}.png'
                 cairosvg.svg2png(url=str(svg), write_to=str(png), scale=.8)
-                frames.append(Image.open(png).convert('RGB'))
+                if include_in_tour:
+                    frames.append(Image.open(png).convert('RGB'))
             await shot('builds')
             app.query_one('#log-search', Input).value = 'error'
             await shot('error-search')
             app.query_one('#workspace', TabbedContent).active = 'metadata'
+            tree = app.query_one('#layer-tree', Tree)
+            layer = next(n for n in tree.root.children if n.data and n.data.kind == 'layer')
+            tree.select_node(layer)
+            await pilot.pause(.2)
+            app.query_one('#metadata-table', DataTable).move_cursor(row=1)
             await shot('layers-recipes')
             app.query_one('#workspace', TabbedContent).active = 'tasklogs'
             await shot('task-logs')
@@ -74,6 +80,9 @@ async def capture():
             await pilot.press('f4')
             await shot('profiles')
             await pilot.press('escape')
+            app.query_one('#workspace', TabbedContent).active = 'builds'
+            await pilot.resize_terminal(90, 28)
+            await shot('compact', include_in_tour=False)
         app.store.close()
         # Stable dimensions; no invented terminal content.
         size = frames[0].size

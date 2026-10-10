@@ -45,6 +45,8 @@ def dependencies(path: Path) -> list[tuple[str, str]]:
     edges = []
     with path.open(errors='replace') as source:
         for line in source:
+            if line.startswith("$ "):
+                continue
             match = re.search(r'"([^"\n]+)"\s*->\s*"([^"\n]+)"', line)
             if match:
                 edges.append(match.groups())

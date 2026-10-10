@@ -2,9 +2,9 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Validation report — YoctoTUI</title><link rel="stylesheet" href="style.css"></head>
 <body><header><a class="brand" href="index.html">Y▸ YoctoTUI</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a></nav></header><main class="manual"><article class="doc"><h1 id="validation-report">Validation report</h1>
 <h2 id="status">Status</h2>
-<p>Development validation on <strong>2026-10-10</strong>. The full container image build is running; this report will be updated from the observed result before the final verification commit. This is not a success claim.</p>
+<p><strong>Completed on 2026-10-10.</strong> The real kas-container image build exited 0: all <strong>4,064 tasks succeeded</strong>, with no reused tasks. Elapsed wall time was <strong>57 minutes 10 seconds</strong> (10:41:45–11:38:55 UTC). BitBake reported <strong>20 warnings and no errors</strong>. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.</p>
 <h2 id="automated-checks">Automated checks</h2>
-<p>The initial expanded suite passed <strong>20 unit and UI tests</strong> on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing and TUI navigation.</p>
+<p>The expanded suite passed <strong>33 unit and UI tests</strong> on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.</p>
 <p>The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thread example. The same tests passed when executed outside that sandbox. This restriction is separate from application behavior.</p>
 <h2 id="genuine-yocto-image-build">Genuine Yocto image build</h2>
 <table>
@@ -63,13 +63,46 @@
 <td>Threads</td>
 <td>BB_NUMBER_THREADS=8, PARALLEL_MAKE=-j8</td>
 </tr>
+<tr>
+<td>Initial sstate</td>
+<td>Wanted 1,854; Local 0; Mirrors 0; Missed 1,854</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>4,064 attempted tasks, all succeeded; exit 0</td>
+</tr>
+<tr>
+<td>Rootfs archive</td>
+<td>core-image-minimal-qemux86-64.rootfs-20261010104206.tar.bz2</td>
+</tr>
+<tr>
+<td>Archive size</td>
+<td>18,012,484 bytes</td>
+</tr>
+<tr>
+<td>Rootfs evidence</td>
+<td>724 entries; shell present; 27,107,202 regular-file bytes</td>
+</tr>
+<tr>
+<td>SHA-256</td>
+<td>f96d0d5d60d2465caa4ca5ce6b8d60e92c454e1a2a1df1e27d1c236db0f7cfe1</td>
+</tr>
 </tbody>
 </table>
 <p>No Yocto build toolchain was installed on the host. The official kas image provides those dependencies. The project venv contains TUI/test/documentation tools and the kas-container wrapper. Build data and the downloaded image consume disk space; they are isolated, not nonexistent.</p>
 <p>Docker Snap exposed a private /tmp mount initially owned by root. Only that dedicated work mount was assigned the builder UID/GID. Docker socket permissions were not modified. A failed initial attempt and the later real build logs are retained locally under .validation.</p>
 <p>The configuration pins the fetched Poky commit for reproducibility. Standard upstream source fetches and mirrors are used; network warnings are not treated as successful fetch evidence.</p>
+<h2 id="runtime-probes-after-the-build">Runtime probes after the build</h2>
+<p>All eight probes ran through YoctoTUI Runner and the same pinned kas-container image, with exit 0: evaluated layers, busybox recipe lookup, busybox environment, devtool status, container-only local.conf, built package listing, dependency graph generation and container-only graph reading. The environment contained <strong>1,943 parsed variables</strong>, with MACHINE=qemux86-64 and PN=busybox. The graph contained <strong>12,654 parsed edges</strong>.</p>
+<p>The rootfs inventory utility was also exercised on the actual copied archive without extraction. The timing report found <strong>4,048 completed timestamp pairs</strong> and zero unmatched starts; the slowest compile was llvm-native at <strong>1,770 seconds</strong>. Task wall times overlap and do not sum to the build duration.</p>
+<p>Reproduce post-build probes with <code>PATH=&quot;$PWD/.venv/bin:$PATH&quot; python tools/probe_kas.py</code>. Local machine evidence is retained in <code>.validation/result.json</code>, <code>.validation/probes.json</code>, the SQLite history and original logs; generated rootfs files are ignored by Git.</p>
+<p><img src="assets/real-kas-build.png" alt="Completed actual kas-container build" /></p>
+<p><img src="assets/real-kas-environment.png" alt="Actual evaluated busybox environment" /></p>
+<p><img src="assets/real-kas-dependencies.png" alt="Actual container task dependency graph" /></p>
+<h2 id="documentation-site">Documentation site</h2>
+<p>The static documentation was exercised in Chromium 153 using Playwright: capability filtering, runtime profile examples, screenshot dialog, all three generated HTML manuals and a 390-pixel mobile viewport passed. No JavaScript page errors or failed resources were observed. The site and publishing workflow are committed; no GitHub remote is configured, so a public Pages deployment has not occurred.</p>
 <h2 id="screenshots-and-gif">Screenshots and GIF</h2>
-<p>Media in assets/ was captured from the actual Textual app with Pilot. The sample workspace and controlled failure are clearly labelled demo data. SVG is exported by Textual; PNG is rendered from the exported SVG; GIF sequences those actual captures. No generated image or invented successful build screen is used.</p>
+<p>The real-kas-* images show the verified build and its actual environment/dependencies. Other media is explicitly sample data. Media in assets/ was captured from the actual Textual app with Pilot. The sample workspace and controlled failure are clearly labelled demo data. SVG is exported by Textual and cropped to the terminal grid, removing Rich's decorative desktop-window frame; PNG is rendered with a local monospace font from that grid; GIF sequences those actual captures. No generated image or invented successful build screen is used.</p>
 <h2 id="coverage-boundaries">Coverage boundaries</h2>
 <p>A passing minimal image build does not validate every board, old release, devtool operation, existing-container lifecycle, shared-cache topology, external device or optional testing/security class. Podman command construction is tested; a Docker execution does not prove an end-to-end Podman build. Graceful stop uses documented BitBake client behavior and single-signal unit verification; interrupting the full validation build was not used as a shortcut.</p>
 <p>Reference behavior: <a href="https://github.com/openembedded/bitbake/blob/master/lib/bb/ui/knotty.py">BitBake knotty UI shutdown handling</a>, <a href="https://kas.readthedocs.io/en/4.8.1/userguide/kas-container.html">kas container guide</a>.</p>

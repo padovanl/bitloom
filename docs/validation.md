@@ -2,11 +2,11 @@
 
 ## Status
 
-Development validation on **2026-10-10**. The full container image build is running; this report will be updated from the observed result before the final verification commit. This is not a success claim.
+**Completed on 2026-10-10.** The real kas-container image build exited 0: all **4,064 tasks succeeded**, with no reused tasks. Elapsed wall time was **57 minutes 10 seconds** (10:41:45–11:38:55 UTC). BitBake reported **20 warnings and no errors**. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.
 
 ## Automated checks
 
-The initial expanded suite passed **20 unit and UI tests** on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing and TUI navigation.
+The expanded suite passed **33 unit and UI tests** on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.
 
 The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thread example. The same tests passed when executed outside that sandbox. This restriction is separate from application behavior.
 
@@ -26,6 +26,12 @@ The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thr
 | Work | Dedicated /tmp/yoctotui-kas-validation mount in the Docker daemon namespace |
 | Output format | root filesystem tar.bz2 |
 | Threads | BB_NUMBER_THREADS=8, PARALLEL_MAKE=-j8 |
+| Initial sstate | Wanted 1,854; Local 0; Mirrors 0; Missed 1,854 |
+| Result | 4,064 attempted tasks, all succeeded; exit 0 |
+| Rootfs archive | core-image-minimal-qemux86-64.rootfs-20261010104206.tar.bz2 |
+| Archive size | 18,012,484 bytes |
+| Rootfs evidence | 724 entries; shell present; 27,107,202 regular-file bytes |
+| SHA-256 | f96d0d5d60d2465caa4ca5ce6b8d60e92c454e1a2a1df1e27d1c236db0f7cfe1 |
 
 No Yocto build toolchain was installed on the host. The official kas image provides those dependencies. The project venv contains TUI/test/documentation tools and the kas-container wrapper. Build data and the downloaded image consume disk space; they are isolated, not nonexistent.
 
@@ -33,9 +39,27 @@ Docker Snap exposed a private /tmp mount initially owned by root. Only that dedi
 
 The configuration pins the fetched Poky commit for reproducibility. Standard upstream source fetches and mirrors are used; network warnings are not treated as successful fetch evidence.
 
+## Runtime probes after the build
+
+All eight probes ran through YoctoTUI Runner and the same pinned kas-container image, with exit 0: evaluated layers, busybox recipe lookup, busybox environment, devtool status, container-only local.conf, built package listing, dependency graph generation and container-only graph reading. The environment contained **1,943 parsed variables**, with MACHINE=qemux86-64 and PN=busybox. The graph contained **12,654 parsed edges**.
+
+The rootfs inventory utility was also exercised on the actual copied archive without extraction. The timing report found **4,048 completed timestamp pairs** and zero unmatched starts; the slowest compile was llvm-native at **1,770 seconds**. Task wall times overlap and do not sum to the build duration.
+
+Reproduce post-build probes with `PATH="$PWD/.venv/bin:$PATH" python tools/probe_kas.py`. Local machine evidence is retained in `.validation/result.json`, `.validation/probes.json`, the SQLite history and original logs; generated rootfs files are ignored by Git.
+
+![Completed actual kas-container build](assets/real-kas-build.png)
+
+![Actual evaluated busybox environment](assets/real-kas-environment.png)
+
+![Actual container task dependency graph](assets/real-kas-dependencies.png)
+
+## Documentation site
+
+The static documentation was exercised in Chromium 153 using Playwright: capability filtering, runtime profile examples, screenshot dialog, all three generated HTML manuals and a 390-pixel mobile viewport passed. No JavaScript page errors or failed resources were observed. The site and publishing workflow are committed; no GitHub remote is configured, so a public Pages deployment has not occurred.
+
 ## Screenshots and GIF
 
-Media in assets/ was captured from the actual Textual app with Pilot. The sample workspace and controlled failure are clearly labelled demo data. SVG is exported by Textual; PNG is rendered from the exported SVG; GIF sequences those actual captures. No generated image or invented successful build screen is used.
+The real-kas-* images show the verified build and its actual environment/dependencies. Other media is explicitly sample data. Media in assets/ was captured from the actual Textual app with Pilot. The sample workspace and controlled failure are clearly labelled demo data. SVG is exported by Textual and cropped to the terminal grid, removing Rich's decorative desktop-window frame; PNG is rendered with a local monospace font from that grid; GIF sequences those actual captures. No generated image or invented successful build screen is used.
 
 ## Coverage boundaries
 

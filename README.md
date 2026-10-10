@@ -55,6 +55,8 @@ The [command reference](docs/commands.md) documents every built-in action. The [
 | F2 | Search and queue a command |
 | F3 | Refresh local metadata, logs, diagnostics and artifacts |
 | F4 | Edit profiles |
+| F5 | Open build interruption options |
+| F6 | Retry the selected job |
 | Alt+1…5 | Builds, metadata, task logs, workbench, caches |
 | Ctrl+L | Focus build log search |
 | Ctrl+P | Textual command palette |
@@ -63,7 +65,7 @@ The [command reference](docs/commands.md) documents every built-in action. The [
 | Tab / Shift+Tab | Move focus |
 | Escape | Close a dialog |
 
-The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace; below 105 columns it switches to tabs and hides side panes. Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
+The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace; below 105 columns it switches to tabs and hides side panes. The [compact terminal capture](docs/assets/compact.png) shows the 90 × 28 layout. Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
 
 ## Build interruption and recovery
 
@@ -89,6 +91,10 @@ PATH="$PWD/.venv/bin:$PATH" python tools/validate_kas.py \
 ```
 
 Docker/Podman must be running. The kas image supplies Yocto build dependencies. The first build downloads sources and can take considerable time/disk space. `.validation/` contains logs, SQLite history and `result.json`; it is ignored by Git. Use a Linux filesystem for work files. Docker installed via Snap has a private `/tmp`; see the [troubleshooting guide](docs/guide.md#troubleshooting).
+
+**Verified on 2026-10-10:** all 4,064 tasks succeeded in 57m 10s through kas-container; the rootfs archive and eight runtime probes passed.
+
+![Actual successful kas-container build](docs/assets/real-kas-build.png)
 
 See the [validation report](docs/validation.md) for the actual result and limitations. Screenshots and GIFs show a sample workspace; they are not evidence of a completed Yocto image.
 
