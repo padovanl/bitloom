@@ -369,6 +369,7 @@ class BitloomApp(App):
                             yield Button("Build recipe", id="recipe-build")
                             yield Button("Modify", id="recipe-modify")
                             yield Button("Layer actions", id="layer-actions")
+                            yield Button("Studio", id="studio", variant="primary")
                             yield Button("New file", id="new-file")
                             yield Button("Rescan", id="rescan")
                         yield Static(id="detail", markup=False)
@@ -880,6 +881,7 @@ class BitloomApp(App):
         yield SystemCommand("Keyboard reference", "Every key in every section (?)", self.action_keys)
         yield SystemCommand("Switch profile", "Choose the active profile (P)", self.action_switch_profile)
         yield SystemCommand("Edit profiles", "JSON profile editor (F4)", self.action_profiles)
+        yield SystemCommand("Studio", "Create a product layer, distro, machine, image, recipe or append", lambda: self.action_press("studio"))
         yield SystemCommand("Console builds", "Builds started outside Bitloom (BitBake console logs)", self.action_console_builds)
         yield SystemCommand("Refresh workspace", "Rescan metadata, logs, artifacts (F3)", self.action_refresh)
         yield SystemCommand("Stop selected job", "Interruption options (F5)", self.action_stop_job)
@@ -1285,6 +1287,10 @@ class BitloomApp(App):
             self.export_log()
         elif ident == "console-builds":
             self.action_console_builds()
+        elif ident == "studio":
+            from .screens import StudioScreen
+            from .studio import product_layers
+            self.push_screen(StudioScreen(self.profile, self.release, product_layers(self.entries, self.profile)), self.studio_result)
         elif ident == "sbom-settings":
             from .screens import SbomSettingsScreen
             self.push_screen(SbomSettingsScreen(self.profile, self.release), self.sbom_settings_result)
@@ -1307,6 +1313,48 @@ class BitloomApp(App):
             if table.row_count:
                 key = table.coordinate_to_cell_key(table.cursor_coordinate).row_key
                 table.post_message(DataTable.RowSelected(table, table.cursor_row, key))
+
+    def studio_result(self, result):
+        """Register what Studio created: layer, distro/machine selection or kas overlay."""
+        if not result:
+            return
+        from .studio import kas_overlay, runtime_path
+        plan, profile = result["plan"], self.profile
+        message = [f"Created {len(result['written'])} files in {plan['layer']}"]
+        try:
+            if profile.mode in {"kas", "kas-container", "wrapper"} and (plan["new_layer"] or plan["activate"]):
+                name, text = kas_overlay(profile, plan)
+                path = profile.root_path / name
+                if path.exists():
+                    message.append(f"{name} exists; add the layer/selection to it by hand")
+                else:
+                    path.write_text(text)
+                    if profile.mode == "wrapper":
+                        message.append(f"add {name} to the configuration your launcher passes to kas")
+                    elif profile.name in self.settings.shared:
+                        message.append(f"team profile: clone it and append {name} to kas_file")
+                    else:
+                        profile.kas_file = ":".join([*profile.kas_file.split(":"), name])
+                        self.settings.save()
+                        message.append(f"kas_file is now {profile.kas_file}")
+            else:
+                if plan["new_layer"]:
+                    self.runner.submit(profile, "Register layer " + plan["layer"].rsplit("/", 1)[-1], ["bitbake-layers", "add-layer", runtime_path(profile, plan["layer"])], "layer-add")
+                    message.append("queued bitbake-layers add-layer")
+                if result["use"] and plan["activate"].get("distro"):
+                    profile.distro = plan["activate"]["distro"]
+                if result["use"] and plan["activate"].get("machine"):
+                    profile.machine = plan["activate"]["machine"]
+                if result["use"] and (plan["activate"].get("distro") or plan["activate"].get("machine")):
+                    self.settings.save()
+                    message.append(f"profile now uses DISTRO={profile.distro or 'default'} MACHINE={profile.machine or 'default'}")
+            if plan["activate"].get("target"):
+                self.main_query("#target", Input).value = plan["activate"]["target"]
+                message.append(f"target set to {plan['activate']['target']} (b builds it)")
+            self.notify(" · ".join(message), timeout=15)
+            self.scan_project()
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error", timeout=12)
 
     def sbom_settings_result(self, result):
         if not result:
