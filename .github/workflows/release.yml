@@ -7,6 +7,16 @@ on:
         description: 'Stable version without v prefix (for example 1.2.3)'
         required: true
         type: string
+      prerelease:
+        description: 'Mark the GitHub release as a pre-release'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: 'Create a draft release (publish it manually after review)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -52,7 +62,31 @@ jobs:
           cd /tmp
           /usr/bin/bitloom --help
           /usr/bin/python3 -c 'import os, sys; sys.path.insert(0, "/opt/bitloom/lib"); import bitloom; assert bitloom.__version__ == os.environ["RELEASE_VERSION"]'
-      - name: Publish GitHub release
+      - name: Smoke test the installed package
+        working-directory: /tmp
         run: |
+          set -e
+          export PYTHONPATH=/opt/bitloom/lib
+          /usr/bin/python3 -c 'import bitloom.app, bitloom.web, bitloom.ci, bitloom.studio, bitloom.sbom, bitloom.sbom_settings, bitloom.fleet, bitloom.infra'
+          /usr/bin/bitloom --list-actions | grep -q sbom-cve-recipe
+          /usr/bin/python3 -c 'from pathlib import Path; from bitloom.cli import prepare_demo; prepare_demo(Path("/tmp/bitloom-smoke"))'
+          # --doctor exits 2 when a check warns (no BitBake on the runner): both mean it ran.
+          status=0; /usr/bin/bitloom --config /tmp/bitloom-smoke/demo/.bitloom/profiles.json --doctor || status=$?
+          test "$status" -eq 0 -o "$status" -eq 2
+          /usr/bin/python3 -c 'from pathlib import Path; from bitloom.models import Settings; from bitloom.sbom import sbom_report; s = Settings(Path("/tmp/bitloom-smoke/demo/.bitloom/profiles.json")); p = next(p for p in s.profiles if p.name == "demo-wrynose"); text = sbom_report(p); assert "SPDX 3" in text, text'
+      - name: Keep the assets with the workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitloom-${{ inputs.version }}
+          path: dist/release/
+          if-no-files-found: error
+      - name: Publish GitHub release
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
+          DRAFT: ${{ inputs.draft }}
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          if [ "$DRAFT" = "true" ]; then flags+=(--draft); fi
           gh release create "v${RELEASE_VERSION}" dist/release/* \
-            --target "$GITHUB_SHA" --title "Bitloom ${RELEASE_VERSION}" --generate-notes
+            --target "$GITHUB_SHA" --title "Bitloom ${RELEASE_VERSION}" --generate-notes "${flags[@]}"
