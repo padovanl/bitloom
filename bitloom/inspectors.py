@@ -176,8 +176,9 @@ def diagnostics(profile: Profile) -> list[tuple[str, str, str]]:
         p = cache_path(profile, kind)
         check(p.is_dir(), kind, str(p))
     conf = read_assignments(profile.build_path / "conf/local.conf")
-    results += [("INFO", k, conf.get(k, "not explicitly set; inspect bitbake -e")) for k in ("MACHINE", "DISTRO", "BB_NUMBER_THREADS", "PARALLEL_MAKE", "INHERIT", "SSTATE_MIRRORS", "PREMIRRORS", "BB_NO_NETWORK", "TMPDIR")]
-    return results
+    results += [("INFO", k, conf.get(k, "not explicitly set; inspect bitbake -e")) for k in ("MACHINE", "DISTRO", "BB_NUMBER_THREADS", "PARALLEL_MAKE", "INHERIT", "SSTATE_MIRRORS", "PREMIRRORS", "BB_HASHSERVE", "PRSERV_HOST", "BB_NO_NETWORK", "TMPDIR")]
+    from .infra import filesystem_checks, host_checks
+    return results + filesystem_checks(profile) + host_checks()
 
 
 def human_size(n: int) -> str:

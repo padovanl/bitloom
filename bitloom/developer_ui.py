@@ -349,7 +349,7 @@ class DeveloperPanel(Vertical):
             'downloads': [('Prepare source mirrors', 'mirror'), ('Verify fetch offline', 'offline-fetch'), ('Verify full build offline', 'offline-build')],
             'kernel': [('Kernel config check', 'kernel-fragments'), ('Export kernel diff', 'kernel-diff'), ('Menuconfig (terminal)', 'menuconfig')],
             'upgrade': [('Check latest version', 'dev-latest'), ('Check upgrade status', 'dev-upgrade-status'), ('Upgrade recipe', 'dev-upgrade')],
-            'board': [('Device status', 'status'), ('Deploy recipe', 'deploy'), ('Undeploy recipe', 'undeploy'), ('Run device test', 'test'),
+            'board': [('Fleet status (all devices)', 'fleet'), ('Device status', 'status'), ('Deploy recipe', 'deploy'), ('Undeploy recipe', 'undeploy'), ('Run device test', 'test'),
                       ('Console (terminal)', 'console'), ('Acquire labgrid place', 'acquire'), ('Release labgrid place', 'release'), ('Power cycle place', 'power')],
             'security': [('Record selected issue review', 'review')],
             'config': [('Generate kas lock', 'kas-lock')],
@@ -610,6 +610,14 @@ class DeveloperPanel(Vertical):
             if operation == 'prepare-work':
                 self.app.developer_busy = True
                 self.notify(await dev.prepare_kas_work(profile), timeout=12)
+                return
+            if operation == 'fleet':
+                from .fleet import fleet_report, fleet_status
+                self.query_one('#dev-state', Static).update('Probing every configured device…')
+                rows = await fleet_status(self.app.store.directory / 'devices.json')
+                output = self.query_one('#dev-detail', RichLog)
+                output.clear(); output.write(Text(fleet_report(rows)))
+                self.query_one('#dev-state', Static).update(f'Fleet status · {len(rows)} devices')
                 return
             if self.view == 'board':
                 await self.device_operation(operation, recipe)

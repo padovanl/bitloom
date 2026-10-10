@@ -163,3 +163,43 @@ def task_timings(path: Path) -> str:
         return 'No completed timestamped task pairs found. kas timestamped output is supported. Plain BitBake output does not provide timings; enable buildstats and inspect its artifacts.'
     rows = [f'{seconds:9.0f}s  {recipe:45} {task:30} {status}' for seconds, recipe, task, status in sorted(complete, reverse=True)[:200]]
     return '\n'.join([f'Observed task timings: {path}', f'Completed pairs: {len(complete)} · unmatched starts: {len(running)}', 'Sorted by wall duration. Tasks overlap; summed durations are not build elapsed time.', '', *rows])
+
+
+IMAGE_SUFFIXES = (".wic", ".wic.gz", ".wic.bz2", ".wic.xz", ".wic.zst", ".ext4", ".ext3", ".ext2", ".tar.bz2", ".tar.gz", ".tar.xz",
+                  ".tar.zst", ".squashfs", ".squashfs-xz", ".ubi", ".ubifs", ".jffs2", ".cpio.gz", ".iso", ".hddimg", ".sdimg", ".rpi-sdimg",
+                  ".swu", ".fitImage", ".itb")
+
+
+def image_matrix(profile: Profile) -> str:
+    """Every image of every MACHINE in tmp/deploy/images, newest first, with package counts."""
+    from datetime import datetime
+    from .inspectors import human_size
+    root = profile.build_path / 'tmp/deploy/images'
+    if not root.is_dir():
+        return f'No deployed images under {root}. Build an image for at least one MACHINE first.'
+    lines = [f'Image matrix: {root}', 'One block per MACHINE. Symlinks are the stable names BitBake points at the newest build.', '']
+    machines = sorted(p for p in root.iterdir() if p.is_dir())
+    for machine in machines:
+        images, manifests = [], {}
+        for path in machine.iterdir():
+            if path.name.endswith('.manifest') and not path.is_symlink():
+                try:
+                    manifests[path.name[:-9]] = sum(1 for line in path.read_text(errors='replace').splitlines() if line.strip())
+                except OSError:
+                    pass
+            elif path.name.endswith(IMAGE_SUFFIXES) and path.is_file() and not path.is_symlink():
+                images.append(path)
+        images.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        lines.append(f'{machine.name}  ·  {len(images)} image files  ·  {len(manifests)} manifests')
+        for path in images[:40]:
+            stat = path.stat()
+            stem = next((name for name in manifests if path.name.startswith(name)), '')
+            packages = f'{manifests[stem]} packages' if stem else ''
+            lines.append(f'  {datetime.fromtimestamp(stat.st_mtime):%Y-%m-%d %H:%M}  {human_size(stat.st_size):>10}  {path.name}  {packages}')
+        lines.append('')
+    sdk = profile.build_path / 'tmp/deploy/sdk'
+    if sdk.is_dir():
+        installers = sorted(p for p in sdk.iterdir() if p.name.endswith('.sh') and p.is_file())
+        lines.append(f'SDK installers: {len(installers)}')
+        lines += [f'  {human_size(p.stat().st_size):>10}  {p.name}' for p in installers[:20]]
+    return '\n'.join(lines)
