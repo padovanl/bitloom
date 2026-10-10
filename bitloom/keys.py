@@ -37,7 +37,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
         ("s", "press('stop')", "Stop", "stop"), ("r", "press('retry')", "Retry", "retry"),
         ("e", "press('errors')", "Errors", "errors"), ("p", "press('log-follow')", "Pause", "log-follow"),
         ("x", "press('export')", "Export", "export"), ("i", "build_summary", "Summary", ""),
-        ("f", "press('failed-task-log')", "Failed log", ""),
+        ("f", "press('failed-task-log')", "Failed log", ""), ("c", "console_builds", "Console builds", "console-builds"),
     ],
     "metadata": [
         ("b", "press('recipe-build')", "Build", "recipe-build"), ("m", "press('recipe-modify')", "Modify", "recipe-modify"),
@@ -114,6 +114,12 @@ DIALOG_KEYS = [
     ("↑ / ↓", "Command center filter: choose the operation"),
     ("f / g / k", "Interruption dialog: finish, graceful stop, force"),
 ]
+
+
+def sectional_actions() -> set[str]:
+    """Action names that only run from the section that binds them."""
+    from textual.actions import parse
+    return {parse(bound)[1] for keys in SECTION_KEYS.values() for _, bound, _, _ in keys}
 
 
 def section_bindings() -> list[Binding]:

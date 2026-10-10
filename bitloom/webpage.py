@@ -69,6 +69,7 @@ main { overflow: auto; padding: 16px 20px; display: flex; flex-direction: column
 .row.selected { background: var(--raised); box-shadow: inset 3px 0 var(--accent); }
 .row .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .meta { color: var(--muted); font: 12px var(--mono); }
+.group-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; padding: 12px 14px 6px; border-bottom: 1px solid var(--line); }
 .glyph { font-family: var(--mono); text-align: center; }
 .s-success { color: var(--ok); } .s-failed { color: var(--err); } .s-running { color: var(--accent); }
 .s-queued, .s-cancelling, .s-interrupted { color: var(--warn); } .s-cancelled { color: var(--muted); }
@@ -233,7 +234,7 @@ const KEYS = [["1 – 4", "Switch section"], ["/", "Search in the current sectio
   ["j / k", "Next / previous operation"], ["b", "Build the target"], ["q", "Queue any operation"], ["t", "Edit the build target"],
   ["s", "Force stop the selected operation"], ["g", "Graceful stop (BitBake client SIGINT)"], ["r", "Retry the selected operation"],
   ["e", "Toggle errors only"], ["o / u / w / m", "Output / Summary / Warnings / Timings tab"], ["?", "This help"]];
-let state = null, actions = [], selected = null, view = "builds", tab = "output", logOffset = -1, logFor = null, followTimer = null;
+let consoleRows = [], state = null, actions = [], selected = null, view = "builds", tab = "output", logOffset = -1, logFor = null, followTimer = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, {...options, headers: {"X-Bitloom-Token": token, "Content-Type": "application/json", ...(options.headers || {})}});
@@ -322,12 +323,37 @@ function renderState() {
     if (row.profile !== (p && p.name)) item.querySelector(".title").append(el("span", {class: "meta", text: "  " + row.profile}));
     list.append(item);
   }
+  if (consoleRows.length) {
+    list.append(el("div", {class: "group-label", text: "CONSOLE BUILDS · started outside Bitloom"}));
+    for (const row of consoleRows) {
+      const id = "console:" + row.path;
+      const when = new Date(row.modified * 1000).toLocaleString();
+      list.append(el("div", {class: "row" + (id === selected ? " selected" : ""), role: "option", tabindex: "-1", "data-id": id, onclick: () => select_(id)},
+        el("span", {class: "glyph s-" + row.status, text: GLYPH[row.status] || "·"}),
+        el("span", {class: "title", title: row.path, text: when + "  " + row.machine}),
+        el("span", {class: "meta", text: size(row.size)})));
+    }
+  }
   if (!selected && state.history.length) select_(state.history[0].id);
   renderDetail();
 }
+async function loadConsole() {
+  try { consoleRows = (await api(`/api/console?profile=${encodeURIComponent($("profile").value || state.active)}`)).rows; } catch (error) { consoleRows = []; }
+}
 
+function consoleRow() { return selected && selected.startsWith("console:") ? consoleRows.find((row) => "console:" + row.path === selected) : null; }
 function current() { return state && state.history.find((row) => row.id === selected); }
 function renderDetail() {
+  const outside = consoleRow();
+  if (outside) {
+    for (const id of ["stop-btn", "graceful-btn", "retry-btn"]) $(id).disabled = true;
+    $("d-glyph").textContent = GLYPH[outside.status] || "·"; $("d-glyph").className = "glyph s-" + outside.status;
+    $("d-title").textContent = "Console build " + outside.name;
+    $("d-meta").textContent = `${outside.status} · ${outside.machine} · not started by Bitloom`;
+    $("d-progress").className = "progress " + outside.status;
+    $("d-progress").firstElementChild.style.width = outside.status === "success" ? "100%" : "0";
+    return;
+  }
   const row = current();
   const active = row && ["running", "queued", "cancelling"].includes(row.status);
   $("stop-btn").disabled = !active; $("graceful-btn").disabled = !row || row.status !== "running"; $("retry-btn").disabled = !row || active;
@@ -348,10 +374,18 @@ function select_(id) {
 }
 
 async function loadTab() {
-  const row = current(); if (!row) return;
+  const outside = consoleRow();
+  const row = current(); if (!row && !outside) return;
   $("log-tools").hidden = tab !== "output";
   const log = $("log");
   try {
+    if (outside) {
+      const base = `profile=${prof()}&path=${encodeURIComponent(outside.path)}`;
+      if (tab !== "output") { const report = await api(`/api/console/report?${base}`); renderLog(log, report[tab] || "", ""); return; }
+      const query = $("log-search").value;
+      const data = await api(`/api/console/log?${base}&q=${encodeURIComponent(query)}&errors=${$("errors-only").checked ? 1 : 0}`);
+      renderLog(log, data.text, query); logFor = selected; return;
+    }
     if (tab !== "output") {
       const report = await api(`/api/jobs/${row.id}/report`);
       renderLog(log, report[tab] || "", ""); return;
@@ -370,11 +404,13 @@ async function loadTab() {
   } catch (error) { renderLog(log, String(error.message), ""); }
 }
 
+let consoleCheck = 0;
 async function refresh() {
+  if (Date.now() - consoleCheck > 15000 && state) { consoleCheck = Date.now(); await loadConsole(); }
   try { state = await api("/api/state"); renderState(); }
   catch (error) { $("service-dot").className = "dot err"; $("service-label").textContent = error.message; }
   const row = current();
-  if (view === "builds" && tab === "output" && row && (row.status === "running" || row.status === "cancelling" || logFor !== row.id)) loadTab();
+  if (view === "builds" && tab === "output" && row && !consoleRow() && (row.status === "running" || row.status === "cancelling" || logFor !== row.id)) loadTab();
 }
 
 function setView(name) {
@@ -477,7 +513,7 @@ async function control(kind) {
 function wire() {
   for (const button of document.querySelectorAll("nav button")) button.addEventListener("click", () => setView(button.dataset.view));
   for (const button of document.querySelectorAll(".tabs button")) button.addEventListener("click", () => setTab(button.dataset.tab));
-  $("profile").addEventListener("change", () => { $("target").dataset.touched = ""; renderState(); setView(view); });
+  $("profile").addEventListener("change", async () => { $("target").dataset.touched = ""; await loadConsole(); renderState(); setView(view); });
   $("target").addEventListener("input", () => { $("target").dataset.touched = "1"; });
   $("target").addEventListener("keydown", (event) => { if (event.key === "Enter") queue("build", {target: $("target").value}); });
   $("build-btn").addEventListener("click", () => queue("build", {target: $("target").value}));
@@ -525,9 +561,9 @@ function wire() {
     else if (event.key === "q") { openQueue(); handled(); }
     else if (event.key === "t") { $("target").focus(); $("target").select(); handled(); }
     else if (view === "builds") {
-      const rows = state ? state.history : [], index = rows.findIndex((row) => row.id === selected);
-      if ((event.key === "j" || event.key === "ArrowDown") && index < rows.length - 1) { select_(rows[index + 1].id); handled(); }
-      else if ((event.key === "k" || event.key === "ArrowUp") && index > 0) { select_(rows[index - 1].id); handled(); }
+      const rows = state ? [...state.history.map((row) => row.id), ...consoleRows.map((row) => "console:" + row.path)] : [], index = rows.indexOf(selected);
+      if ((event.key === "j" || event.key === "ArrowDown") && index < rows.length - 1) { select_(rows[index + 1]); handled(); }
+      else if ((event.key === "k" || event.key === "ArrowUp") && index > 0) { select_(rows[index - 1]); handled(); }
       else if (event.key === "s") { control("stop"); handled(); }
       else if (event.key === "g") { control("graceful"); handled(); }
       else if (event.key === "r") { control("retry"); handled(); }
@@ -542,7 +578,7 @@ function wire() {
   wire(); setView("builds");
   if (!token) { toast("Open the URL printed by bitloom --web (it carries the session token).", true); return; }
   try { actions = await api("/api/actions"); } catch (error) { toast(error.message, true); }
-  await refresh();
+  await refresh(); await loadConsole(); renderState();
   setInterval(refresh, 1500);
 })();
 </script>

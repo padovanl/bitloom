@@ -158,3 +158,26 @@ def test_reference_lists_every_section_key():
         for key, _, label, _ in keys:
             assert f'| `{key}` | {label} |' in text
     assert 'Ctrl+O' in text and 'Ctrl+K' in text
+
+
+async def test_console_builds_from_outside_bitloom(tmp_path):
+    from bitloom.screens import ConsoleBuildsScreen
+    from bitloom.inspectors import console_logs
+    app = BitloomApp(make_demo(tmp_path / 'demo'), tmp_path / 'state')
+    cooker = tmp_path / 'demo/build/tmp/log/cooker/qemux86-64'
+    (cooker / '20260102120000.log').write_text("NOTE: Tasks Summary: Attempted 5 tasks of which 5 didn't need to be rerun and all succeeded.\n")
+    assert [e.detail for e in console_logs(app.profile)] == ['success', 'failed']
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.3)
+        await pilot.press('c')
+        await pilot.pause(.4)
+        assert isinstance(app.screen, ConsoleBuildsScreen)
+        failed = next(i for i, e in enumerate(app.screen.entries) if e.detail == 'failed')
+        app.screen.query_one('#console-list').highlighted = failed
+        await pilot.press('enter')
+        await pilot.pause(.4)
+        assert app.selected_log.name == '20260101120000.log' and app.selected_job_id is None
+        await pilot.press('e')
+        await pilot.pause(.3)
+        assert any('oe_runmake failed' in str(line.text) for line in app.query_one('#log').lines)
+    app.store.close()

@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from textual import on
+from textual import on, work
 from textual.binding import Binding
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -675,3 +675,55 @@ class ProfilePickerScreen(ModalScreen):
     @on(OptionList.OptionSelected, "#picker")
     def chosen(self, event):
         self.dismiss(event.option.id)
+
+
+class ConsoleBuildsScreen(ModalScreen):
+    """Pick a BitBake console log, including builds started outside Bitloom."""
+    DEFAULT_CSS = """
+    ConsoleBuildsScreen { align: center middle; background: $background 60%; }
+    ConsoleBuildsScreen > Vertical { width: 100; height: auto; max-height: 85%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    ConsoleBuildsScreen OptionList { height: auto; max-height: 24; border: none; background: $surface; }
+    ConsoleBuildsScreen #console-hint { color: $text-muted; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                ("j", "move(1)", "Down"), ("k", "move(-1)", "Up")]
+
+    def __init__(self, profile):
+        super().__init__()
+        self.profile = profile
+        self.entries = []
+
+    def compose(self):
+        with Vertical():
+            yield Label("Every build of this build directory, also from a terminal, script or CI. Enter opens it in Builds.", id="console-hint")
+            yield OptionList(id="console-list")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Console builds · " + str(self.profile.build_path / "tmp/log/cooker")
+        self.load()
+
+    @work(exclusive=True)
+    async def load(self):
+        import asyncio
+        from datetime import datetime
+        from rich.text import Text
+        from .inspectors import console_logs, human_size
+        self.entries = await asyncio.to_thread(console_logs, self.profile)
+        picker = self.query_one("#console-list", OptionList)
+        glyphs = {"success": ("✔", self.app.current_theme.success), "failed": ("✖", self.app.current_theme.error),
+                  "interrupted": ("⚠", self.app.current_theme.warning)}
+        for index, entry in enumerate(self.entries):
+            glyph, color = glyphs.get(entry.detail, ("·", self.app.current_theme.foreground))
+            picker.add_option(Option(Text.assemble((f"{glyph} {entry.detail:<11}", color), datetime.fromtimestamp(entry.modified).strftime("%Y-%m-%d %H:%M"),
+                                                   ("  " + entry.kind, "bold"), ("  " + human_size(entry.size), "dim")), id=str(index)))
+        if not self.entries:
+            picker.add_option(Option("No console logs yet: BitBake writes tmp/log/cooker/<MACHINE>/*.log for each build", disabled=True))
+        picker.focus()
+
+    def action_move(self, step):
+        picker = self.query_one("#console-list", OptionList)
+        picker.action_cursor_down() if step > 0 else picker.action_cursor_up()
+
+    @on(OptionList.OptionSelected, "#console-list")
+    def chosen(self, event):
+        self.dismiss(self.entries[int(event.option.id)])

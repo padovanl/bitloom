@@ -97,3 +97,14 @@ def test_read_only_views_and_task_log_confinement(dashboard, tmp_path):
     secret = tmp_path / 'demo/build/conf/local.conf'
     assert call(base, '/api/tasklog?path=' + quote(str(secret)))[0] == 404
     assert call(base, '/api/tasklog?path=' + quote(logs[0]['path'] + '/../../../../conf/local.conf'))[0] == 404
+
+
+def test_console_builds_are_listed_and_confined(dashboard, tmp_path):
+    from urllib.parse import quote
+    board, base = dashboard
+    rows = json.loads(call(base, '/api/console')[1])['rows']
+    assert rows and rows[0]['status'] == 'failed' and rows[0]['machine'] == 'qemux86-64'
+    path = quote(rows[0]['path'])
+    assert 'oe_runmake failed' in json.loads(call(base, f'/api/console/log?path={path}&errors=1')[1])['text']
+    assert 'Errors: 2' in json.loads(call(base, f'/api/console/report?path={path}')[1])['summary']
+    assert call(base, '/api/console/log?path=' + quote(str(tmp_path / 'demo/build/conf/local.conf')))[0] == 404

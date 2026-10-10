@@ -20,3 +20,4 @@ local_conf_header:
     INHERIT += "buildstats buildhistory"
     BUILDHISTORY_COMMIT = "1"
     CONF_VERSION = "2"
+    IMAGE_INSTALL:append = " strace"

@@ -18,7 +18,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .commands import ACTIONS, BY_ID, arguments, invocation
-from .inspectors import diagnostics, human_size, metadata, search_log, task_logs
+from .inspectors import console_logs, diagnostics, human_size, metadata, search_log, task_logs
 from .models import Settings, read_assignments
 
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
@@ -201,6 +201,28 @@ class Dashboard:
             raise LookupError("Log not available yet")
         return job_report(path)
 
+    def console(self, query):
+        profile = self.profile(query.get("profile", [""])[0])
+        return {"rows": [{"name": e.name, "machine": e.kind, "status": e.detail, "size": e.size, "modified": e.modified, "path": str(e.path)}
+                         for e in console_logs(profile)]}
+
+    def console_entry(self, query):
+        profile = self.profile(query.get("profile", [""])[0])
+        wanted = query.get("path", [""])[0]
+        # Only logs found under tmp/log/cooker of a configured profile are served.
+        entry = next((e for e in console_logs(profile) if str(e.path) == wanted), None)
+        if entry is None:
+            raise LookupError("Console log not found in the build directory")
+        return entry.path
+
+    def console_log(self, query):
+        path = self.console_entry(query)
+        text_query, errors = query.get("q", [""])[0], query.get("errors", ["0"])[0] == "1"
+        return {"text": search_log(path, text_query, errors), "filtered": bool(text_query or errors)}
+
+    def console_report(self, query):
+        return job_report(self.console_entry(query))
+
     def health(self, query):
         profile = self.profile(query.get("profile", [""])[0])
         return {"checks": [{"status": s, "name": n, "detail": d} for s, n, d in diagnostics(profile)]}
@@ -306,6 +328,12 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.task_logs(query)
                 elif route == ("GET", "tasklog"):
                     payload = dashboard.task_log(query)
+                elif route == ("GET", "console"):
+                    payload = dashboard.console(query)
+                elif route == ("GET", "console", "log"):
+                    payload = dashboard.console_log(query)
+                elif route == ("GET", "console", "report"):
+                    payload = dashboard.console_report(query)
                 elif route == ("POST", "preview"):
                     payload = dashboard.preview(self.body())
                 elif route == ("POST", "jobs"):

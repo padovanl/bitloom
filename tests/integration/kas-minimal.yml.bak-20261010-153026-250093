@@ -1,0 +1,23 @@
+header:
+  version: 14
+machine: qemux86-64
+distro: poky
+target: core-image-minimal
+repos:
+  poky:
+    url: https://git.yoctoproject.org/poky
+    tag: yocto-5.0.8
+    commit: dc4827b3660bc1a03a2bc3b0672615b50e9137ff
+    layers:
+      meta:
+      meta-poky:
+      meta-yocto-bsp:
+local_conf_header:
+  cockpit-validation: |
+    BB_NUMBER_THREADS = "8"
+    PARALLEL_MAKE = "-j8"
+    IMAGE_FSTYPES = "tar.bz2"
+    INHERIT += "buildstats buildhistory"
+    BUILDHISTORY_COMMIT = "1"
+    CONF_VERSION = "2"
+    IMAGE_INSTALL:append = " strace"
