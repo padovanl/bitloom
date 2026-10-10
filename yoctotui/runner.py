@@ -39,6 +39,10 @@ class Job:
     progress: tuple[int, int] = (0, 0)
     errors: list[str] = field(default_factory=list)
     cancel_requested: bool = False
+    managed_container: str = ""
+    graceful_requested: bool = False
+    at_risk: set[str] = field(default_factory=set)
+    active_recipe_tasks: dict[str, str] = field(default_factory=dict)
 
 
 class Runner:
@@ -83,7 +87,9 @@ class Runner:
         self.store.put(job)
         self.callback(job, None)
         try:
-            inv = invocation(job.profile, job.command)
+            if job.profile.mode == "container" and not job.profile.container_name:
+                job.managed_container = f"yoctotui-{job.id}"
+            inv = invocation(job.profile, job.command, job.managed_container)
             with job.log.open("w", buffering=1) as output:
                 output.write(f"$ {inv.display}\n")
                 job.process = await asyncio.create_subprocess_exec(
@@ -99,6 +105,7 @@ class Runner:
                         break
                     line = ANSI.sub("", raw.decode(errors="replace")).rstrip()
                     output.write(line + "\n")
+                    self.track_tasks(job, line)
                     m = PROGRESS.search(line)
                     if m:
                         job.progress = (int(m[1]), int(m[2]))
@@ -121,6 +128,49 @@ class Runner:
             self.store.put(job)
             self.callback(job, None)
 
+    @staticmethod
+    def track_tasks(job: Job, line: str):
+        # Standard knotty non-TTY output: recipe PN-VERSION: task do_x: Started/Succeeded.
+        match = re.search(r"recipe (\S+): task (\S+): (Started|Succeeded|Failed)", line)
+        if match:
+            recipe_version, task, state = match.groups()
+            recipe = re.sub(r"-[0-9].*$", "", recipe_version)
+            key = f"{recipe_version}:{task}"
+            if state == "Started":
+                job.active_recipe_tasks[key] = recipe
+            elif state == "Succeeded":
+                job.active_recipe_tasks.pop(key, None)
+            job.at_risk = set(job.active_recipe_tasks.values())
+
+    async def graceful_stop(self, job: Job):
+        if job.status == "queued":
+            await self.cancel(job)
+            return
+        if job.graceful_requested:
+            return  # Never send an accidental second SIGINT.
+        supported = job.profile.mode == "host" or bool(job.managed_container)
+        if not supported or job.command[0] != "bitbake":
+            raise ValueError("Graceful signalling requires a host or managed-container BitBake client")
+        if not job.process or job.process.returncode is not None:
+            return
+        # Only the client receives SIGINT. Signalling the process group would
+        # interrupt workers instead of allowing BitBake's normal shutdown.
+        job.cancel_requested = True
+        job.graceful_requested = True
+        job.status = "cancelling"
+        self.store.put(job)
+        self.callback(job, None)
+        try:
+            if job.managed_container:
+                control = await asyncio.create_subprocess_exec(job.profile.engine, "kill", "--signal", "SIGINT", job.managed_container, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+                output, _ = await control.communicate()
+                if control.returncode:
+                    self.callback(job, "ERROR: Container signal failed: " + output.decode(errors="replace"))
+            else:
+                os.kill(job.process.pid, signal.SIGINT)
+        except ProcessLookupError:
+            pass
+
     async def cancel(self, job: Job):
         if job.status not in {"running", "queued", "cancelling"}:
             return
@@ -134,6 +184,13 @@ class Runner:
         job.status = "cancelling"
         self.store.put(job)
         self.callback(job, None)
+        if job.managed_container:
+            control = await asyncio.create_subprocess_exec(job.profile.engine, "stop", "--time", "10", job.managed_container, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+            output, _ = await control.communicate()
+            if control.returncode:
+                self.callback(job, "WARNING: Container stop: " + output.decode(errors="replace"))
+        elif job.profile.mode != "host":
+            self.callback(job, "WARNING: Stopping runtime client; check external container/server before recovery.")
         # Signal the process group, including children launched by BitBake.
         for sig, timeout in ((signal.SIGINT, 8), (signal.SIGTERM, 4), (signal.SIGKILL, 2)):
             if job.process.returncode is not None:
