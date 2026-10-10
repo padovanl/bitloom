@@ -22,7 +22,7 @@ The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thr
 | kas wrapper / image | 4.8.1 |
 | Image digest observed | sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476 |
 | Runtime | Docker, through kas-container |
-| Engine integration | YoctoTUI Runner, SQLite history, persistent streamed log |
+| Engine integration | Bitloom Runner, SQLite history, persistent streamed log |
 | Work | Dedicated /tmp/yoctotui-kas-validation mount in the Docker daemon namespace |
 | Output format | root filesystem tar.bz2 |
 | Threads | BB_NUMBER_THREADS=8, PARALLEL_MAKE=-j8 |
@@ -41,7 +41,7 @@ The configuration pins the fetched Poky commit for reproducibility. Standard ups
 
 ## Runtime probes after the build
 
-All eight probes ran through YoctoTUI Runner and the same pinned kas-container image, with exit 0: evaluated layers, busybox recipe lookup, busybox environment, devtool status, container-only local.conf, built package listing, dependency graph generation and container-only graph reading. The environment contained **1,943 parsed variables**, with MACHINE=qemux86-64 and PN=busybox. The graph contained **12,654 parsed edges**.
+All eight probes ran through Bitloom Runner and the same pinned kas-container image, with exit 0: evaluated layers, busybox recipe lookup, busybox environment, devtool status, container-only local.conf, built package listing, dependency graph generation and container-only graph reading. The environment contained **1,943 parsed variables**, with MACHINE=qemux86-64 and PN=busybox. The graph contained **12,654 parsed edges**.
 
 The rootfs inventory utility was also exercised on the actual copied archive without extraction. The timing report found **4,048 completed timestamp pairs** and zero unmatched starts; the slowest compile was llvm-native at **1,770 seconds**. Task wall times overlap and do not sum to the build duration.
 

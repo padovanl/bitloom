@@ -1,4 +1,4 @@
-"""Run a genuine kas-container build through YoctoTUI's own Runner.
+"""Run a genuine kas-container build through Bitloom's own Runner.
 
 Usage: PATH="$PWD/.venv/bin:$PATH" python tools/validate_kas.py --work /tmp/yoctotui-kas
 Requires Docker or Podman and kas-container. Does not install Yocto on the host.

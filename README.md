@@ -1,10 +1,16 @@
-# YoctoTUI
+# Bitloom
 
 **A terminal cockpit for everyday Yocto and BitBake development.** Build images, inspect recipes, develop with devtool, follow failures, and manage local caches from one keyboard-friendly interface.
 
+*Weaving layers, recipes and builds into one terminal workspace.*
+
 Python 3.10+ · Textual · Linux / WSL2 · Host · Docker · Podman · kas · kas-container
 
-![YoctoTUI build cockpit](docs/assets/builds.png)
+![Bitloom build cockpit](docs/assets/builds.png)
+
+## Inspiration and thanks
+
+Bitloom is inspired by the idea behind [yoctui](https://github.com/0xbadcaffe/yoctui): bringing everyday Yocto and BitBake work into a terminal interface. Thank you to [0xbadcaffe](https://github.com/0xbadcaffe), the author of yoctui, for the inspiration and for sharing the project with the community. Bitloom has its own implementation and interface.
 
 ## Start in one minute
 
@@ -12,17 +18,19 @@ Python 3.10+ · Textual · Linux / WSL2 · Host · Docker · Podman · kas · ka
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-yoctotui --demo
+bitloom --demo
 ```
+
+The executable is `bitloom`; `yoctotui` remains available as a compatibility alias. The Python package and existing `.yoctotui` configuration/state paths retain their names.
 
 The demo creates an isolated sample workspace under `.yoctotui/demo`. Its metadata and screenshots are labelled demo data. It does **not** simulate successful Yocto builds or download Yocto.
 
-For a real project, launch `yoctotui`, press **F4**, and configure a profile. Alternatively:
+For a real project, launch `bitloom`, press **F4**, and configure a profile. Alternatively:
 
 ```bash
 cp examples/profiles.json .yoctotui/profiles.json
 # Replace the example paths before starting.
-yoctotui --config .yoctotui/profiles.json
+bitloom --config .yoctotui/profiles.json
 ```
 
 ![Animated tour of the actual TUI](docs/assets/tour.gif)
@@ -72,7 +80,7 @@ The interface uses compact single-line controls, a terminal navigator, split his
 **Stop…** offers three explicit choices:
 
 - **Let finish** leaves the build running.
-- **Graceful stop** sends exactly one SIGINT to the host BitBake client, or to the main process of a fresh container managed by YoctoTUI. BitBake can finish its currently executing tasks. The TUI does not escalate this request automatically.
+- **Graceful stop** sends exactly one SIGINT to the host BitBake client, or to the main process of a fresh container managed by Bitloom. BitBake can finish its currently executing tasks. The TUI does not escalate this request automatically.
 - **Force + recovery** terminates the managed process/container and offers `bitbake -c clean` for recipes observed running in the log. Finished tasks are removed from that active set. Recovery is withheld if runtime shutdown is unconfirmed. Work files may contain developer edits: the recovery dialog makes the selection explicit.
 
 kas wrappers and pre-existing containers do not expose a guaranteed client PID. Graceful stop is disabled there; forced client termination requires checking the external build server before manually cleaning. A build interruption does not normally rewrite `.bb` files, and an observed active recipe is **not proof of corruption**. Task detection depends on standard BitBake log messages.

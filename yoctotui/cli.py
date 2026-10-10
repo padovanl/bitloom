@@ -34,7 +34,7 @@ def make_demo(directory: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="YoctoTUI — Yocto / BitBake development cockpit")
+    parser = argparse.ArgumentParser(description="Bitloom — Yocto / BitBake development cockpit")
     parser.add_argument("--config", type=Path, default=Path(".yoctotui/profiles.json"))
     parser.add_argument("--state", type=Path, default=Path(".yoctotui"))
     parser.add_argument("--demo", action="store_true", help="Create an isolated sample workspace; no fake build execution")

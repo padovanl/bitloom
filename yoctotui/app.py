@@ -22,7 +22,7 @@ from .runner import Job, Runner
 from .screens import ActionScreen, FileScreen, ProfilesScreen, PruneScreen
 from .store import Store
 
-HELP = """# YoctoTUI cockpit
+HELP = """# Bitloom cockpit
 
 **F2** command center · **F3** refresh · **F4** profiles · **Ctrl+P** Textual command palette · **Ctrl+Q** exit
 
@@ -46,7 +46,7 @@ Commands depend on the selected Yocto release and inherited classes. SPDX, ptest
 
 
 class YoctoApp(App):
-    TITLE = "YoctoTUI"
+    TITLE = "Bitloom"
     SUB_TITLE = "Yocto / BitBake workspace"
     CSS = """
     Screen { background: #0b1115; color: #bdcbd2; }
@@ -162,7 +162,7 @@ class YoctoApp(App):
         return self.settings.profile
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, icon="Y")
+        yield Header(show_clock=True, icon="B")
         with Horizontal(id="toolbar"):
             yield Select([(p.name, p.name) for p in self.settings.profiles], value=self.profile.name, allow_blank=False, id="profile")
             yield Input(placeholder="Build target / recipe", value=self.profile.targets[0] if self.profile.targets else "", id="target")
@@ -171,7 +171,7 @@ class YoctoApp(App):
             yield Button("Profiles", id="profiles")
         with Horizontal(id="shell"):
             with Vertical(id="rail"):
-                yield Static("YOCTOTUI\nYocto / BitBake", id="brand")
+                yield Static("BITLOOM\nYocto / BitBake", id="brand")
                 yield Static("BUILD & DIAGNOSE", classes="rail-label")
                 for title, tab in [("Builds / logs", "builds"), ("Task logs", "tasklogs")]:
                     yield Button(title, id=f"nav-{tab}")

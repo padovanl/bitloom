@@ -40,7 +40,7 @@ async def capture():
             async def shot(name, include_in_tour=True):
                 await pilot.pause(.25)
                 svg = output / f'{name}.svg'
-                svg.write_text(terminal_svg(app, 'YoctoTUI · demo workspace'))
+                svg.write_text(terminal_svg(app, 'Bitloom · demo workspace'))
                 png = output / f'{name}.png'
                 cairosvg.svg2png(url=str(svg), write_to=str(png), scale=.8)
                 if include_in_tour:
