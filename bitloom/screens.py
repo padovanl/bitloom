@@ -1107,3 +1107,194 @@ class StudioScreen(ModalScreen):
             self.notify(str(exc), severity="error", timeout=10)
             return
         self.dismiss({"plan": self.plan, "written": [str(p) for p in written], "use": self.values().get("use") == "1"})
+
+
+class SetupScreen(ModalScreen):
+    """Guided project setup: scan a directory, pick how it builds, adjust, save and reload."""
+    DEFAULT_CSS = """
+    SetupScreen { align: center middle; background: $background 60%; }
+    SetupScreen > Vertical { width: 98%; height: 96%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    SetupScreen #setup-hint { color: $text-muted; height: auto; }
+    SetupScreen #setup-dir-row { height: 1; margin: 1 0; }
+    SetupScreen #setup-dir { width: 1fr; }
+    SetupScreen #setup-split { height: 1fr; }
+    SetupScreen #setup-found { width: 2fr; height: 1fr; border: round $primary-muted; background: $surface; }
+    SetupScreen #setup-found:focus { border: round $accent; }
+    SetupScreen #setup-form { width: 3fr; height: 1fr; margin-left: 1; border: round $primary-muted; padding: 0 1; }
+    SetupScreen #setup-form:focus-within { border: round $accent; }
+    SetupScreen .field-label { margin-top: 1; text-style: bold; height: 1; }
+    SetupScreen .field-info { color: $text-muted; height: auto; }
+    SetupScreen Input, SetupScreen Select { height: 1; }
+    SetupScreen #setup-env { height: 4; }
+    SetupScreen #setup-checks { height: auto; max-height: 7; }
+    SetupScreen Horizontal.buttons { height: 1; margin-top: 1; }
+    SetupScreen Horizontal.buttons Button { margin-right: 1; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                Binding("ctrl+o", "save", "Save", priority=True), Binding("ctrl+s", "save", "Save", priority=True, show=False)]
+    FIELDS = [("name", "Profile name", "Unique name shown in the profile switcher (P)."),
+              ("kas_file", "kas configuration", "kas modes: the YAML file(s), colon-separated, relative to the project."),
+              ("init_script", "Init script", "host: oe-init-build-env path relative to the project; empty if you start from an initialised shell."),
+              ("build_dir", "Build directory", "host/container: relative to the project or absolute; kas modes use KAS_WORK_DIR/build."),
+              ("launcher", "Launcher script", "wrapper: the project script that runs kas, e.g. ./scripts/run.sh."),
+              ("machine", "MACHINE", "Optional override; empty keeps the configuration's value."),
+              ("distro", "DISTRO", "Optional override."),
+              ("targets", "Targets", "Space-separated; the first fills the build target field.")]
+
+    def __init__(self, settings, directory):
+        super().__init__()
+        self.settings, self.directory = settings, str(directory)
+        self.candidates = []
+
+    def compose(self):
+        from textual.containers import VerticalScroll
+        with Vertical():
+            yield Label("Point Bitloom at a project: it finds kas files, init scripts, build directories and launcher scripts. "
+                        "Pick a proposal, adjust it, ^O saves and the workspace reloads with the new profile.", id="setup-hint")
+            with Horizontal(id="setup-dir-row"):
+                yield Input(value=self.directory, placeholder="Project directory (Enter scans)", id="setup-dir")
+                yield Button("Scan", id="setup-scan")
+            with Horizontal(id="setup-split"):
+                yield OptionList(id="setup-found")
+                with VerticalScroll(id="setup-form"):
+                    yield Label("Runtime", classes="field-label")
+                    yield Select([(m, m) for m in ("kas-container", "kas", "host", "container", "wrapper")], value="kas-container", allow_blank=False, id="setup-mode")
+                    yield Static("kas-container: kas and Yocto in a container (recommended). kas: kas on the host. host: an initialised Poky/OE-Core checkout. "
+                                 "container: your own Docker/Podman image. wrapper: a project script that runs kas.", classes="field-info")
+                    for key, label, info in self.FIELDS:
+                        yield Label(label, classes="field-label", id="label-" + key)
+                        yield Input(id="setup-" + key)
+                        yield Static(info, classes="field-info", id="info-" + key)
+                    yield Label("Environment (KEY=VALUE per line)", classes="field-label")
+                    yield TextArea("", id="setup-env")
+                    yield Static("kas-container: KAS_WORK_DIR (separate Linux directory), KAS_CONTAINER_ENGINE. wrapper: the variable that selects the configuration, e.g. YML=boards/board.yml.", classes="field-info")
+                    yield Label("Checks", classes="field-label")
+                    yield Static(id="setup-checks")
+            with Horizontal(classes="buttons"):
+                yield Button("^O Save + use", id="setup-save", variant="primary")
+                yield Button("Esc Close", id="setup-close")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Set up a project"
+        self.query_one("#setup-found").border_title = "Found"
+        self.query_one("#setup-form").border_title = "Profile"
+        self.scan()
+
+    def scan(self):
+        from .setup import detect
+        found = self.query_one("#setup-found", OptionList)
+        found.clear_options()
+        try:
+            self.candidates = detect(Path(self.query_one("#setup-dir", Input).value))
+        except (OSError, ValueError) as exc:
+            self.candidates = []
+            found.add_option(Option("✖ " + str(exc), disabled=True))
+            return
+        if not self.candidates:
+            found.add_option(Option("Nothing recognised: fill the form by hand", disabled=True))
+            self.fill({"name": "project", "root": self.query_one("#setup-dir", Input).value, "mode": "kas-container"})
+            return
+        from rich.text import Text
+        for index, candidate in enumerate(self.candidates):
+            label = Text.assemble((candidate.title, "bold"), "\n", ("  " + " · ".join(candidate.evidence), "dim"))
+            found.add_option(Option(label, id=str(index)))
+        found.highlighted = 0
+        found.focus()
+        self.fill(self.candidates[0].profile)
+
+    def fill(self, data):
+        self.query_one("#setup-mode", Select).value = data.get("mode", "kas-container")
+        for key, _, _ in self.FIELDS:
+            value = data.get(key, "")
+            if key == "launcher":
+                value = " ".join(value or [])
+            if key == "targets":
+                value = " ".join(value or [])
+            self.query_one("#setup-" + key, Input).value = value or ""
+        self.query_one("#setup-env", TextArea).load_text("\n".join(f"{k}={v}" for k, v in (data.get("environment") or {}).items()))
+        self.refresh_form()
+
+    def profile(self):
+        import shlex
+        from .models import Profile
+        values = {key: self.query_one("#setup-" + key, Input).value.strip() for key, _, _ in self.FIELDS}
+        environment = {}
+        for line in self.query_one("#setup-env", TextArea).text.splitlines():
+            if "=" in line.strip():
+                key, value = line.strip().split("=", 1)
+                environment[key.strip()] = value.strip()
+        data = {"name": values["name"], "root": self.query_one("#setup-dir", Input).value.strip(), "mode": str(self.query_one("#setup-mode", Select).value),
+                "kas_file": values["kas_file"] or "kas.yml", "init_script": values["init_script"], "build_dir": values["build_dir"] or "build",
+                "machine": values["machine"], "distro": values["distro"], "targets": values["targets"].split() or ["core-image-minimal"],
+                "environment": environment}
+        if data["mode"] == "wrapper":
+            data["launcher"] = shlex.split(values["launcher"])
+        return Profile.from_dict(data)
+
+    def refresh_form(self):
+        from rich.text import Text
+        from .setup import check
+        mode = str(self.query_one("#setup-mode", Select).value)
+        visible = {"kas_file": mode in {"kas", "kas-container"}, "init_script": mode in {"host", "container"}, "build_dir": mode in {"host", "container"},
+                   "launcher": mode == "wrapper"}
+        for key, show in visible.items():
+            for prefix in ("label-", "setup-", "info-"):
+                self.query_one("#" + prefix + key).display = show
+        theme = self.app.current_theme
+        text = Text()
+        try:
+            rows = check(self.profile())
+        except (ValueError, TypeError) as exc:
+            rows = [("ERR", str(exc))]
+        for status, message in rows:
+            glyph, color = {"OK": ("✔", theme.success), "WARN": ("▲", theme.warning), "ERR": ("✖", theme.error)}[status]
+            text.append(f"{glyph} ", style=f"bold {color}").append(message + "\n")
+        self.query_one("#setup-checks", Static).update(text)
+        self.query_one("#setup-save", Button).disabled = any(status == "ERR" for status, _ in rows)
+
+    def on_option_list_option_highlighted(self, event):
+        if event.option_list.id == "setup-found" and event.option.id is not None:
+            self.fill(self.candidates[int(event.option.id)].profile)
+
+    def on_option_list_option_selected(self, event):
+        if event.option_list.id == "setup-found":
+            self.query_one("#setup-name", Input).focus()
+
+    def on_input_changed(self, event):
+        if event.input.id and event.input.id.startswith("setup-") and event.input.id != "setup-dir":
+            self.refresh_form()
+
+    def on_text_area_changed(self, event):
+        self.refresh_form()
+
+    def on_select_changed(self, event):
+        self.refresh_form()
+
+    def on_input_submitted(self, event):
+        if event.input.id == "setup-dir":
+            event.stop()
+            self.scan()
+
+    @on(Button.Pressed, "#setup-scan")
+    def scan_pressed(self):
+        self.scan()
+
+    @on(Button.Pressed, "#setup-close")
+    def close_pressed(self):
+        self.dismiss(None)
+
+    @on(Button.Pressed, "#setup-save")
+    def save_pressed(self):
+        self.action_save()
+
+    def action_save(self):
+        from .setup import save
+        try:
+            profile = self.profile()
+            if self.query_one("#setup-save", Button).disabled:
+                raise ValueError("Fix the checks marked ✖ first")
+            save(self.settings, profile)
+        except (OSError, ValueError, TypeError) as exc:
+            self.notify(str(exc), severity="error", timeout=10)
+            return
+        self.dismiss(profile.name)
