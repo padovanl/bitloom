@@ -15,7 +15,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, DataTable, Footer, Input, Label, Markdown, ProgressBar, RichLog, Select, Static, TabbedContent, TabPane, Tree
+from textual.widgets import Button, DataTable, Footer, Input, Label, Markdown, ProgressBar, RichLog, Select, Sparkline, Static, TabbedContent, TabPane, Tree
 
 from . import __version__
 from .commands import invocation
@@ -112,6 +112,18 @@ class BitloomApp(App):
     .metric { width: 1fr; height: 4; padding: 0 1; margin-right: 1; background: $background;
               border: round $primary-muted; border-title-color: $foreground-muted; border-title-style: bold; }
     #disk-metric { margin-right: 1; }
+    #resource-card { layout: vertical; }
+    #resource-metric { height: 1; }
+    #cpu-spark { height: 1; margin-top: 0; }
+    #cpu-spark > .sparkline--max-color { color: $accent; }
+    #cpu-spark > .sparkline--min-color { color: $primary-muted; }
+    .metric.flash-ok { border: round $success; border-title-color: $success; }
+    .metric.flash-err { border: round $error; border-title-color: $error; }
+    Toast { background: $surface; border-left: outer $accent; padding: 0 1; }
+    Toast.-information { border-left: outer $accent; }
+    Toast.-warning { border-left: outer $warning; }
+    Toast.-error { border-left: outer $error; }
+    Toast .toast--title { text-style: bold; color: $foreground; }
 
     /* Panels share one frame style; the focused panel lights up. */
     #workspace { height: 1fr; }
@@ -143,6 +155,7 @@ class BitloomApp(App):
     #progress Bar > .bar--bar { color: $accent; background: $surface; }
     #progress Bar > .bar--complete { color: $success; background: $surface; }
     #progress.failed Bar > .bar--bar { color: $error; }
+    #progress Bar > .bar--indeterminate { color: $accent; background: $surface; }
     #progress PercentageStatus { color: $foreground-muted; }
     #log { height: 1fr; }
     #scan-state { height: 1; margin-bottom: 1; color: $foreground-muted; }
@@ -184,6 +197,7 @@ class BitloomApp(App):
     Screen.short #workspace > ContentTabs { display: block; }
     Screen.short #metrics { height: 3; margin-top: 0; }
     Screen.short .metric { height: 3; border: none; border-top: round $primary-muted; }
+    Screen.short #cpu-spark, Screen.narrow #cpu-spark { display: none; }
     Screen.short #task-monitor, Screen.short #active-tasks, Screen.short #source-preview, Screen.short #layer-tree { display: none; }
     Screen.short #history-panel { height: 6; }
     Screen.tiny #metrics, Screen.tiny #history-panel { display: none; }
@@ -284,6 +298,9 @@ class BitloomApp(App):
         self.developer_busy = False
         self.capability_cache = {}
         self.release = None
+        self.cpu_history: list[float] = []
+        self.frame = 0
+        self.was_busy = False
 
     def refresh_theme_colors(self):
         self.update_telemetry()
@@ -342,8 +359,12 @@ class BitloomApp(App):
                 yield Static(id="rail-context")
             with Vertical(id="main"):
                 with Horizontal(id="metrics"):
-                    for ident in ("build-metric", "queue-metric", "resource-metric", "disk-metric"):
-                        yield Static(id=ident, classes="metric")
+                    yield Static(id="build-metric", classes="metric")
+                    yield Static(id="queue-metric", classes="metric")
+                    with Vertical(id="resource-card", classes="metric"):
+                        yield Static(id="resource-metric")
+                        yield Sparkline([], id="cpu-spark")
+                    yield Static(id="disk-metric", classes="metric")
                 with Workspace(id="workspace"):
                     with TabPane(labels["builds"], id="builds"):
                         with Horizontal(id="build-split"):
@@ -470,7 +491,7 @@ class BitloomApp(App):
                   "#analysis-output": "Report", "#health": "Health checks", "#help": "Guide"}
         for selector, title in titles.items():
             self.main_query(selector).border_title = title
-        for ident, title in (("build-metric", "Build"), ("queue-metric", "Tasks"), ("resource-metric", "Host"), ("disk-metric", "Disk")):
+        for ident, title in (("build-metric", "Build"), ("queue-metric", "Tasks"), ("resource-card", "Host"), ("disk-metric", "Disk")):
             self.main_query(f"#{ident}").border_title = title
         # Every button has a key; keep Tab for fields, tables and logs.
         for button in self.screen_stack[0].query(Button):
@@ -482,6 +503,7 @@ class BitloomApp(App):
             button = self.main_query(f"#{ident}", Button)
             button.label = Text.assemble((key, "bold"), " " + str(button.label))
         self.set_interval(0.2, self.flush_log)
+        self.set_interval(0.12, self.animate)
         self.set_interval(2, self.update_telemetry)
         self.set_interval(1, self.update_elapsed)
         self.set_interval(5, self.watch_metadata)
@@ -613,6 +635,45 @@ class BitloomApp(App):
         self.scan_project()
         self.refresh_history()
 
+    SPINNER = "◐◓◑◒"
+
+    def animate(self):
+        """Spinners for running jobs and a shimmer on the brand while the service works."""
+        if not self.screen_stack or not len(self.screen_stack[0].query("#brand-line")):
+            return
+        self.frame += 1
+        spinner = self.SPINNER[self.frame // 2 % len(self.SPINNER)]
+        busy = self.runner.active is not None
+        theme = self.current_theme
+        table = self.main_query("#history", DataTable)
+        if table.columns:
+            column = list(table.columns)[1]
+            for row in self.history_rows.values():
+                if row["status"] == "running" and row["id"] in table.rows:
+                    table.update_cell(row["id"], column, Text(f"{spinner} running", style=theme.accent))
+        if busy:
+            self.update_brand(shine=self.frame % 24)
+        elif self.was_busy:
+            self.update_brand()
+        self.was_busy = busy
+
+    def update_brand(self, shine=None):
+        theme = self.current_theme
+        word = " ◆ bitloom "
+        brand = Text()
+        for index, char in enumerate(word):
+            lit = shine is not None and abs(index - shine) <= 1
+            brand.append(char, style=f"bold {theme.background} on {theme.secondary if lit else theme.accent}")
+        line = getattr(self, "brand_tail", None)
+        self.main_query("#brand-line", Static).update(brand + line if line is not None else brand)
+
+    def flash(self, status):
+        """Briefly light the Build card in the outcome colour."""
+        card = self.main_query("#build-metric", Static)
+        card.set_class(status == "success", "flash-ok")
+        card.set_class(status == "failed", "flash-err")
+        self.set_timer(2.5, lambda: (card.remove_class("flash-ok"), card.remove_class("flash-err")))
+
     def status_style(self, status):
         theme = self.current_theme
         glyph, color = {
@@ -635,15 +696,17 @@ class BitloomApp(App):
         queue = sum(j.status == "queued" for j in self.runner.jobs)
         machine = p.machine or self.config_hints.get('MACHINE', '?')
         distro = p.distro or self.config_hints.get('DISTRO', '?')
-        brand = Text.assemble((" ◆ bitloom ", f"bold {theme.background} on {theme.accent}"), "  ",
-                              (p.name, "bold"), ("  ·  ", "dim"), p.mode, ("  ·  ", "dim"), ("MACHINE ", "dim"), machine,
-                              ("  ·  ", "dim"), ("DISTRO ", "dim"), distro, ("  ·  ", "dim"), (describe(self.release), "italic"),
-                              no_wrap=True, overflow="ellipsis")
-        self.main_query("#brand-line", Static).update(brand)
+        self.brand_tail = Text.assemble("  ", (p.name, "bold"), ("  ·  ", "dim"), p.mode, ("  ·  ", "dim"), ("MACHINE ", "dim"), machine,
+                                        ("  ·  ", "dim"), ("DISTRO ", "dim"), distro, ("  ·  ", "dim"), (describe(self.release), "italic"),
+                                        no_wrap=True, overflow="ellipsis")
+        if not self.runner.active:
+            self.update_brand()
         recent = next((r for r in self.history_rows.values() if r["profile"] == p.name), None)
         status = active.status if active else recent["status"] if recent else "idle"
         title = active.title if active else recent["title"] if recent else "No jobs in this profile"
         glyph, color = self.status_style(status)
+        if status == "running":
+            glyph = self.SPINNER[self.frame // 2 % len(self.SPINNER)]
         connection = ("⇄ service", theme.success) if self.persistent else ("◇ embedded", theme.foreground)
         service_version = getattr(self.runner, "service_version", None)
         if self.persistent and service_version not in {None, __version__}:
@@ -938,19 +1001,20 @@ class BitloomApp(App):
                 delta = current[0] - self.resource_previous[0]
                 usage = 100 * (1 - (current[1] - self.resource_previous[1]) / delta) if delta else 0
                 cpu = f"{usage:.0f}% CPU"
+                self.cpu_history = (self.cpu_history + [usage])[-48:]
+                spark = self.main_query("#cpu-spark", Sparkline)
+                spark.data = [max(1.0, value) for value in self.cpu_history]
             self.resource_previous = current
             mem = {line.split(':')[0]: int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()}
             ram = 1 - mem['MemAvailable'] / mem['MemTotal']
             theme = self.current_theme
             text = Text(no_wrap=True, overflow="ellipsis")
             if self.resource_previous and cpu != "warming up":
-                full, empty = self.meter(usage / 100, 8)
-                text.append("CPU ", style="dim").append(full, style=theme.secondary).append(empty, style="dim").append(f" {usage:3.0f}%")
+                text.append("CPU ", style="dim").append(f"{usage:3.0f}%", style=f"bold {theme.secondary}")
             else:
-                text.append("CPU warming up", style="dim")
-            full, empty = self.meter(ram, 8)
-            text.append("\nRAM ", style="dim").append(full, style=theme.secondary).append(empty, style="dim").append(f" {100*ram:3.0f}%")
-            text.append(f"  {human_size((mem['MemTotal']-mem['MemAvailable'])*1024)}", style="dim")
+                text.append("CPU …", style="dim")
+            text.append("  RAM ", style="dim").append(f"{100*ram:3.0f}%", style=f"bold {theme.secondary}")
+            text.append(f" {human_size((mem['MemTotal']-mem['MemAvailable'])*1024)}", style="dim")
             self.main_query("#resource-metric", Static).update(text)
         except (OSError, ValueError, KeyError):
             self.main_query("#resource-metric", Static).update("Unavailable on this host")
@@ -1137,17 +1201,24 @@ class BitloomApp(App):
             if job.status == "success" and job.action_id == "graph-read" and job.profile.name == self.profile.name:
                 self.read_runtime_graph(job.log)
             if job.status == "failed":
-                self.notify(f"{job.title} failed — open Errors only and Task logs", severity="error", timeout=8)
+                self.notify(f"{job.title} · exit {job.code}. Press f for the failed task log, i for the summary.", title="✖ Build failed", severity="error", timeout=10)
+                self.flash("failed")
                 self.scan_project()
+            elif job.status == "success" and job.finished:
+                self.notify(job.title, title="✔ Completed", timeout=5)
+                self.flash("success")
             if job.id == self.selected_job_id:
                 glyph, color = self.status_style(job.status)
-                self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {job.status}", f"bold {color}"), "  ", (job.title, "bold"), (f"  ·  exit {job.code}  ·  {job.log}", "dim"), no_wrap=True, overflow="ellipsis"))
+                self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {job.status}", f"bold {color}"), "  ", (job.title, "bold"), ((f"  ·  exit {job.code}" if job.code is not None else "") + f"  ·  {job.log}", "dim"), no_wrap=True, overflow="ellipsis"))
         if job.id == self.selected_job_id:
             self.main_query("#progress", ProgressBar).set_class(job.status == "failed", "failed")
         if job.id == self.selected_job_id and job.status == "success":
             self.main_query("#progress", ProgressBar).update(total=100, progress=100)
         elif job.id == self.selected_job_id and job.progress[1]:
             self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=job.progress[0])
+        elif job.id == self.selected_job_id and job.status == "running":
+            # Animated indeterminate bar until BitBake reports task counts.
+            self.main_query("#progress", ProgressBar).update(total=None)
 
     def style_line(self, line, query=""):
         theme = self.current_theme
@@ -1318,40 +1389,12 @@ class BitloomApp(App):
         """Register what Studio created: layer, distro/machine selection or kas overlay."""
         if not result:
             return
-        from .studio import kas_overlay, runtime_path
-        plan, profile = result["plan"], self.profile
-        message = [f"Created {len(result['written'])} files in {plan['layer']}"]
+        from .studio import register
         try:
-            if profile.mode in {"kas", "kas-container", "wrapper"} and (plan["new_layer"] or plan["activate"]):
-                name, text = kas_overlay(profile, plan)
-                path = profile.root_path / name
-                if path.exists():
-                    message.append(f"{name} exists; add the layer/selection to it by hand")
-                else:
-                    path.write_text(text)
-                    if profile.mode == "wrapper":
-                        message.append(f"add {name} to the configuration your launcher passes to kas")
-                    elif profile.name in self.settings.shared:
-                        message.append(f"team profile: clone it and append {name} to kas_file")
-                    else:
-                        profile.kas_file = ":".join([*profile.kas_file.split(":"), name])
-                        self.settings.save()
-                        message.append(f"kas_file is now {profile.kas_file}")
-            else:
-                if plan["new_layer"]:
-                    self.runner.submit(profile, "Register layer " + plan["layer"].rsplit("/", 1)[-1], ["bitbake-layers", "add-layer", runtime_path(profile, plan["layer"])], "layer-add")
-                    message.append("queued bitbake-layers add-layer")
-                if result["use"] and plan["activate"].get("distro"):
-                    profile.distro = plan["activate"]["distro"]
-                if result["use"] and plan["activate"].get("machine"):
-                    profile.machine = plan["activate"]["machine"]
-                if result["use"] and (plan["activate"].get("distro") or plan["activate"].get("machine")):
-                    self.settings.save()
-                    message.append(f"profile now uses DISTRO={profile.distro or 'default'} MACHINE={profile.machine or 'default'}")
-            if plan["activate"].get("target"):
-                self.main_query("#target", Input).value = plan["activate"]["target"]
-                message.append(f"target set to {plan['activate']['target']} (b builds it)")
-            self.notify(" · ".join(message), timeout=15)
+            messages, target = register(self.settings, self.profile, result["plan"], result["use"], self.runner.submit)
+            if target:
+                self.main_query("#target", Input).value = target
+            self.notify(" · ".join([f"Created {len(result['written'])} files in {result['plan']['layer']}", *messages]), timeout=15)
             self.scan_project()
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity="error", timeout=12)

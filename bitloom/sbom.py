@@ -145,14 +145,29 @@ def sbom_report(profile: Profile, limit=6) -> str:
     return "\n".join(lines)
 
 
+DEADLINES = [(date(2026, 9, 11), "Reporting of actively exploited vulnerabilities and severe incidents (Art. 14): early warning within 24 h via the ENISA single reporting platform"),
+             (date(2027, 12, 11), "Essential requirements apply (Annex I): secure by default, vulnerability handling, SBOM, security updates")]
+
+
 def cra_report(profile: Profile, state: Path | None = None, today: date | None = None) -> str:
+    today = today or date.today()
+    rows = cra_checks(profile, state, today)
+    lines = [f"CRA readiness · {profile.name}", "Engineering evidence from this build directory for Regulation (EU) 2024/2847. Not a conformity assessment or legal advice.", "",
+             *[f"{status:5} {item:30} {detail}" for status, item, detail in rows], "", "TIMELINE"]
+    lines += [f"{'in force' if when <= today else 'from':8} {when:%Y-%m-%d}  {text}" for when, text in DEADLINES]
+    lines += ["", "STANDARDS", "EN 40000-1-3 (draft, CEN/CENELEC JTC 13): vulnerability handling process - receipt, assessment, remediation,",
+              "communication and tracking. Bitloom contributes per-build SBOM quality, VEX status, dispositions with owner/expiry and evidence bundles."]
+    return "\n".join(lines)
+
+
+def cra_checks(profile: Profile, state: Path | None = None, today: date | None = None) -> list[tuple[str, str, str]]:
     today = today or date.today()
     deploy = profile.build_path / "tmp/deploy"
     conf = read_assignments(profile.build_path / "conf/local.conf")
     rows = []
 
     def add(status, item, detail):
-        rows.append(f"{status:5} {item:30} {detail}")
+        rows.append((status, item, detail))
     from .versions import INFO, detect_release
     series = detect_release(profile)
     if series in INFO:
@@ -203,10 +218,4 @@ def cra_report(profile: Profile, state: Path | None = None, today: date | None =
             add("INFO", "Vulnerability dispositions", "none recorded (Developer → Security → Record review)")
         bundles = list((Path(state) / "exports").glob("bundle-*.json")) if (Path(state) / "exports").is_dir() else []
         add("OK" if bundles else "INFO", "Reproducibility evidence", f"{len(bundles)} bundles exported" if bundles else "export a reproducibility bundle per release (Analysis)")
-    deadlines = [(date(2026, 9, 11), "Reporting of actively exploited vulnerabilities and severe incidents (Art. 14): early warning within 24 h via the ENISA single reporting platform"),
-                 (date(2027, 12, 11), "Essential requirements apply (Annex I): secure by default, vulnerability handling, SBOM, security updates")]
-    lines = [f"CRA readiness · {profile.name}", "Engineering evidence from this build directory for Regulation (EU) 2024/2847. Not a conformity assessment or legal advice.", "", *rows, "", "TIMELINE"]
-    lines += [f"{'in force' if when <= today else 'from':8} {when:%Y-%m-%d}  {text}" for when, text in deadlines]
-    lines += ["", "STANDARDS", "EN 40000-1-3 (draft, CEN/CENELEC JTC 13): vulnerability handling process - receipt, assessment, remediation,",
-              "communication and tracking. Bitloom contributes per-build SBOM quality, VEX status, dispositions with owner/expiry and evidence bundles."]
-    return "\n".join(lines)
+    return rows

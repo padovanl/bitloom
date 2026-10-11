@@ -23,7 +23,11 @@ def dashboard(tmp_path):
     yield board, f'http://127.0.0.1:{server.server_address[1]}'
     server.shutdown()
     server.server_close()
+    # The service refuses to stop while jobs are active: cancel them first.
     try:
+        for job in rpc(board.state, {'op': 'status'})['jobs']:
+            if job['status'] in {'running', 'queued', 'cancelling'}:
+                rpc(board.state, {'op': 'cancel', 'id': job['id']})
         rpc(board.state, {'op': 'stop'})
     except (OSError, ValueError):
         pass
