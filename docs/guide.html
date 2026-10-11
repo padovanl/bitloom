@@ -1,7 +1,15 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>User guide — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="user-guide">User guide</h1>
+<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="keyboard.html">Keys</a><a href="web.html">Web</a><a href="compliance.html">SBOM &amp; CRA</a><a href="studio.html">Studio</a><a href="teams.html">Teams &amp; CI</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="user-guide">User guide</h1>
 <p>For a complete hands-on acceptance path, follow the <a href="testbook.html">manual testbook</a>. The <a href="developer.html">Developer workbench guide</a> documents F10, all sixteen implemented views, creation/clone workflows and evidence comparisons. The <a href="roadmap.md">research and implementation map</a> retains sources and practical boundaries.</p>
+<p>More guides:</p>
+<ul>
+<li><a href="keyboard.html">Keyboard reference</a>: every key in every section, nano editor keys and dialogs.</li>
+<li><a href="web.md">Web dashboard</a>: <code>bitloom --web</code>, sections, notifications, keyboard and API.</li>
+<li><a href="compliance.html">SBOM, CRA and Yocto releases</a>: release awareness, SBOM quality, CRA readiness, EN 40000 and SBOM settings.</li>
+<li><a href="studio.md">Studio</a>: create your own distribution, machines, images, recipes and layers.</li>
+<li><a href="teams.html">Teams, CI/CD and setup</a>: headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.</li>
+</ul>
 <h2 id="install-from-a-github-release">Install from a GitHub release</h2>
 <p>Open the <a href="https://github.com/padovanl/bitloom/releases">GitHub Releases page</a> and download the assets for the version you want. Replace <code>1.2.3</code> below with that version.</p>
 <h3 id="debian--ubuntu">Debian / Ubuntu</h3>
@@ -23,7 +31,35 @@ python3 -m venv .venv
 <p>Download <code>SHA256SUMS</code> alongside the packages, then run <code>sha256sum --check --ignore-missing SHA256SUMS</code> in the same directory. Check that the package you downloaded reports <code>OK</code>.</p>
 <h2 id="fresh-checkout-demo">Fresh checkout demo</h2>
 <p>Run <code>./setup-demo.sh</code> from the cloned checkout to create or reuse <code>.venv</code>, install dependencies and launch the sample TUI. Requires Bash, Python 3.10+ with venv support on Linux or WSL2, and internet access for installation. No Docker, kas or Yocto installation is needed for the sample data.</p>
-<p>Use <code>./setup-demo.sh --no-launch</code> to prepare without launching, then <code>.venv/bin/bitloom --demo</code> to start later. <code>--dev</code> installs test dependencies; <code>--python python3.12</code> or <code>PYTHON</code> selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under <code>.bitloom/demo</code> in the checkout.</p>
+<p>Use <code>./setup-demo.sh --no-launch</code> to prepare without launching, then <code>.venv/bin/bitloom --demo</code> to start later. <code>--dev</code> installs test dependencies; <code>--python python3.12</code> or <code>PYTHON</code> selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under <code>.bitloom</code> in the checkout.</p>
+<p>The demo has three profiles; press <code>P</code> to switch:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Workspace</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>demo</code></td>
+<td><code>.bitloom/demo</code></td>
+<td>Generic sample: recipes, a failing task log, a console build, caches</td>
+</tr>
+<tr>
+<td><code>demo-scarthgap</code></td>
+<td><code>.bitloom/demo-scarthgap</code></td>
+<td>Poky layout detected as 5.0 LTS, SPDX 2.2 SBOM, cve-check summary; Wrynose-only operations are explained and refused</td>
+</tr>
+<tr>
+<td><code>demo-wrynose</code></td>
+<td><code>.bitloom/demo-wrynose</code></td>
+<td>Split OE-Core layout detected as 6.0 LTS, SPDX 3 SBOM with VEX, sbom-cve-check report</td>
+</tr>
+</tbody>
+</table>
+<p>Every sample file is labelled; the demo never simulates a successful Yocto build.</p>
 <p>The terminal adapts while resizing: below 105 columns or 30 rows it hides the navigator and side panes; below 30 rows it also hides the overview. Below 75 columns or 22 rows it hides history and metrics to preserve output. Resize to restore panels. F8/F9 switches sections and F2/F4/F7 opens commands/profiles/themes even when toolbar controls are hidden. Verified sizes range from 60 × 20 to 160 × 50, including a wide 140 × 20 terminal.</p>
 <h2 id="profiles-and-paths">Profiles and paths</h2>
 <p>Profiles are local JSON stored at <code>.bitloom/profiles.json</code> by default. State is stored at <code>.bitloom/</code>; both paths can be set on the command line. The file is atomically replaced with mode 0600. Profile names must be unique; queued jobs retain a copy of the original profile.</p>
@@ -49,7 +85,7 @@ python3 -m venv .venv
 </tr>
 <tr>
 <td><code>mode</code></td>
-<td><code>host</code>, <code>kas</code>, <code>container</code>, or <code>kas-container</code></td>
+<td><code>host</code>, <code>kas</code>, <code>container</code>, <code>kas-container</code> or <code>wrapper</code> (a project launcher script, see <a href="teams.html#project-launcher-scripts">Teams</a>)</td>
 </tr>
 <tr>
 <td><code>init_script</code></td>
@@ -99,8 +135,13 @@ python3 -m venv .venv
 <td><code>source_mappings</code></td>
 <td>Absolute runtime-to-host directory mappings for Developer IDE exports</td>
 </tr>
+<tr>
+<td><code>launcher</code>, <code>launcher_shell</code></td>
+<td><code>wrapper</code> mode: the script argv and how it runs a command (<code>{command}</code>)</td>
+</tr>
 </tbody>
 </table>
+<p>A profiles file can also contain <code>&quot;include&quot;: [...]</code> with read-only team profile files; see <a href="teams.html#team-profiles">Teams</a>.</p>
 <p><code>DL_DIR</code>/<code>SSTATE_DIR</code> in local.conf are read as literal hints. <code>${TOPDIR}</code> is expanded; other expressions require a profile path override. Runtime paths, especially kas container paths, may differ from host paths. Use <strong>Resolve env</strong> to inspect the authoritative result.</p>
 <h3 id="host">Host</h3>
 <p>Set root to your checkout. The TUI sources the init script in bash and executes a quoted argument list. You can also start from an already initialized shell and leave init_script empty. No shell operators in target fields are executed.</p>
@@ -118,9 +159,19 @@ python3 -m venv .venv
 <p>Use recipe browsing to locate metadata, open files, build or start devtool modify. The metadata browser indexes local files, including inactive layers; <code>Show layers</code>, <code>Show recipes</code>, <code>Show appends</code> and <code>Show overlaid recipes</code> ask BitBake for evaluated state.</p>
 <p>Interactive actions suspend Textual and give the real terminal to devshell, menuconfig, QEMU or kas shell. They require a real terminal and cannot start while a queued/running job occupies the runner. Their output is not persisted as a queued build log.</p>
 <h2 id="terminal-layout">Terminal layout</h2>
-<p>F5 opens interruption options and F6 retries the selected job. Use the navigator or F8/F9 for Builds, metadata, task logs, workbench and caches. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.</p>
+<p>Bitloom is fully usable without a mouse; the <a href="keyboard.html">keyboard reference</a> lists every key and <code>?</code> shows it inside the TUI.</p>
+<ul>
+<li>The top bar shows the profile, runtime, MACHINE, DISTRO, the detected Yocto release, the service connection and the clock; the brand shimmers while the service is building.</li>
+<li>The numbered navigator lists sections <code>1</code>–<code>0</code>; <code>[</code>/<code>]</code> or F8/F9 cycle through them and the section's list receives focus.</li>
+<li>Each section has single-letter actions, shown in the footer and in front of every button label (for example <code>s</code> stop, <code>r</code> retry, <code>e</code> errors only in Builds). Letters typed into a field never trigger them; <code>/</code> or <code>Ctrl+W</code> focuses the section filter and <code>Esc</code> returns to the list.</li>
+<li>Editors use nano keys: <code>^O</code> write, <code>^X</code> exit (asks before discarding changes), <code>^W</code> search, <code>^K</code>/<code>^U</code> cut and uncut lines, <code>^G</code> help.</li>
+<li>Status cards show the current job with a spinner, task and setscene counts, CPU/RAM with a CPU sparkline, and disk usage; the Build card flashes green or red when a job ends. The progress bar is indeterminate until BitBake reports task counts.</li>
+<li><code>P</code> switches profile, <code>t</code> edits the build target (Enter builds it), <code>b</code> builds, Ctrl+P lists sections, actions and all operations.</li>
+</ul>
+<details class="shot"><summary><span>Screenshot</span> Keyboard reference overlay</summary><div class="shot-body"><img src="assets/keys.png" alt="Keyboard reference overlay" loading="lazy" decoding="async"></div></details>
+<p>F5 opens interruption options and F6 retries the selected job. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.</p>
 <h2 id="errors-and-log-search">Errors and log search</h2>
-<p>Failures generate a notification and refresh the task-log browser. Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to <code>.bitloom/exports</code>.</p>
+<p>Failures generate a notification and refresh the task-log browser. Analysis → <em>Failure diagnosis</em> anchors on the root cause instead of the first line mentioning a failure: compiler errors, the first make <code>***</code> line with the output leading to it, out-of-memory kills, full disks, fetch and patch failures and pseudo aborts. It lists the failed tasks and maps known causes to a next step, for example retrying a MakeMaker &quot;Makefile has been rebuilt&quot; race. <strong>Builds → <code>c</code></strong> opens console builds that were started outside Bitloom (<a href="teams.html#builds-started-elsewhere">details</a>). Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to <code>.bitloom/exports</code>.</p>
 <p>Task logs are discovered under the standard <code>tmp/work/ARCH/RECIPE/VERSION/temp</code> hierarchy and ordered by modification time. Custom TMPDIR layouts currently require setting build_dir to match the expected layout or opening logs externally. Symlink aliases are skipped to avoid duplicate entries.</p>
 <p>The Workbench build report extracts warnings, errors, task summaries, failed tasks and shared-state summaries. Timings ranks completed tasks by durations observed in timestamped kas output. Overlapping tasks are not added into a false build duration. Plain BitBake logs without timestamps cannot supply those timings; use buildstats artifacts. It does not invent diagnoses. Use the task's own log to determine the cause.</p>
 <h2 id="workbench">Workbench</h2>
@@ -297,7 +348,7 @@ bitloom --embedded                     # exit stops owned jobs
 </tbody>
 </table>
 <p>The choice is a UI preference stored in <code>appearance.json</code> under the selected state directory, independent of build profiles. Missing, malformed or unknown saved themes fall back to Bitloom. Themes do not change build settings or stop queued work.</p>
-<p><img src="assets/themes.gif" alt="Fourteen actual terminal theme previews" /></p>
+<details class="shot"><summary><span>Animation</span> Fourteen actual terminal theme previews</summary><div class="shot-body"><img src="assets/themes.gif" alt="Fourteen actual terminal theme previews" loading="lazy" decoding="async"></div></details>
 <h2 id="build-launch-and-try-the-local-yocto-workspace">Build, launch and try the local Yocto workspace</h2>
 <p>Run these commands from the repository root in a Linux/WSL terminal. Bitloom is a Python application: editable installation is sufficient for development; no native compilation is required.</p>
 <h3 id="install-for-development">Install for development</h3>
@@ -356,10 +407,10 @@ python tools/probe_workflows.py
 <p><code>validate_kas.py</code> builds the image and verifies its rootfs; probes then exercise real runtime operations. <code>probe_workflows.py</code> submits a warm build to a separate persistent service and stops that service after completion. Unit/UI checks run with <code>python -m pytest -q</code>; they do not require a Yocto build.</p>
 <h3 id="preview-the-pages-site-locally">Preview the Pages site locally</h3>
 <pre><code class="language-bash">python -m pip install '.[docs]'
-python tools/build_docs.py
-python -m http.server 8000 --directory docs
+python tools/serve_docs.py --port 8000          # rebuilds the HTML, then serves docs/
+python tools/serve_docs.py --port 9000 --no-build --open
 </code></pre>
-<p>Open <code>http://localhost:8000</code>. The Pages workflow is included, but this workspace has no GitHub remote and no public deployment yet.</p>
+<p><code>--host</code> changes the bind address (loopback by default). Screenshots in the HTML pages are collapsed and load only when expanded.</p>
 <h2 id="gentle-colors-and-focus">Gentle colors and focus</h2>
 <p>F7 offers Soft Slate, a muted dark gray palette, and Linen, a warm light palette. Focusing report or log panes highlights the border without tinting the entire background. If a true-color terminal such as Windows Terminal renders saturated blue blocks, check TERM and COLORTERM and try <code>COLORTERM=truecolor bitloom</code> with your usual profile arguments. Limited-color terminals still use their available colors.</p>
 <h3 id="navigation-and-elapsed-time">Navigation and elapsed time</h3>
@@ -409,7 +460,7 @@ local_conf_header:
 <p>Metadata's <strong>New file</strong> button and Analysis's <strong>Create runtime file</strong> operation open an editor with an absolute destination path and templates for empty text, private example recipes and .bbappend files. Select the template before entering your content. <strong>Create file</strong> creates missing parent folders and atomically publishes the file without overwriting existing files or symlinks. Builds queued or running in this session must finish before metadata creation or editing.</p>
 <p>With kas/container profiles use runtime paths, for example <code>/work/meta-bitloom/recipes-example/hello/hello_1.0.bb</code>. The directory is shown in Analysis after creation. Local metadata remains a host filesystem index; container-only files are viewed through runtime directory/file operations. Host metadata additions, edits and deletions are detected every five seconds and refresh the index when changed. Open runtime directory listings refresh every fifteen seconds while idle, with a 2,000-entry limit. Dialogs pause automatic scans. F3 rescans local metadata; Analyze refreshes the current runtime directory immediately.</p>
 <p>To follow the hands-on tutorial entirely through Bitloom: use F2 Create layer for <code>/work/meta-bitloom</code>, then New file to create the .bb recipe and any .bbappend files. Create the kas experiment YAML in the host checkout using your editor, since a container profile's file dialog targets the container filesystem. Register the layer in kas as described above. Existing container files can be edited through Analysis → Edit runtime file.</p>
-<p><img src="assets/file-creation.png" alt="New-file editor with sample recipe" /></p>
+<details class="shot"><summary><span>Screenshot</span> New-file editor with sample recipe</summary><div class="shot-body"><img src="assets/file-creation.png" alt="New-file editor with sample recipe" loading="lazy" decoding="async"></div></details>
 <h2 id="connected-developer-workflows">Connected Developer workflows</h2>
 <p>F10 opens the <a href="developer.html">Developer workbench</a>. Its guide documents all sixteen views, field meanings, queued operations, stale-file detection, immutable captures and baseline comparison. New layer previews complete CMake/Meson/Make/Python/Rust fixtures and registers them through a new kas composition or bitbake-layers. Clone, also in F4, preserves the original profile and selects a separate build directory. Optional <code>source_mappings</code> maps absolute runtime roots to real host-visible directories for IDE exports.</p>
 <p>New owned kas-container jobs have unique Docker/Podman names and labels. Force stop records the exact container's stop result before recipe recovery is offered. Graceful draining remains disabled for kas wrappers; native kas and external containers retain unconfirmed-server guards. Shutdown evidence displays the original job observations separately from a fresh probe namespace.</p>

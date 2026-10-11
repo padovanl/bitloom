@@ -4,13 +4,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from bitloom.commands import ACTIONS
-lines = ['# Command reference', '', 'All actions use the selected profile/runtime. Required inputs appear in the command dialog.', 'Commands may require classes or options supplied by your selected Yocto release.', '', '| ID | Group | Operation | Required input | Tool / arguments |', '| --- | --- | --- | --- | --- |']
+lines = ['# Command reference', '', 'All actions use the selected profile/runtime. Required inputs appear in the command dialog.', 'Commands may require classes or options supplied by your selected Yocto release. The Release column shows the Yocto series window; outside it the TUI, web dashboard and `--ci` explain what is missing and suggest the alternative.', '', '| ID | Group | Operation | Required input | Tool / arguments | Release |', '| --- | --- | --- | --- | --- | --- |']
 for a in ACTIONS:
     tool = ' '.join([a.tool, *a.args]).strip() or 'custom argv'
-    lines.append(f'| `{a.id}` | {a.group} | {a.title} | {", ".join(a.inputs) or "—"} | `{tool}` |')
+    window = (a.since or '') + ('…' + a.until if a.until else ('+' if a.since else '')) or 'any'
+    lines.append(f'| `{a.id}` | {a.group} | {a.title} | {", ".join(a.inputs) or "—"} | `{tool}` | {window} |')
 lines += ['', 'Interactive commands hand off to a real terminal and are not stored as queued build logs.', 'Custom task adds `-c TASK` after the target. kas commands append the selected kas_file.', '', '## Action-specific requirements', '']
 for a in ACTIONS:
     if a.help:
         lines.append(f'- **{a.title}:** {a.help}')
 (ROOT / 'docs/commands.md').write_text('\n'.join(lines) + '\n')
 print(f'Documented {len(ACTIONS)} actions')
+from bitloom.keys import reference_markdown
+(ROOT / 'docs/keyboard.md').write_text(reference_markdown())
+print('Documented the keyboard reference')

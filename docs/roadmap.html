@@ -1,10 +1,46 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Research and implementation map — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="research-and-implementation-map">Research and implementation map</h1>
+<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="keyboard.html">Keys</a><a href="web.html">Web</a><a href="compliance.html">SBOM &amp; CRA</a><a href="studio.html">Studio</a><a href="teams.html">Teams &amp; CI</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="research-and-implementation-map">Research and implementation map</h1>
 <p>Research reviewed on <strong>2026-10-10</strong>. All fourteen workflows below now have implemented controls in F10 Developer. See the <a href="developer.html">Developer guide</a> for inputs/operations and <a href="testbook.html#13-developer-acceptance">chapter 13 of the manual testbook</a> for concrete acceptance cases. Implementation status and validation coverage are separate: hardware, complete SDK debugging and release-specific reports still require their real prerequisites.</p>
 <h2 id="what-developers-are-struggling-with">What developers are struggling with</h2>
 <p>Public discussions describe opaque configuration, confusing errors and lengthy feedback loops. A developer learning Yocto describes difficulty understanding variables and locating the actual failure in an <a href="https://www.reddit.com/r/embedded/comments/1vdlik5/is_yocto_hard_or_am_i_dumb/">August 2026 discussion</a>. Another describes spending working days chasing configuration changes across projects in an <a href="https://www.reddit.com/r/embedded/comments/1661ico/my_job_has_become_editing_yocto_and_other_config/">August 2023 discussion</a>. A <a href="https://www.reddit.com/r/embedded/comments/1jqre2y/">March 2025 beginner discussion</a> highlights friction between an intended image change and the resulting system.</p>
 <p>These are individual experiences, not a representative developer survey. They identify problems worth investigating; they do not establish demand percentages or prove which feature is most popular. The priorities below are Bitloom's assessment of daily value, considering what the application already provides. Technical foundations are checked against upstream documentation, rather than community advice alone.</p>
+<h2 id="answering-the-criticisms-of-earlier-yocto-interfaces">Answering the criticisms of earlier Yocto interfaces</h2>
+<p>Research reviewed on <strong>2026-10-12</strong>. Earlier graphical front ends were criticised and some were retired; Bitloom is designed around those lessons. The left column records documented problems, the right column how Bitloom responds. It is a design rationale, not a claim that Bitloom replaces these tools.</p>
+<table>
+<thead>
+<tr>
+<th>Documented problem</th>
+<th>Bitloom's response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hob</strong> was tightly woven into BitBake internals, fragile, needed constant QA, was tied to GTK+ 2 and was removed in 2016 (<a href="https://docs.yoctoproject.org/pipermail/yocto/2016-March/028921.html">removal discussion</a>).</td>
+<td>Uses only public command-line interfaces and their output (<code>bitbake</code>, <code>bitbake-layers</code>, <code>devtool</code>, <code>kas</code>, <code>bitbake-getvar</code>, logs and deploy files); no imports of BitBake internals. A terminal UI plus a standard-library web page, nothing to keep in sync with a GUI toolkit.</td>
+</tr>
+<tr>
+<td><strong>Toaster</strong> must be running before a build to record it, needs its own Django setup and database, struggles with non-Poky layouts, and the project lists it among components with little maintainer time (<a href="https://docs.yoctoproject.org/toaster-manual/intro.html">Toaster manual</a>, <a href="https://wiki.yoctoproject.org/wiki/2025_Yocto_Project_Weekly_Status_Archive">2025 status reports</a>).</td>
+<td>Reads evidence after the fact: console builds from <code>tmp/log/cooker</code> (builds started anywhere), task logs, deploy directories, SPDX documents and buildstats. One <code>pip</code>/<code>.deb</code> install, SQLite history only for its own queue, kas and split-repository (Wrynose) layouts, containers and project launcher scripts.</td>
+</tr>
+<tr>
+<td><strong>knotty</strong> output floods beginners; finding the failing task and its cause is hard, and messages labelled ERROR are not always the root cause (<a href="https://docs.yoctoproject.org/pipermail/yocto/2011-November/003477.html">user report</a>, <a href="https://www.openembedded.org/pipermail/bitbake-devel/2013-April/013176.html">BitBake discussion</a>).</td>
+<td>Errors-only filter with context, failed task logs from BitBake's own paths, Toaster-style summaries, grouped warnings and a root-cause diagnosis with next steps, verified on a real perl build failure.</td>
+</tr>
+<tr>
+<td>A steep learning curve: months to become productive, release differences make advice stale (<a href="https://www.dornerworks.com/?p=1658">DornerWorks</a>).</td>
+<td>Every operation previews the exact command; Studio and SBOM settings explain every field; the detected release decides defaults and explains what a release lacks with the alternative it offers.</td>
+</tr>
+<tr>
+<td><strong>taskexp</strong> and graphical dependency explorers need a desktop toolkit.</td>
+<td>Dependency edges, &quot;why this task&quot; and environment diffs in the terminal and over SSH.</td>
+</tr>
+<tr>
+<td>Remote and shared build machines: sessions die with the terminal.</td>
+<td>A reconnectable build service, a web dashboard on loopback with a token (tunnel it over SSH), headless CI runs with JUnit/JSON, read-only team profiles.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="implemented-workflow-map">Implemented workflow map</h2>
 <table>
 <thead>
