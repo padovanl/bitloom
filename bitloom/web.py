@@ -356,6 +356,34 @@ class Dashboard:
         result = self.rpc({"op": "submit", "profile": asdict(helper), "title": "Clone " + destination.name, "command": argv, "action_id": "project-clone"})
         return {"id": result["job"]["id"], "dest": str(destination)}
 
+    def vulnerabilities(self, query):
+        from dataclasses import asdict
+        from .vulns import counts, load, scanners, select, sources
+        profile = self.profile(query.get("profile", [""])[0])
+        findings, errors = load(profile, self.state, query.get("source", [""])[0])
+        try:
+            minimum = float(query.get("min", ["0"])[0] or 0)
+        except ValueError:
+            minimum = 0.0
+        shown = select(findings, query.get("status", ["unpatched"])[0], minimum, query.get("q", [""])[0])
+        return {"sources": [label for label, _ in sources(profile, self.state)], "counts": counts(findings), "errors": errors,
+                "findings": [asdict(f) for f in shown[:500]], "shown": len(shown), "scanners": {k: bool(v) for k, v in scanners().items()}}
+
+    def vulnerability_scan(self, body):
+        from dataclasses import asdict
+        from datetime import datetime
+        from .sbom import sbom_files
+        from .vulns import grype_argv
+        profile = self.profile(body.get("profile"))
+        sboms = [p for p in sbom_files(profile) if p.name.endswith(".spdx.json")]
+        if not sboms:
+            raise ValueError("No SPDX JSON SBOM in tmp/deploy")
+        output = self.state / "vulnerability-scans" / f"{sboms[0].name[:-len('.spdx.json')]}-{datetime.now():%Y%m%d-%H%M%S}.grype.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        helper = Profile(name="vulnerability-scan", root=str(self.state), build_dir=str(self.state))
+        result = self.rpc({"op": "submit", "profile": asdict(helper), "title": "Grype scan " + output.name, "command": grype_argv(sboms[0], output), "action_id": "vuln-scan"})
+        return {"id": result["job"]["id"]}
+
     def setup_scan(self, query):
         from .setup import candidate_json, detect
         directory = query.get("dir", [""])[0] or str(self.profile().root_path)
@@ -499,6 +527,10 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.studio_preview(self.body())
                 elif route == ("POST", "studio", "create"):
                     payload = dashboard.studio_create(self.body())
+                elif route == ("GET", "vulnerabilities"):
+                    payload = dashboard.vulnerabilities(query)
+                elif route == ("POST", "vulnerabilities", "scan"):
+                    payload = dashboard.vulnerability_scan(self.body())
                 elif route == ("GET", "projects"):
                     payload = dashboard.projects()
                 elif route == ("POST", "projects", "preview"):

@@ -7,6 +7,22 @@ from pathlib import Path
 DEMO_TOOL = "Bitloom demo sample - not produced by a real build"
 
 
+def cve_sample(tool: str) -> str:
+    """Yocto CVE JSON (cve-check / sbom-cve-check) with labelled sample identifiers."""
+    import json
+    issue = lambda ident, status, score, detail, summary: {"id": ident, "status": status, "scorev3": score, "detail": detail,
+                                                           "summary": f"Demo sample ({tool}), not a real vulnerability: {summary}", "link": ""}
+    return json.dumps({"version": "1", "note": DEMO_TOOL, "package": [
+        {"name": "openssh", "layer": "meta", "version": "9.6p1", "issue": [
+            issue("CVE-0000-0001", "Unpatched", "8.1", "version-in-range", "remote pre-authentication issue"),
+            issue("CVE-0000-0004", "Patched", "5.3", "fixed-version", "information disclosure")]},
+        {"name": "busybox", "layer": "meta", "version": "1.36.1", "issue": [
+            issue("CVE-0000-0002", "Unpatched", "9.8", "version-in-range", "buffer overflow in a shell applet"),
+            issue("CVE-0000-0003", "Ignored", "4.0", "not-applicable-config", "feature disabled in this configuration")]},
+        {"name": "demo-agent", "layer": "meta-demo", "version": "1.0", "issue": [
+            issue("CVE-0000-0005", "Unpatched", "5.5", "version-in-range", "local denial of service")]}]}, indent=1)
+
+
 def release_samples(release: str) -> dict[str, str]:
     """Release-specific sample files: core layer series, SBOM format and CVE evidence."""
     import json
@@ -20,7 +36,7 @@ def release_samples(release: str) -> dict[str, str]:
                              {"name": "demo-agent", "versionInfo": "1.0", "licenseConcluded": "NOASSERTION"}]}
         return {"poky/meta/conf/layer.conf": 'BBFILE_COLLECTIONS += "core"\nLAYERSERIES_CORENAMES = "scarthgap"\n',
                 image + ".spdx.json": json.dumps(sbom, indent=1),
-                "build/tmp/log/cve/cve-summary.json": json.dumps({"note": DEMO_TOOL, "package": [{"name": "openssh", "issue": [{"id": "CVE-0000-0001", "status": "Unpatched"}]}]}, indent=1)}
+                "build/tmp/log/cve/cve-summary.json": cve_sample("cve-check")}
     graph = [{"type": "CreationInfo", "@id": "_:c", "created": "2026-06-01T00:00:00Z", "createdUsing": ["tool"]},
              {"type": "Tool", "spdxId": "tool", "name": DEMO_TOOL}]
     for index, (name, version, purl, supplier) in enumerate([("busybox", "1.37.0", True, True), ("openssh", "10.0p1", True, True), ("demo-agent", "1.0", False, False)]):
@@ -38,7 +54,7 @@ def release_samples(release: str) -> dict[str, str]:
                   {"type": f"security_Vex{kind}VulnAssessmentRelationship", "spdxId": f"x{index}", "from": f"v{index}", "to": [package]}]
     return {"layers/openembedded-core/meta/conf/layer.conf": 'BBFILE_COLLECTIONS += "core"\nLAYERSERIES_CORENAMES = "wrynose"\n',
             image + ".spdx.json": json.dumps({"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld", "@graph": graph}, indent=1),
-            image + ".sbom-cve-check.yocto.json": json.dumps({"note": DEMO_TOOL, "affected": ["CVE-0000-0001"]}, indent=1)}
+            image + ".sbom-cve-check.yocto.json": cve_sample("sbom-cve-check")}
 
 
 def prepare_demo(state: Path) -> Path:
@@ -103,6 +119,9 @@ def main():
     ci.add_argument("--fail-fast", action="store_true", help="Stop the matrix at the first failure")
     parser.add_argument("--sbom", action="store_true", help="Print SBOM quality (SPDX 3/2.2: identifiers, licences, suppliers, VEX)")
     parser.add_argument("--cra", action="store_true", help="Print CRA readiness evidence; exit 2 when a check warns")
+    parser.add_argument("--vulns", action="store_true", help="Print CVE findings (cve-check, sbom-cve-check, Grype) for the active profile")
+    parser.add_argument("--min-cvss", type=float, default=0.0, help="With --vulns: only findings at or above this CVSS score")
+    parser.add_argument("--fail-on-unpatched", action="store_true", help="With --vulns: exit 2 when an unpatched finding matches")
     parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
     parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
     parser.add_argument("--list-actions", action="store_true", help="List all available operations")
@@ -135,6 +154,12 @@ def main():
         return
     if args.demo:
         args.config = prepare_demo(args.state)
+    if args.vulns:
+        from .models import Settings
+        from .vulns import load, report, select
+        findings, errors = load(Settings(args.config).profile, args.state)
+        print(report(findings, errors, "unpatched", args.min_cvss))
+        raise SystemExit(2 if args.fail_on_unpatched and select(findings, "unpatched", args.min_cvss) else 0)
     if args.sbom or args.cra:
         from .models import Settings
         from .sbom import cra_report, sbom_report
