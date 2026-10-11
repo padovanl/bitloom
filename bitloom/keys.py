@@ -78,6 +78,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
         ("e", "press('environment')", "bitbake -e", "environment"), ("d", "press('dev-status')", "devtool", "dev-status"),
         ("v", "press('versions')", "Versions", "versions"), ("n", "press('network-check')", "Network", "network-check"),
         ("s", "press('sbom-settings')", "SBOM settings", "sbom-settings"), ("c", "press('cra-report')", "CRA readiness", "cra-report"),
+        ("w", "press('setup-wizard')", "Set up project", "setup-wizard"),
     ],
     "guide": [],
 }

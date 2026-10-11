@@ -316,6 +316,34 @@ class Dashboard:
         messages, target = register(settings, profile, result, body.get("use") is True, submit)
         return {"written": [str(p) for p in written], "messages": messages, "target": target}
 
+    def setup_scan(self, query):
+        from .setup import candidate_json, detect
+        directory = query.get("dir", [""])[0] or str(self.profile().root_path)
+        return {"dir": str(Path(directory).expanduser().resolve()), "candidates": [candidate_json(c) for c in detect(Path(directory))]}
+
+    def setup_profile(self, body):
+        from .models import Profile
+        data = body.get("profile")
+        if not isinstance(data, dict):
+            raise ValueError("profile must be an object")
+        return Profile.from_dict(data)
+
+    def setup_check(self, body):
+        from .setup import check
+        try:
+            rows = check(self.setup_profile(body))
+        except (TypeError, ValueError) as exc:
+            rows = [("ERR", str(exc))]
+        return {"checks": [{"status": s, "message": m} for s, m in rows]}
+
+    def setup_save(self, body):
+        from .setup import check, save
+        profile = self.setup_profile(body)
+        if any(status == "ERR" for status, _ in check(profile)):
+            raise ValueError("Fix the checks marked ✖ first")
+        save(self.settings(), profile)
+        return {"active": profile.name}
+
     def health(self, query):
         profile = self.profile(query.get("profile", [""])[0])
         return {"checks": [{"status": s, "name": n, "detail": d} for s, n, d in diagnostics(profile)]}
@@ -429,6 +457,12 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.studio_preview(self.body())
                 elif route == ("POST", "studio", "create"):
                     payload = dashboard.studio_create(self.body())
+                elif route == ("GET", "setup", "scan"):
+                    payload = dashboard.setup_scan(query)
+                elif route == ("POST", "setup", "check"):
+                    payload = dashboard.setup_check(self.body())
+                elif route == ("POST", "setup", "save"):
+                    payload = dashboard.setup_save(self.body())
                 elif route == ("GET", "console"):
                     payload = dashboard.console(query)
                 elif route == ("GET", "console", "log"):

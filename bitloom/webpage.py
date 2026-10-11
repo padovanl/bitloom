@@ -380,9 +380,35 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
       </div>
     </section>
 
-    <section id="view-health" class="view panel" hidden>
+    <section id="view-health" class="view" hidden>
+      <div class="panel">
+        <div class="head"><h2>Set up a project</h2><span style="flex:1"></span><span class="hint">Finds kas files, init scripts, build directories and launcher scripts; the new profile becomes active at once.</span></div>
+        <div class="tools"><input type="search" id="setup-dir" placeholder="Project directory, e.g. /home/me/src/product (Enter scans)"><button class="btn primary" id="setup-scan">Scan</button></div>
+        <div class="split" style="min-height:0">
+          <div class="list" id="setup-found" style="max-height:420px"></div>
+          <div class="form" id="setup-form">
+            <label class="f" for="sp-mode">Runtime</label>
+            <select id="sp-mode"><option>kas-container</option><option>kas</option><option>host</option><option>container</option><option>wrapper</option></select>
+            <div class="help">kas-container: kas and Yocto in a container (recommended) · kas: kas on the host · host: initialised Poky/OE-Core · container: your image · wrapper: a project script that runs kas.</div>
+            <label class="f" for="sp-name">Profile name</label><input type="text" id="sp-name">
+            <label class="f" data-mode="kas kas-container" for="sp-kas_file">kas configuration</label><input type="text" id="sp-kas_file" data-mode="kas kas-container">
+            <label class="f" data-mode="host container" for="sp-init_script">Init script</label><input type="text" id="sp-init_script" data-mode="host container">
+            <label class="f" data-mode="host container" for="sp-build_dir">Build directory</label><input type="text" id="sp-build_dir" data-mode="host container">
+            <label class="f" data-mode="wrapper" for="sp-launcher">Launcher script</label><input type="text" id="sp-launcher" data-mode="wrapper">
+            <div class="help" data-mode="wrapper">The script must accept kas subcommands (build, dump…) and forward <code>shell -c COMMAND</code>.</div>
+            <label class="f" for="sp-environment">Environment (KEY=VALUE per line)</label><textarea id="sp-environment" rows="3" style="background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:12px var(--mono);color:var(--fg)"></textarea>
+            <div class="help">kas-container: KAS_WORK_DIR on a Linux filesystem. wrapper: the variable that selects the configuration, e.g. YML=boards/board.yml.</div>
+            <label class="f" for="sp-machine">MACHINE / DISTRO / targets</label>
+            <div style="display:flex;gap:8px"><input type="text" id="sp-machine" placeholder="MACHINE"><input type="text" id="sp-distro" placeholder="DISTRO"><input type="text" id="sp-targets" placeholder="targets"></div>
+            <ul class="checks" id="sp-checks" style="margin-top:12px"></ul>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn primary" id="sp-save">Save and use</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
       <div class="head"><h2>Health, setup and configuration</h2><span style="flex:1"></span><span class="hint">Literal local.conf values; run bitbake -e for evaluated ones.</span></div>
       <div class="list"><table><thead><tr><th>Status</th><th>Check</th><th>Details</th></tr></thead><tbody id="health-rows"></tbody></table></div>
+      </div>
     </section>
   </main>
 </div>
@@ -684,7 +710,7 @@ function setView(name) {
   view = name;
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
-  if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") loadHealth();
+  if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
   if (name === "compliance") loadCompliance(); if (name === "studio") loadStudio();
   if (name === "builds") requestAnimationFrame(moveInk);
 }
@@ -736,6 +762,60 @@ async function loadHealth() {
   const data = await api(`/api/health?profile=${prof()}`);
   body.textContent = "";
   data.checks.forEach((check, i) => { const tr = el("tr", {}, el("td", {}, el("span", {class: "badge " + (STATUS_BADGE[check.status] || "muted"), text: check.status})), el("td", {text: check.name}), el("td", {class: "mono", text: check.detail})); tr.style.animationDelay = i * 15 + "ms"; body.append(tr); });
+}
+
+/* Guided project setup */
+let setupCandidates = [], setupRoot = "";
+async function scanSetup() {
+  const list = $("setup-found"); list.textContent = ""; list.append(el("div", {class: "skeleton"}), el("div", {class: "skeleton", style: "width:70%"}));
+  try {
+    const data = await api(`/api/setup/scan?dir=${encodeURIComponent($("setup-dir").value)}`);
+    setupRoot = data.dir; $("setup-dir").value = data.dir; setupCandidates = data.candidates; list.textContent = "";
+    if (!setupCandidates.length) { list.append(el("div", {class: "empty", text: "Nothing recognised: fill the form by hand."})); fillSetup({name: "project", mode: "kas-container"}); return; }
+    setupCandidates.forEach((candidate, i) => {
+      const row = el("div", {class: "row" + (i === 0 ? " selected" : ""), tabindex: "0"}, el("span", {class: "glyph", text: {wrapper: "⇄", host: "⌂", kas: "◇", "kas-container": "▣"}[candidate.mode] || "·"}),
+        el("span", {}, el("b", {text: candidate.title}), el("div", {class: "meta", text: candidate.evidence.join(" · ")}), ...candidate.hints.map((h) => el("div", {class: "hint", text: h}))), el("span"));
+      row.addEventListener("click", () => { for (const node of list.children) node.classList.toggle("selected", node === row); fillSetup(candidate.profile); });
+      list.append(row);
+    });
+    fillSetup(setupCandidates[0].profile);
+  } catch (error) { list.textContent = ""; list.append(el("div", {class: "empty", text: error.message})); }
+}
+function fillSetup(profile) {
+  $("sp-mode").value = profile.mode || "kas-container";
+  for (const key of ["name", "kas_file", "init_script", "build_dir", "machine", "distro"]) $("sp-" + key).value = profile[key] || "";
+  $("sp-launcher").value = (profile.launcher || []).join(" ");
+  $("sp-targets").value = (profile.targets || []).join(" ");
+  $("sp-environment").value = Object.entries(profile.environment || {}).map(([k, v]) => `${k}=${v}`).join("\n");
+  checkSetup();
+}
+function setupProfile() {
+  const environment = {};
+  for (const line of $("sp-environment").value.split("\n")) { const at = line.indexOf("="); if (at > 0) environment[line.slice(0, at).trim()] = line.slice(at + 1).trim(); }
+  const mode = $("sp-mode").value, profile = {name: $("sp-name").value.trim(), root: setupRoot || $("setup-dir").value, mode, environment,
+    kas_file: $("sp-kas_file").value.trim() || "kas.yml", init_script: $("sp-init_script").value.trim(), build_dir: $("sp-build_dir").value.trim() || "build",
+    machine: $("sp-machine").value.trim(), distro: $("sp-distro").value.trim(), targets: $("sp-targets").value.split(/\s+/).filter(Boolean)};
+  if (mode === "wrapper") profile.launcher = $("sp-launcher").value.split(/\s+/).filter(Boolean);
+  for (const node of document.querySelectorAll("#setup-form [data-mode]")) node.hidden = !node.dataset.mode.split(" ").includes(mode);
+  return profile;
+}
+let setupTimer;
+function checkSetup() {
+  clearTimeout(setupTimer);
+  setupTimer = setTimeout(async () => {
+    const data = await api("/api/setup/check", {method: "POST", body: JSON.stringify({profile: setupProfile()})});
+    const list = $("sp-checks"); list.textContent = "";
+    for (const row of data.checks) list.append(el("li", {style: "grid-template-columns:26px 1fr"}, el("span", {class: {OK: "s-success", WARN: "s-queued", ERR: "s-failed"}[row.status], text: {OK: "✔", WARN: "▲", ERR: "✖"}[row.status]}), el("span", {text: row.message})));
+    $("sp-save").disabled = data.checks.some((row) => row.status === "ERR");
+  }, 150);
+}
+async function saveSetup() {
+  try {
+    const result = await api("/api/setup/save", {method: "POST", body: JSON.stringify({profile: setupProfile()})});
+    $("profile").textContent = ""; await refresh(); $("profile").value = result.active; $("target").dataset.touched = ""; await loadConsole(); renderState();
+    toast("Project set up", `Profile ${result.active} is active and ready to build.`, "success", {label: "Go to Builds", run: () => setView("builds")});
+    loadHealth();
+  } catch (error) { toast("Setup", error.message, "error"); }
 }
 
 /* Compliance */
@@ -945,6 +1025,10 @@ function wire() {
   $("graceful-btn").addEventListener("click", () => control("graceful"));
   $("retry-btn").addEventListener("click", () => control("retry"));
   $("st-create").addEventListener("click", createStudio);
+  $("setup-scan").addEventListener("click", scanSetup);
+  $("setup-dir").addEventListener("keydown", (event) => { if (event.key === "Enter") scanSetup(); });
+  for (const id of ["sp-mode", "sp-name", "sp-kas_file", "sp-init_script", "sp-build_dir", "sp-launcher", "sp-environment", "sp-machine", "sp-distro", "sp-targets"]) $(id).addEventListener("input", checkSetup);
+  $("sp-save").addEventListener("click", saveSetup);
   $("log-search").addEventListener("input", () => { clearTimeout(typingTimer); typingTimer = setTimeout(loadTab, 200); });
   $("errors-only").addEventListener("change", loadTab);
   $("log").addEventListener("scroll", () => { const log = $("log"); $("jump").classList.toggle("show", log.scrollHeight - log.scrollTop - log.clientHeight > 80); });

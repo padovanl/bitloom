@@ -456,6 +456,7 @@ class BitloomApp(App):
                         yield DeveloperPanel(id="developer-panel")
                     with TabPane(labels["healthtab"], id="healthtab"):
                         with Horizontal(classes="tools"):
+                            yield Button("Set up project", id="setup-wizard", variant="primary")
                             yield Button("local.conf", id="local-conf")
                             yield Button("bblayers.conf", id="layers-conf")
                             yield Button("Environment", id="environment")
@@ -516,6 +517,9 @@ class BitloomApp(App):
         self.refresh_history()
         self.action_refresh()
         self.main_query("#history", DataTable).focus()
+        if not self.settings.path.exists():
+            # First run without profiles: start the guided setup in the current directory.
+            self.call_after_refresh(lambda: self.open_setup(Path.cwd()))
 
     def set_label(self, ident, text=None):
         """Show a button's keyboard key in front of its label."""
@@ -944,6 +948,7 @@ class BitloomApp(App):
         yield SystemCommand("Keyboard reference", "Every key in every section (?)", self.action_keys)
         yield SystemCommand("Switch profile", "Choose the active profile (P)", self.action_switch_profile)
         yield SystemCommand("Edit profiles", "JSON profile editor (F4)", self.action_profiles)
+        yield SystemCommand("Set up a project", "Detect kas files, init scripts and launcher scripts and create a profile", self.open_setup)
         yield SystemCommand("Studio", "Create a product layer, distro, machine, image, recipe or append", lambda: self.action_press("studio"))
         yield SystemCommand("Console builds", "Builds started outside Bitloom (BitBake console logs)", self.action_console_builds)
         yield SystemCommand("Refresh workspace", "Rescan metadata, logs, artifacts (F3)", self.action_refresh)
@@ -1358,6 +1363,8 @@ class BitloomApp(App):
             self.export_log()
         elif ident == "console-builds":
             self.action_console_builds()
+        elif ident == "setup-wizard":
+            self.open_setup()
         elif ident == "studio":
             from .screens import StudioScreen
             from .studio import product_layers
@@ -1384,6 +1391,18 @@ class BitloomApp(App):
             if table.row_count:
                 key = table.coordinate_to_cell_key(table.cursor_coordinate).row_key
                 table.post_message(DataTable.RowSelected(table, table.cursor_row, key))
+
+    def open_setup(self, directory=None):
+        from .screens import SetupScreen
+        self.push_screen(SetupScreen(self.settings, directory or self.profile.root_path), self.setup_result)
+
+    def setup_result(self, name):
+        """A saved profile becomes active; selectors, metadata and health reload at once."""
+        if not name:
+            return
+        self.capability_cache.clear()
+        self.profiles_result(True)
+        self.notify(f"Profile {name} is ready: {self.profile.mode} in {self.profile.root_path}", title="✔ Project set up", timeout=10)
 
     def studio_result(self, result):
         """Register what Studio created: layer, distro/machine selection or kas overlay."""
