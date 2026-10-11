@@ -1542,3 +1542,151 @@ class CloneScreen(ModalScreen):
             self.notify(str(exc), severity="error")
             return
         self.dismiss({"argv": argv, "dest": argv[-1]})
+
+
+class VulnerabilitiesScreen(ModalScreen):
+    """CVE findings from cve-check, sbom-cve-check and Grype with reviews and scans."""
+    DEFAULT_CSS = """
+    VulnerabilitiesScreen { align: center middle; background: $background 60%; }
+    VulnerabilitiesScreen > Vertical { width: 98%; height: 96%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    VulnerabilitiesScreen #vuln-tools { height: 1; margin: 1 0; }
+    VulnerabilitiesScreen #vuln-tools Select { width: 34; }
+    VulnerabilitiesScreen #vuln-status { width: 18; }
+    VulnerabilitiesScreen #vuln-min { width: 12; }
+    VulnerabilitiesScreen #vuln-filter { width: 1fr; }
+    VulnerabilitiesScreen #vuln-summary { height: auto; color: $text-muted; }
+    VulnerabilitiesScreen #vuln-split { height: 1fr; }
+    VulnerabilitiesScreen #vuln-table { width: 3fr; height: 1fr; }
+    VulnerabilitiesScreen #vuln-detail { width: 2fr; height: 1fr; margin-left: 1; border: round $primary-muted; padding: 0 1; }
+    VulnerabilitiesScreen Input, VulnerabilitiesScreen Select { height: 1; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                ("r", "review", "Review"), ("g", "grype", "Grype scan"), ("x", "export", "Export CSV"),
+                ("slash", "focus_filter", "Filter"), ("j", "move(1)", "Down"), ("k", "move(-1)", "Up")]
+
+    def __init__(self, profile, state):
+        super().__init__()
+        self.profile, self.state = profile, Path(state)
+        self.findings, self.errors, self.shown = [], [], []
+
+    def compose(self):
+        from textual.widgets import DataTable
+        from .vulns import sources
+        options = [("Newest report of each tool", "")] + [(label, label) for label, _ in sources(self.profile, self.state)]
+        with Vertical():
+            with Horizontal(id="vuln-tools"):
+                yield Select(options, value="", allow_blank=False, id="vuln-source")
+                yield Select([("Unpatched", "unpatched"), ("All", "all"), ("Reviewed", "reviewed")], value="unpatched", allow_blank=False, id="vuln-status")
+                yield Input(placeholder="min CVSS", id="vuln-min", type="number")
+                yield Input(placeholder="/ CVE, package or text", id="vuln-filter")
+            yield Static(id="vuln-summary", markup=False)
+            with Horizontal(id="vuln-split"):
+                yield DataTable(id="vuln-table", cursor_type="row")
+                yield Static(id="vuln-detail", markup=False)
+
+    def on_mount(self):
+        from .versions import describe
+        self.query_one(Vertical).border_title = "Vulnerabilities · r review · g scan with Grype · x export CSV · / filter · Esc close"
+        table = self.query_one("#vuln-table")
+        for name, width in (("Severity", 10), ("CVSS", 5), ("CVE", 18), ("Package", 22), ("Status", 11), ("Review", 16)):
+            table.add_column(name, width=width)
+        table.border_title = "Findings"
+        self.query_one("#vuln-detail").border_title = "Detail"
+        self.reload()
+        table.focus()
+
+    def reload(self):
+        from .vulns import load
+        self.findings, self.errors = load(self.profile, self.state, str(self.query_one("#vuln-source", Select).value))
+        self.render_rows()
+
+    def render_rows(self):
+        from rich.text import Text
+        from .vulns import counts, select
+        try:
+            minimum = float(self.query_one("#vuln-min", Input).value or 0)
+        except ValueError:
+            minimum = 0.0
+        self.shown = select(self.findings, str(self.query_one("#vuln-status", Select).value), minimum, self.query_one("#vuln-filter", Input).value)
+        table = self.query_one("#vuln-table")
+        table.clear()
+        theme = self.app.current_theme
+        colors = {"critical": theme.error, "high": theme.error, "medium": theme.warning, "low": theme.foreground}
+        for index, finding in enumerate(self.shown[:2000]):
+            table.add_row(Text(finding.severity, style=f"bold {colors.get(finding.severity, theme.foreground)}"), f"{finding.score:.1f}" if finding.score else "—",
+                          finding.id, f"{finding.package} {finding.version}", finding.status, Text(finding.review or "", style=theme.success), key=str(index))
+        c = counts(self.findings)
+        if not self.findings and not self.errors:
+            summary = ("No CVE report yet. Wrynose: enable sbom-cve-check (Configuration → s) and build the image; older releases: "
+                       "INHERIT += \"cve-check\". Or press g to scan the newest SPDX SBOM with Grype.")
+        else:
+            summary = (f"{c['total']} assessed · {c['unpatched']} unpatched (critical {c.get('unpatched_critical', 0)}, high {c.get('unpatched_high', 0)}, "
+                       f"medium {c.get('unpatched_medium', 0)}) · {c['patched']} patched · {c['ignored']} ignored · {c['reviewed']} reviewed · showing {len(self.shown)}")
+        self.query_one("#vuln-summary", Static).update(summary + "".join("\n! " + e for e in self.errors))
+        self.show_detail()
+
+    def selected(self):
+        table = self.query_one("#vuln-table")
+        return self.shown[table.cursor_row] if self.shown and table.cursor_row < len(self.shown) else None
+
+    def show_detail(self):
+        finding = self.selected()
+        detail = self.query_one("#vuln-detail", Static)
+        if not finding:
+            detail.update("")
+            return
+        detail.update("\n".join(filter(None, [f"{finding.id} · {finding.severity} {finding.score or ''}", f"{finding.package} {finding.version} · {finding.status}",
+                                               f"source: {finding.source}", f"detail: {finding.detail}" if finding.detail else "",
+                                               f"vector: {finding.vector}" if finding.vector else "", finding.link, "", finding.summary,
+                                               "", f"Reviewed: {finding.review}" if finding.review else "Not reviewed: press r to record an owner, a reason and an expiry."])))
+
+    def on_data_table_row_highlighted(self, event):
+        self.show_detail()
+
+    def on_select_changed(self, event):
+        self.reload() if event.select.id == "vuln-source" else self.render_rows()
+
+    def on_input_changed(self, event):
+        self.render_rows()
+
+    def on_input_submitted(self, event):
+        event.stop()
+        self.query_one("#vuln-table").focus()
+
+    def action_focus_filter(self):
+        self.query_one("#vuln-filter", Input).focus()
+
+    def action_move(self, step):
+        table = self.query_one("#vuln-table")
+        table.action_cursor_down() if step > 0 else table.action_cursor_up()
+
+    def action_review(self):
+        from .developer_ui import DispositionScreen
+        finding = self.selected()
+        if not finding:
+            return
+        self.app.push_screen(DispositionScreen(self.state, {"package": finding.package, "id": finding.id, "status": finding.status}), lambda saved: saved and self.reload())
+
+    def action_export(self):
+        from .vulns import to_csv
+        from datetime import datetime
+        destination = self.state / "exports" / f"vulnerabilities-{datetime.now():%Y%m%d-%H%M%S}.csv"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(to_csv(self.shown))
+        self.notify(f"Exported {len(self.shown)} rows to {destination}", timeout=8)
+
+    def action_grype(self):
+        from datetime import datetime
+        from .sbom import sbom_files
+        from .vulns import grype_argv
+        try:
+            sboms = [p for p in sbom_files(self.profile) if p.name.endswith(".spdx.json")]
+            if not sboms:
+                raise ValueError("No SPDX JSON SBOM in tmp/deploy (SPDX 3 releases write IMAGE.spdx.json)")
+            output = self.state / "vulnerability-scans" / f"{sboms[0].name[:-len('.spdx.json')]}-{datetime.now():%Y%m%d-%H%M%S}.grype.json"
+            output.parent.mkdir(parents=True, exist_ok=True)
+            argv = grype_argv(sboms[0], output)
+        except ValueError as exc:
+            self.notify(str(exc), severity="warning", timeout=10)
+            return
+        self.dismiss({"scan": argv, "output": str(output)})

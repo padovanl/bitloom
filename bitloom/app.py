@@ -318,6 +318,7 @@ class BitloomApp(App):
         self.capability_cache = {}
         self.release = None
         self.pending_clones: dict[str, str] = {}
+        self.pending_scans: set[str] = set()
         self.cpu_history: list[float] = []
         self.frame = 0
         self.was_busy = False
@@ -460,6 +461,7 @@ class BitloomApp(App):
                             yield Button("Rootfs inventory", id="image-contents")
                             yield Button("Image matrix", id="image-matrix")
                             yield Button("SBOM quality", id="sbom-report")
+                            yield Button("Vulnerabilities", id="vulnerabilities")
                         yield DataTable(id="artifact-table", cursor_type="row")
                     with TabPane(labels["analysis"], id="analysis"):
                         with Horizontal(classes="tools"):
@@ -972,6 +974,7 @@ class BitloomApp(App):
         yield SystemCommand("Keyboard reference", "Every key in every section (?)", self.action_keys)
         yield SystemCommand("Switch profile", "Choose the active profile (P)", self.action_switch_profile)
         yield SystemCommand("Edit profiles", "JSON profile editor (F4)", self.action_profiles)
+        yield SystemCommand("Vulnerabilities", "CVE findings from cve-check, sbom-cve-check and Grype", self.open_vulnerabilities)
         yield SystemCommand("Projects", "Recent projects, open a folder, new project, clone from Git", self.open_projects)
         yield SystemCommand("Set up a project", "Detect kas files, init scripts and launcher scripts and create a profile", self.open_setup)
         yield SystemCommand("Studio", "Create a product layer, distro, machine, image, recipe or append", lambda: self.action_press("studio"))
@@ -1243,6 +1246,10 @@ class BitloomApp(App):
             self.update_overview()
             if job.status == "success" and job.action_id == "graph-read" and job.profile.name == self.profile.name:
                 self.read_runtime_graph(job.log)
+            if job.id in self.pending_scans and job.status in {"success", "failed", "cancelled"}:
+                self.pending_scans.discard(job.id)
+                if job.status == "success":
+                    self.call_after_refresh(self.open_vulnerabilities)
             destination = self.pending_clones.get(job.id) if job.status in {"success", "failed", "cancelled"} else None
             if destination:
                 del self.pending_clones[job.id]
@@ -1413,6 +1420,8 @@ class BitloomApp(App):
             self.action_console_builds()
         elif ident == "projects":
             self.open_projects()
+        elif ident == "vulnerabilities":
+            self.open_vulnerabilities()
         elif ident == "studio":
             from .screens import StudioScreen
             from .studio import product_layers
@@ -1443,6 +1452,24 @@ class BitloomApp(App):
     def open_setup(self, directory=None):
         from .screens import SetupScreen
         self.push_screen(SetupScreen(self.settings, directory or self.profile.root_path), self.setup_result)
+
+    def open_vulnerabilities(self):
+        from .screens import VulnerabilitiesScreen
+        self.push_screen(VulnerabilitiesScreen(self.profile, self.store.directory), self.vulnerabilities_result)
+
+    def vulnerabilities_result(self, request):
+        """Grype scans run as visible jobs; the findings open again when they finish."""
+        if not request or "scan" not in request:
+            return
+        helper = Profile(name="vulnerability-scan", root=str(self.store.directory), build_dir=str(self.store.directory))
+        try:
+            job = self.runner.submit(helper, "Grype scan " + Path(request["output"]).name, request["scan"], "vuln-scan")
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error")
+            return
+        self.pending_scans.add(job.id)
+        self.select_job(job.id, job.log)
+        self.action_section("builds")
 
     def open_projects(self):
         from .projects import Recent

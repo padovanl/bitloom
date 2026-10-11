@@ -271,6 +271,13 @@ def cra_checks(profile: Profile, state: Path | None = None, today: date | None =
         add("WARN", "Vulnerability analysis", "none found: " + hint)
     local = profile.build_path / "conf/local.conf"
     raw = local.read_text(errors="replace") if local.exists() else ""
+    from .vulns import counts, load
+    findings, _ = load(profile, state)
+    if findings:
+        c = counts(findings)
+        severe = c.get("unpatched_critical", 0) + c.get("unpatched_high", 0)
+        add("WARN" if severe else "OK", "Unpatched vulnerabilities",
+            f"{c['unpatched']} unpatched ({severe} critical/high), {c['reviewed']} reviewed · Artifacts → v")
     inherit = " ".join(re.findall(r'^\s*(?:INHERIT|USER_CLASSES)\s*(?:\+=|\?=|=|:append\s*=)\s*"([^"]*)"', raw, re.M))
     add("OK" if "buildhistory" in inherit else "INFO", "Change traceability", "buildhistory enabled" if "buildhistory" in inherit else "enable buildhistory (BUILDHISTORY_COMMIT = \"1\") to version image/package changes")
     if state:

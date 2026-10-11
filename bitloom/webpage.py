@@ -6,7 +6,7 @@ PAGE = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bitloom dashboard</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1115'/%3E%3Cpath d='M9 7v18M9 8h8a5 5 0 0 1 0 10H9m0 0h9a5 5 0 0 1 0 10H9' fill='none' stroke='%2384c9c0' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22512%22 height=%22512%22 viewBox=%220 0 512 512%22 role=%22img%22 aria-labelledby=%22title description%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%230b1115%22/%3E %3Crect x=%2224%22 y=%2224%22 width=%22464%22 height=%22464%22 rx=%2292%22 fill=%22none%22 stroke=%22%23203e49%22 stroke-width=%224%22/%3E %3Cpath d=%22M176 112h92c64 0 108 29 108 77 0 30-18 52-47 64 40 10 63 34 63 71 0 52-46 84-118 84h-98%22 fill=%22none%22 stroke=%22%2384c9c0%22 stroke-width=%2232%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E %3Cpath d=%22M176 112v296%22 fill=%22none%22 stroke=%22%2381bdcf%22 stroke-width=%2232%22 stroke-linecap=%22round%22/%3E %3Cpath d=%22M104 160h162M104 256h202M104 352h174%22 fill=%22none%22 stroke=%22%2384c9c0%22 stroke-width=%2224%22 stroke-linecap=%22round%22/%3E %3Cpath d=%22M176 141v38M176 333v38%22 stroke=%22%230b1115%22 stroke-width=%2240%22/%3E %3Cpath d=%22M104 160h162M104 352h174%22 fill=%22none%22 stroke=%22%2384c9c0%22 stroke-width=%2224%22 stroke-linecap=%22round%22/%3E %3Cpath d=%22M158 256h36%22 stroke=%22%230b1115%22 stroke-width=%2232%22/%3E %3Cpath d=%22M176 233v46%22 stroke=%22%2381bdcf%22 stroke-width=%2232%22/%3E %3Ccircle cx=%22420%22 cy=%2296%22 r=%2212%22 fill=%22%23dfbe77%22/%3E %3C/svg%3E">
 <style>
 :root {
   --bg: #080d11; --bg2: #0b1218; --surface: #0f1920; --raised: #142029; --line: #1f2f3a; --line2: #2a3d4a;
@@ -40,9 +40,11 @@ kbd { font: 11px var(--mono); border: 1px solid var(--line2); border-bottom-widt
 header { grid-column: 1 / -1; position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 18px;
   background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 10px; font: 700 16px var(--mono); letter-spacing: .02em; }
-.brand svg { width: 28px; height: 28px; }
-.brand svg path { stroke-dasharray: 80; stroke-dashoffset: 80; animation: weave 1.4s var(--ease) forwards; }
-.brand svg path:nth-child(2) { animation-delay: .25s; }
+.brand svg.logo { width: 30px; height: 30px; filter: drop-shadow(0 4px 10px var(--glow)); }
+.brand svg.logo path[pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; animation: weave 1.3s var(--ease) forwards; }
+.brand svg.logo path[pathLength]:nth-of-type(2) { animation-delay: .2s; } .brand svg.logo path[pathLength]:nth-of-type(3) { animation-delay: .4s; }
+.brand svg.logo circle { animation: blink 3.2s ease-in-out infinite 1.5s; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @keyframes weave { to { stroke-dashoffset: 0; } }
 .brand .word { background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent)); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sheen 8s linear infinite; }
 @keyframes sheen { to { background-position: 200% 0; } }
@@ -271,7 +273,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 </svg>
 <div class="app">
   <header>
-    <span class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6v20" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><path d="M9 7h8a5 5 0 0 1 0 10H9m0 0h9a5 5 0 0 1 0 10H9" fill="none" stroke="var(--accent2)" stroke-width="3" stroke-linecap="round"/></svg><span class="word">bitloom</span></span>
+    <span class="brand"><svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#0b1115"/><rect x="24" y="24" width="464" height="464" rx="92" fill="none" stroke="#203e49" stroke-width="4"/><path pathLength="1" d="M176 112h92c64 0 108 29 108 77 0 30-18 52-47 64 40 10 63 34 63 71 0 52-46 84-118 84h-98" fill="none" stroke="#84c9c0" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path pathLength="1" d="M176 112v296" fill="none" stroke="#81bdcf" stroke-width="32" stroke-linecap="round"/><path pathLength="1" d="M104 160h162M104 256h202M104 352h174" fill="none" stroke="#84c9c0" stroke-width="24" stroke-linecap="round"/><path d="M176 141v38M176 333v38" stroke="#0b1115" stroke-width="40"/><path d="M104 160h162M104 352h174" fill="none" stroke="#84c9c0" stroke-width="24" stroke-linecap="round"/><path d="M158 256h36" stroke="#0b1115" stroke-width="32"/><path d="M176 233v46" stroke="#81bdcf" stroke-width="32"/><circle cx="420" cy="96" r="12" fill="#dfbe77"/></svg><span class="word">bitloom</span></span>
     <select id="profile" aria-label="Profile"></select>
     <span class="chip" id="release-chip">release …</span>
     <span class="context" id="context"></span>
@@ -363,6 +365,19 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
         <div style="text-align:right"><div class="hint">Regulation (EU) 2024/2847 · engineering evidence, not legal advice</div><div id="cr-score" class="big">—</div></div>
       </div></div>
       <div class="panel"><div class="head"><h2>SBOM quality</h2><span class="meta" id="sb-file"></span></div><div class="gauges" id="sb-gauges"></div><div class="chips" id="sb-vex"></div></div>
+      <div class="panel">
+        <div class="head"><h2>Vulnerabilities</h2><span class="meta" id="vu-summary"></span><span style="flex:1"></span>
+          <button class="btn" id="vu-csv">Export CSV</button><button class="btn primary" id="vu-grype" title="Scan the newest SPDX SBOM with Grype">Scan with Grype</button></div>
+        <div class="tools">
+          <select id="vu-source"><option value="">Newest report of each tool</option></select>
+          <select id="vu-status"><option value="unpatched">Unpatched</option><option value="all">All</option><option value="reviewed">Reviewed</option></select>
+          <input type="search" id="vu-min" placeholder="min CVSS" style="max-width:110px;flex:0 0 110px">
+          <input type="search" id="vu-q" placeholder="CVE, package or text">
+        </div>
+        <div class="chips" id="vu-chips" style="padding-top:12px"></div>
+        <div class="list" style="max-height:420px"><table><thead><tr><th>Severity</th><th>CVSS</th><th>CVE</th><th>Package</th><th>Status</th><th>Review</th></tr></thead><tbody id="vu-rows"></tbody></table></div>
+        <div class="hint" style="padding:10px 16px">Sources: cve-check, sbom-cve-check (Wrynose) and Grype reports. Record reviews in the TUI (Artifacts → v → r); VulnScout and Grype read the same SBOMs.</div>
+      </div>
       <div class="two">
         <div class="panel"><div class="head"><h2>CRA readiness checks</h2></div><ul class="checks" id="cr-checks"></ul></div>
         <div class="panel"><div class="head"><h2>Timeline</h2></div><ul class="timeline" id="cr-timeline"></ul>
@@ -576,6 +591,10 @@ function renderLog(target, text, query, append = false) {
 function notifyTransitions(rows) {
   for (const row of rows) {
     const before = lastStatus[row.id];
+    if (pendingScan && row.id === pendingScan && before && before !== row.status && row.status === "success") {
+      pendingScan = null; toast("Grype scan finished", "Findings updated", "success", {label: "Show", run: () => { setView("compliance"); }});
+      if (view === "compliance") loadVulns();
+    }
     if (pendingClone && row.id === pendingClone.id && before && before !== row.status && row.status === "success") {
       const destination = pendingClone.dest; pendingClone = null;
       toast("Clone finished", destination, "success", {label: "Set it up", run: () => { setView("health"); $("setup-dir").value = destination; scanSetup(); }});
@@ -744,7 +763,7 @@ function setView(name) {
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
   if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
-  if (name === "compliance") loadCompliance(); if (name === "studio") loadStudio();
+  if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio();
   if (name === "builds") requestAnimationFrame(moveInk);
 }
 function moveInk() {
@@ -956,6 +975,53 @@ async function loadCompliance() {
   }
 }
 
+/* Vulnerabilities */
+let vulnRows = [], vulnTimer, pendingScan = null;
+async function loadVulns() {
+  const query = `profile=${prof()}&source=${encodeURIComponent($("vu-source").value)}&status=${$("vu-status").value}&min=${encodeURIComponent($("vu-min").value)}&q=${encodeURIComponent($("vu-q").value)}`;
+  const data = await api(`/api/vulnerabilities?${query}`);
+  const select = $("vu-source");
+  if (select.options.length !== data.sources.length + 1) {
+    const keep = select.value; select.textContent = ""; select.append(el("option", {value: "", text: "Newest report of each tool"}));
+    for (const label of data.sources) select.append(el("option", {value: label, text: label}));
+    select.value = keep;
+  }
+  $("vu-grype").disabled = !data.scanners.grype;
+  $("vu-grype").title = data.scanners.grype ? "Scan the newest SPDX SBOM with Grype" : "Install grype to scan SBOMs";
+  const c = data.counts;
+  $("vu-summary").textContent = data.sources.length ? `${c.total} assessed · showing ${data.shown}` : "no CVE report yet";
+  const chips = $("vu-chips"); chips.textContent = "";
+  for (const [key, cls, label] of [["unpatched_critical", "err", "critical"], ["unpatched_high", "err", "high"], ["unpatched_medium", "warn", "medium"], ["unpatched_low", "info", "low"], ["patched", "ok", "patched"], ["ignored", "muted", "ignored"], ["reviewed", "ok", "reviewed"]]) {
+    if (c[key]) chips.append(el("span", {class: "badge " + cls, text: `${c[key]} ${label}` + (key.startsWith("unpatched_") ? " unpatched" : "")}));
+  }
+  if (!data.sources.length) chips.append(el("span", {class: "hint", text: "Wrynose: enable sbom-cve-check (TUI Configuration → s) and build; older releases: INHERIT += \"cve-check\"; or scan an SPDX SBOM with Grype."}));
+  for (const error of data.errors) chips.append(el("span", {class: "badge warn", text: error}));
+  vulnRows = data.findings;
+  const body = $("vu-rows"); body.textContent = "";
+  const colour = {critical: "err", high: "err", medium: "warn", low: "info"};
+  vulnRows.forEach((f, i) => {
+    const tr = el("tr", {class: "clickable", tabindex: "0", title: f.summary},
+      el("td", {}, el("span", {class: "badge " + (colour[f.severity] || "muted"), text: f.severity})), el("td", {class: "mono", text: f.score ? f.score.toFixed(1) : "—"}),
+      el("td", {class: "mono"}, f.link ? el("a", {href: f.link, target: "_blank", rel: "noopener noreferrer", text: f.id}) : f.id),
+      el("td", {text: `${f.package} ${f.version}`}), el("td", {text: f.status + (f.detail ? " · " + f.detail : "")}), el("td", {class: "s-success", text: f.review}));
+    tr.style.animationDelay = Math.min(i, 20) * 12 + "ms";
+    tr.addEventListener("click", () => toast(f.id, `${f.package} ${f.version} · ${f.status} · ${f.source} · ${f.summary}`, f.status === "Unpatched" ? "warning" : "info"));
+    body.append(tr);
+  });
+  if (!vulnRows.length && data.sources.length) body.append(el("tr", {}, el("td", {colspan: "6", class: "empty", text: "No finding matches the filters."})));
+}
+function exportVulns() {
+  const header = ["id", "package", "version", "status", "score", "severity", "detail", "source", "review"];
+  const quote = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [header.join(","), ...vulnRows.map((f) => header.map((k) => quote(f[k])).join(","))].join("\n");
+  const link = el("a", {href: URL.createObjectURL(new Blob([csv], {type: "text/csv"})), download: "vulnerabilities.csv"});
+  document.body.append(link); link.click(); link.remove();
+}
+async function scanGrype() {
+  try { const job = await api("/api/vulnerabilities/scan", {method: "POST", body: JSON.stringify({profile: $("profile").value})}); toast("Grype scan queued", "Follow it in Builds; results appear here when it finishes.", "info"); pendingScan = job.id; }
+  catch (error) { toast("Grype", error.message, "error"); }
+}
+
 /* Studio */
 async function loadStudio() {
   const data = await api(`/api/studio/fields?profile=${prof()}&kind=${studioKind}`);
@@ -1112,6 +1178,10 @@ function wire() {
   $("graceful-btn").addEventListener("click", () => control("graceful"));
   $("retry-btn").addEventListener("click", () => control("retry"));
   $("st-create").addEventListener("click", createStudio);
+  for (const id of ["vu-source", "vu-status"]) $(id).addEventListener("change", loadVulns);
+  for (const id of ["vu-min", "vu-q"]) $(id).addEventListener("input", () => { clearTimeout(vulnTimer); vulnTimer = setTimeout(loadVulns, 200); });
+  $("vu-csv").addEventListener("click", exportVulns);
+  $("vu-grype").addEventListener("click", scanGrype);
   $("setup-scan").addEventListener("click", scanSetup);
   $("pj-show-new").addEventListener("click", () => { $("pj-new").hidden = !$("pj-new").hidden; $("pj-clone").hidden = true; previewProject(); });
   $("pj-show-clone").addEventListener("click", () => { $("pj-clone").hidden = !$("pj-clone").hidden; $("pj-new").hidden = true; });

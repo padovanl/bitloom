@@ -61,6 +61,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
     "artifacts": [
         ("o", "press('artifact-read')", "Open", "artifact-read"), ("i", "press('image-contents')", "Rootfs", "image-contents"),
         ("m", "press('image-matrix')", "Image matrix", "image-matrix"), ("s", "press('sbom-report')", "SBOM quality", "sbom-report"),
+        ("v", "press('vulnerabilities')", "Vulnerabilities", "vulnerabilities"),
     ],
     "analysis": [
         ("t", "open_select('#analysis-kind')", "Type", ""), ("a", "press('analysis-run')", "Analyze", "analysis-run"),
