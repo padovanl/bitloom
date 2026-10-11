@@ -31,6 +31,7 @@ class Option:
     until: str = ""
     verified: bool = True         # False: first release not confirmed; verify with bitbake-getvar
     lines: tuple[str, ...] = field(default=())  # extra fixed lines when enabled
+    template: str = ""            # text options: assignment with {value}; default: <name>_name/_type
 
 
 OPTIONS = [
@@ -44,6 +45,11 @@ OPTIONS = [
            "Recipes can override it with SPDX_PACKAGE_SUPPLIER:pn-<recipe>.",
            "Identifies the manufacturer in the SBOM; scanners and authorities see who supplies each component.",
            since="styhead", verified=False),
+    Option("supplier-22", "Supplier, SPDX 2.2 (SPDX_SUPPLIER)", "text", "SPDX_SUPPLIER",
+           "SPDX 2.2 releases (up to 5.0 by default) record SPDX_SUPPLIER on every package; its default is the placeholder "
+           "'Organization: OpenEmbedded ()', which does not identify your company.",
+           "Identifies the manufacturer in SPDX 2.2 SBOMs.", until="whinlatter", verified=False,
+           template='SPDX_SUPPLIER = "Organization: {value}"'),
     Option("image-supplier", "Image supplier (SPDX_IMAGE_SUPPLIER)", "text", "SPDX_IMAGE_SUPPLIER",
            "Organisation recorded as suppliedBy on the root elements of the image SBOM (_name, _type = \"organization\").",
            "The product-level SBOM names the manufacturer placing it on the market.", since="styhead", verified=False),
@@ -119,7 +125,7 @@ def render(values: dict[str, str]) -> list[str]:
             lines.append(f'{option.name} = "{value}"')
         elif option.kind == "text":
             safe = value.replace('"', "'").replace("\\", "")
-            lines += [f'{option.name}_name = "{safe}"', f'{option.name}_type = "organization"']
+            lines += [option.template.format(value=safe)] if option.template else [f'{option.name}_name = "{safe}"', f'{option.name}_type = "organization"']
         lines += list(option.lines)
     return lines
 
@@ -134,6 +140,11 @@ def parse(lines: list[str]) -> dict[str, str]:
             values[option.id] = "1"
         elif option.kind == "choice":
             match = re.search(rf'^{option.name}\s*=\s*"([^"]*)"', text, re.M)
+            if match:
+                values[option.id] = match[1]
+        elif option.kind == "text" and option.template:
+            pattern = re.escape(option.template).replace(re.escape("{value}"), '([^"]*)').replace("\\ ", "\\s*")
+            match = re.search("^" + pattern, text, re.M)
             if match:
                 values[option.id] = match[1]
         elif option.kind == "text":

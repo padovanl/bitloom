@@ -20,7 +20,7 @@ def test_plans_follow_the_release(tmp_path):
     assert 'LAYERSERIES_COMPAT_acme = "wrynose"' in distro['files']['conf/layer.conf'] and distro['activate'] == {'distro': 'acme'}
     old = plan('distro', values('distro', 'scarthgap', [], new_layer='meta-acme', supplier='Acme'), profile, 'scarthgap')
     assert 'SPDX_IMAGE_SUPPLIER' not in old['files']['conf/distro/acme.conf'] and 'INIT_MANAGER = "sysvinit"' in old['files']['conf/distro/acme.conf']
-    assert any('Styhead' in note for note in old['notes'])
+    assert 'SPDX_SUPPLIER = "Organization: Acme"' in old['files']['conf/distro/acme.conf']
     image_fields = {f.id: f for f in fields('image', 'wrynose', [])}
     assert 'debug-tweaks' not in image_fields['features'].choices and 'allow-root-login' in image_fields['features'].choices
     assert 'debug-tweaks' in {f.id: f for f in fields('image', 'scarthgap', [])}['features'].choices

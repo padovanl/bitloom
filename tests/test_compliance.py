@@ -153,3 +153,33 @@ async def test_settings_screen_keyboard_flow(tmp_path):
         text = (tmp_path / 'demo/build/conf/local.conf').read_text()
         assert 'INHERIT += "create-spdx"' in text and 'SPDX_INCLUDE_SOURCES = "1"' in text
     app.store.close()
+
+
+def test_spdx22_image_from_manifest_and_package_documents(tmp_path):
+    """Layout of a real Scarthgap build: IMAGE.spdx.tar.zst + manifest + tmp/deploy/spdx documents."""
+    from bitloom.sbom import analyse, sbom_files
+    tmp = tmp_path / 'build/tmp'
+    images = tmp / 'deploy/images/qemux86-64'
+    images.mkdir(parents=True)
+    (images / 'core-image-minimal-qemux86-64.rootfs-1.manifest').write_text('busybox core2_64 1.36.1\nbase-files qemux86_64 3.0.14\nmystery core2_64 1.0\n')
+    (images / 'core-image-minimal-qemux86-64.rootfs-1.spdx.tar.zst').write_bytes(b'zstd')
+    packages, recipes = tmp / 'deploy/spdx/core2-64/packages', tmp / 'deploy/spdx/core2-64/recipes'
+    packages.mkdir(parents=True); recipes.mkdir(parents=True)
+    (tmp / 'deploy/spdx/qemux86_64/packages').mkdir(parents=True)
+    (packages / 'busybox.spdx.json').write_text(json.dumps({'spdxVersion': 'SPDX-2.2', 'packages': [
+        {'name': 'busybox', 'versionInfo': '1.36.1', 'licenseConcluded': 'NOASSERTION', 'licenseDeclared': 'GPL-2.0-only', 'supplier': 'Organization: OpenEmbedded ()'}]}))
+    (recipes / 'recipe-busybox.spdx.json').write_text(json.dumps({'spdxVersion': 'SPDX-2.2', 'packages': [
+        {'name': 'busybox', 'sourceInfo': 'CVEs fixed: CVE-2023-42364 CVE-2021-42380',
+         'externalRefs': [{'referenceCategory': 'SECURITY', 'referenceType': 'http://spdx.org/rdf/references/cpe23Type', 'referenceLocator': 'cpe:2.3:*:*:busybox:1.36.1'}]}]}))
+    (tmp / 'deploy/spdx/qemux86_64/packages/base-files.spdx.json').write_text(json.dumps({'spdxVersion': 'SPDX-2.2', 'packages': [
+        {'name': 'base-files', 'versionInfo': '3.0.14', 'licenseDeclared': 'GPL-2.0-only', 'supplier': 'Organization: Acme'}]}))
+    reverse = tmp / 'pkgdata/qemux86-64/runtime-reverse'
+    reverse.mkdir(parents=True)
+    (reverse / 'busybox').write_text('PN: busybox\nPV: 1.36.1\n')
+    files = sbom_files(Profile(root=str(tmp_path)))
+    assert [f.name for f in files] == ['core-image-minimal-qemux86-64.rootfs-1.manifest']
+    result = analyse(files[0])
+    assert result['packages'] == 3 and result['unresolved_packages'] == 1
+    assert round(result['with_cpe'], 2) == .33 and round(result['with_license'], 2) == .67
+    assert round(result['with_supplier'], 2) == .33  # the OpenEmbedded placeholder is not a supplier
+    assert result['vex'] == {'CVEs recorded fixed by recipes': 2}
