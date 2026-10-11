@@ -67,6 +67,9 @@ KNOWN_CAUSES = [
      'The compiler was killed, usually by the out-of-memory killer. Lower PARALLEL_MAKE / BB_NUMBER_THREADS for this recipe '
      '(PARALLEL_MAKE:pn-<recipe> = "-j4"), add swap or memory, then retry.'),
     ('resources', r'No space left on device', 'The disk is full. Free space (Caches → prune plan, rm_work) and retry.'),
+    ('interrupted', r"(undefined reference to [`']main'|file truncated|file format not recognized|is truncated|unexpected end of file)",
+     'Object files were left empty or truncated by an interrupted build (killed container, power loss, WSL or machine restart); '
+     'make sees them as up to date. Clean the recipe and build again: {clean}. Downloads and sstate are kept.'),
     ('race', r'Your Makefile has been rebuilt|Please rerun the make command',
      'ExtUtils::MakeMaker regenerated a Makefile during a parallel build (timestamp race, common in perl). Retry the task; '
      'if it repeats, check for clock skew or files with future timestamps in the work directory.'),
@@ -105,6 +108,9 @@ def diagnose(text):
     evidence = [line for line in lines[max(0, anchor - before):anchor + 6] if 'WARNING:' not in line] if anchor is not None else []
     paths = list(dict.fromkeys(re.findall(r'Logfile of failure stored in:\s*(\S+)', text)))
     failed = sorted(set(re.findall(r'Task \(?([^)\s]+)\)? failed', text)))
+    recipes = sorted({re.sub(r'_[^_/]*\.bb$', '', Path(task.split(':')[0]).name).removesuffix('.bb') for task in failed}) or \
+        sorted(set(re.findall(r'ERROR: ([a-z0-9][a-z0-9+.-]*?)-\d[^ ]* do_\w+:', text)))
+    advice = advice.replace('{clean}', ' '.join(f'bitbake -c clean {name}' for name in recipes) or 'bitbake -c clean <recipe>')
     return ('FAILURE DIAGNOSIS\nCategory: ' + category + '\nFailed tasks: ' + (', '.join(failed) or 'not reported') +
             '\nReported task logs: ' + (', '.join(paths) or 'none') + '\nRoot-cause context:\n' +
             '\n'.join(line[:400] for line in evidence or ['No diagnostic found.']) + '\nNext step: ' + advice)

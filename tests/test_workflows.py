@@ -151,3 +151,13 @@ def test_diagnosis_reads_kas_errors():
            '2026-10-12 02:07:17 - ERROR    - Provided tag "yocto-6.0.2" ("acfe02fa") does not match provided commit "178b3931" in repository "bitbake"\n')
     report = diagnose(log)
     assert 'Category: configuration' in report and 'Provided tag' in report and "refs/tags/TAG^{}" in report
+
+
+def test_diagnosis_recognises_interrupted_builds():
+    # From a real Wrynose build interrupted by a WSL restart: zero-byte objects in binutils' ld.
+    log = ("2026-10-12 08:24:21 - ERROR    - ERROR: binutils-2.46.1-r0 do_compile: oe_runmake failed\n"
+           "/usr/src/debug/glibc/2.43+git/csu/../sysdeps/x86_64/start.S:103:(.text+0x1b): undefined reference to `main'\n"
+           "ldgram.y:395:(.text+0xf0c): undefined reference to `input_flags'\n"
+           "2026-10-12 08:24:21 - ERROR    - ERROR: Task (/work/build/../openembedded-core/meta/recipes-devtools/binutils/binutils_2.46.bb:do_compile) failed with exit code '1'\n")
+    report = diagnose(log)
+    assert 'Category: interrupted' in report and 'bitbake -c clean binutils' in report
