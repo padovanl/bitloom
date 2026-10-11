@@ -742,6 +742,8 @@ class ConsoleBuildsScreen(ModalScreen):
                                                    ("  " + entry.kind, "bold"), ("  " + human_size(entry.size), "dim")), id=str(index)))
         if not self.entries:
             picker.add_option(Option("No console logs yet: BitBake writes tmp/log/cooker/<MACHINE>/*.log for each build", disabled=True))
+        else:
+            picker.highlighted = 0  # options arrive after mount; Enter must open the newest at once
         picker.focus()
 
     def action_move(self, step):

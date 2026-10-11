@@ -173,7 +173,8 @@ async def test_console_builds_from_outside_bitloom(tmp_path):
         await pilot.pause(.4)
         assert isinstance(app.screen, ConsoleBuildsScreen)
         failed = next(i for i, e in enumerate(app.screen.entries) if e.detail == 'failed')
-        app.screen.query_one('#console-list').highlighted = failed
+        for _ in range(failed):
+            await pilot.press('j')
         await pilot.press('enter')
         await pilot.pause(.4)
         assert app.selected_log.name == '20260101120000.log' and app.selected_job_id is None
