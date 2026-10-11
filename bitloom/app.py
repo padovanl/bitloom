@@ -718,6 +718,9 @@ class BitloomApp(App):
 
     def update_overview(self):
         from .versions import describe
+        # Called from timers and job callbacks, which can still fire while the app shuts down.
+        if not self.screen_stack or not len(self.screen_stack[0].query("#brand-line")):
+            return
         p = self.profile
         theme = self.current_theme
         active = self.runner.active

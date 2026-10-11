@@ -6,7 +6,8 @@ More guides:
 
 * [Keyboard reference](keyboard.md): every key in every section, nano editor keys and dialogs.
 * [Web dashboard](web.md): `bitloom --web`, sections, notifications, keyboard and API.
-* [SBOM, CRA and Yocto releases](compliance.md): release awareness, SBOM quality, CRA readiness, EN 40000 and SBOM settings.
+* [Projects and guided setup](projects.md): open folders with automatic detection (kas files, launcher scripts, Poky checkouts), create new projects, clone from Git.
+* [SBOM, CRA and Yocto releases](compliance.md): release awareness, SBOM quality, vulnerabilities (cve-check, sbom-cve-check, Grype), CRA readiness, EN 40000 and SBOM settings.
 * [Studio](studio.md): create your own distribution, machines, images, recipes and layers.
 * [Teams, CI/CD and setup](teams.md): headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.
 

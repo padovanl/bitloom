@@ -4,6 +4,7 @@ Run: python tools/capture_web.py   (requires playwright with Chromium, pillow)
 Jobs are real subprocesses with sample output; nothing claims a Yocto build.
 """
 import json
+import os
 import sys
 import tempfile
 import threading
@@ -12,6 +13,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Neutral home directory in captures: paths shown in the docs must not reveal the author's account.
+os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', str(Path.home() / '.cache/ms-playwright'))  # browsers stay in the real home
+os.environ['HOME'] = '/home/developer'
 sys.path.insert(0, str(ROOT))
 from bitloom.cli import prepare_demo
 from bitloom.daemon import rpc
@@ -66,7 +70,10 @@ def main():
             page.keyboard.press('5'); page.wait_for_timeout(1500); shot('web-studio')
             page.keyboard.press('Control+k'); page.wait_for_timeout(300); page.keyboard.type('sbom'); page.wait_for_timeout(500); shot('web-palette')
             page.keyboard.press('Escape')
-            page.keyboard.press('6'); page.wait_for_timeout(1200); shot('web-health', tour=False)
+            page.keyboard.press('4'); page.wait_for_timeout(1500)
+            page.locator('#vu-rows').scroll_into_view_if_needed(); page.wait_for_timeout(600); shot('web-vulnerabilities')
+            page.keyboard.press('6'); page.wait_for_timeout(1500); shot('web-projects')
+            page.click('#pj-show-new'); page.wait_for_timeout(900); shot('web-new-project', tour=False)
             mobile = browser.new_page(viewport={'width': 390, 'height': 844}, color_scheme='light')
             mobile.goto(base + '/#token=docs'); mobile.wait_for_timeout(3000)
             mobile.screenshot(path=str(output / 'web-mobile.png'))

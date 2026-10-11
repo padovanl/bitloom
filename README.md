@@ -57,6 +57,16 @@ Every action has a key. Numbers `1`–`0` open sections, single letters act in t
 ![Studio in the browser](docs/assets/web-studio.png)
 </details>
 
+## Projects and guided setup
+
+Every project is a profile; `P` switches between them. **Configuration → `w`** opens the project hub (also in the web dashboard):
+
+* **Open a folder**: the guided setup finds kas files, Poky/OE-Core checkouts with their build directories, and launcher scripts that call kas (with the variable that selects the configuration, such as `YML`). Pick a proposal, adjust the explained fields with live checks, `^O`: the profile is active and everything reloads.
+* **New project**: name, folder, Scarthgap or Wrynose, MACHINE, DISTRO, image, kas or kas-container and an optional product layer; Bitloom writes `kas.yml` pinned to verified release tags, a README, `.gitignore` and a Git repository.
+* **Clone from GitHub/Git**: the clone runs as a job and the guided setup opens on the new folder.
+
+The first start without a profiles file opens the guided setup in the current directory. See [Projects and guided setup](docs/projects.md).
+
 ## SBOM, CRA and Yocto releases
 
 Bitloom detects the Yocto release of each profile and adapts: operations, SBOM options and Studio defaults declare their release window, and when a feature is missing (for example `sbom-cve-check` before 6.0 Wrynose, or `cve-check` from 6.0) the TUI, the web dashboard and CI say so and offer the alternative the release provides.
@@ -64,6 +74,7 @@ Bitloom detects the Yocto release of each profile and adapts: operations, SBOM o
 * **SBOM quality** for SPDX 3 (Wrynose) and SPDX 2.2 (Scarthgap) images: PURL, CPE, licence and supplier coverage, VEX status and affected CVEs (`s` in Artifacts, `bitloom --sbom`).
 * **CRA readiness**: release support window, SBOM, identifiers, VEX, CVE analysis, traceability, dispositions and reproducibility evidence, with the Regulation (EU) 2024/2847 timeline (`c` in Configuration, `bitloom --cra`).
 * **SBOM settings** with an explanation, CRA relevance and release window for each option, applied as one managed block or kas overlay with backups (`s` in Configuration).
+* **Vulnerabilities**: findings from sbom-cve-check (Wrynose), cve-check and Grype in one list with severity, status, detail and your reviews; scan the newest SPDX SBOM with Grype, export CSV, and gate CI with `bitloom --vulns --min-cvss 7 --fail-on-unpatched` (`v` in Artifacts).
 
 The CRA harmonised standards are being drafted as the [EN 40000 series](https://cyber-regulation.com/article/en-40000-series-explained); [prEN 40000-1-3](https://standards.iteh.ai/catalog/standards/cen/487254bf-baa1-48e9-be33-658b37f6fb90/pren-40000-1-3) covers vulnerability handling (receipt, assessment, remediation, communication, tracking). Bitloom does not implement or certify the standard: its compliance views are organised around the build evidence such a process relies on. Details in [SBOM, CRA and releases](docs/compliance.md); it is engineering evidence, not legal advice.
 

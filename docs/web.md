@@ -33,9 +33,9 @@ ssh -L 8765:127.0.0.1:8765 build-server
 | `1` | Builds | History with live spinners, the selected job with an animated progress bar (stripes while running, indeterminate until BitBake reports task counts), streaming output, search with context, errors-only filter, stop, graceful stop and retry. Console builds started outside Bitloom appear under the history. |
 | `2` | Recipes | Recipes, appends, classes, layers and kas files, filtered as you type. |
 | `3` | Task logs | `tmp/work/*/temp/log.*` files with search and an errors-only view. Only indexed task logs can be read. |
-| `4` | SBOM & CRA | Release support, SBOM quality gauges, VEX status, CRA readiness checks, the regulation timeline and every SBOM option with its explanation. See [SBOM, CRA and releases](compliance.md). |
+| `4` | SBOM & CRA | Release support, SBOM quality gauges, VEX status, vulnerabilities from cve-check, sbom-cve-check and Grype, CRA readiness checks, the regulation timeline and every SBOM option with its explanation. See [SBOM, CRA and releases](compliance.md). |
 | `5` | Studio | Create a product layer, distribution, machine, image, recipe or append with a live preview. See [Studio](studio.md). |
-| `6` | Configuration | Health checks, setup checks and literal `local.conf` values. |
+| `6` | Configuration | Projects (recent, new, clone), guided project setup, health checks, setup checks and literal `local.conf` values. See [Projects](projects.md). |
 
 The build detail has Toaster-style tabs computed from the stored log: **Summary** (errors, warnings, failed tasks), **Sstate reuse**, grouped **Warnings** and observed task **Timings**.
 
@@ -86,6 +86,8 @@ The page uses a small JSON API that scripts can use too (all calls need the `X-B
 | `POST /api/jobs/<id>/stop`, `/retry` | `{mode: graceful|force}` / retry with the original profile |
 | `GET /api/console`, `/api/console/log`, `/api/console/report` | Builds started outside Bitloom |
 | `GET /api/compliance` | SBOM summaries, CRA checks, timeline, SBOM options |
+| `GET /api/vulnerabilities`, `POST /api/vulnerabilities/scan` | Findings with filters; Grype scan of the newest SPDX SBOM |
+| `/api/projects…`, `/api/setup…` | Projects and guided setup, see [Projects](projects.md#api) |
 | `GET /api/studio/fields`, `POST /api/studio/preview`, `/create` | Studio |
 | `GET /api/metadata`, `/api/tasklogs`, `/api/tasklog`, `/api/health` | Read-only views |
 
