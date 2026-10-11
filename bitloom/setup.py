@@ -176,9 +176,11 @@ def save(settings: Settings, profile: Profile) -> None:
     if profile.mode == "kas-container" and profile.environment.get("KAS_WORK_DIR"):
         Path(profile.environment["KAS_WORK_DIR"]).expanduser().mkdir(parents=True, exist_ok=True)
     settings.profiles = [p for p in settings.profiles if p.name != profile.name or p.name in settings.shared] + [profile]
-    # A first run starts with an implicit 'default' profile pointing at the working directory: drop it.
-    if not settings.path.exists():
-        settings.profiles = [p for p in settings.profiles if p.name != "default" or p is profile]
+    # A first run starts with an implicit 'default' profile for the working directory: drop it while untouched.
+    implicit = getattr(settings, "implicit_default", None)
+    if implicit:
+        settings.profiles = [p for p in settings.profiles if p is profile or asdict(p) != implicit]
+        settings.implicit_default = None
     settings.active = profile.name
     settings.save()
 

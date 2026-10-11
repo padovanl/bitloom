@@ -8,6 +8,15 @@ from bitloom.cli import make_demo
 from bitloom.screens import ActionScreen, ProfilesScreen
 
 
+async def eventually(pilot, condition, timeout=20):
+    """Poll instead of fixed sleeps: timers and workers are slower on a loaded machine."""
+    for _ in range(int(timeout / .25)):
+        if condition():
+            return True
+        await pilot.pause(.25)
+    return condition()
+
+
 async def test_app_tabs_modals_filters_and_demo(tmp_path):
     config = make_demo(tmp_path / 'demo')
     app = BitloomApp(config, tmp_path / 'state')
@@ -132,7 +141,7 @@ async def test_analysis_content_search_log_report_and_export(tmp_path):
     config = make_demo(tmp_path / 'demo')
     app = BitloomApp(config, tmp_path / 'state')
     async with app.run_test(size=(140, 42)) as pilot:
-        await pilot.pause(.4)
+        assert await eventually(pilot, lambda: len(app.entries) >= 3)   # metadata scan finished
         app.query_one('#workspace', TabbedContent).active = 'analysis'
         app.query_one('#analysis-query', Input).value = 'SRC_URI'
         app.run_analysis()
@@ -307,24 +316,16 @@ async def test_create_recipe_from_tui_and_detect_external_file(tmp_path):
         await pilot.pause(.1)
         assert 'do_install' in app.screen.query_one('#new-content',TextArea).text
         app.screen.query_one('#create-file',Button).press()
-        await pilot.pause(.8)
-        assert path.exists()
-        assert any(e.path==path for e in app.entries)
-        async def eventually(condition, timeout=20):
-            # The watcher polls every 5 s; allow for a loaded machine.
-            for _ in range(int(timeout/.25)):
-                if condition():
-                    return True
-                await pilot.pause(.25)
-            return condition()
+        assert await eventually(pilot, path.exists)
+        assert await eventually(pilot, lambda: any(e.path==path for e in app.entries))
         external=path.with_name('external_1.0.bb')
         external.write_text('SUMMARY = "Created externally"\n')
-        assert await eventually(lambda: any(e.path==external for e in app.entries))
+        assert await eventually(pilot, lambda: any(e.path==external for e in app.entries))
         previous=next(e.size for e in app.entries if e.path==external)
         external.write_text('SUMMARY = "Externally modified recipe content"\n')
-        assert await eventually(lambda: next((e.size for e in app.entries if e.path==external), previous)!=previous)
+        assert await eventually(pilot, lambda: next((e.size for e in app.entries if e.path==external), previous)!=previous)
         external.unlink()
-        assert await eventually(lambda: not any(e.path==external for e in app.entries))
+        assert await eventually(pilot, lambda: not any(e.path==external for e in app.entries))
     app.store.close()
 
 async def test_open_runtime_directory_refreshes_automatically(tmp_path):
@@ -352,8 +353,7 @@ async def test_new_generic_file_opens_containing_directory(tmp_path):
         app.screen.query_one('#new-path',Input).value=str(path)
         app.screen.query_one('#new-content',TextArea).load_text('My notes\n')
         app.screen.query_one('#create-file',Button).press()
-        await pilot.pause(1)
+        assert await eventually(pilot, lambda: path.exists() and 'notes.txt' in app.analysis_text)
         assert path.read_text()=='My notes\n'
         assert app.query_one('#workspace',TabbedContent).active=='analysis'
-        assert 'notes.txt' in app.analysis_text
     app.store.close()

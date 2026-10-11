@@ -52,6 +52,25 @@ Commands depend on the selected Yocto release and inherited classes. SPDX, ptest
 """
 
 
+def alive(handler):
+    """Ignore widget messages delivered after the workspace screen has gone (shutdown)."""
+    import functools
+    import inspect
+
+    if inspect.iscoroutinefunction(handler):
+        @functools.wraps(handler)
+        async def wrapped(self, *args, **kwargs):
+            if self.screen_stack:
+                return await handler(self, *args, **kwargs)
+        return wrapped
+
+    @functools.wraps(handler)
+    def wrapped(self, *args, **kwargs):
+        if self.screen_stack:
+            return handler(self, *args, **kwargs)
+    return wrapped
+
+
 class Workspace(TabbedContent):
     """Sections change only through navigation, never because a hidden widget kept focus."""
 
@@ -298,6 +317,7 @@ class BitloomApp(App):
         self.developer_busy = False
         self.capability_cache = {}
         self.release = None
+        self.pending_clones: dict[str, str] = {}
         self.cpu_history: list[float] = []
         self.frame = 0
         self.was_busy = False
@@ -323,6 +343,7 @@ class BitloomApp(App):
         temporary.replace(self.appearance_path)
 
     @on(Button.Pressed, "#themes")
+    @alive
     def action_themes(self):
         from .screens import ThemeScreen
         self.push_screen(ThemeScreen())
@@ -456,7 +477,7 @@ class BitloomApp(App):
                         yield DeveloperPanel(id="developer-panel")
                     with TabPane(labels["healthtab"], id="healthtab"):
                         with Horizontal(classes="tools"):
-                            yield Button("Set up project", id="setup-wizard", variant="primary")
+                            yield Button("Projects", id="projects", variant="primary")
                             yield Button("local.conf", id="local-conf")
                             yield Button("bblayers.conf", id="layers-conf")
                             yield Button("Environment", id="environment")
@@ -620,6 +641,7 @@ class BitloomApp(App):
             self.action_refresh()
 
     @on(Select.Changed, "#profile")
+    @alive
     def profile_changed(self, event):
         if event.value is Select.BLANK:
             return
@@ -769,6 +791,7 @@ class BitloomApp(App):
                 table.update_cell(row['id'],list(table.columns)[2],f'{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}')
 
     @on(Button.Pressed,'#new-file')
+    @alive
     def new_file(self):
         from .screens import NewFileScreen
         self.push_screen(NewFileScreen(self.profile),self.file_created)
@@ -927,6 +950,7 @@ class BitloomApp(App):
             self.push_screen(KeysScreen())
 
     @on(Input.Submitted)
+    @alive
     def field_submitted(self, event):
         ident = event.input.id
         if ident == "target":
@@ -948,6 +972,7 @@ class BitloomApp(App):
         yield SystemCommand("Keyboard reference", "Every key in every section (?)", self.action_keys)
         yield SystemCommand("Switch profile", "Choose the active profile (P)", self.action_switch_profile)
         yield SystemCommand("Edit profiles", "JSON profile editor (F4)", self.action_profiles)
+        yield SystemCommand("Projects", "Recent projects, open a folder, new project, clone from Git", self.open_projects)
         yield SystemCommand("Set up a project", "Detect kas files, init scripts and launcher scripts and create a profile", self.open_setup)
         yield SystemCommand("Studio", "Create a product layer, distro, machine, image, recipe or append", lambda: self.action_press("studio"))
         yield SystemCommand("Console builds", "Builds started outside Bitloom (BitBake console logs)", self.action_console_builds)
@@ -966,11 +991,16 @@ class BitloomApp(App):
         self.screen_stack[0].set_class(event.size.width < 75 or event.size.height < 22, "tiny")
 
     @on(Button.Pressed, "#rail Button")
+    @alive
     def navigate(self, event):
         self.action_section(event.button.id[4:])
 
     @on(TabbedContent.TabActivated, "#workspace")
+    @alive
     def navigation_changed(self):
+        # A tab event can still arrive while the app is shutting down.
+        if not self.screen_stack or not len(self.screen_stack[0].query("#workspace")):
+            return
         active = self.main_query("#workspace", TabbedContent).active
         for button in self.screen_stack[0].query("#rail Button"):
             button.set_class(button.id == f"nav-{active}", "selected")
@@ -980,12 +1010,15 @@ class BitloomApp(App):
             self.call_after_refresh(self.focus_primary)
 
     def focus_primary(self):
+        if not self.screen_stack:
+            return
         active = self.main_query("#workspace", TabbedContent).active
         widget = self.main_query(PRIMARY.get(active, "#history"))
         if widget.display and widget.can_focus:
             widget.focus()
 
     @on(Button.Pressed, "#log-follow")
+    @alive
     def toggle_follow(self):
         self.follow_log = not self.follow_log
         self.set_label("log-follow", "Pause" if self.follow_log else "Resume")
@@ -1044,6 +1077,7 @@ class BitloomApp(App):
         self.update_overview()
 
     @on(DataTable.RowHighlighted, "#metadata-table")
+    @alive
     def preview_metadata(self, event):
         entry = self.metadata_rows.get(str(event.row_key.value))
         if entry:
@@ -1117,6 +1151,7 @@ class BitloomApp(App):
         tree.root.expand()
 
     @on(Tree.NodeSelected, "#layer-tree")
+    @alive
     def layer_tree_selected(self, event):
         entry = event.node.data
         if isinstance(entry, Entry):
@@ -1160,14 +1195,17 @@ class BitloomApp(App):
                 table.add_row(e.name, e.kind, human_size(e.size), str(e.path), key=key)
 
     @on(Input.Changed, "#metadata-search")
+    @alive
     def metadata_filter(self):
         self.render_metadata()
 
     @on(Input.Changed, "#task-search")
+    @alive
     def task_filter(self):
         self.render_logs()
 
     @on(Input.Changed, "#artifact-search")
+    @alive
     def artifact_filter(self):
         self.render_artifacts()
 
@@ -1205,6 +1243,13 @@ class BitloomApp(App):
             self.update_overview()
             if job.status == "success" and job.action_id == "graph-read" and job.profile.name == self.profile.name:
                 self.read_runtime_graph(job.log)
+            destination = self.pending_clones.get(job.id) if job.status in {"success", "failed", "cancelled"} else None
+            if destination:
+                del self.pending_clones[job.id]
+                if job.status == "success":
+                    from .projects import Recent
+                    Recent(self.store.directory).add(destination, "", "cloned")
+                    self.call_after_refresh(lambda: self.open_setup(destination))
             if job.status == "failed":
                 self.notify(f"{job.title} · exit {job.code}. Press f for the failed task log, i for the summary.", title="✖ Build failed", severity="error", timeout=10)
                 self.flash("failed")
@@ -1287,10 +1332,12 @@ class BitloomApp(App):
             log.write(self.style_line(line, query))
 
     @on(Input.Changed, "#log-search")
+    @alive
     def log_filter(self):
         self.reload_log()
 
     @on(DataTable.RowSelected)
+    @alive
     def row_selected(self, event):
         key = str(event.row_key.value)
         ident = event.data_table.id
@@ -1338,6 +1385,7 @@ class BitloomApp(App):
         return self.main_query("#target", Input).value
 
     @on(Button.Pressed)
+    @alive
     def button_pressed(self, event):
         ident = event.button.id
         commands = {"build": "build", "commands": "build", "layer-actions": "layers", "environment": "environment", "dev-status": "dev-status", "fetch-all": "fetch-all", "inspect-resolve": "environment", "generate-graph": "graph"}
@@ -1363,8 +1411,8 @@ class BitloomApp(App):
             self.export_log()
         elif ident == "console-builds":
             self.action_console_builds()
-        elif ident == "setup-wizard":
-            self.open_setup()
+        elif ident == "projects":
+            self.open_projects()
         elif ident == "studio":
             from .screens import StudioScreen
             from .studio import product_layers
@@ -1396,12 +1444,69 @@ class BitloomApp(App):
         from .screens import SetupScreen
         self.push_screen(SetupScreen(self.settings, directory or self.profile.root_path), self.setup_result)
 
+    def open_projects(self):
+        from .projects import Recent
+        from .screens import ProjectsScreen
+        self.push_screen(ProjectsScreen(self.settings, Recent(self.store.directory)), self.projects_result)
+
+    def projects_result(self, intent):
+        from .projects import Recent
+        from .screens import CloneScreen, NewProjectScreen
+        if not intent:
+            return
+        if intent.get("open"):
+            root = Path(intent["open"]).expanduser().resolve()
+            matches = [p for p in self.settings.profiles if p.root_path == root]
+            existing = next((p for p in matches if p.name == self.settings.active), matches[0] if matches else None)
+            if existing:
+                Recent(self.store.directory).add(root, existing.name, "opened")
+                self.main_query("#profile", Select).value = existing.name
+                self.notify(f"Switched to {existing.name}", timeout=4)
+            else:
+                self.open_setup(root)
+        elif intent.get("new"):
+            self.push_screen(NewProjectScreen(), self.new_project_result)
+        elif intent.get("clone"):
+            self.push_screen(CloneScreen(), self.clone_result)
+
+    def new_project_result(self, profile):
+        if not profile:
+            return
+        from .projects import Recent
+        from .setup import save
+        try:
+            save(self.settings, profile)
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error", timeout=10)
+            return
+        Recent(self.store.directory).add(profile.root_path, profile.name, "created")
+        self.setup_result(profile.name)
+        self.notify("Press b to build the image; the first build downloads the layers and sources.", timeout=10)
+
+    def clone_result(self, request):
+        """Clone as a visible job; the guided setup opens on success (see job_update)."""
+        if not request:
+            return
+        destination = Path(request["dest"])
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            helper = Profile(name="git-clone", root=str(destination.parent), build_dir=str(destination.parent))
+            job = self.runner.submit(helper, "Clone " + destination.name, request["argv"], "project-clone")
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error", timeout=10)
+            return
+        self.pending_clones[job.id] = str(destination)
+        self.select_job(job.id, job.log)
+        self.action_section("builds")
+
     def setup_result(self, name):
         """A saved profile becomes active; selectors, metadata and health reload at once."""
         if not name:
             return
+        from .projects import Recent
         self.capability_cache.clear()
         self.profiles_result(True)
+        Recent(self.store.directory).add(self.profile.root_path, name, "set up")
         self.notify(f"Profile {name} is ready: {self.profile.mode} in {self.profile.root_path}", title="✔ Project set up", timeout=10)
 
     def studio_result(self, result):
@@ -1508,12 +1613,14 @@ class BitloomApp(App):
         self.main_query("#scan-state", Static).update(f"{p} · {len(entries)} files · {human_size(sum(e.size for e in entries))} · scan capped at 20,000 files")
 
     @on(Select.Changed, "#cache-kind")
+    @alive
     def cache_kind_changed(self):
         self.cache_entries = []
         if self.is_mounted:
             self.scan_cache()
 
     @on(Input.Changed, "#cache-search")
+    @alive
     def cache_filter(self):
         self.render_cache()
 
@@ -1595,6 +1702,7 @@ class BitloomApp(App):
             self.notify(str(exc), severity="warning")
 
     @on(Input.Changed, "#inspect-search")
+    @alive
     def inspection_filter(self):
         self.render_inspection()
 
@@ -1657,6 +1765,7 @@ class BitloomApp(App):
             self.notify(str(exc) or type(exc).__name__, severity="warning")
 
     @on(Select.Changed, "#analysis-kind")
+    @alive
     def analysis_fields(self):
         kind = str(self.main_query("#analysis-kind", Select).value)
         self.main_query("#analysis-query", Input).display = kind == "metadata"
@@ -1795,6 +1904,7 @@ class BitloomApp(App):
         raise ValueError("Unknown workflow")
 
     @on(Button.Pressed, "#analysis-export")
+    @alive
     def export_analysis(self):
         if not self.analysis_text:
             self.notify("Run an analysis first", severity="warning")

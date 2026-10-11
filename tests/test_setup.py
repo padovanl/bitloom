@@ -70,9 +70,16 @@ async def test_tui_wizard_saves_and_reloads(tmp_path, monkeypatch):
         assert not isinstance(app.screen, SetupScreen)
         assert app.profile.name == 'product-run-build' and app.profile.mode == 'wrapper'
         assert app.main_query('#profile').value == 'product-run-build'
-        await pilot.press('9', 'w')                          # reopen from Configuration
+        from bitloom.screens import ProjectsScreen
+        await pilot.press('9', 'w')                          # projects hub from Configuration
         await pilot.pause(.5)
-        assert isinstance(app.screen, SetupScreen)
+        assert isinstance(app.screen, ProjectsScreen)
+        await pilot.press('o')
+        app.screen.query_one('#open-dir', Input).value = str(root)
+        await pilot.press('enter')
+        await pilot.pause(.5)
+        # The folder already has a profile: Bitloom switches to it instead of asking again.
+        assert not isinstance(app.screen, SetupScreen) and app.profile.name == 'product-run-build'
     app.store.close()
 
 
