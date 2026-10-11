@@ -105,6 +105,7 @@ class Settings:
         self.shared: dict[str, str] = {}
         self.include_warnings: list[str] = []
         self.ignored_keys: list[str] = []
+        self.implicit_default: dict | None = None
         if path.exists():
             data = json.loads(path.read_text())
             self.active = data.get("active", "default")
@@ -117,6 +118,10 @@ class Settings:
         self.load_shared()
         if not self.profiles:
             self.profiles = [Profile(root=str(Path.cwd()))]
+            self.implicit_default = asdict(self.profiles[0])
+        elif data_default := next((asdict(p) for p in self.profiles if p.name == "default" and len(self.profiles) == 1), None):
+            # A profiles file holding only the untouched first-run default is still "implicit".
+            self.implicit_default = data_default if data_default == asdict(Profile(root=data_default["root"])) else None
         for profile in self.profiles:
             profile.validate()
         if len({p.name for p in self.profiles}) != len(self.profiles):

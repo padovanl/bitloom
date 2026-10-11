@@ -382,6 +382,35 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 
     <section id="view-health" class="view" hidden>
       <div class="panel">
+        <div class="head"><h2>Projects</h2><span style="flex:1"></span>
+          <button class="btn" id="pj-show-new">✦ New project</button><button class="btn" id="pj-show-clone">⇣ Clone from Git</button></div>
+        <div class="list" id="pj-recent" style="max-height:260px"></div>
+        <div id="pj-new" hidden>
+          <div class="split" style="min-height:0">
+            <div class="form">
+              <label class="f" for="pj-name">Project name</label><input type="text" id="pj-name" value="my-product">
+              <label class="f" for="pj-dir">Folder</label><input type="text" id="pj-dir">
+              <label class="f" for="pj-release">Yocto release</label><select id="pj-release"></select>
+              <div class="help">Both are LTS. Wrynose uses split repositories, SPDX 3 and sbom-cve-check.</div>
+              <label class="f" for="pj-machine">MACHINE / DISTRO / image</label>
+              <div style="display:flex;gap:8px"><select id="pj-machine"></select><input type="text" id="pj-distro" value="poky"><select id="pj-target"></select></div>
+              <label class="f" for="pj-runtime">Runtime</label><select id="pj-runtime"><option value="kas-container">kas-container (recommended)</option><option value="kas">kas on the host</option></select>
+              <label class="check" style="margin-top:12px"><span class="switch"><input type="checkbox" id="pj-layer" checked><span></span></span>create meta-&lt;name&gt; product layer</label>
+              <label class="f" for="pj-owner">Copyright owner</label><input type="text" id="pj-owner" placeholder="Your company">
+              <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn primary" id="pj-create">✦ Create project</button></div>
+            </div>
+            <div class="files list" id="pj-files"></div>
+          </div>
+        </div>
+        <div id="pj-clone" class="form" hidden>
+          <label class="f" for="pj-url">Repository URL</label><input type="text" id="pj-url" placeholder="https://github.com/org/product.git or git@github.com:org/product.git">
+          <label class="f" for="pj-dest">Destination folder</label><input type="text" id="pj-dest">
+          <label class="f" for="pj-branch">Branch or tag (optional)</label><input type="text" id="pj-branch">
+          <div class="help">Runs git clone as a job you can follow in Builds; the guided setup opens when it finishes.</div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn primary" id="pj-clone-go">⇣ Clone</button></div>
+        </div>
+      </div>
+      <div class="panel">
         <div class="head"><h2>Set up a project</h2><span style="flex:1"></span><span class="hint">Finds kas files, init scripts, build directories and launcher scripts; the new profile becomes active at once.</span></div>
         <div class="tools"><input type="search" id="setup-dir" placeholder="Project directory, e.g. /home/me/src/product (Enter scans)"><button class="btn primary" id="setup-scan">Scan</button></div>
         <div class="split" style="min-height:0">
@@ -547,6 +576,10 @@ function renderLog(target, text, query, append = false) {
 function notifyTransitions(rows) {
   for (const row of rows) {
     const before = lastStatus[row.id];
+    if (pendingClone && row.id === pendingClone.id && before && before !== row.status && row.status === "success") {
+      const destination = pendingClone.dest; pendingClone = null;
+      toast("Clone finished", destination, "success", {label: "Set it up", run: () => { setView("health"); $("setup-dir").value = destination; scanSetup(); }});
+    }
     if (before && before !== row.status) {
       const open = {label: "Open", run: () => { setView("builds"); select_(row.id); }};
       if (row.status === "success") toast("Build succeeded", `${row.title} · ${elapsed(row)}`, "success", open);
@@ -710,7 +743,7 @@ function setView(name) {
   view = name;
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
-  if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
+  if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
   if (name === "compliance") loadCompliance(); if (name === "studio") loadStudio();
   if (name === "builds") requestAnimationFrame(moveInk);
 }
@@ -762,6 +795,60 @@ async function loadHealth() {
   const data = await api(`/api/health?profile=${prof()}`);
   body.textContent = "";
   data.checks.forEach((check, i) => { const tr = el("tr", {}, el("td", {}, el("span", {class: "badge " + (STATUS_BADGE[check.status] || "muted"), text: check.status})), el("td", {text: check.name}), el("td", {class: "mono", text: check.detail})); tr.style.animationDelay = i * 15 + "ms"; body.append(tr); });
+}
+
+/* Projects */
+let projectInfo = null, pendingClone = null;
+async function loadProjects() {
+  projectInfo = await api("/api/projects");
+  const list = $("pj-recent"); list.textContent = "";
+  for (const item of projectInfo.recent) {
+    const row = el("div", {class: "row", tabindex: "0"}, el("span", {class: "glyph", text: item.profile ? "●" : "○"}),
+      el("span", {}, el("b", {text: item.root.split("/").pop() || item.root}), el("div", {class: "meta", text: item.root})),
+      el("span", {class: "meta", text: item.profile ? item.profile : "not set up"}));
+    const open = () => {
+      if (item.profile) { $("profile").value = item.profile; $("profile").dispatchEvent(new Event("change")); toast("Switched project", item.profile, "info"); }
+      else { $("setup-dir").value = item.root; scanSetup(); $("setup-dir").scrollIntoView({behavior: "smooth"}); }
+    };
+    row.addEventListener("click", open); row.addEventListener("keydown", (event) => { if (event.key === "Enter") open(); });
+    list.append(row);
+  }
+  if (!projectInfo.recent.length) list.append(el("div", {class: "empty", text: "No projects yet: create one or clone one."}));
+  for (const [id, values] of [["pj-release", Object.entries(projectInfo.releases)], ["pj-machine", projectInfo.machines.map((m) => [m, m])], ["pj-target", projectInfo.images.map((m) => [m, m])]]) {
+    const select = $(id); if (select.options.length) continue;
+    for (const [value, label] of values) select.append(el("option", {value, text: label}));
+  }
+  if (!$("pj-dir").value) $("pj-dir").value = projectInfo.home + "/yocto/my-product";
+}
+function projectBody() {
+  return {name: $("pj-name").value.trim(), dir: $("pj-dir").value.trim(), release: $("pj-release").value, machine: $("pj-machine").value, distro: $("pj-distro").value.trim(),
+          target: $("pj-target").value, runtime: $("pj-runtime").value, layer: $("pj-layer").checked, owner: $("pj-owner").value.trim()};
+}
+let projectTimer;
+function previewProject() {
+  clearTimeout(projectTimer);
+  projectTimer = setTimeout(async () => {
+    const files = $("pj-files"); files.textContent = "";
+    try {
+      const plan = await api("/api/projects/preview", {method: "POST", body: JSON.stringify(projectBody())});
+      $("pj-create").disabled = false;
+      Object.entries(plan.files).forEach(([name, text]) => files.append(el("details", name === "kas.yml" ? {open: ""} : {}, el("summary", {text: "+ " + name}), el("pre", {text}))));
+    } catch (error) { $("pj-create").disabled = true; files.append(el("div", {class: "notice", text: "✖ " + error.message})); }
+  }, 150);
+}
+async function createProject() {
+  try {
+    const result = await api("/api/projects/create", {method: "POST", body: JSON.stringify(projectBody())});
+    $("profile").textContent = ""; await refresh(); $("profile").value = result.active; $("target").dataset.touched = ""; renderState();
+    toast("Project created", `${result.root} · profile ${result.active} is active`, "success", {label: "Build it", run: () => queue("build", {target: $("target").value})});
+    $("pj-new").hidden = true; loadProjects();
+  } catch (error) { toast("New project", error.message, "error"); }
+}
+async function cloneProject() {
+  try {
+    pendingClone = await api("/api/projects/clone", {method: "POST", body: JSON.stringify({url: $("pj-url").value, dest: $("pj-dest").value, branch: $("pj-branch").value})});
+    toast("Cloning", pendingClone.dest, "info"); selected = null; await refresh(); select_(pendingClone.id); setView("builds");
+  } catch (error) { toast("Clone", error.message, "error"); }
 }
 
 /* Guided project setup */
@@ -1026,6 +1113,13 @@ function wire() {
   $("retry-btn").addEventListener("click", () => control("retry"));
   $("st-create").addEventListener("click", createStudio);
   $("setup-scan").addEventListener("click", scanSetup);
+  $("pj-show-new").addEventListener("click", () => { $("pj-new").hidden = !$("pj-new").hidden; $("pj-clone").hidden = true; previewProject(); });
+  $("pj-show-clone").addEventListener("click", () => { $("pj-clone").hidden = !$("pj-clone").hidden; $("pj-new").hidden = true; });
+  for (const id of ["pj-name", "pj-dir", "pj-release", "pj-machine", "pj-distro", "pj-target", "pj-runtime", "pj-layer", "pj-owner"]) $(id).addEventListener("input", previewProject);
+  $("pj-name").addEventListener("input", () => { const dir = $("pj-dir").value; $("pj-dir").value = dir.slice(0, dir.lastIndexOf("/") + 1) + $("pj-name").value; });
+  $("pj-url").addEventListener("input", () => { const name = $("pj-url").value.replace(/\/$/, "").split(/[\/:]/).pop().replace(/\.git$/, ""); if (projectInfo && name) $("pj-dest").value = projectInfo.home + "/yocto/" + name; });
+  $("pj-create").addEventListener("click", createProject);
+  $("pj-clone-go").addEventListener("click", cloneProject);
   $("setup-dir").addEventListener("keydown", (event) => { if (event.key === "Enter") scanSetup(); });
   for (const id of ["sp-mode", "sp-name", "sp-kas_file", "sp-init_script", "sp-build_dir", "sp-launcher", "sp-environment", "sp-machine", "sp-distro", "sp-targets"]) $(id).addEventListener("input", checkSetup);
   $("sp-save").addEventListener("click", saveSetup);

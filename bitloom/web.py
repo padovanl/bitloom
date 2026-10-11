@@ -19,7 +19,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .commands import ACTIONS, BY_ID, arguments, invocation
 from .inspectors import console_logs, diagnostics, human_size, metadata, search_log, task_logs
-from .models import Settings, read_assignments
+from .models import Profile, Settings, read_assignments
 
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 MAX_CHUNK = 512 * 1024
@@ -316,6 +316,46 @@ class Dashboard:
         messages, target = register(settings, profile, result, body.get("use") is True, submit)
         return {"written": [str(p) for p in written], "messages": messages, "target": target}
 
+    def projects(self):
+        from .projects import IMAGES, MACHINES, RELEASES, Recent
+        settings = self.settings()
+        roots = {str(p.root_path): p.name for p in settings.profiles}
+        items, seen = [], set()
+        for item in Recent(self.state).load() + [{"root": root, "profile": name, "how": "profile"} for root, name in roots.items()]:
+            if item["root"] not in seen:
+                seen.add(item["root"])
+                items.append({**item, "profile": roots.get(item["root"], "")})
+        return {"recent": items, "releases": {k: v["title"] for k, v in RELEASES.items()}, "machines": list(MACHINES), "images": list(IMAGES),
+                "home": str(Path.home())}
+
+    def project_plan(self, body):
+        from .projects import new_project_plan
+        values = {k: str(body.get(k, "")) for k in ("dir", "name", "release", "machine", "distro", "target", "owner")}
+        return new_project_plan(values["dir"], values["name"], values["release"], values["machine"], values["distro"], values["target"],
+                                body.get("layer") is True, values["owner"])
+
+    def project_create(self, body):
+        from .projects import Recent, create_project
+        from .setup import save
+        plan = self.project_plan(body)
+        runtime = body.get("runtime", "kas-container")
+        if runtime not in {"kas", "kas-container"}:
+            raise ValueError("runtime must be kas or kas-container")
+        profile = create_project(plan, runtime)
+        save(self.settings(), profile)
+        Recent(self.state).add(profile.root_path, profile.name, "created")
+        return {"active": profile.name, "root": str(profile.root_path)}
+
+    def project_clone(self, body):
+        from dataclasses import asdict
+        from .projects import clone_argv
+        argv = clone_argv(str(body.get("url", "")), str(body.get("dest", "")), str(body.get("branch", "")))
+        destination = Path(argv[-1])
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        helper = Profile(name="git-clone", root=str(destination.parent), build_dir=str(destination.parent))
+        result = self.rpc({"op": "submit", "profile": asdict(helper), "title": "Clone " + destination.name, "command": argv, "action_id": "project-clone"})
+        return {"id": result["job"]["id"], "dest": str(destination)}
+
     def setup_scan(self, query):
         from .setup import candidate_json, detect
         directory = query.get("dir", [""])[0] or str(self.profile().root_path)
@@ -342,6 +382,8 @@ class Dashboard:
         if any(status == "ERR" for status, _ in check(profile)):
             raise ValueError("Fix the checks marked ✖ first")
         save(self.settings(), profile)
+        from .projects import Recent
+        Recent(self.state).add(profile.root_path, profile.name, "set up")
         return {"active": profile.name}
 
     def health(self, query):
@@ -457,6 +499,14 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.studio_preview(self.body())
                 elif route == ("POST", "studio", "create"):
                     payload = dashboard.studio_create(self.body())
+                elif route == ("GET", "projects"):
+                    payload = dashboard.projects()
+                elif route == ("POST", "projects", "preview"):
+                    payload = dashboard.project_plan(self.body())
+                elif route == ("POST", "projects", "create"):
+                    payload = dashboard.project_create(self.body())
+                elif route == ("POST", "projects", "clone"):
+                    payload = dashboard.project_clone(self.body())
                 elif route == ("GET", "setup", "scan"):
                     payload = dashboard.setup_scan(query)
                 elif route == ("POST", "setup", "check"):

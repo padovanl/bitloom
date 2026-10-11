@@ -1298,3 +1298,247 @@ class SetupScreen(ModalScreen):
             self.notify(str(exc), severity="error", timeout=10)
             return
         self.dismiss(profile.name)
+
+
+class ProjectsScreen(ModalScreen):
+    """Project hub: recent projects, open a folder, create a new project, clone from Git."""
+    DEFAULT_CSS = """
+    ProjectsScreen { align: center middle; background: $background 60%; }
+    ProjectsScreen > Vertical { width: 110; max-width: 96%; height: auto; max-height: 90%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    ProjectsScreen #projects-hint { color: $text-muted; height: auto; margin-bottom: 1; }
+    ProjectsScreen OptionList { height: auto; max-height: 18; border: round $primary-muted; background: $surface; }
+    ProjectsScreen OptionList:focus { border: round $accent; }
+    ProjectsScreen Horizontal { height: 1; margin-top: 1; }
+    ProjectsScreen Horizontal Button { margin-right: 1; }
+    ProjectsScreen #open-row { display: none; height: 1; }
+    ProjectsScreen #open-dir { width: 1fr; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                ("o", "open_folder", "Open folder"), ("n", "choose('new')", "New project"), ("g", "choose('clone')", "Clone"),
+                ("j", "move(1)", "Down"), ("k", "move(-1)", "Up")]
+
+    def __init__(self, settings, recent):
+        super().__init__()
+        self.settings, self.recent = settings, recent
+        self.items = []
+
+    def compose(self):
+        with Vertical():
+            yield Label("Enter opens a recent project (its profile, or the guided setup) · o open a folder · n new project · g clone from Git · Esc close", id="projects-hint")
+            yield OptionList(id="projects-list")
+            with Horizontal(id="open-row"):
+                yield Input(placeholder="Folder to open (Enter scans it)", id="open-dir")
+            with Horizontal():
+                yield Button("o Open folder", id="projects-open")
+                yield Button("n New project", id="projects-new", variant="primary")
+                yield Button("g Clone from Git", id="projects-clone")
+
+    def on_mount(self):
+        from rich.text import Text
+        self.query_one(Vertical).border_title = "Projects"
+        seen, picker = set(), self.query_one("#projects-list", OptionList)
+        roots = {str(p.root_path): p.name for p in self.settings.profiles}
+        for item in self.recent.load() + [{"root": root, "profile": name, "how": "profile"} for root, name in roots.items()]:
+            if item["root"] in seen:
+                continue
+            seen.add(item["root"])
+            self.items.append(item)
+            profile = roots.get(item["root"])
+            label = Text.assemble((Path(item["root"]).name or item["root"], "bold"), ("  " + item["root"], "dim"),
+                                  ("  ● " + profile if profile else "  not set up", "italic"), ("  · " + item.get("how", ""), "dim"))
+            picker.add_option(Option(label, id=str(len(self.items) - 1)))
+        if self.items:
+            picker.highlighted = 0
+        picker.focus()
+
+    def action_move(self, step):
+        picker = self.query_one("#projects-list", OptionList)
+        picker.action_cursor_down() if step > 0 else picker.action_cursor_up()
+
+    def action_open_folder(self):
+        self.query_one("#open-row").display = True
+        field = self.query_one("#open-dir", Input)
+        field.value = field.value or str(Path.home())
+        field.focus()
+
+    def action_choose(self, what):
+        self.dismiss({what: True})
+
+    @on(OptionList.OptionSelected, "#projects-list")
+    def chosen(self, event):
+        self.dismiss({"open": self.items[int(event.option.id)]["root"]})
+
+    def on_input_submitted(self, event):
+        if event.input.id == "open-dir":
+            event.stop()
+            self.dismiss({"open": event.value.strip()})
+
+    @on(Button.Pressed, "#projects-open")
+    def open_pressed(self):
+        self.action_open_folder()
+
+    @on(Button.Pressed, "#projects-new")
+    def new_pressed(self):
+        self.dismiss({"new": True})
+
+    @on(Button.Pressed, "#projects-clone")
+    def clone_pressed(self):
+        self.dismiss({"clone": True})
+
+
+class NewProjectScreen(ModalScreen):
+    """Create a new Yocto project folder with a pinned kas configuration."""
+    DEFAULT_CSS = """
+    NewProjectScreen { align: center middle; background: $background 60%; }
+    NewProjectScreen > Vertical { width: 98%; height: 94%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    NewProjectScreen #np-split { height: 1fr; }
+    NewProjectScreen #np-form { width: 2fr; height: 1fr; border: round $primary-muted; padding: 0 1; }
+    NewProjectScreen #np-form:focus-within { border: round $accent; }
+    NewProjectScreen #np-preview { width: 3fr; height: 1fr; margin-left: 1; }
+    NewProjectScreen .field-label { margin-top: 1; text-style: bold; height: 1; }
+    NewProjectScreen .field-info { color: $text-muted; height: auto; }
+    NewProjectScreen Input, NewProjectScreen Select { height: 1; }
+    NewProjectScreen #np-hint { color: $text-muted; height: 1; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                Binding("ctrl+o", "create", "Create", priority=True), Binding("ctrl+s", "create", "Create", priority=True, show=False)]
+
+    def compose(self):
+        from textual.containers import VerticalScroll
+        from textual.widgets import Checkbox, RichLog
+        from .projects import IMAGES, MACHINES, RELEASES
+        base = Path.home() / "yocto"
+        with Vertical():
+            yield Label("A few choices give you a buildable project: kas.yml pinned to verified release tags, README, .gitignore and git init. ^O creates, Esc closes.", id="np-hint")
+            with Horizontal(id="np-split"):
+                with VerticalScroll(id="np-form"):
+                    for ident, label, widget, info in [
+                        ("name", "Project name", Input(value="my-product", id="np-name"), "Lowercase; also the profile name."),
+                        ("dir", "Folder", Input(value=str(base / "my-product"), id="np-dir"), "A new or empty folder."),
+                        ("release", "Yocto release", Select([(v["title"], k) for k, v in RELEASES.items()], value="scarthgap", allow_blank=False, id="np-release"),
+                         "Both are LTS. Wrynose uses split repositories (no poky), SPDX 3 and sbom-cve-check."),
+                        ("machine", "MACHINE", Select([(m, m) for m in MACHINES], value="qemux86-64", allow_blank=False, id="np-machine"), "Start on QEMU; derive your board later in Studio."),
+                        ("distro", "DISTRO", Input(value="poky", id="np-distro"), "poky, or the id of your own distribution created later with Studio."),
+                        ("target", "Image", Select([(i, i) for i in IMAGES], value="core-image-minimal", allow_blank=False, id="np-target"), "The image built by b."),
+                        ("runtime", "Runtime", Select([("kas-container (recommended)", "kas-container"), ("kas on the host", "kas")], value="kas-container", allow_blank=False, id="np-runtime"),
+                         "kas-container brings every Yocto host dependency in a container."),
+                    ]:
+                        yield Label(label, classes="field-label")
+                        yield widget
+                        yield Static(info, classes="field-info")
+                    yield Label("Product layer", classes="field-label")
+                    yield Checkbox("create meta-<name> for your recipes, distro and machines", value=True, id="np-layer")
+                    yield Label("Copyright owner", classes="field-label")
+                    yield Input(value="", placeholder="Your company", id="np-owner")
+                yield RichLog(id="np-preview", wrap=False, markup=False, auto_scroll=False)
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "New project"
+        self.query_one("#np-preview").border_title = "Files"
+        self.query_one("#np-name", Input).focus()
+        self.refresh_preview()
+
+    def plan(self):
+        from .projects import new_project_plan
+        value = lambda ident: str(getattr(self.query_one("#np-" + ident), "value"))
+        return new_project_plan(value("dir"), value("name"), value("release"), value("machine"), value("distro"), value("target"),
+                                bool(self.query_one("#np-layer").value), value("owner"))
+
+    def on_input_changed(self, event):
+        if event.input.id == "np-name":
+            folder = self.query_one("#np-dir", Input)
+            parent = Path(folder.value).parent if folder.value else Path.home() / "yocto"
+            folder.value = str(parent / event.value)
+        self.refresh_preview()
+
+    def on_select_changed(self, event):
+        self.refresh_preview()
+
+    def on_checkbox_changed(self, event):
+        self.refresh_preview()
+
+    def refresh_preview(self):
+        from rich.text import Text
+        log = self.query_one("#np-preview")
+        log.clear()
+        try:
+            plan = self.plan()
+        except ValueError as exc:
+            log.write(Text("✖ " + str(exc), style=self.app.current_theme.error))
+            return
+        for name in ("kas.yml", "README.md", ".gitignore"):
+            log.write(Text("+++ " + name, style=f"bold {self.app.current_theme.success}"))
+            log.write(Text(plan["files"][name]))
+        if plan["layer"]:
+            log.write(Text(f"+++ {plan['layer']}/ (conf/layer.conf, README.md, COPYING.MIT)", style=f"bold {self.app.current_theme.success}"))
+        log.scroll_home(animate=False)
+
+    def action_create(self):
+        from .projects import create_project
+        try:
+            plan = self.plan()
+            profile = create_project(plan, str(self.query_one("#np-runtime", Select).value))
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error", timeout=10)
+            return
+        self.dismiss(profile)
+
+
+class CloneScreen(ModalScreen):
+    """Clone a project from GitHub or any Git server, then set it up."""
+    DEFAULT_CSS = """
+    CloneScreen { align: center middle; background: $background 60%; }
+    CloneScreen > Vertical { width: 100; max-width: 96%; height: auto; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1 1 1; }
+    CloneScreen .field-label { margin-top: 1; text-style: bold; height: 1; }
+    CloneScreen .field-info { color: $text-muted; height: auto; }
+    CloneScreen Input { height: 1; }
+    CloneScreen #clone-preview { margin-top: 1; color: $text-muted; height: auto; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                Binding("ctrl+o", "clone", "Clone", priority=True)]
+
+    def compose(self):
+        with Vertical():
+            yield Label("Repository URL", classes="field-label")
+            yield Input(placeholder="https://github.com/org/product.git or git@github.com:org/product.git", id="clone-url")
+            yield Static("HTTPS or SSH; your git credentials and SSH agent are used as in a terminal.", classes="field-info")
+            yield Label("Destination folder", classes="field-label")
+            yield Input(id="clone-dest")
+            yield Label("Branch or tag (optional)", classes="field-label")
+            yield Input(id="clone-branch")
+            yield Static(id="clone-preview", markup=False)
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Clone a project · ^O clones, then the guided setup opens"
+        self.query_one("#clone-url", Input).focus()
+
+    autofill = ""
+    dest_touched = False
+
+    def on_input_changed(self, event):
+        from .projects import clone_argv, default_destination
+        if event.input.id == "clone-dest" and event.value != self.autofill:
+            self.dest_touched = True  # never overwrite a destination the user typed
+        if event.input.id == "clone-url" and event.value.strip() and not self.dest_touched:
+            self.autofill = default_destination(event.value, Path.home() / "yocto")
+            self.query_one("#clone-dest", Input).value = self.autofill
+        try:
+            import shlex
+            text = "$ " + shlex.join(clone_argv(*(self.query_one("#clone-" + k, Input).value for k in ("url", "dest", "branch"))))
+        except ValueError as exc:
+            text = str(exc)
+        self.query_one("#clone-preview", Static).update(text)
+
+    def on_input_submitted(self, event):
+        event.stop()
+        self.action_clone()
+
+    def action_clone(self):
+        from .projects import clone_argv
+        values = [self.query_one("#clone-" + k, Input).value for k in ("url", "dest", "branch")]
+        try:
+            argv = clone_argv(*values)
+        except ValueError as exc:
+            self.notify(str(exc), severity="error")
+            return
+        self.dismiss({"argv": argv, "dest": argv[-1]})
