@@ -95,7 +95,7 @@ GLOBAL_KEYS = [
     ("t", "Edit the build target (when no section uses t)"),
     ("b", "Build the target (outside Recipes)"),
     ("P", "Switch profile"),
-    ("F2", "Command center (all 69 operations)"),
+    ("F2", "Command center (every operation, filtered as you type)"),
     ("F3", "Refresh metadata, logs and diagnostics"),
     ("F4", "Edit profiles"),
     ("F5 / F6", "Stop / retry the selected job"),
