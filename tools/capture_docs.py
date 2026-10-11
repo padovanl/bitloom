@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from bitloom.app import BitloomApp
 from terminal_capture import terminal_svg
-from bitloom.cli import make_demo
+from bitloom.cli import prepare_demo
 from textual.widgets import Input, TabbedContent, Tree, DataTable
 
 
@@ -26,7 +26,7 @@ async def capture():
     with tempfile.TemporaryDirectory(prefix='bitloom-docs-') as work:
         root = Path(work)
         os.environ.pop('NO_COLOR', None)
-        app = BitloomApp(make_demo(root / 'demo'), root / 'state')
+        app = BitloomApp(prepare_demo(root / 'workspace'), root / 'state')
         frames = []
         async with app.run_test(size=(140, 42)) as pilot:
             await pilot.pause(.8)
@@ -95,6 +95,53 @@ async def capture():
             app.screen.query_one('#new-template', Select).value = 'recipe'
             await shot('file-creation')
             await pilot.press('escape')
+            # Keyboard reference, profile switcher and builds started outside Bitloom.
+            await pilot.press('1', 'question_mark')
+            await shot('keys')
+            await pilot.press('escape', 'P')
+            await shot('profile-picker', include_in_tour=False)
+            await pilot.press('escape', 'c')
+            await pilot.pause(.4)
+            await shot('console-builds')
+            await pilot.press('enter')
+            await pilot.pause(.4)
+            await shot('console-build-log', include_in_tour=False)
+            # Release-aware features on the Wrynose and Scarthgap sample workspaces.
+            from textual.widgets import Select as ProfileSelect
+            app.main_query('#profile', ProfileSelect).value = 'demo-wrynose'
+            await pilot.pause(1.2)
+            await pilot.press('2', 'c')
+            await pilot.pause(.8)
+            await shot('studio')
+            await pilot.press('escape', '9', 's')
+            await pilot.pause(.6)
+            await shot('sbom-settings')
+            await pilot.press('escape', '9', 'c')
+            await pilot.pause(.8)
+            await shot('cra-readiness')
+            await pilot.press('escape', '6', 's')
+            await pilot.pause(.8)
+            await shot('sbom-quality')
+            await pilot.press('escape')
+            app.main_query('#profile', ProfileSelect).value = 'demo-scarthgap'
+            await pilot.pause(1.2)
+            await pilot.press('1', 'f2')
+            await pilot.pause(.3)
+            for key in 'sbom':
+                await pilot.press(key)
+            await pilot.press('down')
+            await shot('release-gating')
+            await pilot.press('escape')
+            # Live job: spinner, indeterminate progress, then task counts.
+            running = root / 'sample_running.py'
+            running.write_text('import time\nprint("NOTE: Running setscene task 120 of 300")\ntime.sleep(1.5)\nfor i in range(1, 40):\n    print(f"NOTE: Running task {i} of 400 (/demo/r{i}.bb:do_compile)", flush=True)\n    print(f"NOTE: recipe demo-r{i}-1.0-r0: task do_compile: Started", flush=True)\n    time.sleep(.1)\n')
+            live = app.runner.submit(app.profile, 'Demo running build — sample output', [sys.executable, str(running)])
+            app.select_job(live.id, live.log)
+            await pilot.pause(2.6)
+            await shot('running')
+            await app.runner.consumer
+            app.main_query('#profile', ProfileSelect).value = 'demo'
+            await pilot.pause(.8)
             app.query_one('#workspace', TabbedContent).active = 'builds'
             await pilot.resize_terminal(90, 28)
             await shot('compact', include_in_tour=False)

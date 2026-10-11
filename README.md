@@ -10,7 +10,7 @@
 [![Total release downloads](https://img.shields.io/github/downloads/padovanl/bitloom/total)](https://github.com/padovanl/bitloom/releases)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-**A terminal cockpit for everyday Yocto and BitBake development.** Build images, inspect recipes, develop with devtool, follow failures, and manage local caches from one keyboard-friendly interface.
+**A terminal cockpit and web dashboard for everyday Yocto and BitBake development.** Build images, inspect recipes, develop with devtool, follow failures, create your own distribution, check SBOMs for the Cyber Resilience Act and manage caches, from a keyboard-first terminal UI or a browser, sharing one build service.
 
 *Weaving layers, recipes and builds into one terminal workspace.*
 
@@ -22,7 +22,7 @@ The opening capture shows the idle sample workspace. Error screens in the tour d
 
 ## Learn and test Bitloom
 
-Follow the [manual testbook](README.testbook.md) from installation through kas/container builds, layer and recipe creation, devtool, caches, interruption and every implemented command. Each case specifies inputs, prerequisites and expected evidence. Optional hardware/classes are recorded as N/A when unavailable. The [Pages testbook](https://padovanl.github.io/bitloom/testbook.html) is the same document rendered for the web. Chapter 13 covers the implemented Developer workflows in addition to all 69 command-center actions.
+Follow the [manual testbook](README.testbook.md) from installation through kas/container builds, layer and recipe creation, devtool, caches, interruption and every implemented command. Each case specifies inputs, prerequisites and expected evidence. Optional hardware/classes are recorded as N/A when unavailable. The [Pages testbook](https://padovanl.github.io/bitloom/testbook.html) is the same document rendered for the web. Chapter 13 covers the implemented Developer workflows in addition to all 74 command-center actions; chapter 14 covers keyboard-only use, the web dashboard, SBOM/CRA and release awareness, Studio and team features.
 
 ## Developer workbench
 
@@ -32,7 +32,69 @@ Create complete MIT-licensed **CMake, Meson, Make, Python or Rust** layer/recipe
 
 Follow the [Developer guide](docs/developer.md) for every input and operation, and [chapter 13 of the testbook](README.testbook.md#13-developer-acceptance) for all fourteen acceptance experiments. The [research and implementation map](docs/roadmap.md) retains upstream sources and practical limits. Public discussions are qualitative evidence, not a representative survey.
 
+<details><summary>Animation: Actual Developer workbench tour using real kas-container evidence</summary>
+
 ![Actual Developer workbench tour using real kas-container evidence](docs/assets/developer-tour.gif)
+</details>
+
+## Keyboard first
+
+Every action has a key. Numbers `1`–`0` open sections, single letters act in the current section and are shown on every button and in the footer, `/` searches, `Esc` returns to the list, `?` shows the [keyboard reference](docs/keyboard.md). Editors use nano keys (`^O` write, `^X` exit, `^W` search, `^K`/`^U` cut and uncut); dialogs confirm with `^O` and close with `Esc`. `P` switches profile, `t` edits the target and Enter builds it, Ctrl+P searches sections, actions and all operations.
+
+<details><summary>Screenshot: keyboard reference inside the TUI</summary>
+
+![Keyboard reference overlay](docs/assets/keys.png)
+</details>
+
+## Web dashboard
+
+`bitloom --web` serves an animated dashboard for the same build service: live output and progress, Toaster-style build summaries, toasts for every job transition, a Ctrl+K command palette, SBOM & CRA, Studio and configuration views. Loopback only with a session token by default, keyboard driven, responsive and light/dark. See the [web guide](docs/web.md).
+
+<details><summary>Screenshots: web dashboard</summary>
+
+![Web dashboard following a build](docs/assets/web-builds.png)
+![SBOM and CRA view](docs/assets/web-compliance.png)
+![Studio in the browser](docs/assets/web-studio.png)
+</details>
+
+## SBOM, CRA and Yocto releases
+
+Bitloom detects the Yocto release of each profile and adapts: operations, SBOM options and Studio defaults declare their release window, and when a feature is missing (for example `sbom-cve-check` before 6.0 Wrynose, or `cve-check` from 6.0) the TUI, the web dashboard and CI say so and offer the alternative the release provides.
+
+* **SBOM quality** for SPDX 3 (Wrynose) and SPDX 2.2 (Scarthgap) images: PURL, CPE, licence and supplier coverage, VEX status and affected CVEs (`s` in Artifacts, `bitloom --sbom`).
+* **CRA readiness**: release support window, SBOM, identifiers, VEX, CVE analysis, traceability, dispositions and reproducibility evidence, with the Regulation (EU) 2024/2847 timeline (`c` in Configuration, `bitloom --cra`).
+* **SBOM settings** with an explanation, CRA relevance and release window for each option, applied as one managed block or kas overlay with backups (`s` in Configuration).
+
+The CRA harmonised standards are being drafted as the [EN 40000 series](https://cyber-regulation.com/article/en-40000-series-explained); [prEN 40000-1-3](https://standards.iteh.ai/catalog/standards/cen/487254bf-baa1-48e9-be33-658b37f6fb90/pren-40000-1-3) covers vulnerability handling (receipt, assessment, remediation, communication, tracking). Bitloom does not implement or certify the standard: its compliance views are organised around the build evidence such a process relies on. Details in [SBOM, CRA and releases](docs/compliance.md); it is engineering evidence, not legal advice.
+
+<details><summary>Screenshots: CRA readiness, SBOM settings and release-aware command center</summary>
+
+![CRA readiness](docs/assets/cra-readiness.png)
+![SBOM settings](docs/assets/sbom-settings.png)
+![Command center refusing a Wrynose-only operation on Scarthgap](docs/assets/release-gating.png)
+</details>
+
+## Studio: your own distribution
+
+`c` in Recipes opens Studio: create a product layer, your own `DISTRO` based on Poky or standalone OE-Core defaults (init manager, features, hardening, SBOM policy), machines derived from a reference board, images, licensed sample recipes and appends. Every field is explained, defaults follow the detected release, the preview shows every file, nothing is overwritten, and new layers are registered with `bitbake-layers` or a kas overlay. See [Studio](docs/studio.md).
+
+<details><summary>Screenshot: Studio</summary>
+
+![Studio creating a distribution](docs/assets/studio.png)
+</details>
+
+## Teams, CI/CD and setup
+
+* `bitloom --ci ACTION[:TARGET] --profile …` runs a serial profile × operation matrix headless, with GitHub/GitLab log sections and annotations, JUnit XML and a JSON summary.
+* Read-only team profiles through `include` (NFS or a shared repository).
+* Setup and infrastructure checks: host limits, UTF-8 locale, WSL, filesystems of TMPDIR/DL_DIR/SSTATE_DIR (NFS, CIFS), reachability of mirrors, hash equivalence and PR servers.
+* Image matrix across machines, device fleet status (`--fleet`), console builds started outside Bitloom, and a `wrapper` runtime for project scripts that launch kas.
+
+See [Teams, CI/CD and setup](docs/teams.md).
+
+## Lessons from earlier Yocto interfaces
+
+Hob was retired for being fragile and tied to BitBake internals; Toaster must be running before a build and needs its own server; knotty output makes the failing cause hard to find. Bitloom uses only public command-line interfaces, reads evidence from any build after the fact (including console logs of builds it did not start), points at the root cause of failures and explains every option. The [research map](docs/roadmap.md#answering-the-criticisms-of-earlier-yocto-interfaces) lists the sources.
 
 ## Inspiration and thanks
 
@@ -101,7 +163,10 @@ cp examples/profiles.json .bitloom/profiles.json
 bitloom --config .bitloom/profiles.json
 ```
 
+<details><summary>Animation: Animated tour of the actual TUI</summary>
+
 ![Animated tour of the actual TUI](docs/assets/tour.gif)
+</details>
 
 ## What you can do
 
@@ -131,13 +196,21 @@ Real sessions use an independent local service: close the terminal and reconnect
 
 The **Analysis** selector connects signature explanations, failure diagnosis, runtime filesystem access, image provenance, snapshot comparison, devtool review, reproducibility exports, preflight and conservative cache reference plans. Shared/exclusive advisory cache locks coordinate cooperating Bitloom builders. Read the [workflow guide](docs/guide.md#evidence-workflows) for inputs, bounds and limitations.
 
+<details><summary>Screenshot: Real container image provenance</summary>
+
 ![Real container image provenance](docs/assets/real-kas-provenance.png)
+</details>
 
 ## Keyboard
 
 | Key | Action |
 | --- | --- |
-| F2 | Search and queue a command |
+| 1 … 9, 0 · [ ] | Open a section · previous / next section |
+| letters | Section actions shown in the footer and on buttons (`s` stop, `r` retry, `e` errors, `c` console builds…) |
+| / · Esc | Search in the section · back to the list |
+| ? / F1 / Ctrl+G | Keyboard reference |
+| P · t · b | Switch profile · edit target · build target |
+| F2 | Search and queue a command (↑↓ choose, Enter queues) |
 | F3 | Refresh local metadata, logs, diagnostics and artifacts |
 | F4 | Edit profiles |
 | F5 | Open build interruption options |
@@ -150,7 +223,8 @@ The **Analysis** selector connects signature explanations, failure diagnosis, ru
 | Ctrl+Q | Detach from service and exit; embedded/demo stops owned jobs |
 | Enter | Select a build log or open a metadata/task/artifact row |
 | Tab / Shift+Tab | Move focus |
-| Escape | Close a dialog |
+| Escape / Ctrl+X | Close a dialog; editors ask before discarding changes |
+| Ctrl+O · Ctrl+W · Ctrl+K/U | nano keys in editors: write · search · cut/uncut line |
 
 The interface uses compact single-line controls, a terminal navigator, split history/output and syntax-highlighted metadata previews. **140 × 42** shows the complete workspace. Below 105 columns or 30 rows, tabs replace the navigator and side panes disappear. Short terminals also hide the task monitor and overview. Below 75 columns or 22 rows, logs take priority over history and metrics; resize to restore those panels. Command, profile and theme dialogs also fit within the terminal and scroll when necessary. Navigation with **F8/F9**, commands with **F2**, profiles with **F4** and themes with **F7** remain available. Layout tests cover **160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20 and 140 × 20**, including restoration after resizing. See the [compact capture](docs/assets/compact.png) and [small terminal capture](docs/assets/tiny.png). Host CPU/RAM and workspace filesystem usage are sampled every two seconds and explicitly labelled as host resources.
 
@@ -166,7 +240,12 @@ New kas-container jobs have uniquely named, owned containers: force stop records
 
 ## Real Yocto validation
 
-The reproducible integration configuration is [tests/integration/kas-minimal.yml](tests/integration/kas-minimal.yml): Poky **yocto-5.0.8**, **qemux86-64**, **core-image-minimal**, executed through the same Runner used by the TUI.
+Two reproducible integration configurations are executed through the same Runner used by the TUI:
+
+* [tests/integration/kas-minimal.yml](tests/integration/kas-minimal.yml): Poky **yocto-5.0.8** (Scarthgap 5.0 LTS), **qemux86-64**, **core-image-minimal**.
+* [tests/integration/kas-wrynose.yml](tests/integration/kas-wrynose.yml): **yocto-6.0.2** (Wrynose 6.0 LTS) with bitbake, openembedded-core and meta-yocto as separate repositories, since the combined poky repository ends with 5.x.
+
+`tools/prepare_validation.py --release both` creates the `kas-scarthgap` and `kas-wrynose` profiles; `tools/validate_kas.py --release wrynose` validates the second workspace.
 
 ```bash
 # Install the official wrapper inside the project venv, not system-wide.
@@ -181,7 +260,10 @@ Docker/Podman must be running. The kas image supplies Yocto build dependencies. 
 
 **Verified on 2026-10-10:** all 4,064 tasks succeeded in 57m 10s through kas-container; the rootfs archive and eight runtime probes passed.
 
+<details><summary>Screenshot: Actual successful kas-container build</summary>
+
 ![Actual successful kas-container build](docs/assets/real-kas-build.png)
+</details>
 
 See the [validation report](docs/validation.md) for the actual result and limitations. Screenshots and GIFs show a sample workspace; they are not evidence of a completed Yocto image.
 
@@ -196,6 +278,10 @@ python -m bitloom --doctor
 # Regenerate actual UI screenshots and GIF (optional tooling).
 pip install pillow cairosvg
 python tools/capture_docs.py
+python tools/capture_web.py      # web dashboard, needs playwright with Chromium
+
+# Build and preview the documentation site (default port 8000).
+python tools/serve_docs.py --port 8080 --open
 ```
 
 The static [documentation site](docs/index.html) is ready for GitHub Pages. The workflow uploads `docs/` on pushes to `main` and supports manual dispatch. In the GitHub repository, select **Settings → Pages → Source → GitHub Actions**. A GitHub remote and a push are required to publish; local files alone do not create a public site.
@@ -210,7 +296,10 @@ No CI claim implies a full Yocto build: unit/UI tests and the opt-in container i
 
 Press **F7** or choose **Themes** in the toolbar to preview and save one of 14 palettes: Bitloom, Soft Slate, Linen, Nord, Dracula, Tokyo Night, Catppuccin Mocha, Gruvbox, Solarized Dark, Ocean, Forest, Ember, Paper and High Contrast. Linen and Paper are light themes; High Contrast uses a black background and bright foreground. Cancel restores the previous palette. The choice is stored separately from build profiles in the state's `appearance.json` and is restored next launch.
 
+<details><summary>Animation: Actual terminal theme previews</summary>
+
 ![Actual terminal theme previews](docs/assets/themes.gif)
+</details>
 
 The [Bitloom icon](docs/assets/bitloom-icon.svg) combines a woven B with horizontal layer threads and a vertical build thread. SVG is the source; PNG variants provide favicon, touch-icon and sharing support.
 
@@ -304,11 +393,11 @@ python tools/probe_workflows.py
 
 ```bash
 python -m pip install '.[docs]'
-python tools/build_docs.py
-python -m http.server 8000 --directory docs
+python tools/serve_docs.py --port 8000          # rebuilds the HTML, then serves docs/
+python tools/serve_docs.py --port 9000 --no-build --open
 ```
 
-Open `http://localhost:8000`. The Pages workflow is included, but this workspace has no GitHub remote and no public deployment yet.
+Open the printed address. Screenshots in the HTML pages are collapsed and load only when you expand them.
 
 ## License
 
@@ -334,7 +423,10 @@ For kas/container profiles, a path such as `/work/meta-bitloom/recipes-example/h
 
 Creating a recipe file does not register its layer: use **Create layer** and **Add layer**, and declare the layer in kas for reproducible configuration.
 
+<details><summary>Screenshot: Actual new-file dialog with a sample recipe</summary>
+
 ![Actual new-file dialog with a sample recipe](docs/assets/file-creation.png)
+</details>
 
 ## Reproduce Developer experiments in a fresh kas container
 

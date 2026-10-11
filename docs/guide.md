@@ -2,6 +2,14 @@
 
 For a complete hands-on acceptance path, follow the [manual testbook](testbook.html). The [Developer workbench guide](developer.md) documents F10, all sixteen implemented views, creation/clone workflows and evidence comparisons. The [research and implementation map](roadmap.md) retains sources and practical boundaries.
 
+More guides:
+
+* [Keyboard reference](keyboard.md): every key in every section, nano editor keys and dialogs.
+* [Web dashboard](web.md): `bitloom --web`, sections, notifications, keyboard and API.
+* [SBOM, CRA and Yocto releases](compliance.md): release awareness, SBOM quality, CRA readiness, EN 40000 and SBOM settings.
+* [Studio](studio.md): create your own distribution, machines, images, recipes and layers.
+* [Teams, CI/CD and setup](teams.md): headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.
+
 ## Install from a GitHub release
 
 Open the [GitHub Releases page](https://github.com/padovanl/bitloom/releases) and download the assets for the version you want. Replace `1.2.3` below with that version.
@@ -39,7 +47,17 @@ Download `SHA256SUMS` alongside the packages, then run `sha256sum --check --igno
 
 Run `./setup-demo.sh` from the cloned checkout to create or reuse `.venv`, install dependencies and launch the sample TUI. Requires Bash, Python 3.10+ with venv support on Linux or WSL2, and internet access for installation. No Docker, kas or Yocto installation is needed for the sample data.
 
-Use `./setup-demo.sh --no-launch` to prepare without launching, then `.venv/bin/bitloom --demo` to start later. `--dev` installs test dependencies; `--python python3.12` or `PYTHON` selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under `.bitloom/demo` in the checkout.
+Use `./setup-demo.sh --no-launch` to prepare without launching, then `.venv/bin/bitloom --demo` to start later. `--dev` installs test dependencies; `--python python3.12` or `PYTHON` selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under `.bitloom` in the checkout.
+
+The demo has three profiles; press `P` to switch:
+
+| Profile | Workspace | Shows |
+| --- | --- | --- |
+| `demo` | `.bitloom/demo` | Generic sample: recipes, a failing task log, a console build, caches |
+| `demo-scarthgap` | `.bitloom/demo-scarthgap` | Poky layout detected as 5.0 LTS, SPDX 2.2 SBOM, cve-check summary; Wrynose-only operations are explained and refused |
+| `demo-wrynose` | `.bitloom/demo-wrynose` | Split OE-Core layout detected as 6.0 LTS, SPDX 3 SBOM with VEX, sbom-cve-check report |
+
+Every sample file is labelled; the demo never simulates a successful Yocto build.
 
 The terminal adapts while resizing: below 105 columns or 30 rows it hides the navigator and side panes; below 30 rows it also hides the overview. Below 75 columns or 22 rows it hides history and metrics to preserve output. Resize to restore panels. F8/F9 switches sections and F2/F4/F7 opens commands/profiles/themes even when toolbar controls are hidden. Verified sizes range from 60 × 20 to 160 × 50, including a wide 140 × 20 terminal.
 
@@ -52,7 +70,7 @@ Profiles are local JSON stored at `.bitloom/profiles.json` by default. State is 
 | `name` | Unique profile identifier |
 | `root` | Absolute or relative project root (resolved on the host) |
 | `build_dir` | Build directory, relative to root or absolute on host |
-| `mode` | `host`, `kas`, `container`, or `kas-container` |
+| `mode` | `host`, `kas`, `container`, `kas-container` or `wrapper` (a project launcher script, see [Teams](teams.md#project-launcher-scripts)) |
 | `init_script` | Host/container init script; autodetects oe-init-build-env or poky/oe-init-build-env |
 | `kas_file` | kas configuration path(s), including colon-separated composition |
 | `engine` | Docker or Podman for generic container mode |
@@ -65,6 +83,9 @@ Profiles are local JSON stored at `.bitloom/profiles.json` by default. State is 
 | `container_args` | Array of additional Docker/Podman arguments |
 | `targets` | Suggested targets; the first fills the toolbar |
 | `source_mappings` | Absolute runtime-to-host directory mappings for Developer IDE exports |
+| `launcher`, `launcher_shell` | `wrapper` mode: the script argv and how it runs a command (`{command}`) |
+
+A profiles file can also contain `"include": [...]` with read-only team profile files; see [Teams](teams.md#team-profiles).
 
 `DL_DIR`/`SSTATE_DIR` in local.conf are read as literal hints. `${TOPDIR}` is expanded; other expressions require a profile path override. Runtime paths, especially kas container paths, may differ from host paths. Use **Resolve env** to inspect the authoritative result.
 
@@ -100,11 +121,22 @@ Interactive actions suspend Textual and give the real terminal to devshell, menu
 
 ## Terminal layout
 
-F5 opens interruption options and F6 retries the selected job. Use the navigator or F8/F9 for Builds, metadata, task logs, workbench and caches. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.
+Bitloom is fully usable without a mouse; the [keyboard reference](keyboard.md) lists every key and `?` shows it inside the TUI.
+
+* The top bar shows the profile, runtime, MACHINE, DISTRO, the detected Yocto release, the service connection and the clock; the brand shimmers while the service is building.
+* The numbered navigator lists sections `1`–`0`; `[`/`]` or F8/F9 cycle through them and the section's list receives focus.
+* Each section has single-letter actions, shown in the footer and in front of every button label (for example `s` stop, `r` retry, `e` errors only in Builds). Letters typed into a field never trigger them; `/` or `Ctrl+W` focuses the section filter and `Esc` returns to the list.
+* Editors use nano keys: `^O` write, `^X` exit (asks before discarding changes), `^W` search, `^K`/`^U` cut and uncut lines, `^G` help.
+* Status cards show the current job with a spinner, task and setscene counts, CPU/RAM with a CPU sparkline, and disk usage; the Build card flashes green or red when a job ends. The progress bar is indeterminate until BitBake reports task counts.
+* `P` switches profile, `t` edits the build target (Enter builds it), `b` builds, Ctrl+P lists sections, actions and all operations.
+
+![Keyboard reference overlay](assets/keys.png)
+
+F5 opens interruption options and F6 retries the selected job. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.
 
 ## Errors and log search
 
-Failures generate a notification and refresh the task-log browser. Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.bitloom/exports`.
+Failures generate a notification and refresh the task-log browser. Analysis → *Failure diagnosis* anchors on the root cause instead of the first line mentioning a failure: compiler errors, the first make `***` line with the output leading to it, out-of-memory kills, full disks, fetch and patch failures and pseudo aborts. It lists the failed tasks and maps known causes to a next step, for example retrying a MakeMaker "Makefile has been rebuilt" race. **Builds → `c`** opens console builds that were started outside Bitloom ([details](teams.md#builds-started-elsewhere)). Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.bitloom/exports`.
 
 Task logs are discovered under the standard `tmp/work/ARCH/RECIPE/VERSION/temp` hierarchy and ordered by modification time. Custom TMPDIR layouts currently require setting build_dir to match the expected layout or opening logs externally. Symlink aliases are skipped to avoid duplicate entries.
 
@@ -333,11 +365,11 @@ python tools/probe_workflows.py
 
 ```bash
 python -m pip install '.[docs]'
-python tools/build_docs.py
-python -m http.server 8000 --directory docs
+python tools/serve_docs.py --port 8000          # rebuilds the HTML, then serves docs/
+python tools/serve_docs.py --port 9000 --no-build --open
 ```
 
-Open `http://localhost:8000`. The Pages workflow is included, but this workspace has no GitHub remote and no public deployment yet.
+`--host` changes the bind address (loopback by default). Screenshots in the HTML pages are collapsed and load only when expanded.
 
 ## Gentle colors and focus
 

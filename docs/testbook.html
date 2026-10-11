@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bitloom manual testbook — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="bitloom-manual-testbook">Bitloom manual testbook</h1>
+<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="keyboard.html">Keys</a><a href="web.html">Web</a><a href="compliance.html">SBOM &amp; CRA</a><a href="studio.html">Studio</a><a href="teams.html">Teams &amp; CI</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="bitloom-manual-testbook">Bitloom manual testbook</h1>
 <p>This is an executable learning path and acceptance checklist, not a report of tests already performed. Run it yourself against your environment. All project text and evidence should remain in English. Record PASS, FAIL or N/A with the reason and a log/screenshot. Do not count an unavailable device, class or runtime as a successful test.</p>
 <h2 id="contents">Contents</h2>
 <ol>
@@ -17,6 +17,7 @@
 <li><a href="#11-every-command-center-action">Every command-center action</a></li>
 <li><a href="#12-record-results-and-restore-the-experiment">Record results and restore the experiment</a></li>
 <li><a href="#13-developer-acceptance">Developer acceptance</a></li>
+<li><a href="#14-keyboard-web-compliance-studio-and-teams">Keyboard, web, compliance, Studio and teams</a></li>
 </ol>
 <p>Run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.</p>
 <h2 id="1-build-and-installation">1. Build and installation</h2>
@@ -29,6 +30,7 @@ python -m bitloom --list-actions
 COLORTERM=truecolor bitloom --demo
 </code></pre>
 <p>Expected: .venv is created/reused, the executable and module work, and the demo opens. The demo provides sample files; it does not provide BitBake or fabricate successful Yocto builds. Exit with Ctrl+Q; Esc closes a dialog first. Repeat setup: existing sample files are retained.</p>
+<p>Press <code>P</code>: the switcher lists <code>demo</code>, <code>demo-scarthgap</code> and <code>demo-wrynose</code>. Select each: the top bar shows <em>release unknown</em>, <em>scarthgap 5.0 LTS</em> and <em>wrynose 6.0 LTS</em> respectively. The workspaces live in <code>.bitloom/demo</code>, <code>.bitloom/demo-scarthgap</code> and <code>.bitloom/demo-wrynose</code>; every SBOM/CVE sample names itself a demo sample.</p>
 <h3 id="b02--wheel-and-source-archive">B02 — Wheel and source archive</h3>
 <pre><code class="language-bash">python -m pip install build wheel
 python -m build --no-isolation
@@ -1011,6 +1013,46 @@ PY
 <td>Lock output/revision matches installed kas behavior.</td>
 <td>TODO</td>
 </tr>
+<tr>
+<td>CMD070 / <code>sbom-cve-recipe</code></td>
+<td>Recipe CVE analysis from its SBOM (sbom-cve-check)</td>
+<td>target=busybox</td>
+<td>V01 on kas-wrynose</td>
+<td>Wrynose: report in DEPLOY_DIR_IMAGE. Scarthgap: refused, naming the cve-check alternative.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD071 / <code>recipe-sbom</code></td>
+<td>Create recipe SBOM (SPDX 3)</td>
+<td>target=busybox</td>
+<td>V01 on kas-wrynose</td>
+<td>Recipe SBOM task runs on Wrynose; refused on Scarthgap.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD072 / <code>vex</code></td>
+<td>Generate VEX metadata</td>
+<td>target=busybox</td>
+<td>V03 (vex class enabled)</td>
+<td>do_generate_vex runs when the class is inherited; otherwise the probe explains it is unavailable.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD073 / <code>sbom-cve-enable</code></td>
+<td>Enable sbom-cve-check for image builds</td>
+<td>none</td>
+<td>V03 on kas-wrynose</td>
+<td>bitbake-config-build enables the fragment; the next image build writes sbom-cve-check reports.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD074 / <code>sbom-cve-disable</code></td>
+<td>Disable sbom-cve-check fragment</td>
+<td>none</td>
+<td>after CMD073</td>
+<td>The fragment is disabled again.</td>
+<td>TODO</td>
+</tr>
 </tbody>
 </table>
 <p>Rows are not a single destructive execution sequence. Recreate the relevant workspace state before devtool finish/reset/update/upgrade, and choose actual signature/artifact paths where requested. Mark direct hardware and unsupported runtime tests N/A with prerequisites recorded.</p>
@@ -1181,4 +1223,64 @@ python tools/check_testbook.py
 python tools/build_docs.py
 </code></pre>
 <p>The validation helper's <code>--image</code> opt-in builds a full fresh image; its default <code>--build</code> validates a small recipe and offline/failure recovery paths. Read result.json rather than treating executable probe PASS as proof of missing image artifacts. Restore your experimental changes and keep the original state/history as described in chapter 12.</p>
+<h2 id="14-keyboard-web-compliance-studio-and-teams">14. Keyboard, web, compliance, Studio and teams</h2>
+<p>Run on the demo first (<code>bitloom --demo</code>), then on the real <code>kas-scarthgap</code>/<code>kas-wrynose</code> profiles from <code>python tools/prepare_validation.py --release both</code> where a case says so.</p>
+<h3 id="u01--keyboard-only-session">U01 — Keyboard-only session</h3>
+<p>Do not touch the mouse. Expected for each step:</p>
+<ol>
+<li><code>1</code>…<code>0</code> open each section and focus its list; <code>[</code>/<code>]</code> cycle; the rail highlight follows.</li>
+<li>In Builds the footer and buttons show <code>s r e p x i f c</code>; <code>e</code> toggles errors only; typing <code>/err</code> puts the letters in the search field without toggling; <code>Esc</code> returns focus to History.</li>
+<li><code>2</code> then <code>j</code>/<code>k</code> move in the metadata table; <code>t</code> (Recipes uses <code>t</code> for the tree) focuses the layer tree.</li>
+<li><code>1</code>, <code>t</code>, type a target, Enter: the command center opens with the build; <code>↓</code>/<code>↑</code> change the operation from the filter; <code>Tab Tab</code> reaches the inputs; Enter queues.</li>
+<li><code>P</code> opens the profile switcher (<code>j</code>/<code>k</code>, Enter); <code>?</code>, <code>F1</code> and <code>Ctrl+G</code> open the keyboard reference; <code>Ctrl+X</code> closes it.</li>
+<li><code>Ctrl+P</code> lists sections, Studio, console builds and every operation.</li>
+</ol>
+<h3 id="u02--nano-keys-in-editors">U02 — nano keys in editors</h3>
+<p><code>9</code>, <code>l</code> opens local.conf. <code>^K ^K</code> cuts two lines, <code>^U</code> pastes them back, <code>^W</code> searches (Enter selects the match, <code>Alt+W</code> finds the next), <code>^X</code> refuses once while the buffer is modified, <code>^O</code> writes a timestamped <code>.bak-</code> backup, <code>^X</code> closes. The same keys work in the profile editor (<code>F4</code>), runtime files and the new-file dialog; forms confirm with <code>^O</code>.</p>
+<h3 id="w01--start-the-web-dashboard-securely">W01 — Start the web dashboard securely</h3>
+<pre><code class="language-bash">bitloom --web --no-browser --port 8765 --config .validation/profiles.json --state .validation
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/api/state              # 401: token required
+curl -s -o /dev/null -w '%{http_code}\n' -H 'X-Bitloom-Token: wrong' http://127.0.0.1:8765/api/state   # 401
+</code></pre>
+<p>Expected: the printed URL carries <code>#token=…</code>; opening it shows <em>Connected</em> and the service pid. The token disappears from the address bar after load. A TUI on the same <code>--state</code> shows the same history.</p>
+<h3 id="w02--follow-stop-and-retry-from-the-browser">W02 — Follow, stop and retry from the browser</h3>
+<p>Queue a build with <code>b</code> (or Operations, <code>q</code>). Expected: a <em>Build started</em> toast; the progress bar is indeterminate, then striped with <code>task N of M</code>; output streams; the TUI shows the same job with a spinner. Open Summary/Sstate reuse/Warnings/Timings with <code>u</code>, <code>o</code>, <code>w</code>, <code>m</code>. Search with <code>/</code>, toggle errors with <code>e</code>. <code>g</code> (graceful) or <code>s</code> (force, confirm) stops it with a toast; <code>r</code> retries. A failure raises an error toast whose <em>Open summary</em> button jumps to the summary.</p>
+<h3 id="w03--palette-phone-and-light-theme">W03 — Palette, phone and light theme</h3>
+<p><code>Ctrl+K</code>, type <code>sbom</code>: the palette lists the SBOM section and operations. Resize the browser below 900 px or open it on a phone: one column, scrolling navigation, toasts at the bottom. With the system light theme the page switches palettes; with <em>reduce motion</em> animations stop.</p>
+<h3 id="v01--release-awareness">V01 — Release awareness</h3>
+<p>On <code>demo-scarthgap</code> (or <code>kas-scarthgap</code>): <code>F2</code>, type <code>sbom</code>, <code>↓</code> to <em>Recipe CVE analysis from its SBOM</em>. Expected: <em>(not in this release)</em>, a disabled Queue button and “use Run recipe CVE check (cve-check) instead”. On <code>demo-wrynose</code> (or <code>kas-wrynose</code>) the same operation is offered and <code>cve</code> is refused the other way round. In the web dashboard the Operations dialog shows the same refusal. <code>bitloom --ci sbom-cve-recipe:busybox --profile kas-scarthgap</code> prints a skip warning and writes <code>&lt;skipped&gt;</code> in JUnit.</p>
+<h3 id="v02--sbom-quality">V02 — SBOM quality</h3>
+<p><code>6</code>, <code>s</code> (or <code>bitloom --sbom</code>). On <code>demo-wrynose</code>: SPDX 3.0.1, PURL 67%, supplier 67%, VEX affected 1 · fixed 1 · not affected 1, affected CVE-0000-0001. On <code>demo-scarthgap</code>: SPDX 2.2 with CPE coverage. On a real Scarthgap build: the image appears as <code>…rootfs-&lt;timestamp&gt;.manifest</code> (the SPDX 2.2 archive is read through the manifest and <code>tmp/deploy/spdx</code>), supplier 0% because of the OpenEmbedded placeholder, and <em>CVEs recorded fixed by recipes</em>.</p>
+<h3 id="v03--sbom-settings">V03 — SBOM settings</h3>
+<p><code>9</code>, <code>s</code>. Move with <code>j</code>/<code>k</code>; the right pane explains each option, its CRA relevance and release window. On Scarthgap, <em>sbom-cve-check on image builds</em> shows n/a and Space refuses it; <em>Supplier, SPDX 2.2</em> accepts a name. Toggle <em>Generate SPDX SBOMs</em> and <em>Build history</em>, <code>^O</code>. Expected: a managed block in <code>build/conf/local.conf</code> plus a <code>.bak-</code> backup (host/container), or <code>bitloom-sbom.yml</code> appended to the kas profile's <code>kas_file</code>. Reopen: the states persist. <code>v</code> queues <code>bitbake-getvar</code> for the selected variable.</p>
+<h3 id="v04--cra-readiness">V04 — CRA readiness</h3>
+<p><code>9</code>, <code>c</code> and <code>bitloom --cra --config … --state …</code>. Expected: the release support line, SBOM/identifier/licence/VEX/analysis/traceability/disposition/reproducibility checks, the 2026-09-11 and 2027-12-11 milestones and the EN 40000-1-3 note; <code>--cra</code> exits 2 when any check warns. The web SBOM &amp; CRA section (<code>4</code>) shows the same checks with gauges.</p>
+<h3 id="n01--studio-your-own-distribution">N01 — Studio: your own distribution</h3>
+<p><code>2</code>, <code>c</code>. Expected: kinds on the left; <em>Distribution</em> selected. On the demo, the target layer is <code>meta-demo</code>; change the id to <code>demo-os</code> and watch the preview. <code>^O</code> creates <code>meta-demo/conf/distro/demo-os.conf</code>; the profile's DISTRO becomes <code>demo-os</code> (top bar). Repeat: Studio refuses to overwrite. Try <em>Image recipe</em> on Wrynose: <code>debug-tweaks</code> is not offered; on Scarthgap it is.</p>
+<h3 id="n02--studio-on-a-kas-profile-and-in-the-browser">N02 — Studio on a kas profile and in the browser</h3>
+<p>On <code>kas-scarthgap</code>, create a <em>Product layer</em> <code>meta-acme</code>, then an <em>Image recipe</em> in it. Expected: <code>kas-studio-meta-acme.yml</code> appended to <code>kas_file</code> with the layer as a repository and <code>target: acme-image</code>; <code>b</code> builds it after a kas build registers the layer. In the web Studio (<code>5</code>) the same forms preview live; <em>Create files</em> raises a toast with a <em>Build</em> button.</p>
+<h3 id="t01--headless-ci-matrix">T01 — Headless CI matrix</h3>
+<pre><code class="language-bash">bitloom --config .validation/profiles.json --state .ci --ci kas-build --profile kas-scarthgap \
+  --junit results.xml --summary summary.json --annotations github
+</code></pre>
+<p>Expected: <code>::group::</code> sections around the build output, error/warning annotations, <code>results.xml</code> with one test case per job, <code>summary.json</code> with status, sstate hit rate, warnings, failed tasks and new images; exit code 0 on success. Ctrl+C stops the running job cleanly (exit 130).</p>
+<h3 id="t02--team-profiles">T02 — Team profiles</h3>
+<p>Create <code>/tmp/team.json</code> with <code>{&quot;profiles&quot;: [{&quot;name&quot;: &quot;team-demo&quot;, &quot;root&quot;: &quot;&lt;demo root&gt;&quot;}]}</code> and add <code>&quot;include&quot;: [&quot;/tmp/team.json&quot;, &quot;/tmp/missing.json&quot;]</code> to your profiles file. Expected: <code>P</code> lists <code>team-demo</code> marked <em>team</em>; F4 shows only your own profiles plus the include list; Configuration warns about <code>/tmp/missing.json</code>; saving profiles keeps the include.</p>
+<h3 id="t03--setup-filesystem-and-network-checks">T03 — Setup, filesystem and network checks</h3>
+<p><code>9</code> and <code>bitloom --doctor</code> (<code>--network</code> to probe). Expected: host rows (cores, memory, Python, locale, inotify, open files, engines, WSL hint), filesystem rows for the build directory, TMPDIR, DL_DIR and SSTATE_DIR, and <code>n</code> probing configured mirrors/hash equivalence/PR servers without downloading.</p>
+<h3 id="t04--images-fleet-and-console-builds">T04 — Images, fleet and console builds</h3>
+<p><code>6</code>, <code>m</code> lists every image per MACHINE with sizes and package counts. Developer → Board view → <em>Fleet status</em> (or <code>bitloom --fleet</code>) probes all configured devices at once and writes <code>fleet-status.json</code>. Run a build directly in a kas shell, outside Bitloom; then <code>1</code>, <code>c</code>: the console build appears classified, Enter opens it with search and errors-only, and the web dashboard lists it under <em>Console builds</em>.</p>
+<h3 id="t05--project-launcher-script">T05 — Project launcher script</h3>
+<p>Create a script that accepts kas subcommands and <code>shell -c CMD</code>, for example:</p>
+<pre><code class="language-bash">cat &gt; /tmp/launcher.sh &lt;&lt;'SH'
+#!/bin/bash
+# Configuration chosen by $YML; kas subcommand as arguments.
+if [ &quot;$1&quot; = &quot;shell&quot; ] &amp;&amp; [ &quot;$2&quot; = &quot;-c&quot; ]; then exec kas-container shell &quot;$YML&quot; -c &quot;$3&quot;; fi
+exec kas-container &quot;$@&quot; &quot;$YML&quot;
+SH
+chmod +x /tmp/launcher.sh
+</code></pre>
+<p>Add a profile with <code>&quot;mode&quot;: &quot;wrapper&quot;</code>, <code>&quot;launcher&quot;: [&quot;/tmp/launcher.sh&quot;]</code>, <code>&quot;environment&quot;: {&quot;YML&quot;: &quot;tests/integration/kas-minimal.yml&quot;, &quot;KAS_WORK_DIR&quot;: &quot;&lt;work dir&gt;&quot;}</code>. Expected: Configuration shows the launcher as OK; <em>Build kas configuration</em> runs <code>/tmp/launcher.sh build</code>; <em>Resolve recipe environment</em> runs <code>/tmp/launcher.sh shell -c 'bitbake -e …'</code>.</p>
+<h3 id="b04--github-release-workflow">B04 — GitHub release workflow</h3>
+<p>In GitHub → Actions → <em>Release Bitloom</em> → <em>Run workflow</em>, enter a new version (for example <code>0.2.0</code>) and optionally tick <em>draft</em> or <em>prerelease</em>. Expected: tests pass, the job builds <code>bitloom-&lt;version&gt;.tar.gz</code>, the wheel, <code>bitloom_&lt;version&gt;_all.deb</code> and <code>SHA256SUMS</code>, installs the <code>.deb</code> and smoke-tests it, attaches the assets to the workflow run and creates the <code>v&lt;version&gt;</code> release. An existing tag is refused. Locally, <code>python tools/build_release.py 0.2.0 --output /tmp/release</code> produces the same files.</p>
 </article></main><footer><a href="index.html">← Back to the cockpit</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a><a href="https://github.com/padovanl/bitloom/blob/main/README.testbook.md">Markdown source</a></footer></body></html>

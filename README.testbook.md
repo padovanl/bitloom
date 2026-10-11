@@ -17,6 +17,7 @@ This is an executable learning path and acceptance checklist, not a report of te
 11. [Every command-center action](#11-every-command-center-action)
 12. [Record results and restore the experiment](#12-record-results-and-restore-the-experiment)
 13. [Developer acceptance](#13-developer-acceptance)
+14. [Keyboard, web, compliance, Studio and teams](#14-keyboard-web-compliance-studio-and-teams)
 
 Run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.
 
@@ -35,6 +36,8 @@ COLORTERM=truecolor bitloom --demo
 ```
 
 Expected: .venv is created/reused, the executable and module work, and the demo opens. The demo provides sample files; it does not provide BitBake or fabricate successful Yocto builds. Exit with Ctrl+Q; Esc closes a dialog first. Repeat setup: existing sample files are retained.
+
+Press `P`: the switcher lists `demo`, `demo-scarthgap` and `demo-wrynose`. Select each: the top bar shows *release unknown*, *scarthgap 5.0 LTS* and *wrynose 6.0 LTS* respectively. The workspaces live in `.bitloom/demo`, `.bitloom/demo-scarthgap` and `.bitloom/demo-wrynose`; every SBOM/CVE sample names itself a demo sample.
 
 ### B02 — Wheel and source archive
 
@@ -461,6 +464,11 @@ The following ledger is generated from the current ACTIONS list. Match each titl
 | CMD067 / `kernel-fragments` | Validate kernel config fragments | target=linux-yocto | X08 | Actual command output; exit/status agrees with the operation and its prerequisites. | TODO |
 | CMD068 / `cve` | Run recipe CVE check | target=busybox | X12 | Configured CVE task/database produces actual results. | TODO |
 | CMD069 / `kas-lock` | Generate kas lock file | none | K03/L03 | Lock output/revision matches installed kas behavior. | TODO |
+| CMD070 / `sbom-cve-recipe` | Recipe CVE analysis from its SBOM (sbom-cve-check) | target=busybox | V01 on kas-wrynose | Wrynose: report in DEPLOY_DIR_IMAGE. Scarthgap: refused, naming the cve-check alternative. | TODO |
+| CMD071 / `recipe-sbom` | Create recipe SBOM (SPDX 3) | target=busybox | V01 on kas-wrynose | Recipe SBOM task runs on Wrynose; refused on Scarthgap. | TODO |
+| CMD072 / `vex` | Generate VEX metadata | target=busybox | V03 (vex class enabled) | do_generate_vex runs when the class is inherited; otherwise the probe explains it is unavailable. | TODO |
+| CMD073 / `sbom-cve-enable` | Enable sbom-cve-check for image builds | none | V03 on kas-wrynose | bitbake-config-build enables the fragment; the next image build writes sbom-cve-check reports. | TODO |
+| CMD074 / `sbom-cve-disable` | Disable sbom-cve-check fragment | none | after CMD073 | The fragment is disabled again. | TODO |
 
 Rows are not a single destructive execution sequence. Recreate the relevant workspace state before devtool finish/reset/update/upgrade, and choose actual signature/artifact paths where requested. Mark direct hardware and unsupported runtime tests N/A with prerequisites recorded.
 
@@ -580,3 +588,106 @@ python tools/build_docs.py
 ```
 
 The validation helper's `--image` opt-in builds a full fresh image; its default `--build` validates a small recipe and offline/failure recovery paths. Read result.json rather than treating executable probe PASS as proof of missing image artifacts. Restore your experimental changes and keep the original state/history as described in chapter 12.
+
+## 14. Keyboard, web, compliance, Studio and teams
+
+Run on the demo first (`bitloom --demo`), then on the real `kas-scarthgap`/`kas-wrynose` profiles from `python tools/prepare_validation.py --release both` where a case says so.
+
+### U01 — Keyboard-only session
+
+Do not touch the mouse. Expected for each step:
+
+1. `1`…`0` open each section and focus its list; `[`/`]` cycle; the rail highlight follows.
+2. In Builds the footer and buttons show `s r e p x i f c`; `e` toggles errors only; typing `/err` puts the letters in the search field without toggling; `Esc` returns focus to History.
+3. `2` then `j`/`k` move in the metadata table; `t` (Recipes uses `t` for the tree) focuses the layer tree.
+4. `1`, `t`, type a target, Enter: the command center opens with the build; `↓`/`↑` change the operation from the filter; `Tab Tab` reaches the inputs; Enter queues.
+5. `P` opens the profile switcher (`j`/`k`, Enter); `?`, `F1` and `Ctrl+G` open the keyboard reference; `Ctrl+X` closes it.
+6. `Ctrl+P` lists sections, Studio, console builds and every operation.
+
+### U02 — nano keys in editors
+
+`9`, `l` opens local.conf. `^K ^K` cuts two lines, `^U` pastes them back, `^W` searches (Enter selects the match, `Alt+W` finds the next), `^X` refuses once while the buffer is modified, `^O` writes a timestamped `.bak-` backup, `^X` closes. The same keys work in the profile editor (`F4`), runtime files and the new-file dialog; forms confirm with `^O`.
+
+### W01 — Start the web dashboard securely
+
+```bash
+bitloom --web --no-browser --port 8765 --config .validation/profiles.json --state .validation
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/api/state              # 401: token required
+curl -s -o /dev/null -w '%{http_code}\n' -H 'X-Bitloom-Token: wrong' http://127.0.0.1:8765/api/state   # 401
+```
+
+Expected: the printed URL carries `#token=…`; opening it shows *Connected* and the service pid. The token disappears from the address bar after load. A TUI on the same `--state` shows the same history.
+
+### W02 — Follow, stop and retry from the browser
+
+Queue a build with `b` (or Operations, `q`). Expected: a *Build started* toast; the progress bar is indeterminate, then striped with `task N of M`; output streams; the TUI shows the same job with a spinner. Open Summary/Sstate reuse/Warnings/Timings with `u`, `o`, `w`, `m`. Search with `/`, toggle errors with `e`. `g` (graceful) or `s` (force, confirm) stops it with a toast; `r` retries. A failure raises an error toast whose *Open summary* button jumps to the summary.
+
+### W03 — Palette, phone and light theme
+
+`Ctrl+K`, type `sbom`: the palette lists the SBOM section and operations. Resize the browser below 900 px or open it on a phone: one column, scrolling navigation, toasts at the bottom. With the system light theme the page switches palettes; with *reduce motion* animations stop.
+
+### V01 — Release awareness
+
+On `demo-scarthgap` (or `kas-scarthgap`): `F2`, type `sbom`, `↓` to *Recipe CVE analysis from its SBOM*. Expected: *(not in this release)*, a disabled Queue button and “use Run recipe CVE check (cve-check) instead”. On `demo-wrynose` (or `kas-wrynose`) the same operation is offered and `cve` is refused the other way round. In the web dashboard the Operations dialog shows the same refusal. `bitloom --ci sbom-cve-recipe:busybox --profile kas-scarthgap` prints a skip warning and writes `<skipped>` in JUnit.
+
+### V02 — SBOM quality
+
+`6`, `s` (or `bitloom --sbom`). On `demo-wrynose`: SPDX 3.0.1, PURL 67%, supplier 67%, VEX affected 1 · fixed 1 · not affected 1, affected CVE-0000-0001. On `demo-scarthgap`: SPDX 2.2 with CPE coverage. On a real Scarthgap build: the image appears as `…rootfs-<timestamp>.manifest` (the SPDX 2.2 archive is read through the manifest and `tmp/deploy/spdx`), supplier 0% because of the OpenEmbedded placeholder, and *CVEs recorded fixed by recipes*.
+
+### V03 — SBOM settings
+
+`9`, `s`. Move with `j`/`k`; the right pane explains each option, its CRA relevance and release window. On Scarthgap, *sbom-cve-check on image builds* shows n/a and Space refuses it; *Supplier, SPDX 2.2* accepts a name. Toggle *Generate SPDX SBOMs* and *Build history*, `^O`. Expected: a managed block in `build/conf/local.conf` plus a `.bak-` backup (host/container), or `bitloom-sbom.yml` appended to the kas profile's `kas_file`. Reopen: the states persist. `v` queues `bitbake-getvar` for the selected variable.
+
+### V04 — CRA readiness
+
+`9`, `c` and `bitloom --cra --config … --state …`. Expected: the release support line, SBOM/identifier/licence/VEX/analysis/traceability/disposition/reproducibility checks, the 2026-09-11 and 2027-12-11 milestones and the EN 40000-1-3 note; `--cra` exits 2 when any check warns. The web SBOM & CRA section (`4`) shows the same checks with gauges.
+
+### N01 — Studio: your own distribution
+
+`2`, `c`. Expected: kinds on the left; *Distribution* selected. On the demo, the target layer is `meta-demo`; change the id to `demo-os` and watch the preview. `^O` creates `meta-demo/conf/distro/demo-os.conf`; the profile's DISTRO becomes `demo-os` (top bar). Repeat: Studio refuses to overwrite. Try *Image recipe* on Wrynose: `debug-tweaks` is not offered; on Scarthgap it is.
+
+### N02 — Studio on a kas profile and in the browser
+
+On `kas-scarthgap`, create a *Product layer* `meta-acme`, then an *Image recipe* in it. Expected: `kas-studio-meta-acme.yml` appended to `kas_file` with the layer as a repository and `target: acme-image`; `b` builds it after a kas build registers the layer. In the web Studio (`5`) the same forms preview live; *Create files* raises a toast with a *Build* button.
+
+### T01 — Headless CI matrix
+
+```bash
+bitloom --config .validation/profiles.json --state .ci --ci kas-build --profile kas-scarthgap \
+  --junit results.xml --summary summary.json --annotations github
+```
+
+Expected: `::group::` sections around the build output, error/warning annotations, `results.xml` with one test case per job, `summary.json` with status, sstate hit rate, warnings, failed tasks and new images; exit code 0 on success. Ctrl+C stops the running job cleanly (exit 130).
+
+### T02 — Team profiles
+
+Create `/tmp/team.json` with `{"profiles": [{"name": "team-demo", "root": "<demo root>"}]}` and add `"include": ["/tmp/team.json", "/tmp/missing.json"]` to your profiles file. Expected: `P` lists `team-demo` marked *team*; F4 shows only your own profiles plus the include list; Configuration warns about `/tmp/missing.json`; saving profiles keeps the include.
+
+### T03 — Setup, filesystem and network checks
+
+`9` and `bitloom --doctor` (`--network` to probe). Expected: host rows (cores, memory, Python, locale, inotify, open files, engines, WSL hint), filesystem rows for the build directory, TMPDIR, DL_DIR and SSTATE_DIR, and `n` probing configured mirrors/hash equivalence/PR servers without downloading.
+
+### T04 — Images, fleet and console builds
+
+`6`, `m` lists every image per MACHINE with sizes and package counts. Developer → Board view → *Fleet status* (or `bitloom --fleet`) probes all configured devices at once and writes `fleet-status.json`. Run a build directly in a kas shell, outside Bitloom; then `1`, `c`: the console build appears classified, Enter opens it with search and errors-only, and the web dashboard lists it under *Console builds*.
+
+### T05 — Project launcher script
+
+Create a script that accepts kas subcommands and `shell -c CMD`, for example:
+
+```bash
+cat > /tmp/launcher.sh <<'SH'
+#!/bin/bash
+# Configuration chosen by $YML; kas subcommand as arguments.
+if [ "$1" = "shell" ] && [ "$2" = "-c" ]; then exec kas-container shell "$YML" -c "$3"; fi
+exec kas-container "$@" "$YML"
+SH
+chmod +x /tmp/launcher.sh
+```
+
+Add a profile with `"mode": "wrapper"`, `"launcher": ["/tmp/launcher.sh"]`, `"environment": {"YML": "tests/integration/kas-minimal.yml", "KAS_WORK_DIR": "<work dir>"}`. Expected: Configuration shows the launcher as OK; *Build kas configuration* runs `/tmp/launcher.sh build`; *Resolve recipe environment* runs `/tmp/launcher.sh shell -c 'bitbake -e …'`.
+
+### B04 — GitHub release workflow
+
+In GitHub → Actions → *Release Bitloom* → *Run workflow*, enter a new version (for example `0.2.0`) and optionally tick *draft* or *prerelease*. Expected: tests pass, the job builds `bitloom-<version>.tar.gz`, the wheel, `bitloom_<version>_all.deb` and `SHA256SUMS`, installs the `.deb` and smoke-tests it, attaches the assets to the workflow run and creates the `v<version>` release. An existing tag is refused. Locally, `python tools/build_release.py 0.2.0 --output /tmp/release` produces the same files.
+

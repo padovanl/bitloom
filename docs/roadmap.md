@@ -8,6 +8,19 @@ Public discussions describe opaque configuration, confusing errors and lengthy f
 
 These are individual experiences, not a representative developer survey. They identify problems worth investigating; they do not establish demand percentages or prove which feature is most popular. The priorities below are Bitloom's assessment of daily value, considering what the application already provides. Technical foundations are checked against upstream documentation, rather than community advice alone.
 
+## Answering the criticisms of earlier Yocto interfaces
+
+Research reviewed on **2026-10-12**. Earlier graphical front ends were criticised and some were retired; Bitloom is designed around those lessons. The left column records documented problems, the right column how Bitloom responds. It is a design rationale, not a claim that Bitloom replaces these tools.
+
+| Documented problem | Bitloom's response |
+| --- | --- |
+| **Hob** was tightly woven into BitBake internals, fragile, needed constant QA, was tied to GTK+ 2 and was removed in 2016 ([removal discussion](https://docs.yoctoproject.org/pipermail/yocto/2016-March/028921.html)). | Uses only public command-line interfaces and their output (`bitbake`, `bitbake-layers`, `devtool`, `kas`, `bitbake-getvar`, logs and deploy files); no imports of BitBake internals. A terminal UI plus a standard-library web page, nothing to keep in sync with a GUI toolkit. |
+| **Toaster** must be running before a build to record it, needs its own Django setup and database, struggles with non-Poky layouts, and the project lists it among components with little maintainer time ([Toaster manual](https://docs.yoctoproject.org/toaster-manual/intro.html), [2025 status reports](https://wiki.yoctoproject.org/wiki/2025_Yocto_Project_Weekly_Status_Archive)). | Reads evidence after the fact: console builds from `tmp/log/cooker` (builds started anywhere), task logs, deploy directories, SPDX documents and buildstats. One `pip`/`.deb` install, SQLite history only for its own queue, kas and split-repository (Wrynose) layouts, containers and project launcher scripts. |
+| **knotty** output floods beginners; finding the failing task and its cause is hard, and messages labelled ERROR are not always the root cause ([user report](https://docs.yoctoproject.org/pipermail/yocto/2011-November/003477.html), [BitBake discussion](https://www.openembedded.org/pipermail/bitbake-devel/2013-April/013176.html)). | Errors-only filter with context, failed task logs from BitBake's own paths, Toaster-style summaries, grouped warnings and a root-cause diagnosis with next steps, verified on a real perl build failure. |
+| A steep learning curve: months to become productive, release differences make advice stale ([DornerWorks](https://www.dornerworks.com/?p=1658)). | Every operation previews the exact command; Studio and SBOM settings explain every field; the detected release decides defaults and explains what a release lacks with the alternative it offers. |
+| **taskexp** and graphical dependency explorers need a desktop toolkit. | Dependency edges, "why this task" and environment diffs in the terminal and over SSH. |
+| Remote and shared build machines: sessions die with the terminal. | A reconnectable build service, a web dashboard on loopback with a token (tunnel it over SSH), headless CI runs with JUnit/JSON, read-only team profiles. |
+
 ## Implemented workflow map
 
 | Case | Implemented interaction | Evidence and practical boundary |
