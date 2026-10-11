@@ -144,3 +144,10 @@ def test_diagnosis_points_at_root_causes():
     fetch = 'WARNING: Failed to fetch URL https://x/y.tar.gz\nERROR: Fetcher failure: Unable to find revision\n'
     assert 'Category: fetch' in diagnose(fetch)
     assert 'Category: link' in diagnose('foo.o: undefined reference to `bar\'\ncollect2: error: ld returned 1 exit status\n')
+
+
+def test_diagnosis_reads_kas_errors():
+    log = ('2026-10-12 02:07:04 - INFO     - kas 4.8.1 started\n'
+           '2026-10-12 02:07:17 - ERROR    - Provided tag "yocto-6.0.2" ("acfe02fa") does not match provided commit "178b3931" in repository "bitbake"\n')
+    report = diagnose(log)
+    assert 'Category: configuration' in report and 'Provided tag' in report and "refs/tags/TAG^{}" in report

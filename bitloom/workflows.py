@@ -58,6 +58,11 @@ def compare(before, after):
 
 # Known causes, most specific first: (category, pattern, explanation and next step).
 KNOWN_CAUSES = [
+    ('configuration', r'Provided tag .* does not match provided commit',
+     'kas: the pinned commit is not the commit of the tag. For annotated tags pin the peeled commit: '
+     "git ls-remote URL 'refs/tags/TAG^{}'."),
+    ('configuration', r'(Validation against the schema failed|Could not find file .*\.ya?ml|unknown option|LAYERSERIES_COMPAT|is not compatible with the core layer)',
+     'The kas or layer configuration is invalid for this release. Check the named file, the kas header version and LAYERSERIES_COMPAT.'),
     ('resources', r'(Killed signal terminated program|fatal error: Killed|virtual memory exhausted|Cannot allocate memory|out of memory)',
      'The compiler was killed, usually by the out-of-memory killer. Lower PARALLEL_MAKE / BB_NUMBER_THREADS for this recipe '
      '(PARALLEL_MAKE:pn-<recipe> = "-j4"), add swap or memory, then retry.'),
@@ -80,7 +85,7 @@ KNOWN_CAUSES = [
     ('link', r'(undefined reference to|ld: cannot find|collect2: error)', 'Linking failed: a library or symbol is missing. Check DEPENDS and the link flags.'),
     ('compile', r'(:\d+:\d+: error:|:\d+: error:|fatal error: [^K]|error: )', 'Inspect the first compiler error and its include paths.'),
 ]
-ROOT_SIGNALS = re.compile(r'(:\d+(?::\d+)?: (?:fatal )?error:|undefined reference to|Killed signal|No space left|Your Makefile has been rebuilt|'
+ROOT_SIGNALS = re.compile(r'( - ERROR +- |:\d+(?::\d+)?: (?:fatal )?error:|undefined reference to|Killed signal|No space left|Your Makefile has been rebuilt|'
                           r'Fetcher failure|Hunk #\d+ FAILED|Nothing PROVIDES|QA Issue|pseudo abort|make(?:\[\d+\])?: \*\*\* )')
 
 
