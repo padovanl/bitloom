@@ -319,6 +319,7 @@ class BitloomApp(App):
         self.release = None
         self.pending_clones: dict[str, str] = {}
         self.pending_scans: set[str] = set()
+        self.announced: set[str] = set()
         self.cpu_history: list[float] = []
         self.frame = 0
         self.was_busy = False
@@ -397,6 +398,7 @@ class BitloomApp(App):
                                     yield Button("Retry", id="retry")
                                     yield Button("Export", id="export")
                                     yield Button("Console", id="console-builds")
+                                    yield Button("Compare", id="compare-runs")
                                 yield Static("No observed active tasks", id="task-monitor", markup=False)
                             with Vertical(id="stream-panel"):
                                 yield Static("Select an operation to inspect its output", id="job-state", markup=False)
@@ -451,6 +453,7 @@ class BitloomApp(App):
                             yield Button("Scan", id="cache-scan")
                             yield Button("Prune plan", variant="warning", id="cache-prune")
                             yield Button("Fetch all", id="fetch-all")
+                            yield Button("tmp/work", id="work-usage")
                         yield Static("Scan a cache to inspect files, size and age.", id="scan-state", markup=False)
                         yield DataTable(id="cache-table", cursor_type="row")
                     with TabPane(labels["artifacts"], id="artifacts"):
@@ -480,6 +483,7 @@ class BitloomApp(App):
                     with TabPane(labels["healthtab"], id="healthtab"):
                         with Horizontal(classes="tools"):
                             yield Button("Projects", id="projects", variant="primary")
+                            yield Button("Notifications", id="notifications")
                             yield Button("local.conf", id="local-conf")
                             yield Button("bblayers.conf", id="layers-conf")
                             yield Button("Environment", id="environment")
@@ -665,6 +669,14 @@ class BitloomApp(App):
 
     SPINNER = "◐◓◑◒"
 
+    def eta_for(self, job):
+        """Human ETA for a running job, from its task rate and earlier runs of the same command."""
+        from .insights import eta, human
+        if not job or job.status != "running":
+            return None
+        estimate = eta(list(self.history_rows.values()), job.profile.name, json.dumps(job.command), job.started, job.progress)
+        return human(estimate["remaining"]) if estimate else None
+
     def animate(self):
         """Spinners for running jobs and a shimmer on the brand while the service works."""
         if not self.screen_stack or not len(self.screen_stack[0].query("#brand-line")):
@@ -761,7 +773,10 @@ class BitloomApp(App):
         if setscene[1]:
             tasks.append(f"  ·  {setscene[0]}/{setscene[1]} sstate", style=theme.success)
         running = len(active.active_recipe_tasks) if active else 0
+        remaining = self.eta_for(active) if active else None
         tasks.append(f"\n{queue} queued · {running} running", style=theme.foreground)
+        if remaining:
+            tasks.append(f" · ETA ~{remaining}", style=f"bold {theme.accent}")
         self.main_query("#queue-metric", Static).update(tasks)
         build = p.build_path
         try:
@@ -1267,6 +1282,13 @@ class BitloomApp(App):
             elif job.status == "success" and job.finished:
                 self.notify(job.title, title="✔ Completed", timeout=5)
                 self.flash("success")
+            if job.finished and job.status in {"success", "failed", "cancelled"} and job.id not in self.announced:
+                self.announced.add(job.id)
+                from .notify import load, send, wanted
+                if wanted(load(self.store.directory), job):
+                    self.bell()
+                    if not self.persistent:  # the service notifies for persistent sessions
+                        send(self.store.directory, job)
             if job.id == self.selected_job_id:
                 glyph, color = self.status_style(job.status)
                 self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {job.status}", f"bold {color}"), "  ", (job.title, "bold"), ((f"  ·  exit {job.code}" if job.code is not None else "") + f"  ·  {job.log}", "dim"), no_wrap=True, overflow="ellipsis"))
@@ -1425,6 +1447,9 @@ class BitloomApp(App):
             self.open_projects()
         elif ident == "vulnerabilities":
             self.open_vulnerabilities()
+        elif ident == "notifications":
+            from .screens import NotificationsScreen
+            self.push_screen(NotificationsScreen(self.store.directory))
         elif ident == "studio":
             from .screens import StudioScreen
             from .studio import product_layers
@@ -1444,7 +1469,7 @@ class BitloomApp(App):
             self.version_report()
         elif ident == "inspect-load":
             self.load_inspection()
-        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report", "dependency-context", "image-contents", "task-timings", "network-check", "image-matrix", "sbom-report", "cra-report"}:
+        elif ident in {"inspect-diff", "buildhistory-report", "download-audit", "build-report", "dependency-context", "image-contents", "task-timings", "network-check", "image-matrix", "sbom-report", "cra-report", "compare-runs", "work-usage"}:
             self.make_report(ident)
         elif ident in {"logs-read", "artifact-read"}:
             table = self.main_query("#task-table" if ident == "logs-read" else "#artifact-table", DataTable)
@@ -1766,6 +1791,19 @@ class BitloomApp(App):
                 text = env_diff(first, second)
             elif ident == "buildhistory-report":
                 text = await asyncio.to_thread(build_history, self.profile)
+            elif ident == "compare-runs":
+                from .insights import compare, earlier_run
+                row = self.history_rows.get(self.selected_job_id)
+                if not row:
+                    raise ValueError("Select an operation in History first")
+                earlier = earlier_run(list(self.history_rows.values()), row)
+                if not earlier:
+                    raise ValueError("No earlier run of this command in this profile to compare with")
+                text = await asyncio.to_thread(compare, row, earlier)
+            elif ident == "work-usage":
+                from .insights import work_report
+                self.notify("Measuring tmp/work (up to 30 s)…", timeout=3)
+                text = await asyncio.to_thread(work_report, self.profile)
             elif ident == "sbom-report":
                 from .sbom import sbom_report
                 text = await asyncio.to_thread(sbom_report, self.profile)

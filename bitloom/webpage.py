@@ -282,6 +282,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
     <button class="btn" id="queue-btn" title="Queue any operation (q)"><kbd>q</kbd>Operations</button>
     <button class="btn" id="palette-btn" title="Command palette (Ctrl+K)"><kbd>⌘K</kbd>Search</button>
     <span class="chip"><span class="dot" id="service-dot"></span><span id="service-label">connecting…</span></span>
+    <button class="btn" id="notify-btn" title="Browser notifications when builds finish">🔔</button>
     <button class="btn" id="keys-btn" title="Keyboard shortcuts (?)">?</button>
   </header>
   <nav aria-label="Sections">
@@ -327,6 +328,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
           <button data-tab="sstate">Sstate reuse</button>
           <button data-tab="warnings">Warnings</button>
           <button data-tab="timings">Timings</button>
+          <button data-tab="compare">Compare</button>
           <span class="ink"></span>
         </div>
         <div class="tools" id="log-tools">
@@ -426,6 +428,22 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
         </div>
       </div>
       <div class="panel">
+        <div class="head"><h2>Build notifications</h2><span style="flex:1"></span><span class="hint">Sent by the build service: they arrive even with no TUI or browser open.</span></div>
+        <div class="form" style="padding-top:10px">
+          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+            <label class="check"><span class="switch"><input type="checkbox" id="nt-success"><span></span></span>success</label>
+            <label class="check"><span class="switch"><input type="checkbox" id="nt-failed"><span></span></span>failed</label>
+            <label class="check"><span class="switch"><input type="checkbox" id="nt-cancelled"><span></span></span>cancelled</label>
+            <label class="check"><span class="switch"><input type="checkbox" id="nt-desktop"><span></span></span>desktop</label>
+            <label class="check">longer than <input type="text" id="nt-min" style="width:70px"> s</label>
+          </div>
+          <label class="f" for="nt-webhook">Webhook</label>
+          <div style="display:flex;gap:8px"><input type="text" id="nt-webhook" placeholder="https://ntfy.sh/your-topic or a Slack/Teams/Mattermost webhook" style="flex:1">
+            <select id="nt-format"><option value="ntfy">ntfy</option><option value="slack">Slack/Teams text</option><option value="json">JSON</option></select>
+            <button class="btn primary" id="nt-save">Save</button></div>
+        </div>
+      </div>
+      <div class="panel">
         <div class="head"><h2>Set up a project</h2><span style="flex:1"></span><span class="hint">Finds kas files, init scripts, build directories and launcher scripts; the new profile becomes active at once.</span></div>
         <div class="tools"><input type="search" id="setup-dir" placeholder="Project directory, e.g. /home/me/src/product (Enter scans)"><button class="btn primary" id="setup-scan">Scan</button></div>
         <div class="split" style="min-height:0">
@@ -450,7 +468,9 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
         </div>
       </div>
       <div class="panel">
-      <div class="head"><h2>Health, setup and configuration</h2><span style="flex:1"></span><span class="hint">Literal local.conf values; run bitbake -e for evaluated ones.</span></div>
+      <div class="head"><h2>Health, setup and configuration</h2><span style="flex:1"></span><span class="hint">Literal local.conf values; run bitbake -e for evaluated ones.</span>
+        <button class="btn" id="work-btn" title="Disk used per recipe in tmp/work">tmp/work usage</button></div>
+      <pre class="log" id="work-usage" hidden style="min-height:0;max-height:360px"></pre>
       <div class="list"><table><thead><tr><th>Status</th><th>Check</th><th>Details</th></tr></thead><tbody id="health-rows"></tbody></table></div>
       </div>
     </section>
@@ -491,7 +511,7 @@ const VIEWS = ["builds", "recipes", "tasklogs", "compliance", "studio", "health"
 const KEYS = [["1 – 6", "Switch section"], ["Ctrl+K", "Command palette: sections, operations, builds"], ["/", "Search in the current section"],
   ["Esc", "Leave a field / close a dialog"], ["j / k", "Next / previous operation"], ["b", "Build the target"], ["q", "Queue any operation"],
   ["t", "Edit the build target"], ["s", "Force stop the selected operation"], ["g", "Graceful stop (BitBake client SIGINT)"],
-  ["r", "Retry the selected operation"], ["e", "Toggle errors only"], ["o / u / w / m", "Output / Summary / Warnings / Timings tab"], ["?", "This help"]];
+  ["r", "Retry the selected operation"], ["e", "Toggle errors only"], ["o / u / w / m / d", "Output / Summary / Warnings / Timings / Compare tab"], ["?", "This help"]];
 const ICONS = {layer: "▤", distro: "◎", machine: "▣", image: "◉", recipe: "✎", append: "⊕"};
 let consoleRows = [], state = null, actions = [], selected = null, view = "builds", tab = "output", logOffset = -1, logFor = null, typingTimer = null;
 let lastStatus = {}, studioKind = "distro", studioFields = [], studioValues = {};
@@ -601,6 +621,9 @@ function notifyTransitions(rows) {
     }
     if (before && before !== row.status) {
       const open = {label: "Open", run: () => { setView("builds"); select_(row.id); }};
+      if (["success", "failed"].includes(row.status) && localStorage.getItem("bitloom-notify") === "1" && "Notification" in window && Notification.permission === "granted" && document.hidden) {
+        new Notification(`Bitloom: ${row.title} ${row.status}`, {body: `${row.profile} · ${elapsed(row)}`, tag: row.id});
+      }
       if (row.status === "success") toast("Build succeeded", `${row.title} · ${elapsed(row)}`, "success", open);
       else if (row.status === "failed") toast("Build failed", `${row.title} · exit ${row.code} · see Summary`, "error", {label: "Open summary", run: () => { setView("builds"); select_(row.id); setTab("summary"); }});
       else if (row.status === "running") toast("Build started", row.title, "info", open);
@@ -712,6 +735,7 @@ function renderDetail() {
   $("d-title").textContent = row.title;
   $("d-meta").textContent = `${row.status} · ${elapsed(row)}${row.code !== null && row.code !== undefined ? " · exit " + row.code : ""} · ${row.profile}`;
   setProgress(row.status, row.progress);
+  if (row.eta) $("d-progress-text").textContent += ` · ETA ~${row.eta.remaining} (${row.eta.basis})`;
 }
 
 function select_(id) {
@@ -734,6 +758,7 @@ async function loadTab() {
       const data = await api(`/api/console/log?${base}&q=${encodeURIComponent(query)}&errors=${$("errors-only").checked ? 1 : 0}`);
       renderLog(log, data.text, query); logFor = selected; return;
     }
+    if (tab === "compare") { renderLog(log, (await api(`/api/jobs/${row.id}/compare`)).text, ""); return; }
     if (tab !== "output") { renderLog(log, (await api(`/api/jobs/${row.id}/report`))[tab] || "", ""); return; }
     const query = $("log-search").value, errors = $("errors-only").checked;
     if (query || errors) {
@@ -762,7 +787,7 @@ function setView(name) {
   view = name;
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
-  if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
+  if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); loadNotifications(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
   if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio();
   if (name === "builds") requestAnimationFrame(moveInk);
 }
@@ -814,6 +839,19 @@ async function loadHealth() {
   const data = await api(`/api/health?profile=${prof()}`);
   body.textContent = "";
   data.checks.forEach((check, i) => { const tr = el("tr", {}, el("td", {}, el("span", {class: "badge " + (STATUS_BADGE[check.status] || "muted"), text: check.status})), el("td", {text: check.name}), el("td", {class: "mono", text: check.detail})); tr.style.animationDelay = i * 15 + "ms"; body.append(tr); });
+}
+
+/* Service notifications */
+async function loadNotifications() {
+  const config = await api("/api/notifications");
+  for (const status of ["success", "failed", "cancelled"]) $("nt-" + status).checked = config.on.includes(status);
+  $("nt-desktop").checked = config.desktop; $("nt-min").value = config.min_seconds; $("nt-webhook").value = config.webhook; $("nt-format").value = config.format;
+}
+async function saveNotifications() {
+  const body = {on: ["success", "failed", "cancelled"].filter((s) => $("nt-" + s).checked), desktop: $("nt-desktop").checked,
+                min_seconds: Number($("nt-min").value || 0), webhook: $("nt-webhook").value.trim(), format: $("nt-format").value};
+  try { await api("/api/notifications", {method: "POST", body: JSON.stringify(body)}); toast("Notifications saved", body.webhook ? "Desktop and webhook" : "Desktop only", "success"); }
+  catch (error) { toast("Notifications", error.message, "error"); }
 }
 
 /* Projects */
@@ -1173,6 +1211,15 @@ function wire() {
   $("queue-btn").addEventListener("click", () => openQueue());
   $("palette-btn").addEventListener("click", openPalette);
   $("keys-btn").addEventListener("click", () => $("keys-dialog").showModal());
+  const bell = () => { $("notify-btn").style.opacity = localStorage.getItem("bitloom-notify") === "1" ? "1" : ".45"; };
+  bell();
+  $("notify-btn").addEventListener("click", async () => {
+    if (!("Notification" in window)) { toast("Notifications", "This browser has no notification support.", "warning"); return; }
+    if (localStorage.getItem("bitloom-notify") === "1") { localStorage.setItem("bitloom-notify", "0"); bell(); toast("Browser notifications off", "", "info"); return; }
+    const permission = await Notification.requestPermission();
+    localStorage.setItem("bitloom-notify", permission === "granted" ? "1" : "0"); bell();
+    toast(permission === "granted" ? "Browser notifications on" : "Notifications blocked by the browser", "Shown when a build ends while this tab is in the background.", permission === "granted" ? "success" : "warning");
+  });
   $("keys-close").addEventListener("click", () => $("keys-dialog").close());
   $("stop-btn").addEventListener("click", () => control("stop"));
   $("graceful-btn").addEventListener("click", () => control("graceful"));
@@ -1189,6 +1236,11 @@ function wire() {
   $("pj-name").addEventListener("input", () => { const dir = $("pj-dir").value; $("pj-dir").value = dir.slice(0, dir.lastIndexOf("/") + 1) + $("pj-name").value; });
   $("pj-url").addEventListener("input", () => { const name = $("pj-url").value.replace(/\/$/, "").split(/[\/:]/).pop().replace(/\.git$/, ""); if (projectInfo && name) $("pj-dest").value = projectInfo.home + "/yocto/" + name; });
   $("pj-create").addEventListener("click", createProject);
+  $("nt-save").addEventListener("click", saveNotifications);
+  $("work-btn").addEventListener("click", async () => {
+    const box = $("work-usage"); box.hidden = false; box.textContent = "Measuring tmp/work (up to 30 s)…";
+    try { box.textContent = (await api(`/api/workusage?profile=${prof()}`)).text; } catch (error) { box.textContent = error.message; }
+  });
   $("pj-clone-go").addEventListener("click", cloneProject);
   $("setup-dir").addEventListener("keydown", (event) => { if (event.key === "Enter") scanSetup(); });
   for (const id of ["sp-mode", "sp-name", "sp-kas_file", "sp-init_script", "sp-build_dir", "sp-launcher", "sp-environment", "sp-machine", "sp-distro", "sp-targets"]) $(id).addEventListener("input", checkSetup);
@@ -1230,7 +1282,7 @@ function wire() {
     const typing = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
     if (event.key === "Escape" && typing && !document.querySelector("dialog[open]")) { document.activeElement.blur(); return; }
     if (typing || document.querySelector("dialog[open]") || event.ctrlKey || event.metaKey || event.altKey) return;
-    const tabs = {o: "output", u: "summary", w: "warnings", m: "timings"};
+    const tabs = {o: "output", u: "summary", w: "warnings", m: "timings", d: "compare"};
     const handled = () => event.preventDefault();
     if (/^[1-6]$/.test(event.key)) { setView(VIEWS[Number(event.key) - 1]); handled(); }
     else if (event.key === "/") { const input = document.querySelector(`#view-${view} input[type=search]`); if (input) { input.focus(); handled(); } }

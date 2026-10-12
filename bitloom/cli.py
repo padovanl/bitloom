@@ -122,6 +122,7 @@ def main():
     parser.add_argument("--vulns", action="store_true", help="Print CVE findings (cve-check, sbom-cve-check, Grype) for the active profile")
     parser.add_argument("--min-cvss", type=float, default=0.0, help="With --vulns: only findings at or above this CVSS score")
     parser.add_argument("--fail-on-unpatched", action="store_true", help="With --vulns: exit 2 when an unpatched finding matches")
+    parser.add_argument("--work-usage", action="store_true", help="Print disk usage per recipe in tmp/work with rm_work advice")
     parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
     parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
     parser.add_argument("--list-actions", action="store_true", help="List all available operations")
@@ -154,6 +155,11 @@ def main():
         return
     if args.demo:
         args.config = prepare_demo(args.state)
+    if args.work_usage:
+        from .insights import work_report
+        from .models import Settings
+        print(work_report(Settings(args.config).profile))
+        return
     if args.vulns:
         from .models import Settings
         from .vulns import load, report, select

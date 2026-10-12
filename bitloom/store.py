@@ -41,7 +41,7 @@ class Store:
         self.db.commit()
 
     def history(self) -> list[dict]:
-        return [dict(r) for r in self.db.execute("SELECT * FROM jobs ORDER BY started DESC LIMIT 500")]
+        return [dict(r) for r in self.db.execute("SELECT * FROM jobs ORDER BY started DESC, rowid DESC LIMIT 500")]
 
     def close(self):
         self.db.close()
