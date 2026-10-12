@@ -2,8 +2,37 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Validation report — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
 <body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="keyboard.html">Keys</a><a href="web.html">Web</a><a href="projects.html">Projects</a><a href="compliance.html">SBOM &amp; CRA</a><a href="studio.html">Studio</a><a href="teams.html">Teams &amp; CI</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="validation-report">Validation report</h1>
 <h2 id="status">Status</h2>
-<p><strong>Completed on 2026-10-10.</strong> The real kas-container image build exited 0: all <strong>4,064 tasks succeeded</strong>, with no reused tasks. Elapsed wall time was <strong>57 minutes 10 seconds</strong> (10:41:45–11:38:55 UTC). BitBake reported <strong>20 warnings and no errors</strong>. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.</p>
+<p><strong>Wrynose, 2026-10-12.</strong> <a href="https://github.com/padovanl/bitloom/blob/main/tests/integration/kas-wrynose.yml">tests/integration/kas-wrynose.yml</a> (yocto-6.0.2: bitbake, openembedded-core and meta-yocto as separate repositories, qemux86-64, core-image-minimal) built through kas-container. A WSL restart interrupted the first run during <code>qemu-system-native:do_compile</code>; the rerun completed the last 9 tasks from sstate. <code>bitloom --ci sbom-cve-enable --ci kas-build</code> then enabled the <code>core/yocto/sbom-cve-check</code> fragment and rebuilt (4,459 tasks, exit 0, 10 warnings from sbom-cve-check). On that build:</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bitloom --sbom</code></td>
+<td>SPDX 3.0.1 image SBOM: 37 installed packages, version, PURL and licence 100%, CPE 97.3%; the document also describes 114 recipes, 105 source archives and the image</td>
+</tr>
+<tr>
+<td><code>bitloom --cra</code></td>
+<td>Every check from real evidence: release support, SBOM, identifiers, licences, VEX (fixed 142, not affected 34), sbom-cve-check reports, buildhistory</td>
+</tr>
+<tr>
+<td><code>bitloom --vulns --min-cvss 7 --fail-on-unpatched</code></td>
+<td>sbom-cve-check findings ranked by CVSS (1,769 unpatched, mostly linux-yocto <code>version-in-range</code>); exit code 2</td>
+</tr>
+<tr>
+<td>TUI Vulnerabilities</td>
+<td>1,769 rows in 0.8 s; filtering stays interactive</td>
+</tr>
+</tbody>
+</table>
+<p>Two defects found on this build were fixed: SBOM coverage counted recipes, <code>-native</code> tools and source archives (licence coverage read 55%), and the sbom-cve-check output was listed as a second image SBOM.</p>
+<p><strong>Scarthgap, 2026-10-10.</strong> The real kas-container image build exited 0: all <strong>4,064 tasks succeeded</strong>, with no reused tasks. Elapsed wall time was <strong>57 minutes 10 seconds</strong> (10:41:45–11:38:55 UTC). BitBake reported <strong>20 warnings and no errors</strong>. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.</p>
 <h2 id="automated-checks">Automated checks</h2>
+<p>The current suite has <strong>158 unit and UI tests</strong> (<code>python -m pytest -q</code>); the paragraph below records the first validation session.</p>
 <p>The expanded suite passed <strong>59 unit and UI tests</strong> on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.</p>
 <p>The sandbox's Python thread-pool shutdown hung even for a minimal asyncio.to_thread example. The same tests passed when executed outside that sandbox. This restriction is separate from application behavior.</p>
 <h2 id="genuine-yocto-image-build">Genuine Yocto image build</h2>

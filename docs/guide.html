@@ -12,6 +12,78 @@
 <li><a href="#daily-helpers">Daily helpers</a>: build notifications, ETA, comparison with the previous run, tmp/work usage.</li>
 <li><a href="teams.html">Teams, CI/CD and setup</a>: headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.</li>
 </ul>
+<h2 id="what-bitloom-covers">What Bitloom covers</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Capabilities</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Builds</td>
+<td>Independent reconnectable build service, serial queue, persistent SQLite history, streaming logs, observed live recipe tasks, task progress, exit status, retries with original profile, cancellation, SDK/eSDK, recipe tasks, forced compile, dry runs, parsing</td>
+</tr>
+<tr>
+<td>Runtimes</td>
+<td>Initialized host environment; kas config composition; fresh Docker/Podman containers; existing containers; official kas-container wrapper</td>
+</tr>
+<tr>
+<td>Layers</td>
+<td>Expandable layer tree, search local layers, priorities through BitBake, add/remove/create, overlays, appends, cross-layer dependencies, edit metadata with backups</td>
+</tr>
+<tr>
+<td>Recipes</td>
+<td>Browse <code>.bb</code>, <code>.bbappend</code>, <code>.bbclass</code> and kas YAML, compile/patch/package individual recipes, list tasks, evaluate environment</td>
+</tr>
+<tr>
+<td>Development</td>
+<td>devtool modify/add/build/build-image/reset/finish/update/upgrade, upstream version checks, device deployment, devshell, kernel menuconfig and config checks</td>
+</tr>
+<tr>
+<td>Errors and logs</td>
+<td>Build and task log browsers, case-insensitive search with context, error-only view, pause/resume, failure notifications, exports, build summary and timestamped slow-task reports</td>
+</tr>
+<tr>
+<td>Downloads</td>
+<td>Fetch a recipe or all target dependencies, size/age inventory, orphan marker and partial-download audit, concrete prune plans</td>
+</tr>
+<tr>
+<td>Shared state</td>
+<td>Local inventory, age-based prune plans, recipe cleansstate, signature dumps/diffs, <code>-S printdiff</code></td>
+</tr>
+<tr>
+<td>Analysis</td>
+<td>Runtime file/directory access and backed-up editing, binary artifact export with SHA-256 verification, failure diagnosis, image package/file provenance, preflight, snapshots and comparison, reproducibility bundles, conservative signature-reference cache plans; search metadata contents with file/line locations, compare package manifests by architecture, inspect sstate hit rates, group repeated warnings, export reports</td>
+</tr>
+<tr>
+<td>Workbench</td>
+<td>Filter evaluated environment variables, compare two snapshots, browse generated dependency edges and transitive/reverse dependency context, buildhistory Git diff</td>
+</tr>
+<tr>
+<td>Outputs</td>
+<td>Discover images, SDKs, manifests, licenses, SBOMs, buildstats and buildhistory files; text preview, read-only tar rootfs inventory (permissions, owners, links), and binary artifact paths</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>Multiple named profiles, custom environment/runtime arguments, local.conf and bblayers.conf editor, backups, external-change detection, diagnostics</td>
+</tr>
+<tr>
+<td>Releases</td>
+<td>Local branch/revision/tag report, dirty-tree status and literal layer-series compatibility checks; separate profiles and build directories per release</td>
+</tr>
+<tr>
+<td>Testing and security</td>
+<td>testimage, ptest, CVE and SPDX command entry points when the required classes/configuration exist</td>
+</tr>
+<tr>
+<td>Utilities</td>
+<td>Argument-based custom commands, interactive terminal handoff, command filtering, keyboard shortcuts, command palette, CLI diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>The <a href="commands.html">command reference</a> documents every built-in action.</p>
 <h2 id="install-from-a-github-release">Install from a GitHub release</h2>
 <p>Open the <a href="https://github.com/padovanl/bitloom/releases">GitHub Releases page</a> and download the assets for the version you want. Replace <code>1.2.3</code> below with that version.</p>
 <h3 id="debian--ubuntu">Debian / Ubuntu</h3>
@@ -171,6 +243,7 @@ python3 -m venv .venv
 <li><code>P</code> switches profile, <code>t</code> edits the build target (Enter builds it), <code>b</code> builds, Ctrl+P lists sections, actions and all operations.</li>
 </ul>
 <details class="shot"><summary><span>Screenshot</span> Keyboard reference overlay</summary><div class="shot-body"><img src="assets/keys.png" alt="Keyboard reference overlay" loading="lazy" decoding="async"></div></details>
+<p><strong>140 × 42</strong> shows the complete workspace. Below 105 columns or 30 rows, tabs replace the navigator and side panes disappear; short terminals also hide the task monitor and overview. Below 75 columns or 22 rows, logs take priority over history and metrics; resize to restore those panels. Dialogs fit within the terminal and scroll when necessary. Layout tests cover 160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20 and 140 × 20, including restoration after resizing.</p>
 <p>F5 opens interruption options and F6 retries the selected job. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.</p>
 <h2 id="daily-helpers">Daily helpers</h2>
 <h3 id="know-when-a-build-ends">Know when a build ends</h3>
@@ -233,7 +306,19 @@ python3 -m venv .venv
 <li><strong>Too little space/RAM:</strong> check Health, reduce thread counts, and inspect cache plans before removal.</li>
 <li><strong>Small terminal:</strong> use keyboard shortcuts and Tab, or increase to 140×42 for the complete layout.</li>
 </ul>
+<h2 id="practical-limits">Practical limits</h2>
+<p>Each command remains subject to the selected Yocto release, runtime, device access and configuration. Inventory scans are bounded, age-based pruning does not perform signature reachability analysis, and no cache is pruned automatically. External builders sharing a cache cannot be detected reliably. Logs and profiles can contain proprietary paths or credentials; review exports before sharing them. Custom commands accept argv, not shell expressions. Unit and UI tests in CI do not run a Yocto build; the container integration builds are separate, opt-in validations (see <a href="validation.html">validation</a>).</p>
 <h2 id="documentation-and-verification">Documentation and verification</h2>
+<pre><code class="language-bash">pip install -e '.[dev]'
+python -m pytest -q                      # unit and UI tests, no Yocto build needed
+pip install pillow cairosvg playwright   # optional capture tooling
+python tools/capture_docs.py             # TUI screenshots and GIFs
+python tools/capture_web.py              # web dashboard (Playwright with Chromium)
+python tools/generate_reference.py       # commands.md and keyboard.md from the code
+python tools/serve_docs.py --port 8000   # rebuild the HTML and serve docs/
+python tools/check_docs.py               # links, anchors and page behaviour
+</code></pre>
+<p>The Pages workflow publishes <code>docs/</code> on pushes to <code>main</code> when the repository has <strong>Settings → Pages → Source → GitHub Actions</strong> (private repositories need a plan that includes Pages); otherwise the run is skipped with a notice.</p>
 <p><code>python tools/capture_docs.py</code> captures the real Textual interface with Pilot and exports SVG/PNG/GIF. It uses labelled demo data. <code>python tools/validate_kas.py</code> executes a real image build through Runner and records a JSON result. Read validation.md for evidence from the current development session.</p>
 <h2 id="persistent-build-service-and-reconnecting">Persistent build service and reconnecting</h2>
 <p>Real launches now use an independent local build service by default. Closing the TUI, pressing Ctrl+Q, or losing the terminal detaches the client: queued and running jobs remain owned by the service. Reopen Bitloom with the same <code>--state</code> directory to reconnect. Jobs retain their original profile, commands and complete logs. Multiple clients can observe the same service.</p>
