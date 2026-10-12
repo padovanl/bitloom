@@ -353,6 +353,13 @@ class BitloomApp(App):
         from .screens import ThemeScreen
         self.push_screen(ThemeScreen())
 
+    def log_search_value(self) -> str:
+        # Called for every output line: keep the widget instead of querying the DOM each time.
+        field = getattr(self, "_log_search", None)
+        if field is None or not field.is_attached:
+            field = self._log_search = self.main_query("#log-search", Input)
+        return field.value
+
     def main_query(self, selector, expect_type=None):
         """Keep background updates on the workspace while a modal is open."""
         return self.screen_stack[0].query_one(selector, expect_type)
@@ -1283,7 +1290,7 @@ class BitloomApp(App):
 
     def job_update(self, job: Job, line: str | None):
         if line is not None:
-            if job.id == self.selected_job_id and not self.errors_only and not self.main_query("#log-search", Input).value:
+            if job.id == self.selected_job_id and not self.errors_only and not self.log_search_value():
                 if self.follow_log:
                     self.live_lines.append(line)
             if "ERROR:" in line:
@@ -1324,6 +1331,10 @@ class BitloomApp(App):
             if job.id == self.selected_job_id:
                 glyph, color = self.status_style(job.status)
                 self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {job.status}", f"bold {color}"), "  ", (job.title, "bold"), ((f"  ·  exit {job.code}" if job.code is not None else "") + f"  ·  {job.log}", "dim"), no_wrap=True, overflow="ellipsis"))
+        shown = (job.id, job.status, tuple(job.progress))
+        if job.id != self.selected_job_id or shown == getattr(self, "_progress_shown", None):
+            return  # most calls are output lines with nothing new for the bar
+        self._progress_shown = shown
         if job.id == self.selected_job_id:
             self.main_query("#progress", ProgressBar).set_class(job.status == "failed", "failed")
         if job.id == self.selected_job_id and job.status == "success":
@@ -1355,11 +1366,17 @@ class BitloomApp(App):
             text.highlight_words([query], style=f"bold reverse {theme.accent}", case_sensitive=False)
         return text
 
+    LIVE_BATCH = 400  # lines rendered per refresh; chatty commands would otherwise stall the UI
+
     def flush_log(self):
         if self.live_lines and self.follow_log:
             log = self.main_query("#log", RichLog)
-            for line in self.live_lines:
-                log.write(self.style_line(line))
+            skipped = len(self.live_lines) - self.LIVE_BATCH
+            if skipped > 0:
+                log.write(Text(f"… {skipped} more lines are in the log file (search with /, or select the job again for the latest 5000)",
+                               style="dim italic"))
+            # One write per refresh: RichLog's per-call overhead dominated chatty builds.
+            log.write(Text("\n").join(self.style_line(line) for line in self.live_lines[-self.LIVE_BATCH:]))
             self.live_lines.clear()
 
     def select_job(self, ident, path):

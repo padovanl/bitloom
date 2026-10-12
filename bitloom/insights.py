@@ -197,6 +197,8 @@ def work_usage(profile: Profile, budget: float = 30.0) -> dict:
 def work_report(profile: Profile, data: dict | None = None, limit: int = 30) -> str:
     from .inspectors import human_size
     data = data or work_usage(profile)
+    if not data["rows"]:
+        return f"tmp/work usage · {profile.name}: {profile.build_path / 'tmp/work'} has no recipe work directories yet (build something first)."
     lines = [f"tmp/work usage · {profile.name} · {human_size(data['total'])} in {len(data['rows'])} recipe work directories"
              + ("" if data["complete"] else " (time budget reached: totals are partial)"), ""]
     lines += [f"{human_size(r['bytes']):>10}  {r['recipe']:40} {r['arch']}" for r in data["rows"][:limit]]

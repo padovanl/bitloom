@@ -511,7 +511,7 @@ const token = (new URLSearchParams(location.hash.slice(1))).get("token") || sess
 if (token) { sessionStorage.setItem("bitloom-token", token); history.replaceState(null, "", location.pathname); }
 const GLYPH = {success: "✔", failed: "✖", running: "●", queued: "◌", cancelling: "◐", cancelled: "■", interrupted: "⚠", unknown: "·", skipped: "↷"};
 const VIEWS = ["builds", "recipes", "tasklogs", "compliance", "studio", "health"];
-const KEYS = [["1 – 6", "Switch section"], ["Ctrl+K", "Command palette: sections, operations, builds"], ["/", "Search in the current section"],
+const KEYS = [["1 – 6", "Switch section"], ["Ctrl+K", "Command palette: sections, operations, profiles, builds"], ["/", "Search in the current section"],
   ["Esc", "Leave a field / close a dialog"], ["j / k", "Next / previous operation"], ["b", "Build the target"], ["q", "Queue any operation"],
   ["t", "Edit the build target"], ["s", "Force stop the selected operation"], ["g", "Graceful stop (BitBake client SIGINT)"],
   ["r", "Retry the selected operation"], ["e", "Toggle errors only"], ["o / u / w / m / d", "Output / Summary / Warnings / Timings / Compare tab"], ["?", "This help"]];
@@ -628,6 +628,7 @@ function notifyTransitions(rows) {
         new Notification(`Bitloom: ${row.title} ${row.status}`, {body: `${row.profile} · ${elapsed(row)}`, tag: row.id});
       }
       if (row.status === "success") toast("Build succeeded", `${row.title} · ${elapsed(row)}`, "success", open);
+      else if (row.status === "failed" && row.code === -1) toast("Did not start", `${row.title} · the command could not run · see Output`, "error", {label: "Open output", run: () => { setView("builds"); select_(row.id); setTab("output"); }});
       else if (row.status === "failed") toast("Build failed", `${row.title} · exit ${row.code} · see Summary`, "error", {label: "Open summary", run: () => { setView("builds"); select_(row.id); setTab("summary"); }});
       else if (row.status === "running") toast("Build started", row.title, "info", open);
       else if (row.status === "cancelled") toast("Build cancelled", row.title, "warning");
@@ -1171,7 +1172,10 @@ function preview() {
 async function queue(action, vals) {
   try {
     const job = await api("/api/jobs", {method: "POST", body: JSON.stringify({profile: $("profile").value, action, values: vals})});
-    toast("Queued", (actions.find((a) => a.id === action) || {title: action}).title, "info"); selected = null; await refresh(); select_(job.id); setView("builds");
+    // Known as queued now, so an end before the next poll (an instant failure) still raises its toast.
+    lastStatus[job.id] = "queued";
+    const subject = Object.values(vals || {}).map((v) => String(v).trim()).filter(Boolean).join(" · ");
+    toast("Queued", (actions.find((a) => a.id === action) || {title: action}).title + (subject ? " · " + subject : ""), "info"); selected = null; await refresh(); select_(job.id); setView("builds");
   } catch (error) { toast("Cannot queue", error.message, "error"); }
 }
 function openQueue(filter = "") { $("op-filter").value = filter; fillOperations(); $("queue-dialog").showModal(); $("op-filter").focus(); }
@@ -1179,7 +1183,7 @@ async function control(kind) {
   const row = current(); if (!row) return;
   if (kind === "stop" && !confirm("Force stop " + row.title + "? Interrupted work directories may need cleaning.")) return;
   try {
-    if (kind === "retry") { const job = await api(`/api/jobs/${row.id}/retry`, {method: "POST", body: "{}"}); toast("Retry queued", row.title, "info"); selected = null; await refresh(); select_(job.id); }
+    if (kind === "retry") { const job = await api(`/api/jobs/${row.id}/retry`, {method: "POST", body: "{}"}); lastStatus[job.id] = "queued"; toast("Retry queued", row.title, "info"); selected = null; await refresh(); select_(job.id); }
     else { await api(`/api/jobs/${row.id}/stop`, {method: "POST", body: JSON.stringify({mode: kind === "graceful" ? "graceful" : "force"})}); toast(kind === "graceful" ? "Graceful stop sent" : "Stop requested", row.title, "warning"); refresh(); }
   } catch (error) { toast("Stop/retry failed", error.message, "error"); }
 }
@@ -1189,6 +1193,11 @@ let paletteItems = [], paletteIndex = 0;
 function paletteEntries() {
   const entries = VIEWS.map((name, i) => ({label: "Go to " + document.querySelector(`nav button[data-view=${name}]`).lastChild.textContent.trim(), hint: String(i + 1), run: () => setView(name)}));
   entries.push({label: "Build target", hint: "b", run: () => queue("build", {target: $("target").value})});
+  for (const profile of (state ? state.profiles : [])) {
+    if (profile.name === $("profile").value) continue;
+    entries.push({label: `Switch profile: ${profile.name}`, hint: profile.release || profile.mode || "", run: () => {
+      $("profile").value = profile.name; $("profile").dispatchEvent(new Event("change")); toast("Switched profile", profile.name, "info"); }});
+  }
   for (const action of actions.filter((a) => !a.interactive)) entries.push({label: `Queue: ${action.group} / ${action.title}`, hint: action.id, run: () => openQueue(action.title)});
   for (const row of (state ? state.history.slice(0, 30) : [])) entries.push({label: `Open build: ${row.title}`, hint: row.status, run: () => { setView("builds"); select_(row.id); }});
   return entries;

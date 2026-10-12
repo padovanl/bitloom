@@ -167,7 +167,14 @@ def counts(findings: list[Finding]) -> dict:
     return result
 
 
+NO_REPORT = ("No CVE report yet. Wrynose: enable sbom-cve-check (Configuration → SBOM settings, or bitbake-config-build "
+             "enable-fragment core/yocto/sbom-cve-check) and build the image; older releases: INHERIT += \"cve-check\". "
+             "Or scan the newest SPDX SBOM with Grype (Artifacts → v → g).")
+
+
 def report(findings: list[Finding], errors: list[str], status="unpatched", min_score=0.0) -> str:
+    if not findings and not errors:
+        return NO_REPORT
     shown = select(findings, status, min_score)
     c = counts(findings)
     lines = [f"Vulnerabilities · {c['total']} assessed · {c['unpatched']} unpatched · {c['patched']} patched · {c['ignored']} ignored · {c['reviewed']} reviewed",
