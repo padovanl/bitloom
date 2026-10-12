@@ -65,7 +65,7 @@ bitloom                    # in your project: the guided setup proposes a profil
 | [Validation](docs/validation.md) | Real Scarthgap and Wrynose builds through kas-container and what was verified |
 | [Research map](docs/roadmap.md) | Sources, criticisms of earlier Yocto interfaces and how Bitloom answers them |
 
-Browse it locally with `python tools/serve_docs.py --port 8000`.
+Browse it locally with `python tools/serve_docs.py --port 8000`; every page has search (`/`), a page list and light and dark themes.
 
 ## CRA and EN 40000
 

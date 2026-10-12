@@ -1,10 +1,27 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Developer workbench — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="keyboard.html">Keys</a><a href="web.html">Web</a><a href="projects.html">Projects</a><a href="compliance.html">SBOM &amp; CRA</a><a href="studio.html">Studio</a><a href="teams.html">Teams &amp; CI</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="developer-workbench">Developer workbench</h1>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Developer workbench — Bitloom documentation</title>
+<meta name="description" content="Bitloom documentation: Developer workbench">
+<link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<body>
+<header class="topbar">
+<button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
+<a class="brand" href="index.html"><img src="assets/bitloom-icon.svg" width="26" height="26" alt=""> Bitloom <small>docs</small></a>
+<div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
+<span class="spacer"></span>
+<a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
+</header>
+<div class="layout">
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html" aria-current="page">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<main class="content">
+<div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
+<article class="doc"><h1 id="developer-workbench">Developer workbench</h1>
 <p>Press <strong>F10</strong> to open Developer, or reach it with F8/F9 or the sidebar. The workbench implements all fourteen workflows identified in the <a href="roadmap.html">research roadmap</a>, in sixteen views. It works through the selected host, kas, container or kas-container profile. Runtime paths are resolved inside that profile; they are not silently interpreted as host paths.</p>
 <p>For installation, building Bitloom and preparing a real Yocto workspace, start with the <a href="testbook.html">testbook</a>. Its <a href="testbook.html#13-developer-acceptance">Developer acceptance cases</a> cover every view and operation below. Sample demo mode does not provide BitBake.</p>
 <details class="shot"><summary><span>Screenshot</span> Actual Developer workbench with evaluated recipe assignment history</summary><div class="shot-body"><img src="assets/developer-variable.png" alt="Actual Developer workbench with evaluated recipe assignment history" loading="lazy" decoding="async"></div></details>
-<h2 id="everyday-controls">Everyday controls</h2>
+<h2 id="everyday-controls">Everyday controls<a class="anchor" href="#everyday-controls" aria-label="Link to this section">#</a></h2>
 <ol>
 <li>Select a view and enter the recipe in the top recipe field. Use <code>mc:debug:busybox</code> for a configured BitBake multiconfig. Clear the field for a global variable query.</li>
 <li>Read the placeholders in the two context fields. Their meaning changes with the view: variable name, runtime directory, report path, image or device.</li>
@@ -13,10 +30,10 @@
 <li>Select an operation and choose <strong>Run</strong> to queue a build, SDK or offline check, or open its existing command dialog. Inspect itself is an evidence query, not a build request. Operation buttons scroll horizontally in a narrow terminal.</li>
 </ol>
 <p>At 80×24 the table stacks above the report; at 60×20 it shrinks further. F10, F8/F9 and keyboard focus remain available. <strong>Ctrl+Q</strong> exits the interface; a running service build continues. <strong>F5</strong> opens explicit interruption choices.</p>
-<h3 id="capture-compare-and-refresh">Capture, compare and refresh</h3>
+<h3 id="capture-compare-and-refresh">Capture, compare and refresh<a class="anchor" href="#capture-compare-and-refresh" aria-label="Link to this section">#</a></h3>
 <p><strong>Capture</strong> writes a private, timestamped JSON file under <code>&lt;state&gt;/exports</code>. The first capture fills the baseline field; later captures preserve it. Inspect after an edit or build, then choose <strong>Compare</strong>: it compares the current report to that baseline and saves a separate comparison export. Enter another capture path to change the baseline. Captures include the profile and original job reference where available; credential-like fields are redacted.</p>
 <p>The workbench checks recorded file fingerprints every fifteen seconds while visible and idle. An edit makes the report <strong>STALE</strong>; inspect again before capturing or comparing. External edits and runtime editor saves invalidate capability data too. Fingerprint and directory scans are bounded, so Inspect remains the authoritative explicit refresh.</p>
-<h2 id="views-and-operations">Views and operations</h2>
+<h2 id="views-and-operations">Views and operations<a class="anchor" href="#views-and-operations" aria-label="Link to this section">#</a></h2>
 <table>
 <thead>
 <tr>
@@ -110,25 +127,25 @@
 </table>
 <p>Image comparisons require the same image, machine, distro, libc and multiconfig. Upgrade comparisons allow a version change in the same machine context. Image package sizes use exact pkgdata PKGSIZE bytes where available, otherwise normalized buildhistory KiB with source labels; these are installed-package data, not compressed image sizes. Missing buildhistory, buildstats, security reports or device access is displayed as unavailable.</p>
 <details class="shot"><summary><span>Screenshot</span> Actual selectable runtime browser inside kas-container</summary><div class="shot-body"><img src="assets/developer-browser.png" alt="Actual selectable runtime browser inside kas-container" loading="lazy" decoding="async"></div></details>
-<h2 id="create-a-layer-and-recipe">Create a layer and recipe</h2>
+<h2 id="create-a-layer-and-recipe">Create a layer and recipe<a class="anchor" href="#create-a-layer-and-recipe" aria-label="Link to this section">#</a></h2>
 <p>Choose <strong>New layer</strong>. Enter a new absolute runtime directory, recipe name, layer collection, copyright owner and supported layer series. Select <strong>CMake, Meson, Make, Python or Rust</strong>. These are complete small source fixtures with an MIT license, matching LIC_FILES_CHKSUM, source files and layer.conf; use devtool add/recipetool for an existing external project.</p>
 <p><strong>Preview</strong> shows every file and registration change. <strong>Fields</strong> returns to editing. <strong>Cancel</strong> creates nothing. <strong>Create + register</strong> refuses existing destinations, including symlinks. For host/direct-container profiles, registration is queued through bitbake-layers. For kas profiles, Bitloom writes a new host YAML overlay including the original configuration and local runtime layer, and selects a new derived profile; the original YAML/profile is preserved. Registration is complete when the installed release can parse the selected composition: check Show configured layers and Show recipe appends, then build the recipe.</p>
 <p>For the container experiment use <code>/work/meta-bitloom-dev</code>, recipe <code>bitloom-hello</code>, collection <code>bitloomdev</code>, series <code>scarthgap</code>, and a new <code>kas-bitloom-dev.yml</code>. The overlay adds the recipe to IMAGE_INSTALL. Build the recipe first, then core-image-minimal. Edit <code>files/source/main.c</code> through Runtime browser, change the greeting, rebuild and inspect the result. Choose different paths/names for a second experiment; the wizard does not overwrite an existing layer.</p>
 <details class="shot"><summary><span>Screenshot</span> Actual layer wizard preview; no files created for this capture</summary><div class="shot-body"><img src="assets/developer-scaffold.png" alt="Actual layer wizard preview; no files created for this capture" loading="lazy" decoding="async"></div></details>
-<h2 id="clone-and-compare-configuration">Clone and compare configuration</h2>
+<h2 id="clone-and-compare-configuration">Clone and compare configuration<a class="anchor" href="#clone-and-compare-configuration" aria-label="Link to this section">#</a></h2>
 <p><strong>Clone</strong>, also available in F4, copies a profile into a distinct absolute build directory. For kas it preserves KAS_WORK_DIR so local layers and source repositories remain available, and sets a separate absolute KAS_BUILD_DIR. kas-container mounts an external build directory as /build. Set optional machine/distro profile overrides, then select the clone. The YAML's resolved settings remain authoritative; inspect the actual kas dump before building. Changing machine/distro in a clone does not rewrite your original YAML. The queue remains serial; separate profiles do not enable concurrent BitBake invocations.</p>
 <p>Docker Snap may have a private daemon /tmp: a host directory can be empty while its container mount contains the complete build. <strong>Prepare new kas workspace</strong> repairs only the top directory of an empty, separately configured work mount. It refuses a nonempty directory owned by another user. Runtime paths remain <code>/work/...</code>; read/write them using Bitloom rather than guessing a host mapping.</p>
-<h3 id="ide-path-mapping">IDE path mapping</h3>
+<h3 id="ide-path-mapping">IDE path mapping<a class="anchor" href="#ide-path-mapping" aria-label="Link to this section">#</a></h3>
 <p>For a host-accessible container checkout, add an explicit mapping in F4:</p>
 <pre><code class="language-json">&quot;source_mappings&quot;: {
   &quot;/work&quot;: &quot;/home/you/yocto-work&quot;
 }
 </code></pre>
 <p><strong>Export IDE mappings / database</strong> writes a private export with evaluated paths and, when available, a mapped compile_commands.json. Mapping respects directory boundaries and compiler path arguments. Configure the real host-visible path; mapping a Docker-private path does not copy files or create a working SDK. For daemon-private workspaces, use an IDE/container context with actual source/sysroot access. Generate IDE SDK probes release support before queueing devtool ide-sdk; supported build systems, SDK configuration and a matching target image are prerequisites for native IDE builds/debugging.</p>
-<h2 id="offline-and-security-checks">Offline and security checks</h2>
+<h2 id="offline-and-security-checks">Offline and security checks<a class="anchor" href="#offline-and-security-checks" aria-label="Link to this section">#</a></h2>
 <p><strong>Prepare source mirrors</strong> runs fetchall with BB_GENERATE_MIRROR_TARBALLS in a temporary post-read configuration. <strong>Verify fetch offline</strong> runs BitBake fetchall with BB_NO_NETWORK; <strong>Verify full build offline</strong> applies BB_NO_NETWORK to the complete target build. Results, arguments and logs enter normal history. These checks cover BitBake fetchers; kas bootstrap may still need network for repositories/images. Fetch readiness and full-build readiness are separate outcomes. Restore deliberately broken URIs/checksums before verification.</p>
 <p>Run release-supported CVE/SPDX actions in F2, find the actual JSON report through Runtime browser, then inspect it in CVE / SBOM review. Existing issue statuses remain intact. Review exceptions are private local records with mandatory owner/reason/expiry; expired reviews are visibly labelled. Missing or unsupported reports do not produce an empty, apparently clean security result. An unpatched finding alone is not an exploitability assessment.</p>
-<h2 id="boards-and-console">Boards and console</h2>
+<h2 id="boards-and-console">Boards and console<a class="anchor" href="#boards-and-console" aria-label="Link to this section">#</a></h2>
 <p>Choose <strong>Devices</strong> to edit <code>&lt;state&gt;/devices.json</code>. Example for a board you own:</p>
 <pre><code class="language-json">{
   &quot;devices&quot;: [{
@@ -141,9 +158,16 @@
 </code></pre>
 <p>Replace example addresses and serial paths with actual equipment. An optional <code>labgrid_place</code> enables labgrid show/acquire/release/power cycle/console using the installed labgrid-client and its environment. Test/console arrays are your explicit local commands; placeholders include <code>{device}</code>, <code>{artifact}</code>, <code>{recipe}</code> and <code>{place}</code>. Use a dedicated board and record ownership before changing it.</p>
 <p>Device status runs a real SSH or labgrid query. Tests and deploy require an exported local artifact whose SHA-256 is saved with device/job evidence. <strong>Devtool deploy transfers the recipe's workspace outputs; the referenced image hash is context, not proof that image was flashed.</strong> Your test_argv can invoke a real board-specific deployment/test tool if required. Serial sessions use the real terminal and util-linux script to retain a transcript and actual exit status; exits are controlled by the console program. Hardware is never simulated as successful.</p>
-<h2 id="capabilities-and-stopping">Capabilities and stopping</h2>
+<h2 id="capabilities-and-stopping">Capabilities and stopping<a class="anchor" href="#capabilities-and-stopping" aria-label="Link to this section">#</a></h2>
 <p>Optional command-center task actions probe the selected recipe's actual listtasks, with a short-lived cache invalidated by profile/metadata changes. Missing testimage/ptest/kernel/security tasks are rejected before queueing with the observed prerequisite. Missing ide-sdk is also rejected. Configuration and report parsing remains release-dependent.</p>
 <p>For newly owned kas-container jobs, Runner gives each Docker/Podman container a unique Bitloom name/label. Force stop targets that exact container and records its stop result; confirmed termination of its namespace permits recovery for recipes observed active. Graceful draining remains available only where the actual BitBake client can receive the documented signal. An arbitrary kas wrapper or existing external container still requires server verification; wrapper exit alone is insufficient. Shutdown evidence separates observations from confirmation.</p>
 <details class="shot"><summary><span>Screenshot</span> Actual buildstats and runtime resource evidence</summary><div class="shot-body"><img src="assets/developer-performance.png" alt="Actual buildstats and runtime resource evidence" loading="lazy" decoding="async"></div></details>
 <p>The <a href="validation.html">validation report</a> distinguishes real kas-container builds/probes, fixture parser tests and hardware/IDE/kernel experiments still requiring an operator. Reproduce evidence with <code>python tools/validate_developer.py --build</code>; add <code>--image</code> for a new full minimal-image build. The helper prepares a dedicated workspace, writes a generated test overlay/profile and preserves original integration configuration. It deliberately introduces and restores one failing task after successful offline checks.</p>
-</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a><a href="developer.md">Markdown source</a></footer></body></html>
+</article>
+<nav class="pager" aria-label="Previous and next page"><a class="prev" href="teams.html"><small>Previous</small>Teams and CI/CD</a><a class="next" href="commands.html"><small>Next</small>Command reference</a></nav>
+<div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/developer.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+</main>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#everyday-controls">Everyday controls</a><a href="#capture-compare-and-refresh" class="sub">Capture, compare and refresh</a><a href="#views-and-operations">Views and operations</a><a href="#create-a-layer-and-recipe">Create a layer and recipe</a><a href="#clone-and-compare-configuration">Clone and compare configuration</a><a href="#ide-path-mapping" class="sub">IDE path mapping</a><a href="#offline-and-security-checks">Offline and security checks</a><a href="#boards-and-console">Boards and console</a><a href="#capabilities-and-stopping">Capabilities and stopping</a></aside>
+</div>
+<script src="docs.js"></script>
+</body></html>

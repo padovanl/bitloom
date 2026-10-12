@@ -726,3 +726,7 @@ Run each step in a scratch copy (`cp -r .bitloom /tmp/bl`, then `--config /tmp/b
 4. Put a truncated `*.spdx.json` and a `*.sbom-cve-check.yocto.json` containing `{"package": "nope"}` next to the image: `--sbom` and `--vulns` report each file's problem and keep analysing the others.
 5. Build target `core-image-minimal busybox` queues one BitBake command with both targets; `a; id`, `$(id)` or a task `compile; id` are refused with *Not a BitBake target* / *Not a task name*, in the TUI, in the web dashboard and in `--ci build:…`.
 6. Web API: `POST /api/jobs` with `"values": "x"` answers 400 with a JSON error; `DELETE /api/state` answers 405.
+
+### D01 — Documentation site
+
+`python tools/serve_docs.py --port 8000`, open `http://127.0.0.1:8000`. Expected: the landing page with feature filter, runtime tabs and screenshot lightbox. Open the *User guide*: a sidebar lists every page (the current one highlighted), *On this page* follows the scroll, each page ends with *Previous* / *Next*. Press `/` (or Ctrl+K), type `sbom-cve-check`: results from several pages with highlighted terms; ↓ and Enter open the section. The ☾/☀ button switches theme and is remembered after a reload; without a choice the site follows the system theme. Code blocks show *Copy* on hover. At phone width, ☰ opens the page list and nothing scrolls sideways.

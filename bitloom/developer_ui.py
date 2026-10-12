@@ -15,10 +15,11 @@ from pathlib import Path
 from rich.text import Text
 from textual import on, work
 from textual.binding import Binding
-from textual.containers import Horizontal, HorizontalScroll, Vertical, VerticalScroll
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Input, Label, RichLog, Select, Static, TextArea, TabbedContent
 
+from .toolbar import ToolBar
 from . import developer as dev
 from .developer_agent import report
 from .models import Profile
@@ -266,7 +267,6 @@ class DeveloperPanel(Vertical):
     DEFAULT_CSS = '''
     DeveloperPanel { height: 1fr; }
     DeveloperPanel .dev-tools { height: 1; margin-bottom: 1; }
-    DeveloperPanel HorizontalScroll.dev-tools { scrollbar-size-horizontal: 0; }
     DeveloperPanel .dev-tools Input { width: 1fr; }
     DeveloperPanel #dev-view { width: 26; }
     DeveloperPanel #dev-operation { width: 24; }
@@ -289,14 +289,14 @@ class DeveloperPanel(Vertical):
         self.next_profile = None
 
     def compose(self):
-        with Horizontal(classes='dev-tools'):
+        with ToolBar(classes='dev-tools'):
             yield Select(dev.VIEWS, value='variable', allow_blank=False, id='dev-view')
             yield Input(value='busybox', placeholder='Recipe / mc:CONFIG:RECIPE', id='dev-recipe')
             yield Button('Inspect', id='dev-inspect', variant='primary')
         with Horizontal(classes='dev-tools'):
             yield Input(value='SUMMARY', id='dev-first')
             yield Input(id='dev-second')
-        with HorizontalScroll(classes='dev-tools'):
+        with ToolBar(classes='dev-tools', max_rows=2):
             yield Select([('No queued operation', 'none')], value='none', allow_blank=False, id='dev-operation')
             yield Button('Run', id='dev-execute')
             yield Button('Open', id='dev-open')

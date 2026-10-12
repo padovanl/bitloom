@@ -1,6 +1,23 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>User guide — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="keyboard.html">Keys</a><a href="web.html">Web</a><a href="projects.html">Projects</a><a href="compliance.html">SBOM &amp; CRA</a><a href="studio.html">Studio</a><a href="teams.html">Teams &amp; CI</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="user-guide">User guide</h1>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User guide — Bitloom documentation</title>
+<meta name="description" content="Bitloom documentation: User guide">
+<link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<body>
+<header class="topbar">
+<button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
+<a class="brand" href="index.html"><img src="assets/bitloom-icon.svg" width="26" height="26" alt=""> Bitloom <small>docs</small></a>
+<div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
+<span class="spacer"></span>
+<a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
+</header>
+<div class="layout">
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="guide.html" aria-current="page">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<main class="content">
+<div class="breadcrumbs"><a href="index.html">Bitloom</a> › Get started</div>
+<article class="doc"><h1 id="user-guide">User guide</h1>
 <p>For a complete hands-on acceptance path, follow the <a href="testbook.html">manual testbook</a>. The <a href="developer.html">Developer workbench guide</a> documents F10, all sixteen implemented views, creation/clone workflows and evidence comparisons. The <a href="roadmap.md">research and implementation map</a> retains sources and practical boundaries.</p>
 <p>More guides:</p>
 <ul>
@@ -12,7 +29,7 @@
 <li><a href="#daily-helpers">Daily helpers</a>: build notifications, ETA, comparison with the previous run, tmp/work usage.</li>
 <li><a href="teams.html">Teams, CI/CD and setup</a>: headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.</li>
 </ul>
-<h2 id="what-bitloom-covers">What Bitloom covers</h2>
+<h2 id="what-bitloom-covers">What Bitloom covers<a class="anchor" href="#what-bitloom-covers" aria-label="Link to this section">#</a></h2>
 <table>
 <thead>
 <tr>
@@ -84,15 +101,15 @@
 </tbody>
 </table>
 <p>The <a href="commands.html">command reference</a> documents every built-in action.</p>
-<h2 id="install-from-a-github-release">Install from a GitHub release</h2>
+<h2 id="install-from-a-github-release">Install from a GitHub release<a class="anchor" href="#install-from-a-github-release" aria-label="Link to this section">#</a></h2>
 <p>Open the <a href="https://github.com/padovanl/bitloom/releases">GitHub Releases page</a> and download the assets for the version you want. Replace <code>1.2.3</code> below with that version.</p>
-<h3 id="debian--ubuntu">Debian / Ubuntu</h3>
+<h3 id="debian--ubuntu">Debian / Ubuntu<a class="anchor" href="#debian--ubuntu" aria-label="Link to this section">#</a></h3>
 <p>Download <code>bitloom_1.2.3_all.deb</code>, then install it from the download directory:</p>
 <pre><code class="language-bash">sudo apt install ./bitloom_1.2.3_all.deb
 bitloom --demo
 </code></pre>
 <p>Requires Python 3.10+ on Debian/Ubuntu. Python application dependencies are included under <code>/opt/bitloom/lib</code>; no pip installation is needed. Docker, Podman, kas and Yocto remain separate tools for real builds. Remove Bitloom with <code>sudo apt remove bitloom</code>.</p>
-<h3 id="other-linux-distributions--wsl2">Other Linux distributions / WSL2</h3>
+<h3 id="other-linux-distributions--wsl2">Other Linux distributions / WSL2<a class="anchor" href="#other-linux-distributions--wsl2" aria-label="Link to this section">#</a></h3>
 <p>Download <code>bitloom-1.2.3.tar.gz</code> and install in a virtual environment:</p>
 <pre><code class="language-bash">tar -xzf bitloom-1.2.3.tar.gz
 cd bitloom-1.2.3
@@ -101,9 +118,9 @@ python3 -m venv .venv
 .venv/bin/bitloom --demo
 </code></pre>
 <p>Alternatively, install the release wheel with <code>.venv/bin/python -m pip install /path/to/bitloom-1.2.3-py3-none-any.whl</code>. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.</p>
-<h3 id="verify-downloaded-assets">Verify downloaded assets</h3>
+<h3 id="verify-downloaded-assets">Verify downloaded assets<a class="anchor" href="#verify-downloaded-assets" aria-label="Link to this section">#</a></h3>
 <p>Download <code>SHA256SUMS</code> alongside the packages, then run <code>sha256sum --check --ignore-missing SHA256SUMS</code> in the same directory. Check that the package you downloaded reports <code>OK</code>.</p>
-<h2 id="fresh-checkout-demo">Fresh checkout demo</h2>
+<h2 id="fresh-checkout-demo">Fresh checkout demo<a class="anchor" href="#fresh-checkout-demo" aria-label="Link to this section">#</a></h2>
 <p>Run <code>./setup-demo.sh</code> from the cloned checkout to create or reuse <code>.venv</code>, install dependencies and launch the sample TUI. Requires Bash, Python 3.10+ with venv support on Linux or WSL2, and internet access for installation. No Docker, kas or Yocto installation is needed for the sample data.</p>
 <p>Use <code>./setup-demo.sh --no-launch</code> to prepare without launching, then <code>.venv/bin/bitloom --demo</code> to start later. <code>--dev</code> installs test dependencies; <code>--python python3.12</code> or <code>PYTHON</code> selects the interpreter for a new environment. The script also works when invoked from another directory. All demo data stays under <code>.bitloom</code> in the checkout.</p>
 <p>The demo has three profiles; press <code>P</code> to switch:</p>
@@ -135,7 +152,7 @@ python3 -m venv .venv
 </table>
 <p>Every sample file is labelled; the demo never simulates a successful Yocto build.</p>
 <p>The terminal adapts while resizing: below 105 columns or 30 rows it hides the navigator and side panes; below 30 rows it also hides the overview. Below 75 columns or 22 rows it hides history and metrics to preserve output. Resize to restore panels. F8/F9 switches sections and F2/F4/F7 opens commands/profiles/themes even when toolbar controls are hidden. Verified sizes range from 60 × 20 to 160 × 50, including a wide 140 × 20 terminal.</p>
-<h2 id="profiles-and-paths">Profiles and paths</h2>
+<h2 id="profiles-and-paths">Profiles and paths<a class="anchor" href="#profiles-and-paths" aria-label="Link to this section">#</a></h2>
 <p>Profiles are local JSON stored at <code>.bitloom/profiles.json</code> by default. State is stored at <code>.bitloom/</code>; both paths can be set on the command line. The file is atomically replaced with mode 0600. Profile names must be unique; queued jobs retain a copy of the original profile.</p>
 <table>
 <thead>
@@ -217,22 +234,22 @@ python3 -m venv .venv
 </table>
 <p>A profiles file can also contain <code>&quot;include&quot;: [...]</code> with read-only team profile files; see <a href="teams.html#team-profiles">Teams</a>.</p>
 <p><code>DL_DIR</code>/<code>SSTATE_DIR</code> in local.conf are read as literal hints. <code>${TOPDIR}</code> is expanded; other expressions require a profile path override. Runtime paths, especially kas container paths, may differ from host paths. Use <strong>Resolve env</strong> to inspect the authoritative result.</p>
-<h3 id="host">Host</h3>
+<h3 id="host">Host<a class="anchor" href="#host" aria-label="Link to this section">#</a></h3>
 <p>Set root to your checkout. The TUI sources the init script in bash and executes a quoted argument list. You can also start from an already initialized shell and leave init_script empty. Target fields accept one or more BitBake targets separated by spaces (<code>core-image-minimal busybox</code>, <code>virtual/kernel</code>, <code>mc:qemuarm:core-image-minimal</code>); anything else, such as shell operators, is refused before queueing. Task and variable fields are checked the same way.</p>
-<h3 id="kas">kas</h3>
+<h3 id="kas">kas<a class="anchor" href="#kas" aria-label="Link to this section">#</a></h3>
 <p>Set mode to <code>kas</code> and point kas_file to your YAML. BitBake/devtool commands execute with <code>kas shell FILE -c COMMAND</code>; kas actions call the appropriate subcommand directly. Install kas in your preferred environment.</p>
-<h3 id="kas-container">kas-container</h3>
+<h3 id="kas-container">kas-container<a class="anchor" href="#kas-container" aria-label="Link to this section">#</a></h3>
 <p>Install the official kas-container wrapper and a functioning Docker or Podman runtime. Set <code>KAS_CONTAINER_ENGINE</code>, <code>KAS_WORK_DIR</code> and optionally <code>KAS_BUILD_DIR</code> in environment. Use a dedicated work directory distinct from the Git source repository. The wrapper supplies containerized kas and Yocto dependencies.</p>
 <p>kas-container does not forward every arbitrary host environment variable into its container. Put Yocto overrides in kas YAML or use officially supported kas environment variables. The machine/distro profile fields map to <code>KAS_MACHINE</code>/<code>KAS_DISTRO</code> in kas modes; you can also set these directly. Set container engine through <code>KAS_CONTAINER_ENGINE</code>, not the generic engine field.</p>
-<h3 id="generic-docker--podman">Generic Docker / Podman</h3>
+<h3 id="generic-docker--podman">Generic Docker / Podman<a class="anchor" href="#generic-docker--podman" aria-label="Link to this section">#</a></h3>
 <p>Set mode to <code>container</code>, engine and image. New containers bind root at container_root, use the current UID/GID and have a unique name. The image must contain bash and your build dependencies. BitBake should be the final exec process for graceful signalling.</p>
 <p>Existing container_name uses <code>exec</code> instead; that container must already mount the project at container_root. build_dir must be inside root. External caches require explicit mounts plus matching paths in your build configuration. Runtime args must be JSON strings, such as <code>[&quot;--network&quot;, &quot;host&quot;]</code>; review privileged options yourself.</p>
-<h2 id="build-and-development-workflows">Build and development workflows</h2>
+<h2 id="build-and-development-workflows">Build and development workflows<a class="anchor" href="#build-and-development-workflows" aria-label="Link to this section">#</a></h2>
 <p>Enter one target or recipe in the toolbar and press Build or F2. Filter the command list by group/name. Required inputs appear dynamically. Review the exact invocation and queue it. Builds and utilities share a serial queue to avoid two servers modifying one build directory.</p>
 <p>The Build pane persists operation, profile, status, timestamps, exit code and log path. Enter on a row loads its log. Retry uses original command and profile even if you have switched profiles. Live progress comes from standard <code>Running task N of M</code> messages. History timestamps are stored in UTC.</p>
 <p>Use recipe browsing to locate metadata, open files, build or start devtool modify. The metadata browser indexes local files, including inactive layers; <code>Show layers</code>, <code>Show recipes</code>, <code>Show appends</code> and <code>Show overlaid recipes</code> ask BitBake for evaluated state.</p>
 <p>Interactive actions suspend Textual and give the real terminal to devshell, menuconfig, QEMU or kas shell. They require a real terminal and cannot start while a queued/running job occupies the runner. Their output is not persisted as a queued build log.</p>
-<h2 id="terminal-layout">Terminal layout</h2>
+<h2 id="terminal-layout">Terminal layout<a class="anchor" href="#terminal-layout" aria-label="Link to this section">#</a></h2>
 <p>Bitloom is fully usable without a mouse; the <a href="keyboard.html">keyboard reference</a> lists every key and <code>?</code> shows it inside the TUI.</p>
 <ul>
 <li>The top bar shows the profile, runtime, MACHINE, DISTRO, the detected Yocto release, the service connection and the clock; the brand shimmers while the service is building.</li>
@@ -245,8 +262,8 @@ python3 -m venv .venv
 <details class="shot"><summary><span>Screenshot</span> Keyboard reference overlay</summary><div class="shot-body"><img src="assets/keys.png" alt="Keyboard reference overlay" loading="lazy" decoding="async"></div></details>
 <p><strong>140 × 42</strong> shows the complete workspace. Below 105 columns or 30 rows, tabs replace the navigator and side panes disappear; short terminals also hide the task monitor and overview. Below 75 columns or 22 rows, logs take priority over history and metrics; resize to restore those panels. Dialogs fit within the terminal and scroll when necessary. Layout tests cover 160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20 and 140 × 20, including restoration after resizing.</p>
 <p>F5 opens interruption options and F6 retries the selected job. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.</p>
-<h2 id="daily-helpers">Daily helpers</h2>
-<h3 id="know-when-a-build-ends">Know when a build ends</h3>
+<h2 id="daily-helpers">Daily helpers<a class="anchor" href="#daily-helpers" aria-label="Link to this section">#</a></h2>
+<h3 id="know-when-a-build-ends">Know when a build ends<a class="anchor" href="#know-when-a-build-ends" aria-label="Link to this section">#</a></h3>
 <p><strong>Configuration → <code>o</code></strong> (or the <em>Build notifications</em> panel in the web Configuration section) chooses how the build service announces finished jobs:</p>
 <ul>
 <li>outcomes (success, failed, cancelled) and a minimum duration, so short commands stay quiet;</li>
@@ -255,25 +272,25 @@ python3 -m venv .venv
 </ul>
 <p>The service sends them, so they arrive even when no TUI or browser is open; an open TUI also rings the terminal bell. <code>^T</code> sends a test. Settings live in <code>&lt;state&gt;/notifications.json</code> (mode 0600, as webhook URLs may be secret). In the web dashboard the 🔔 button additionally enables browser notifications for builds that end while the tab is in the background.</p>
 <details class="shot"><summary><span>Screenshot</span> Notification settings</summary><div class="shot-body"><img src="assets/notifications.png" alt="Notification settings" loading="lazy" decoding="async"></div></details>
-<h3 id="how-long-is-left">How long is left</h3>
+<h3 id="how-long-is-left">How long is left<a class="anchor" href="#how-long-is-left" aria-label="Link to this section">#</a></h3>
 <p>While a build runs, the Tasks card and the web progress line show an ETA. It combines the current task rate (after enough tasks to be meaningful) with the median duration of the last successful runs of the same command in the same profile, and says which it used.</p>
-<h3 id="what-changed-since-the-last-run">What changed since the last run</h3>
+<h3 id="what-changed-since-the-last-run">What changed since the last run<a class="anchor" href="#what-changed-since-the-last-run" aria-label="Link to this section">#</a></h3>
 <p><strong>Builds → <code>d</code></strong> (web: the <em>Compare</em> tab) compares the selected job with the previous run of the same command: duration, tasks executed against setscene tasks restored from sstate, sstate hit rate, reused tasks, warnings that are new or gone, and new errors. Numbers inside messages are normalised so the same warning with another version is not reported as new. Many more executed tasks with fewer setscene tasks point at changed metadata or a cold cache; Analysis → <em>Why rebuilding?</em> explains the signatures.</p>
 <details class="shot"><summary><span>Screenshot</span> Comparison with the previous run</summary><div class="shot-body"><img src="assets/compare-runs.png" alt="Comparison with the previous run" loading="lazy" decoding="async"></div></details>
-<h3 id="what-fills-tmpwork">What fills tmp/work</h3>
+<h3 id="what-fills-tmpwork">What fills tmp/work<a class="anchor" href="#what-fills-tmpwork" aria-label="Link to this section">#</a></h3>
 <p><strong>Caches → <code>w</code></strong> (web Configuration: <em>tmp/work usage</em>, CLI: <code>bitloom --work-usage</code>) measures each recipe's work directory (bounded to 30 seconds on huge trees), lists the largest, says whether <code>rm_work</code> is enabled and gives <code>bitbake -c clean</code> commands for the biggest. <code>INHERIT += &quot;rm_work&quot;</code> removes work directories after each recipe builds; keep recipes you debug with <code>RM_WORK_EXCLUDE</code>.</p>
-<h2 id="errors-and-log-search">Errors and log search</h2>
+<h2 id="errors-and-log-search">Errors and log search<a class="anchor" href="#errors-and-log-search" aria-label="Link to this section">#</a></h2>
 <p>Failures generate a notification and refresh the task-log browser. Analysis → <em>Failure diagnosis</em> anchors on the root cause instead of the first line mentioning a failure: compiler errors, the first make <code>***</code> line with the output leading to it, out-of-memory kills, full disks, fetch and patch failures and pseudo aborts. It lists the failed tasks and maps known causes to a next step, for example retrying a MakeMaker &quot;Makefile has been rebuilt&quot; race, pinning the peeled commit of an annotated kas tag, or <code>bitbake -c clean &lt;recipe&gt;</code> when a build interrupted by a restart left empty object files behind (undefined references to <code>main</code>). These rules come from failures seen on real Scarthgap and Wrynose builds. <strong>Builds → <code>c</code></strong> opens console builds that were started outside Bitloom (<a href="teams.html#builds-started-elsewhere">details</a>). Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to <code>.bitloom/exports</code>.</p>
 <p>Task logs are discovered under the standard <code>tmp/work/ARCH/RECIPE/VERSION/temp</code> hierarchy and ordered by modification time. Custom TMPDIR layouts currently require setting build_dir to match the expected layout or opening logs externally. Symlink aliases are skipped to avoid duplicate entries.</p>
 <p>The Workbench build report extracts warnings, errors, task summaries, failed tasks and shared-state summaries. Timings ranks completed tasks by durations observed in timestamped kas output. Overlapping tasks are not added into a false build duration. Plain BitBake logs without timestamps cannot supply those timings; use buildstats artifacts. It does not invent diagnoses. Use the task's own log to determine the cause.</p>
-<h2 id="workbench">Workbench</h2>
+<h2 id="workbench">Workbench<a class="anchor" href="#workbench" aria-label="Link to this section">#</a></h2>
 <p><strong>Environment:</strong> Resolve env for the chosen target, wait for success, then Load. Filter both variable names and values. Capturing two environments for the same target/profile enables Env diff. Literal exported values are compared; function bodies and assignment provenance remain in the original log.</p>
 <p><strong>Dependencies:</strong> Generate graph for a target and wait for success. Choose Dependencies and Load to read task-depends.dot from the configured host-visible build directory. If the build directory is container-only, Load queues a read through the original runtime and parses its persisted output. Filter nodes to explore task relationships. The first 20,000 edges are indexed. Enter an exact node name in the filter and choose Why this task? to traverse required and reverse dependencies. Traversal detects cycles and limits each direction to 200 nodes.</p>
 <p><strong>Build history:</strong> Enable buildhistory and BUILDHISTORY_COMMIT in local.conf, build an image, then open Build history diff. The report shows recent Git commits and changes between the newest two commits.</p>
 <p><strong>Signatures:</strong> Use Dump signatures, Explain sstate differences, Read signature file or Compare signature files. Signature commands use BitBake tools from the selected release rather than decoding undocumented binary formats.</p>
-<h2 id="root-filesystem-inspection">Root filesystem inspection</h2>
+<h2 id="root-filesystem-inspection">Root filesystem inspection<a class="anchor" href="#root-filesystem-inspection" aria-label="Link to this section">#</a></h2>
 <p>Select a tar rootfs archive in Artifacts and use Rootfs inventory. The report lists file type, mode, numeric UID/GID, size and link targets. Archives are never extracted and links are never followed. The inventory is bounded to 20,000 entries. Other image formats require their own tooling.</p>
-<h2 id="analysis-reports">Analysis reports</h2>
+<h2 id="analysis-reports">Analysis reports<a class="anchor" href="#analysis-reports" aria-label="Link to this section">#</a></h2>
 <p>Open <strong>Analysis</strong> in the navigator or tab bar, choose a report, and press Analyze. Export saves the displayed report under the state directory's exports folder.</p>
 <ul>
 <li><strong>Search metadata:</strong> enter a literal phrase. Search is case-insensitive and covers indexed recipes, appends, classes, kas YAML and layer.conf, including inactive layers. Results contain paths and line numbers. Files above 2 MB or unreadable files are skipped; output stops at 1,000 matches. Container-only metadata must be made host-visible to be indexed.</li>
@@ -282,18 +299,18 @@ python3 -m venv .venv
 <li><strong>Warning groups:</strong> select or enter a build log. Identical messages are counted after removing the timestamp/logger prefix; the 200 most frequent groups are shown. Different recipe paths and message text remain distinct.</li>
 </ul>
 <p>Metadata, manifest, efficiency and warning reports read persisted data from the selected paths. Runtime tools below also provide explicit editing and artifact export.</p>
-<h2 id="cache-and-download-maintenance">Cache and download maintenance</h2>
+<h2 id="cache-and-download-maintenance">Cache and download maintenance<a class="anchor" href="#cache-and-download-maintenance" aria-label="Link to this section">#</a></h2>
 <p>Scan either Downloads or Shared state to view names, size, age and relative paths. Inventory is capped at 20,000 files. The scan total is the indexed total, not necessarily the entire cache. Set an age of at least one day and open Prune plan. It lists concrete files and estimated bytes; nothing is removed before Execute plan.</p>
 <p>Pruning excludes symlinks, <code>.lock</code>/<code>.done</code> markers, Git checkout internals and files whose sibling lock exists. Each file's path, size, modification time and sibling lock are checked again at deletion. Only files inside the selected root can be deleted. The TUI refuses a plan while its own jobs are active/queued. Other machines/builders cannot be detected.</p>
 <p>Age is not proof that an artifact is unused. Keep shared caches and offline source requirements in mind. Recipe clean keeps downloads/sstate; cleansstate removes local recipe shared state; cleanall also deletes recipe downloads. Remote sstate mirrors are unaffected by local inventory pruning.</p>
 <p>Download audit reports possible partial files, lock files and orphan completion markers. For actual source integrity checking, use the recipe fetch task and its SRC_URI checksums.</p>
-<h2 id="releases-and-compatibility">Releases and compatibility</h2>
+<h2 id="releases-and-compatibility">Releases and compatibility<a class="anchor" href="#releases-and-compatibility" aria-label="Link to this section">#</a></h2>
 <p>Versions reports local repository branches, commit IDs, Git descriptions, dirty status and literal LAYERSERIES_COMPAT declarations against locally detected LAYERSERIES_CORENAMES. Dynamic expressions can require manual review. Metadata parse is authoritative.</p>
 <p>Use one profile/build directory per release. The TUI does not switch active Git branches underneath a running build, silently migrate local.conf syntax or mix caches without your configuration.</p>
-<h2 id="configuration-editing">Configuration editing</h2>
+<h2 id="configuration-editing">Configuration editing<a class="anchor" href="#configuration-editing" aria-label="Link to this section">#</a></h2>
 <p>local.conf, bblayers.conf and metadata are editable. Save creates a timestamped backup, refuses to overwrite a file changed externally, and atomically replaces the contents. Files above 2 MB and binary files are not opened in the editor. Close without saving discards in-editor changes. Review changes with your usual Git tooling.</p>
 <p>Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline builds, mirror tarballs, thread limits and optional image/security classes.</p>
-<h2 id="troubleshooting">Troubleshooting</h2>
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" href="#troubleshooting" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><strong>bitbake not found:</strong> configure an init script or launch from a sourced environment.</li>
 <li><strong>kas or kas-container not found:</strong> the build service keeps the <code>PATH</code> of the shell that started it, plus the <code>bin</code> directory of Bitloom's own Python environment. Install kas in that environment or on the system <code>PATH</code>, then restart the service when idle (<code>bitloom --service-stop</code>).</li>
@@ -309,9 +326,9 @@ python3 -m venv .venv
 <li><strong>Too little space/RAM:</strong> check Health, reduce thread counts, and inspect cache plans before removal.</li>
 <li><strong>Small terminal:</strong> use keyboard shortcuts and Tab, or increase to 140×42 for the complete layout.</li>
 </ul>
-<h2 id="practical-limits">Practical limits</h2>
+<h2 id="practical-limits">Practical limits<a class="anchor" href="#practical-limits" aria-label="Link to this section">#</a></h2>
 <p>Each command remains subject to the selected Yocto release, runtime, device access and configuration. Inventory scans are bounded, age-based pruning does not perform signature reachability analysis, and no cache is pruned automatically. External builders sharing a cache cannot be detected reliably. Logs and profiles can contain proprietary paths or credentials; review exports before sharing them. Custom commands accept argv, not shell expressions. Unit and UI tests in CI do not run a Yocto build; the container integration builds are separate, opt-in validations (see <a href="validation.html">validation</a>).</p>
-<h2 id="documentation-and-verification">Documentation and verification</h2>
+<h2 id="documentation-and-verification">Documentation and verification<a class="anchor" href="#documentation-and-verification" aria-label="Link to this section">#</a></h2>
 <pre><code class="language-bash">pip install -e '.[dev]'
 python -m pytest -q                      # unit and UI tests, no Yocto build needed
 pip install pillow cairosvg playwright   # optional capture tooling
@@ -323,7 +340,7 @@ python tools/check_docs.py               # links, anchors and page behaviour
 </code></pre>
 <p>The Pages workflow publishes <code>docs/</code> on pushes to <code>main</code> when the repository has <strong>Settings → Pages → Source → GitHub Actions</strong> (private repositories need a plan that includes Pages); otherwise the run is skipped with a notice.</p>
 <p><code>python tools/capture_docs.py</code> captures the real Textual interface with Pilot and exports SVG/PNG/GIF. It uses labelled demo data. <code>python tools/validate_kas.py</code> executes a real image build through Runner and records a JSON result. Read validation.md for evidence from the current development session.</p>
-<h2 id="persistent-build-service-and-reconnecting">Persistent build service and reconnecting</h2>
+<h2 id="persistent-build-service-and-reconnecting">Persistent build service and reconnecting<a class="anchor" href="#persistent-build-service-and-reconnecting" aria-label="Link to this section">#</a></h2>
 <p>Real launches now use an independent local build service by default. Closing the TUI, pressing Ctrl+Q, or losing the terminal detaches the client: queued and running jobs remain owned by the service. Reopen Bitloom with the same <code>--state</code> directory to reconnect. Jobs retain their original profile, commands and complete logs. Multiple clients can observe the same service.</p>
 <pre><code class="language-bash">bitloom --config .bitloom/profiles.json --state .bitloom
 bitloom --state .bitloom --service-status
@@ -331,11 +348,11 @@ bitloom --state .bitloom --service-stop  # idle service only
 bitloom --embedded                     # exit stops owned jobs
 </code></pre>
 <p>Demo mode remains embedded. F5 still explicitly interrupts a selected job through the service. The service refuses an idle-stop request when jobs remain queued/running; use F5 first if interruption is intended. A Unix socket in a private Linux <code>/tmp/bitloom-services-UID</code> directory works even when the project lives on a WSL Windows mount. Connections are restricted to the same UID. History remains under the selected state directory. This is local persistence, not reboot recovery or a distributed scheduler: a crashed service marks incomplete history interrupted on its next start and does not automatically replay work.</p>
-<h2 id="runtime-filesystem-and-artifacts">Runtime filesystem and artifacts</h2>
+<h2 id="runtime-filesystem-and-artifacts">Runtime filesystem and artifacts<a class="anchor" href="#runtime-filesystem-and-artifacts" aria-label="Link to this section">#</a></h2>
 <p>The Analysis selector now provides <strong>Runtime directory</strong>, <strong>Runtime file</strong>, <strong>Edit runtime file</strong> and <strong>Export runtime artifact</strong>. Enter an absolute path as seen by the selected runtime, such as <code>/work/build/conf/local.conf</code> in kas-container. These operations run Python inside that runtime through the same command routing as builds. Python 3 must exist there.</p>
 <p>Directory previews stop at 2,000 entries; text previews/edits at 2 MiB. Runtime editing opens an actual editor, rejects files changed since the preview, refuses symlink edits, preserves the original file in a content-addressed backup and replaces the file atomically. Saving is blocked while this client's build queue is active. External programs remain responsible for their own edits.</p>
 <p>Binary export streams a file up to 1 GiB into a temporary local file and verifies both SHA-256 and byte count before committing it. The second path is the local destination; leaving it blank uses the state's exports directory. Existing destinations are never overwritten. This handles artifacts visible only inside the container, including a Docker Snap daemon's private filesystem. It does not require mounting or extracting an image.</p>
-<h2 id="evidence-workflows">Evidence workflows</h2>
+<h2 id="evidence-workflows">Evidence workflows<a class="anchor" href="#evidence-workflows" aria-label="Link to this section">#</a></h2>
 <table>
 <thead>
 <tr>
@@ -384,10 +401,10 @@ bitloom --embedded                     # exit stops owned jobs
 </table>
 <p>Package inclusion follows both RDEPENDS and RRECOMMENDS. Virtual providers, renaming, package-manager choices, exclusions and optional recommendations can complicate the chain; absent evidence is explicitly not proof of absence. The evaluated image operation requires an idle queue. Mirror reachability and layer compatibility are not proven by filesystem preflight; use BitBake metadata parsing, layer inspection and fetch actions.</p>
 <p>Reproducibility exports redact credential-named configuration lines and URL userinfo. Profile environment uses a small build-control allowlist; unknown keys and custom container arguments are omitted. Supply those separately. Inspect any bundle before sharing because project-specific secrets embedded under innocuous configuration names cannot be recognized reliably. An unresolved container tag is explicitly reported and is not treated as an exact digest.</p>
-<h2 id="coordinating-shared-caches">Coordinating shared caches</h2>
+<h2 id="coordinating-shared-caches">Coordinating shared caches<a class="anchor" href="#coordinating-shared-caches" aria-label="Link to this section">#</a></h2>
 <p>Bitloom builders take a shared <code>.bitloom-coordination.lock</code> on host-visible download and sstate directories. Maintenance takes an exclusive lock, so cooperating services cannot prune while another Bitloom builder uses the cache. A separate build-directory lease prevents duplicate builders across local state directories. Existing <code>.lock</code> and <code>.done</code> protection also applies when executing a plan directly.</p>
 <p>These are advisory locks. External BitBake processes, container-only cache paths and builders that do not take the same lock are not coordinated. Signature reference plans are conservative: one build's stamps are not an exhaustive record of every cache user. For release-specific removal, coordinate all builders and use that release's <code>scripts/sstate-cache-management.sh</code> after inspecting its own help/options. Bitloom does not infer reachability from age or silently invoke a destructive cache script.</p>
-<h2 id="terminal-themes">Terminal themes</h2>
+<h2 id="terminal-themes">Terminal themes<a class="anchor" href="#terminal-themes" aria-label="Link to this section">#</a></h2>
 <p>Press <strong>F7</strong> or the toolbar's <strong>Themes</strong> button. Choose a palette to preview it immediately, then <strong>Save theme</strong> to persist it or <strong>Cancel/Escape</strong> to restore the palette you opened with. Changes affect terminal backgrounds, surfaces, tables, selection colors, modal dialogs and semantic status colors. Source previews use a matching light/dark syntax palette on their next refresh.</p>
 <table>
 <thead>
@@ -457,9 +474,9 @@ bitloom --embedded                     # exit stops owned jobs
 </table>
 <p>The choice is a UI preference stored in <code>appearance.json</code> under the selected state directory, independent of build profiles. Missing, malformed or unknown saved themes fall back to Bitloom. Themes do not change build settings or stop queued work.</p>
 <details class="shot"><summary><span>Animation</span> Fourteen actual terminal theme previews</summary><div class="shot-body"><img src="assets/themes.gif" alt="Fourteen actual terminal theme previews" loading="lazy" decoding="async"></div></details>
-<h2 id="build-launch-and-try-the-local-yocto-workspace">Build, launch and try the local Yocto workspace</h2>
+<h2 id="build-launch-and-try-the-local-yocto-workspace">Build, launch and try the local Yocto workspace<a class="anchor" href="#build-launch-and-try-the-local-yocto-workspace" aria-label="Link to this section">#</a></h2>
 <p>Run these commands from the repository root in a Linux/WSL terminal. Bitloom is a Python application: editable installation is sufficient for development; no native compilation is required.</p>
-<h3 id="install-for-development">Install for development</h3>
+<h3 id="install-for-development">Install for development<a class="anchor" href="#install-for-development" aria-label="Link to this section">#</a></h3>
 <pre><code class="language-bash">python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
@@ -468,7 +485,7 @@ bitloom --demo
 </code></pre>
 <p>If themes appear monochrome and your shell sets <code>NO_COLOR</code>, run <code>unset NO_COLOR</code> before launching.</p>
 <p>In this prepared workspace, <code>.venv</code> and kas-container already exist. You can start directly with <code>source .venv/bin/activate</code>.</p>
-<h3 id="build-distributable-packages">Build distributable packages</h3>
+<h3 id="build-distributable-packages">Build distributable packages<a class="anchor" href="#build-distributable-packages" aria-label="Link to this section">#</a></h3>
 <pre><code class="language-bash">source .venv/bin/activate
 python -m pip install 'setuptools&gt;=61' build wheel
 python -m build --no-isolation
@@ -478,7 +495,7 @@ python -m build --no-isolation
 /tmp/bitloom-wheel/bin/python -m pip install dist/bitloom-0.1.0-py3-none-any.whl
 /tmp/bitloom-wheel/bin/bitloom --help
 </code></pre>
-<h3 id="open-the-already-built-local-test-workspace">Open the already built local test workspace</h3>
+<h3 id="open-the-already-built-local-test-workspace">Open the already built local test workspace<a class="anchor" href="#open-the-already-built-local-test-workspace" aria-label="Link to this section">#</a></h3>
 <p>The verified local workspace uses <strong>Poky yocto-5.0.8 / Scarthgap</strong>, <strong>qemux86-64</strong>, <strong>core-image-minimal</strong> and a pinned kas container image. Yocto tools execute inside Docker; the host runs only the TUI and container wrapper. <code>.validation</code> is local generated state and is intentionally absent from a fresh Git clone.</p>
 <pre><code class="language-bash">source .venv/bin/activate
 python tools/prepare_validation.py
@@ -497,7 +514,7 @@ bitloom --config .validation/profiles.json --state .validation
 bitloom --state .validation --service-stop
 </code></pre>
 <p>The last command stops an idle service only. Stop it before running integration scripts that need exclusive access to <code>.validation</code>; closing the TUI alone does not stop the service.</p>
-<h3 id="reproduce-on-a-fresh-machine">Reproduce on a fresh machine</h3>
+<h3 id="reproduce-on-a-fresh-machine">Reproduce on a fresh machine<a class="anchor" href="#reproduce-on-a-fresh-machine" aria-label="Link to this section">#</a></h3>
 <p>Docker must be available and the build work directory must be on a Linux filesystem. Install the official wrapper if needed:</p>
 <pre><code class="language-bash">source .venv/bin/activate
 curl -fL https://raw.githubusercontent.com/siemens/kas/4.8.1/kas-container -o .venv/bin/kas-container
@@ -513,20 +530,20 @@ python tools/probe_kas.py
 python tools/probe_workflows.py
 </code></pre>
 <p><code>validate_kas.py</code> builds the image and verifies its rootfs; probes then exercise real runtime operations. <code>probe_workflows.py</code> submits a warm build to a separate persistent service and stops that service after completion. Unit/UI checks run with <code>python -m pytest -q</code>; they do not require a Yocto build.</p>
-<h3 id="preview-the-pages-site-locally">Preview the Pages site locally</h3>
+<h3 id="preview-the-pages-site-locally">Preview the Pages site locally<a class="anchor" href="#preview-the-pages-site-locally" aria-label="Link to this section">#</a></h3>
 <pre><code class="language-bash">python -m pip install '.[docs]'
 python tools/serve_docs.py --port 8000          # rebuilds the HTML, then serves docs/
 python tools/serve_docs.py --port 9000 --no-build --open
 </code></pre>
 <p><code>--host</code> changes the bind address (loopback by default). Screenshots in the HTML pages are collapsed and load only when expanded.</p>
-<h2 id="gentle-colors-and-focus">Gentle colors and focus</h2>
+<h2 id="gentle-colors-and-focus">Gentle colors and focus<a class="anchor" href="#gentle-colors-and-focus" aria-label="Link to this section">#</a></h2>
 <p>F7 offers Soft Slate, a muted dark gray palette, and Linen, a warm light palette. Focusing report or log panes highlights the border without tinting the entire background. If a true-color terminal such as Windows Terminal renders saturated blue blocks, check TERM and COLORTERM and try <code>COLORTERM=truecolor bitloom</code> with your usual profile arguments. Limited-color terminals still use their available colors.</p>
-<h3 id="navigation-and-elapsed-time">Navigation and elapsed time</h3>
+<h3 id="navigation-and-elapsed-time">Navigation and elapsed time<a class="anchor" href="#navigation-and-elapsed-time" aria-label="Link to this section">#</a></h3>
 <p>F8 selects the previous workspace section; F9 selects the next, including Developer, Analysis and Help. F10 opens Developer directly. These keys work with conventional terminal escape sequences. Alt+number bindings remain available on terminals sending compatible key events, but are not the recommended navigation keys. Running history rows update their elapsed time once per second, independently of log output; finished durations remain fixed.</p>
-<h2 id="hands-on-kas-layers-and-recipes">Hands-on kas: layers and recipes</h2>
+<h2 id="hands-on-kas-layers-and-recipes">Hands-on kas: layers and recipes<a class="anchor" href="#hands-on-kas-layers-and-recipes" aria-label="Link to this section">#</a></h2>
 <p>Start the verified workspace with <code>python tools/prepare_validation.py</code>, then <code>bitloom --config .validation/profiles.json --state .validation</code>. Docker must be running. Use F2 to open commands and F8/F9 to change sections.</p>
 <p>First build <code>busybox</code>, repeat the build, run Clean recipe, and build again. Compare executed and reused tasks. Clean recipe + sstate removes the recipe's local shared state too; mirrors can still supply cached results. Build <code>core-image-minimal</code> afterward to inspect image assembly.</p>
-<h3 id="create-a-layer-and-a-small-recipe">Create a layer and a small recipe</h3>
+<h3 id="create-a-layer-and-a-small-recipe">Create a layer and a small recipe<a class="anchor" href="#create-a-layer-and-a-small-recipe" aria-label="Link to this section">#</a></h3>
 <p>From F2, open <strong>Open kas shell</strong>. The following commands run inside the container, with the BitBake environment initialized. <code>/work/meta-bitloom</code> persists in this profile's dedicated work mount.</p>
 <pre><code class="language-bash">bitbake-layers create-layer /work/meta-bitloom
 mkdir -p /work/meta-bitloom/recipes-example/bitloom-hello
@@ -543,7 +560,7 @@ EOF
 exit
 </code></pre>
 <p>CLOSED is used for this private exercise to avoid needing a separate license file; use the actual license and checksum for distributable recipes. Layer creation and registration are separate operations. F2 also provides Create layer and Add layer, but a layer registered only in bblayers.conf may be lost when kas regenerates configuration.</p>
-<h3 id="register-the-layer-reproducibly">Register the layer reproducibly</h3>
+<h3 id="register-the-layer-reproducibly">Register the layer reproducibly<a class="anchor" href="#register-the-layer-reproducibly" aria-label="Link to this section">#</a></h3>
 <p>Create <code>kas-experiment.yml</code> at the root of the Bitloom checkout, using your host editor:</p>
 <pre><code class="language-yaml">header:
   version: 14
@@ -558,19 +575,26 @@ local_conf_header:
 </code></pre>
 <p>This absolute layer path intentionally targets the container workspace above. In F4 duplicate the kas integration profile, retaining its container environment and KAS_WORK_DIR, and set kas_file to <code>kas-experiment.yml</code>. Run <strong>kas build</strong> to apply the configuration. The local layer is declared in kas rather than only in a generated configuration file. Do not commit kas-experiment.yml until you decide whether this container-specific configuration belongs in your project.</p>
 <p>Build target <code>bitloom-hello</code>, then build <code>core-image-minimal</code> and inspect its package manifest for bitloom-hello. To edit the recipe, use the Analysis runtime file reader/editor on <code>/work/meta-bitloom/recipes-example/bitloom-hello/bitloom-hello_1.0.bb</code>, or open the kas shell and use an available editor. Change the greeting to v2 and rebuild the recipe and image. BitBake should detect the metadata change; a clean is usually unnecessary.</p>
-<h3 id="extend-an-existing-recipe">Extend an existing recipe</h3>
+<h3 id="extend-an-existing-recipe">Extend an existing recipe<a class="anchor" href="#extend-an-existing-recipe" aria-label="Link to this section">#</a></h3>
 <p>Keep upstream recipes intact and add a matching .bbappend in your layer. For example, create <code>recipes-core/busybox/busybox_%.bbappend</code> containing:</p>
 <pre><code class="language-bitbake">SUMMARY:append = &quot; (Bitloom experiment)&quot;
 </code></pre>
 <p>Evaluate BusyBox's environment and inspect SUMMARY to verify the append. For source development use Modify recipe (devtool modify), edit the extracted source directory reported by devtool, then Devtool build. Commit source changes before Devtool finish into <code>/work/meta-bitloom</code>; that exports the recipe changes/patches to your layer. Devtool reset removes workspace integration when you want to return to the layer recipe. Source files may remain, so inspect them before removing anything.</p>
 <p>References: <a href="https://docs.yoctoproject.org/dev/dev-manual/layers.html">Yocto layers</a>, <a href="https://kas.readthedocs.io/en/4.8.2/userguide/project-configuration.html">kas configuration</a>.</p>
-<h2 id="create-files-and-refresh-external-changes">Create files and refresh external changes</h2>
+<h2 id="create-files-and-refresh-external-changes">Create files and refresh external changes<a class="anchor" href="#create-files-and-refresh-external-changes" aria-label="Link to this section">#</a></h2>
 <p>Metadata's <strong>New file</strong> button and Analysis's <strong>Create runtime file</strong> operation open an editor with an absolute destination path and templates for empty text, private example recipes and .bbappend files. Select the template before entering your content. <strong>Create file</strong> creates missing parent folders and atomically publishes the file without overwriting existing files or symlinks. Builds queued or running in this session must finish before metadata creation or editing.</p>
 <p>With kas/container profiles use runtime paths, for example <code>/work/meta-bitloom/recipes-example/hello/hello_1.0.bb</code>. The directory is shown in Analysis after creation. Local metadata remains a host filesystem index; container-only files are viewed through runtime directory/file operations. Host metadata additions, edits and deletions are detected every five seconds and refresh the index when changed. Open runtime directory listings refresh every fifteen seconds while idle, with a 2,000-entry limit. Dialogs pause automatic scans. F3 rescans local metadata; Analyze refreshes the current runtime directory immediately.</p>
 <p>To follow the hands-on tutorial entirely through Bitloom: use F2 Create layer for <code>/work/meta-bitloom</code>, then New file to create the .bb recipe and any .bbappend files. Create the kas experiment YAML in the host checkout using your editor, since a container profile's file dialog targets the container filesystem. Register the layer in kas as described above. Existing container files can be edited through Analysis → Edit runtime file.</p>
 <details class="shot"><summary><span>Screenshot</span> New-file editor with sample recipe</summary><div class="shot-body"><img src="assets/file-creation.png" alt="New-file editor with sample recipe" loading="lazy" decoding="async"></div></details>
-<h2 id="connected-developer-workflows">Connected Developer workflows</h2>
+<h2 id="connected-developer-workflows">Connected Developer workflows<a class="anchor" href="#connected-developer-workflows" aria-label="Link to this section">#</a></h2>
 <p>F10 opens the <a href="developer.html">Developer workbench</a>. Its guide documents all sixteen views, field meanings, queued operations, stale-file detection, immutable captures and baseline comparison. New layer previews complete CMake/Meson/Make/Python/Rust fixtures and registers them through a new kas composition or bitbake-layers. Clone, also in F4, preserves the original profile and selects a separate build directory. Optional <code>source_mappings</code> maps absolute runtime roots to real host-visible directories for IDE exports.</p>
 <p>New owned kas-container jobs have unique Docker/Podman names and labels. Force stop records the exact container's stop result before recipe recovery is offered. Graceful draining remains disabled for kas wrappers; native kas and external containers retain unconfirmed-server guards. Shutdown evidence displays the original job observations separately from a fresh probe namespace.</p>
 <p>After upgrading, let an existing persistent service finish its queue and stop that idle service once; the next launch loads the new code. Existing history is retained. The <a href="testbook.html#13-developer-acceptance">Developer acceptance cases</a> give concrete experiments for every workflow, including optional hardware, kernel and SDK prerequisites.</p>
-</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a><a href="guide.md">Markdown source</a></footer></body></html>
+</article>
+<nav class="pager" aria-label="Previous and next page"><a class="next" href="projects.html"><small>Next</small>Projects and setup</a></nav>
+<div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/guide.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+</main>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-bitloom-covers">What Bitloom covers</a><a href="#install-from-a-github-release">Install from a GitHub release</a><a href="#debian--ubuntu" class="sub">Debian / Ubuntu</a><a href="#other-linux-distributions--wsl2" class="sub">Other Linux distributions / WSL2</a><a href="#verify-downloaded-assets" class="sub">Verify downloaded assets</a><a href="#fresh-checkout-demo">Fresh checkout demo</a><a href="#profiles-and-paths">Profiles and paths</a><a href="#host" class="sub">Host</a><a href="#kas" class="sub">kas</a><a href="#kas-container" class="sub">kas-container</a><a href="#generic-docker--podman" class="sub">Generic Docker / Podman</a><a href="#build-and-development-workflows">Build and development workflows</a><a href="#terminal-layout">Terminal layout</a><a href="#daily-helpers">Daily helpers</a><a href="#know-when-a-build-ends" class="sub">Know when a build ends</a><a href="#how-long-is-left" class="sub">How long is left</a><a href="#what-changed-since-the-last-run" class="sub">What changed since the last run</a><a href="#what-fills-tmpwork" class="sub">What fills tmp/work</a><a href="#errors-and-log-search">Errors and log search</a><a href="#workbench">Workbench</a><a href="#root-filesystem-inspection">Root filesystem inspection</a><a href="#analysis-reports">Analysis reports</a><a href="#cache-and-download-maintenance">Cache and download maintenance</a><a href="#releases-and-compatibility">Releases and compatibility</a><a href="#configuration-editing">Configuration editing</a><a href="#troubleshooting">Troubleshooting</a><a href="#practical-limits">Practical limits</a><a href="#documentation-and-verification">Documentation and verification</a><a href="#persistent-build-service-and-reconnecting">Persistent build service and reconnecting</a><a href="#runtime-filesystem-and-artifacts">Runtime filesystem and artifacts</a><a href="#evidence-workflows">Evidence workflows</a><a href="#coordinating-shared-caches">Coordinating shared caches</a><a href="#terminal-themes">Terminal themes</a><a href="#build-launch-and-try-the-local-yocto-workspace">Build, launch and try the local Yocto workspace</a><a href="#install-for-development" class="sub">Install for development</a><a href="#build-distributable-packages" class="sub">Build distributable packages</a><a href="#open-the-already-built-local-test-workspace" class="sub">Open the already built local test workspace</a><a href="#reproduce-on-a-fresh-machine" class="sub">Reproduce on a fresh machine</a><a href="#preview-the-pages-site-locally" class="sub">Preview the Pages site locally</a><a href="#gentle-colors-and-focus">Gentle colors and focus</a><a href="#navigation-and-elapsed-time" class="sub">Navigation and elapsed time</a><a href="#hands-on-kas-layers-and-recipes">Hands-on kas: layers and recipes</a><a href="#create-a-layer-and-a-small-recipe" class="sub">Create a layer and a small recipe</a><a href="#register-the-layer-reproducibly" class="sub">Register the layer reproducibly</a><a href="#extend-an-existing-recipe" class="sub">Extend an existing recipe</a><a href="#create-files-and-refresh-external-changes">Create files and refresh external changes</a><a href="#connected-developer-workflows">Connected Developer workflows</a></aside>
+</div>
+<script src="docs.js"></script>
+</body></html>
