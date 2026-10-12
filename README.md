@@ -282,6 +282,8 @@ Docker/Podman must be running. The kas image supplies Yocto build dependencies. 
 
 **Verified on 2026-10-10:** all 4,064 tasks succeeded in 57m 10s through kas-container; the rootfs archive and eight runtime probes passed.
 
+**Verified on 2026-10-12 (Wrynose):** `kas-wrynose.yml` built through kas-container; `bitloom --ci sbom-cve-enable --ci kas-build` then enabled the sbom-cve-check fragment and rebuilt (4,459 tasks). `--sbom` read the SPDX 3.0.1 image SBOM (37 installed packages, 100% PURL and licence coverage, VEX fixed/not-affected), `--cra` reported every check from real evidence, and `--vulns` ranked the sbom-cve-check findings by CVSS (`--fail-on-unpatched` exited 2).
+
 <details><summary>Screenshot: Actual successful kas-container build</summary>
 
 ![Actual successful kas-container build](docs/assets/real-kas-build.png)

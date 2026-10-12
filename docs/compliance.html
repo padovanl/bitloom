@@ -55,6 +55,7 @@
 <li><strong>SPDX 3.0 JSON-LD</strong> (<code>IMAGE.spdx.json</code>, Styhead and later).</li>
 <li><strong>SPDX 2.2</strong> images, which ship <code>IMAGE.spdx.tar.zst</code>: Bitloom joins the image manifest with the per-package and recipe documents in <code>tmp/deploy/spdx</code>, so no zstd tooling is needed.</li>
 </ul>
+<p>An SPDX 3 image SBOM from OpenEmbedded also describes the recipes that produced the image (including <code>-native</code> build tools), the downloaded source archives and the image itself. Coverage is measured on the installed packages (<code>software_primaryPurpose</code> <em>install</em>), the components that ship; the report lists how many other elements the document describes.</p>
 <p>For each SBOM it reports the share of packages with a version, a PURL, a CPE, licence information and a supplier, the VEX status counts (affected, under investigation, fixed, not affected) with the affected CVE identifiers, the CVEs that SPDX 2.2 recipes record as fixed, and the packages without a licence or identifier. The <code>Organization: OpenEmbedded ()</code> placeholder does not count as a supplier: set your company in the SBOM settings.</p>
 <details class="shot"><summary><span>Screenshot</span> SBOM quality of the Wrynose sample workspace</summary><div class="shot-body"><img src="assets/sbom-quality.png" alt="SBOM quality of the Wrynose sample workspace" loading="lazy" decoding="async"></div></details>
 <h2 id="cra-readiness">CRA readiness</h2>

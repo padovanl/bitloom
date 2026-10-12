@@ -54,6 +54,23 @@ def test_spdx3_and_spdx2_quality(tmp_path):
     assert 'PURL  50.0%' in text and 'affected: CVE-2026-0001' in text
 
 
+def test_spdx3_coverage_counts_installed_packages(tmp_path):
+    """Real OE image SBOMs also list recipes (with -native build tools) and downloaded sources;
+    counting them reported 55% licence coverage for an image whose packages all had one."""
+    from bitloom.sbom import analyse
+    graph = [dict(e) for e in SPDX3['@graph']]
+    for element in graph:
+        if element.get('spdxId') == 'p1':
+            element['software_primaryPurpose'] = 'install'
+    graph += [{"type": "software_Package", "spdxId": "r", "name": "acl-native", "software_primaryPurpose": "specification"},
+              {"type": "software_Package", "spdxId": "s", "name": "acl-2.3.2.tar.gz", "software_primaryPurpose": "source"}]
+    path = tmp_path / 'image.spdx.json'
+    path.write_text(json.dumps({**SPDX3, '@graph': graph}))
+    result = analyse(path)
+    assert result['packages'] == 1 and result['with_license'] == 1.0 and result['missing_identity'] == []
+    assert result['other_elements'] == {'specification': 1, 'source': 1, 'other': 1}
+
+
 def test_release_detection_and_cra_timeline(tmp_path):
     from bitloom.sbom import cra_report
     from bitloom.versions import describe, detect_release

@@ -33,7 +33,9 @@ def sbom_files(profile: Profile) -> list[Path]:
     for folder in (profile.build_path / "tmp/deploy/images", profile.build_path / "tmp/deploy/sdk"):
         if not folder.is_dir():
             continue
-        found += [p for p in folder.rglob("*.spdx.json") if p.is_file() and not p.is_symlink()]
+        # IMAGE.sbom-cve-check.spdx.json is sbom-cve-check's output (the SBOM plus its CVE
+        # assessments): a vulnerability report, read by the vulnerabilities view.
+        found += [p for p in folder.rglob("*.spdx.json") if p.is_file() and not p.is_symlink() and not p.name.endswith(".sbom-cve-check.spdx.json")]
         for archive in folder.rglob("*.spdx.tar.zst"):
             manifest = archive.with_name(archive.name[:-len(".spdx.tar.zst")] + ".manifest")
             if archive.is_file() and not archive.is_symlink() and manifest.is_file() and manifest not in found:
@@ -151,17 +153,25 @@ def _analyse_spdx3(path, data, graph):
         kinds = {x.get("externalIdentifierType") for x in identifiers if isinstance(x, dict)}
         rows.append({"name": element.get("name"), "version": element.get("software_packageVersion"),
                      "purl": bool(element.get("software_packageUrl")) or "packageUrl" in kinds,
-                     "cpe": bool(kinds & {"cpe22", "cpe23"}),
+                     "cpe": bool(kinds & {"cpe22", "cpe23"}), "purpose": element.get("software_primaryPurpose"),
                      "license": element.get("spdxId") in licensed, "supplier": bool(element.get("suppliedBy"))})
+    # OE image SBOMs also describe the recipes (purpose "specification", including -native build
+    # tools), downloaded sources ("source") and the image itself ("archive"): coverage is about
+    # what ships, the installed packages.
+    others = Counter(row["purpose"] or "other" for row in rows if row["purpose"] != "install")
+    if any(row["purpose"] == "install" for row in rows):
+        rows = [row for row in rows if row["purpose"] == "install"]
+    else:
+        others = Counter()
     creation = next((e for e in graph if isinstance(e, dict) and "CreationInfo" in _types(e)), {})
     context = json.dumps(data.get("@context", ""))
     version = "SPDX " + (re.search(r"spdx\.org/rdf/(3[\d.]*)", context) or [None, "3"])[1]
     tools = [by_id.get(t, {}).get("name", t) for t in creation.get("createdUsing", [])] if creation else []
     examples = {status: sorted(map(str, ids))[:15] for status, ids in cves.items()}
-    return _summary(path, version, creation.get("created"), tools, rows, vex, examples)
+    return _summary(path, version, creation.get("created"), tools, rows, vex, examples, others)
 
 
-def _summary(path, version, created, tools, rows, vex, examples):
+def _summary(path, version, created, tools, rows, vex, examples, others=None):
     total = len(rows)
 
     def share(key):
@@ -169,7 +179,7 @@ def _summary(path, version, created, tools, rows, vex, examples):
     return {"file": str(path), "format": version, "created": created, "tools": tools, "packages": total,
             "with_version": share("version"), "with_purl": share("purl"), "with_cpe": share("cpe"),
             "with_license": share("license"), "with_supplier": share("supplier"),
-            "vex": dict(vex), "vex_examples": examples,
+            "vex": dict(vex), "vex_examples": examples, "other_elements": dict(others or {}),
             "missing_license": sorted({r["name"] for r in rows if not r["license"] and r["name"]})[:25],
             "missing_identity": sorted({r["name"] for r in rows if not r["purl"] and not r["cpe"] and r["name"]})[:25]}
 
@@ -191,6 +201,10 @@ def sbom_report(profile: Profile, limit=6) -> str:
         lines += [f"◆ {path.relative_to(profile.build_path)}", f"  {s['format']} · created {s['created'] or '?'} · {', '.join(map(str, s['tools'])) or 'tool not recorded'}",
                   f"  packages {s['packages']:>6}   version {pct(s['with_version'])}   PURL {pct(s['with_purl'])}   CPE {pct(s['with_cpe'])}",
                   f"  licence  {pct(s['with_license'])}   supplier {pct(s['with_supplier'])}"]
+        if s.get("other_elements"):
+            names = {"specification": "recipes", "source": "sources", "archive": "image"}
+            lines.append("  counted: installed packages; also described: "
+                         + ", ".join(f"{count} {names.get(kind, kind)}" for kind, count in sorted(s["other_elements"].items(), key=lambda kv: -kv[1])))
         if s["vex"]:
             lines.append("  VEX      " + " · ".join(f"{status} {count}" for status, count in sorted(s["vex"].items())))
             for status in ("affected", "under investigation"):
@@ -254,7 +268,7 @@ def cra_checks(profile: Profile, state: Path | None = None, today: date | None =
             add("WARN", "Machine-readable SBOM", str(exc))
     else:
         add("WARN", "Machine-readable SBOM", "no *.spdx.json in tmp/deploy; enable create-spdx and build the product image")
-    reports = [p.name for p in (deploy / "images").rglob("*") if p.is_file() and re.search(r"sbom-cve-check|\.vex\.|cve", p.name)] if (deploy / "images").is_dir() else []
+    reports = [p.name for p in (deploy / "images").rglob("*") if p.is_file() and not p.is_symlink() and re.search(r"sbom-cve-check|\.vex\.|cve", p.name)] if (deploy / "images").is_dir() else []
     legacy = (profile.build_path / "tmp/log/cve/cve-summary.json").exists()
     if reports:
         add("OK", "Vulnerability analysis", f"{len(reports)} report files (e.g. {reports[0]})")
