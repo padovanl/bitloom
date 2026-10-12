@@ -1028,7 +1028,7 @@ class BitloomApp(App):
         self.refresh_bindings()
         if active == "builds" and self.selected_log:
             # Output written while Builds was hidden was wrapped at zero width: render it again.
-            self.reload_log()
+            self.call_after_refresh(self.reload_log)
         if len(self.screen_stack) == 1 and not isinstance(self.focused, (Input, Select)):
             # Land on the section's list so its single-key actions work at once.
             self.call_after_refresh(self.focus_primary)
@@ -1362,6 +1362,11 @@ class BitloomApp(App):
         except OSError as exc:
             text = str(exc) if path.exists() else "Waiting for log output…"
         log = self.main_query("#log", RichLog)
+        for _ in range(40):
+            # A hidden log has no width: lines written now would wrap one character per line.
+            if log.scrollable_content_region.width > 1:
+                break
+            await asyncio.sleep(.05)
         log.clear()
         for line in text.splitlines():
             log.write(self.style_line(line, query))
