@@ -92,6 +92,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `i` | Rootfs |
 | `m` | Image matrix |
 | `s` | SBOM quality |
+| `v` | Vulnerabilities |
 
 ## 7 · Analysis
 
@@ -128,6 +129,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `n` | Network |
 | `s` | SBOM settings |
 | `c` | CRA readiness |
+| `w` | Projects |
 
 ## Dialogs
 

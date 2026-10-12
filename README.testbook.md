@@ -687,6 +687,22 @@ chmod +x /tmp/launcher.sh
 
 Add a profile with `"mode": "wrapper"`, `"launcher": ["/tmp/launcher.sh"]`, `"environment": {"YML": "tests/integration/kas-minimal.yml", "KAS_WORK_DIR": "<work dir>"}`. Expected: Configuration shows the launcher as OK; *Build kas configuration* runs `/tmp/launcher.sh build`; *Resolve recipe environment* runs `/tmp/launcher.sh shell -c 'bitbake -e …'`.
 
+### J01 — Guided setup of an existing project
+
+Create a folder with a kas file and a launcher script (the T05 script works), or use one of your projects. **Configuration → `w` → `o`**, type the folder, Enter. Expected: proposals with evidence (launcher script reading `$YML`, kas file with MACHINE, Poky checkout if present); ↑/↓ fills the form; checks show ✔/▲/✖ live and block saving on ✖ (for example an empty `KAS_WORK_DIR` for kas-container); `^O` makes the profile active and the top bar, Recipes and Configuration reload. Opening the same folder again switches to its profile. Start Bitloom in an empty directory with a new `--config`: the guided setup opens by itself. Repeat in the web dashboard (`6` → *Set up a project*).
+
+### J02 — New project
+
+`w` → `n`. Choose Wrynose, `qemuarm64`, `core-image-base`, product layer on. Expected: the preview shows `kas.yml` with bitbake/openembedded-core/meta-yocto pinned to yocto-6.0.2 and `meta-<name>`; `^O` creates the folder with README, `.gitignore`, `.git` and the layer; the profile is active; `b` starts the first kas build. A non-empty folder or an invalid name is refused. In the web dashboard: `6` → *New project*, live preview, *Create project*, toast with *Build it*.
+
+### J03 — Clone from Git
+
+`w` → `g`, enter an HTTPS or SSH URL of a project (or `file:///path/to/repo`). Expected: the destination is suggested until you edit it; `^O` starts a *Clone* job visible in Builds; on success the guided setup opens on the clone. An existing destination or an option-like URL is refused. Web: *Clone from Git*, then the *Set it up* toast.
+
+### V05 — Vulnerabilities
+
+On `demo-wrynose`: `6`, `v`. Expected: 3 unpatched findings ordered critical (CVE-0000-0002, 9.8), high, medium; `/openssh` filters; the detail shows source, detail and summary; `r` opens the review dialog and, after saving, the Review column shows owner and expiry; `x` writes a CSV in `<state>/exports`; `g` scans the newest SPDX SBOM with Grype when installed (otherwise it explains). `bitloom --vulns --min-cvss 9 --fail-on-unpatched` exits 2; with `--min-cvss 9.9` it exits 0. On a real Wrynose build with the sbom-cve-check fragment enabled, the report from `tmp/deploy/images` appears as source. Web: `4` → *Vulnerabilities* with chips, filters and CSV export; CRA readiness shows *Unpatched vulnerabilities*.
+
 ### B04 — GitHub release workflow
 
 In GitHub → Actions → *Release Bitloom* → *Run workflow*, enter a new version (for example `0.2.0`) and optionally tick *draft* or *prerelease*. Expected: tests pass, the job builds `bitloom-<version>.tar.gz`, the wheel, `bitloom_<version>_all.deb` and `SHA256SUMS`, installs the `.deb` and smoke-tests it, attaches the assets to the workflow run and creates the `v<version>` release. An existing tag is refused. Locally, `python tools/build_release.py 0.2.0 --output /tmp/release` produces the same files.

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Projects and guided setup — Bitloom</title><link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="stylesheet" href="style.css"></head>
+<body><header><a class="brand" href="index.html"><img class="brand-icon" src="assets/bitloom-icon.svg" width="34" height="34" alt=""> Bitloom</a><nav aria-label="Documentation navigation"><a href="guide.html">Guide</a><a href="keyboard.html">Keys</a><a href="web.html">Web</a><a href="projects.html">Projects</a><a href="compliance.html">SBOM &amp; CRA</a><a href="studio.html">Studio</a><a href="teams.html">Teams &amp; CI</a><a href="commands.html">Commands</a><a href="validation.html">Validation</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a></nav></header><main class="manual"><article class="doc"><h1 id="projects-and-guided-setup">Projects and guided setup</h1>
+<p>Bitloom works with many projects at once: every project is a profile, and switching project is switching profile (<code>P</code>). The <strong>Projects</strong> hub opens existing folders, creates new Yocto projects and clones projects from GitHub or any Git server. The <strong>guided setup</strong> reads how a folder builds and proposes a ready-to-use profile.</p>
+<p>Open the hub with <strong>Configuration → <code>w</code></strong>, <strong>Ctrl+P → Projects</strong>, or the <em>Projects</em> panel in the web dashboard's Configuration section (<code>6</code>).</p>
+<details class="shot"><summary><span>Screenshot</span> Projects hub with recent projects</summary><div class="shot-body"><img src="assets/projects.png" alt="Projects hub with recent projects" loading="lazy" decoding="async"></div></details>
+<h2 id="open-an-existing-project-guided-setup">Open an existing project: guided setup</h2>
+<ol>
+<li>In the hub press <strong><code>o</code></strong>, type the project folder and press <strong>Enter</strong> (or use <strong>Set up a project</strong> in the web Configuration section).</li>
+<li>Bitloom scans the folder (two levels deep, read-only) and proposes profiles, each with the evidence it found:
+<ul>
+<li><strong>Launcher scripts</strong>: executable scripts that call <code>kas</code>/<code>kas-container</code>, for example a project's <code>run_build.sh</code>. The script becomes a <code>wrapper</code> profile; the environment variable it reads to choose the configuration (such as <code>YML</code>) is pre-filled with the first kas file found.</li>
+<li><strong>kas configurations</strong>: YAML files with a kas <code>header</code>; MACHINE and target are read from the file. kas-container is proposed when available (or when kas is missing), with a separate work directory under <code>~/bitloom-work</code>.</li>
+<li><strong>Poky / OE-Core checkouts</strong>: <code>oe-init-build-env</code> (also under <code>poky/</code>, <code>sources/</code>, <code>layers/</code>) with existing build directories and their MACHINE/DISTRO.</li>
+</ul>
+</li>
+<li>Choose a proposal with <strong>↑/↓</strong>; the form on the right fills in. Every field is explained and checked as you type: project root, kas files, launcher executable, <code>KAS_WORK_DIR</code> (refused when missing, warned when on <code>/mnt/&lt;drive&gt;</code> under WSL), init script, profile validity.</li>
+<li><strong>^O</strong> saves. The profile becomes active, and the selectors, metadata, task logs and health checks reload immediately: press <strong><code>b</code></strong> to build.</li>
+</ol>
+<p>If a folder already has a profile, opening it switches to that profile instead of asking again.</p>
+<p>On the very first start, when no profiles file exists, the guided setup opens automatically in the current directory.</p>
+<details class="shot"><summary><span>Screenshot</span> Guided setup proposing a launcher script and a kas configuration</summary><div class="shot-body"><img src="assets/setup-wizard.png" alt="Guided setup proposing a launcher script and a kas configuration" loading="lazy" decoding="async"></div></details>
+<h3 id="project-launcher-scripts">Project launcher scripts</h3>
+<p>When the folder has a script that runs kas, the proposal uses the <code>wrapper</code> runtime: kas operations call <code>./script &lt;subcommand&gt;</code> and BitBake commands call <code>./script shell -c '&lt;command&gt;'</code>, with the environment variables from the profile (for example <code>YML=boards/board.yml</code>). For BitBake commands and runtime probes the script must forward <code>shell -c</code> and keep standard input open. See <a href="teams.html#project-launcher-scripts">Teams, CI/CD and setup</a> for the details and a minimal example script.</p>
+<h2 id="create-a-new-project">Create a new project</h2>
+<p>Press <strong><code>n</code></strong> in the hub (web: <strong>New project</strong>). A few choices give a buildable project:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project name</td>
+<td>Lowercase; also the profile name</td>
+</tr>
+<tr>
+<td>Folder</td>
+<td>A new or empty folder (defaults to <code>~/yocto/&lt;name&gt;</code>)</td>
+</tr>
+<tr>
+<td>Yocto release</td>
+<td>Scarthgap 5.0 LTS (Poky repository) or Wrynose 6.0 LTS (bitbake, openembedded-core and meta-yocto)</td>
+</tr>
+<tr>
+<td>MACHINE, DISTRO, image</td>
+<td>Start on QEMU with <code>poky</code>; derive your board and distribution later with <a href="studio.html">Studio</a></td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td>kas-container (recommended) or kas on the host</td>
+</tr>
+<tr>
+<td>Product layer</td>
+<td>Creates <code>meta-&lt;name&gt;</code> registered in the kas file</td>
+</tr>
+</tbody>
+</table>
+<p>Bitloom writes <code>kas.yml</code> pinned to the release tags verified by its own real builds (yocto-5.0.8 and yocto-6.0.2, with the commits the tags point to), a README, a <code>.gitignore</code>, the optional layer, and runs <code>git init</code>. The profile becomes active; the first build downloads layers and sources. Update the pinned tags deliberately, and use <em>Generate kas lock file</em> to record exact revisions.</p>
+<details class="shot"><summary><span>Screenshot</span> New project form with the generated kas.yml</summary><div class="shot-body"><img src="assets/new-project.png" alt="New project form with the generated kas.yml" loading="lazy" decoding="async"></div></details>
+<h2 id="clone-from-github-or-git">Clone from GitHub or Git</h2>
+<p>Press <strong><code>g</code></strong> in the hub (web: <strong>Clone from Git</strong>), enter an <code>https://</code>, <code>ssh://</code>, <code>git@</code> or <code>file://</code> URL, the destination (suggested from the URL until you edit it) and an optional branch or tag. Your Git credentials and SSH agent are used as in a terminal.</p>
+<p>The clone runs as a normal job, so you follow its progress in Builds. When it succeeds, the guided setup opens on the new folder.</p>
+<h2 id="recent-projects">Recent projects</h2>
+<p>The hub lists recently opened, created, cloned and set-up folders (stored in <code>&lt;state&gt;/projects.json</code>) together with every profile root. <strong>Enter</strong> switches to the folder's profile, or runs the guided setup if the folder is not set up yet.</p>
+<h2 id="web-dashboard">Web dashboard</h2>
+<p>The Configuration section has the same three parts: <strong>Projects</strong> (recent list, New project with live file preview, Clone from Git), <strong>Set up a project</strong> (scan, proposals, form, live checks, <em>Save and use</em>), and the health checks. Saving or creating selects the new profile in the header at once; a finished clone raises a toast with <em>Set it up</em>.</p>
+<details class="shot"><summary><span>Screenshot</span> Projects in the web dashboard</summary><div class="shot-body"><img src="assets/web-projects.png" alt="Projects in the web dashboard" loading="lazy" decoding="async"></div></details>
+<h2 id="api">API</h2>
+<table>
+<thead>
+<tr>
+<th>Method and path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/projects</code></td>
+<td>Recent projects, releases, machines and images</td>
+</tr>
+<tr>
+<td><code>POST /api/projects/preview</code>, <code>/create</code></td>
+<td>Plan or create a new project <code>{name, dir, release, machine, distro, target, runtime, layer, owner}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/projects/clone</code></td>
+<td>Clone <code>{url, dest, branch}</code> as a job; returns the job id</td>
+</tr>
+<tr>
+<td><code>GET /api/setup/scan?dir=…</code></td>
+<td>Proposals for a folder</td>
+</tr>
+<tr>
+<td><code>POST /api/setup/check</code>, <code>/save</code></td>
+<td>Check or save <code>{profile}</code>; saving makes it active</td>
+</tr>
+</tbody>
+</table>
+</article></main><footer><a href="index.html">← Back to the cockpit</a><a href="testbook.html">Testbook</a><a href="developer.html">Developer</a><a href="roadmap.html">Research</a><a href="projects.md">Markdown source</a></footer></body></html>

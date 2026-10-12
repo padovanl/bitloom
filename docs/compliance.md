@@ -60,6 +60,37 @@ The CRA harmonised standards are being written by CEN/CENELEC JTC 13 as the [EN 
 
 Bitloom does not implement or certify the standard. Its compliance features are organised around the evidence such a process needs from the build: a per-build SBOM whose identifiers allow matching, VEX status and CVE analysis per release, dispositions with an owner and an expiry date, change traceability through buildhistory, and reproducibility bundles.
 
+## Vulnerabilities
+
+SBOM-based CVE tools cross the components of an SBOM with vulnerability databases. **Artifacts → `v`** (web: the *Vulnerabilities* panel in SBOM & CRA, CLI: `bitloom --vulns`) merges their results into one list, one row per CVE and package, the most urgent first:
+
+| Source | File | Release |
+| --- | --- | --- |
+| sbom-cve-check (Bootlin) | `tmp/deploy/images/<machine>/<image>.rootfs.sbom-cve-check.yocto.json` | Wrynose, enabled with the `core/yocto/sbom-cve-check` fragment |
+| cve-check | `tmp/log/cve/cve-summary.json`, `<image>.rootfs.json` | up to Whinlatter (`INHERIT += "cve-check"`) |
+| Grype (Anchore) | `<state>/vulnerability-scans/*.grype.json` | any release with an SPDX JSON SBOM |
+
+Each finding shows the severity (from CVSS v4, then v3, then v2), the score, the CVE with its link, the package and version, the status (*Unpatched*, *Patched*, *Ignored*) with the tool's detail (for example `version-in-range` or `not-applicable-config`), and the review recorded in Bitloom.
+
+* Filter by source, status (unpatched, all, reviewed), minimum CVSS and text (`/`).
+* **`r`** records a review for the selected CVE: owner, reason or evidence reference, and an expiry date (the same dispositions as Developer → Security). A review never marks the upstream vulnerability as fixed.
+* **`g`** scans the newest SPDX JSON SBOM with [Grype](https://github.com/anchore/grype) (when installed) as a visible job; the list reopens with the results when it finishes. SPDX 2.2 images ship their SBOM as an archive: extract it first.
+* **`x`** exports the visible rows as CSV.
+
+[VulnScout](https://github.com/savoirfairelinux/vulnscout) (Savoir-faire Linux) reads the same SPDX SBOMs, cve-check JSON, Yocto VEX and Grype results and adds a web assessment workflow and a CI mode (`--match-condition`, exit code 2); its [meta-vulnscout](https://github.com/savoirfairelinux/meta-vulnscout) layer runs it from BitBake.
+
+CRA readiness lists *Unpatched vulnerabilities* (critical and high count as a warning), and CI can gate on findings:
+
+```bash
+bitloom --vulns --min-cvss 7 --fail-on-unpatched   # exit 2 when an unpatched finding scores 7.0 or more
+```
+
+![Vulnerabilities with severity, status and detail](assets/vulnerabilities.png)
+
+![Vulnerabilities panel in the web dashboard](assets/web-vulnerabilities.png)
+
+Fixing a finding in Yocto: update the recipe or backport the fix with a patch carrying a `CVE: CVE-…` tag (sbom-cve-check and cve-check mark it Patched), correct the product/version matching with `CVE_PRODUCT`/`CVE_VERSION`, or record an assessment with `CVE_STATUS[CVE-…] = "reason: explanation"`.
+
 ## SBOM settings
 
 **Configuration → `s`** manages SBOM, vulnerability and traceability options. Each option explains what it does, why it matters for the CRA and which releases provide it. Options whose first release is not confirmed are marked `?`; press `v` to verify the variable in your runtime with `bitbake-getvar`.
@@ -95,4 +126,4 @@ Bitloom does not implement or certify the standard. Its compliance features are 
 
 `bitloom --demo` creates `demo-scarthgap` and `demo-wrynose` next to the generic demo. Press `P` to switch: the Wrynose sample has an SPDX 3 SBOM with VEX and an sbom-cve-check report; the Scarthgap sample has an SPDX 2.2 SBOM and a cve-check summary. Every sample file is labelled; nothing claims a real build.
 
-Sources: [Yocto Project 6.0 release notes](https://docs.yoctoproject.org/6.0/migration-guides/release-notes-6.0.html), [Yocto reference manual: classes](https://docs.yoctoproject.org/dev/ref-manual/classes.html) and [variables](https://docs.yoctoproject.org/dev/ref-manual/variables.html), [Bootlin: sbom-cve-check in Wrynose](https://bootlin.com/blog/sbom-cve-check-updates-integrated-in-yocto-6-0-wrynose-schneider-electric-support-new-releases-and-more/), [EN 40000-1-3 overview](https://cvdportal.com/standards/en-40000-1-3).
+Sources: [Yocto security manual: checking for vulnerabilities](https://docs.yoctoproject.org/dev/security-manual/vulnerabilities.html), [VulnScout](https://github.com/savoirfairelinux/vulnscout), [Yocto Project 6.0 release notes](https://docs.yoctoproject.org/6.0/migration-guides/release-notes-6.0.html), [Yocto reference manual: classes](https://docs.yoctoproject.org/dev/ref-manual/classes.html) and [variables](https://docs.yoctoproject.org/dev/ref-manual/variables.html), [Bootlin: sbom-cve-check in Wrynose](https://bootlin.com/blog/sbom-cve-check-updates-integrated-in-yocto-6-0-wrynose-schneider-electric-support-new-releases-and-more/), [EN 40000-1-3 overview](https://cvdportal.com/standards/en-40000-1-3).

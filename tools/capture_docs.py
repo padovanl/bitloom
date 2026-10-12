@@ -10,6 +10,8 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Neutral home directory in captures: paths shown in the docs must not reveal the author's account.
+os.environ['HOME'] = '/home/developer'
 sys.path.insert(0, str(ROOT))
 
 from bitloom.app import BitloomApp
@@ -122,6 +124,33 @@ async def capture():
             await pilot.press('escape', '6', 's')
             await pilot.pause(.8)
             await shot('sbom-quality')
+            await pilot.press('escape', 'v')
+            await pilot.pause(.8)
+            await shot('vulnerabilities')
+            await pilot.press('escape')
+            # Projects: hub, new project form, guided setup of an existing folder.
+            await pilot.press('9', 'w')
+            await pilot.pause(.5)
+            await shot('projects')
+            await pilot.press('n')
+            await pilot.pause(.6)
+            await shot('new-project')
+            await pilot.press('escape', '9', 'w', 'o')
+            await pilot.pause(.3)
+            app.screen.query_one('#open-dir', Input).value = str(root / 'workspace/demo-scarthgap')
+            await pilot.press('enter')
+            await pilot.pause(.4)
+            await pilot.press('escape', '9', 'w', 'o')
+            await pilot.pause(.3)
+            launcher_root = root / 'launcher-project'
+            (launcher_root / 'boards').mkdir(parents=True)
+            (launcher_root / 'boards/board-a.yml').write_text('header:\n  version: 14\nmachine: qemuarm64\ntarget: core-image-minimal\nrepos:\n  meta-product:\n')
+            (launcher_root / 'run_build.sh').write_text('#!/bin/bash\n# Sample project launcher (demo)\nkas-container "$1" "${YML}"\n')
+            (launcher_root / 'run_build.sh').chmod(0o755)
+            app.screen.query_one('#open-dir', Input).value = str(launcher_root)
+            await pilot.press('enter')
+            await pilot.pause(.8)
+            await shot('setup-wizard')
             await pilot.press('escape')
             app.main_query('#profile', ProfileSelect).value = 'demo-scarthgap'
             await pilot.pause(1.2)
