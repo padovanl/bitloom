@@ -318,8 +318,12 @@ def kas_overlay(profile: Profile, result: dict) -> tuple[str, str]:
     """(file name, YAML) selecting the layer and the created distro/machine/image."""
     root = Path(result["layer"])
     name = "kas-studio-" + root.name + ".yml"
+    # The overlay lives in the project; a kas repo with neither url nor path is "the repository holding this
+    # file", so the layer resolves for kas and kas-container alike (a relative path would resolve against
+    # KAS_WORK_DIR, where the layer does not exist). Layer paths are relative to that repository's top.
+    top = next((d for d in (profile.root_path, *profile.root_path.parents) if (d / ".git").exists()), profile.root_path)
     try:
-        relative = os.path.relpath(root, profile.root_path)
+        relative = os.path.relpath(root, top)
     except ValueError:
         relative = str(root)
     lines = ["header:", "  version: 14"]
@@ -328,7 +332,7 @@ def kas_overlay(profile: Profile, result: dict) -> tuple[str, str]:
             lines.append(f"{key}: {result['activate'][key]}")
     if result["new_layer"]:
         # Existing layers are already part of the configuration; adding them again would duplicate them.
-        lines += ["repos:", f"  {root.name.replace('-', '_')}:", f"    path: {json.dumps(relative)}"]
+        lines += ["repos:", f"  {root.name.replace('-', '_')}:", "    layers:", f"      {json.dumps(relative)}:"]
     return name, "\n".join(lines) + "\n"
 
 

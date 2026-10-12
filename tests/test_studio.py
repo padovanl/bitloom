@@ -54,9 +54,11 @@ def test_create_into_existing_layer_never_overwrites(tmp_path):
     outside = dict(image, layer='/etc', new_layer=False)
     with pytest.raises(ValueError, match='only inside'):
         create(profile, outside)
+    (tmp_path / '.git').mkdir()  # the project is the repository: kas resolves url-less repos to its top
     kas = Profile(root=str(tmp_path), mode='kas', kas_file='kas.yml')
     name, text = kas_overlay(kas, plan('distro', values('distro', 'wrynose', [], new_layer='meta-new'), kas, 'wrynose'))
-    assert name == 'kas-studio-meta-new.yml' and 'distro: acme' in text and 'path: "meta-new"' in text
+    # No url and no path: the repository holding the overlay; a relative path would resolve against KAS_WORK_DIR.
+    assert name == 'kas-studio-meta-new.yml' and 'distro: acme' in text and 'layers:\n      "meta-new":' in text and 'path:' not in text
     _, existing = kas_overlay(kas, image)
     assert 'repos:' not in existing and 'target: acme-image' in existing
 

@@ -161,3 +161,14 @@ def test_diagnosis_recognises_interrupted_builds():
            "2026-10-12 08:24:21 - ERROR    - ERROR: Task (/work/build/../openembedded-core/meta/recipes-devtools/binutils/binutils_2.46.bb:do_compile) failed with exit code '1'\n")
     report = diagnose(log)
     assert 'Category: interrupted' in report and 'bitbake -c clean binutils' in report
+
+
+def test_stale_image_sbom_is_diagnosed():
+    """Wrynose with sbom-cve-check: the image SBOM was reused from sstate under an older IMAGE_NAME."""
+    from bitloom.workflows import diagnose
+    log = ("NOTE: Running task 4458 of 4459 (core-image-minimal.bb:do_sbom_cve_check)\n"
+           "sbom-cve-check: error: [Errno 2] No such file or directory: "
+           "'/work/build/tmp/deploy/images/qemux86-64/core-image-minimal-qemux86-64.rootfs-20261012223724.spdx.json'\n"
+           "ERROR: Task (core-image-minimal.bb:do_sbom_cve_check) failed with exit code '1'\n")
+    text = diagnose(log)
+    assert 'Category: stale SBOM' in text and '-C create_image_sbom_spdx' in text
