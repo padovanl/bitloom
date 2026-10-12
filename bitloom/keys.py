@@ -36,7 +36,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
     "builds": [
         ("s", "press('stop')", "Stop", "stop"), ("r", "press('retry')", "Retry", "retry"),
         ("e", "press('errors')", "Errors", "errors"), ("p", "press('log-follow')", "Pause", "log-follow"),
-        ("x", "press('export')", "Export", "export"), ("i", "build_summary", "Summary", ""),
+        ("x", "press('export')", "Export", "export"), ("i", "build_summary", "Summary", ""), ("d", "press('compare-runs')", "Compare", "compare-runs"),
         ("f", "press('failed-task-log')", "Failed log", ""), ("c", "console_builds", "Console builds", "console-builds"),
     ],
     "metadata": [
@@ -57,6 +57,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
     "caches": [
         ("s", "press('cache-scan')", "Scan", "cache-scan"), ("t", "toggle_select('#cache-kind')", "DL/sstate", ""),
         ("p", "press('cache-prune')", "Prune plan", "cache-prune"), ("a", "press('fetch-all')", "Fetch all", "fetch-all"),
+        ("w", "press('work-usage')", "tmp/work usage", "work-usage"),
     ],
     "artifacts": [
         ("o", "press('artifact-read')", "Open", "artifact-read"), ("i", "press('image-contents')", "Rootfs", "image-contents"),
@@ -79,7 +80,7 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
         ("e", "press('environment')", "bitbake -e", "environment"), ("d", "press('dev-status')", "devtool", "dev-status"),
         ("v", "press('versions')", "Versions", "versions"), ("n", "press('network-check')", "Network", "network-check"),
         ("s", "press('sbom-settings')", "SBOM settings", "sbom-settings"), ("c", "press('cra-report')", "CRA readiness", "cra-report"),
-        ("w", "press('projects')", "Projects", "projects"),
+        ("w", "press('projects')", "Projects", "projects"), ("o", "press('notifications')", "Notifications", "notifications"),
     ],
     "guide": [],
 }

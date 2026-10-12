@@ -1690,3 +1690,91 @@ class VulnerabilitiesScreen(ModalScreen):
             self.notify(str(exc), severity="warning", timeout=10)
             return
         self.dismiss({"scan": argv, "output": str(output)})
+
+
+class NotificationsScreen(ModalScreen):
+    """Where the build service announces finished jobs: desktop and/or a webhook."""
+    DEFAULT_CSS = """
+    NotificationsScreen { align: center middle; background: $background 60%; }
+    NotificationsScreen > Vertical { width: 96; max-width: 96%; height: auto; max-height: 92%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1 1 1; }
+    NotificationsScreen .field-label { margin-top: 1; text-style: bold; height: 1; }
+    NotificationsScreen .field-info { color: $text-muted; height: auto; }
+    NotificationsScreen Input, NotificationsScreen Select { height: 1; }
+    NotificationsScreen SelectionList { height: 3; border: none; background: $surface; }
+    NotificationsScreen Horizontal { height: 1; margin-top: 1; }
+    NotificationsScreen Horizontal Button { margin-right: 1; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                Binding("ctrl+o", "save", "Save", priority=True), Binding("ctrl+t", "test", "Test", priority=True)]
+
+    def __init__(self, state):
+        super().__init__()
+        self.state = Path(state)
+
+    def compose(self):
+        from textual.widgets import Checkbox, SelectionList
+        from .notify import load
+        config = load(self.state)
+        with Vertical():
+            yield Label("When", classes="field-label")
+            yield SelectionList(*[(s, s, s in config["on"]) for s in ("success", "failed", "cancelled")], id="nt-on")
+            yield Label("Only for jobs longer than (seconds)", classes="field-label")
+            yield Input(str(config["min_seconds"]), id="nt-min", type="integer")
+            yield Static("Short commands stay quiet. The terminal bell always rings in an open TUI.", classes="field-info")
+            yield Label("Desktop", classes="field-label")
+            yield Checkbox("desktop notification (notify-send on Linux, a Windows notification from WSL)", value=config["desktop"], id="nt-desktop")
+            yield Label("Webhook", classes="field-label")
+            yield Input(config["webhook"], placeholder="https://ntfy.sh/your-topic or a Slack/Teams/Mattermost incoming webhook", id="nt-webhook")
+            yield Select([("ntfy (text, title header)", "ntfy"), ("Slack / Teams / Mattermost ({\"text\": …})", "slack"), ("JSON (full job details)", "json")],
+                         value=config["format"], allow_blank=False, id="nt-format")
+            yield Static("Sent by the build service, so notifications arrive even when no TUI is open. The file is stored with mode 0600.", classes="field-info")
+            with Horizontal():
+                yield Button("^O Save", id="nt-save", variant="primary")
+                yield Button("^T Send test", id="nt-test")
+                yield Button("Esc Close", id="nt-close")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Build notifications"
+        self.query_one("#nt-on").focus()
+
+    def config(self):
+        return {"on": list(self.query_one("#nt-on").selected), "min_seconds": self.query_one("#nt-min", Input).value or 0,
+                "desktop": self.query_one("#nt-desktop").value, "webhook": self.query_one("#nt-webhook", Input).value.strip(),
+                "format": str(self.query_one("#nt-format", Select).value)}
+
+    def action_save(self):
+        from .notify import save
+        try:
+            save(self.state, self.config())
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error")
+            return
+        self.notify("Notifications saved", timeout=4)
+        self.dismiss(True)
+
+    def action_test(self):
+        from types import SimpleNamespace
+        from .notify import save, send
+        try:
+            save(self.state, self.config())
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error")
+            return
+        job = SimpleNamespace(id="test", title="Test notification", status="success", code=0, profile=SimpleNamespace(name="bitloom"),
+                              started="2026-01-01T00:00:00+00:00", finished="2026-01-01T00:12:34+00:00", command=["true"],
+                              log="", failure_logs=[], action_id="test")
+        sent = send(self.state, job, force=True)
+        self.app.bell()
+        self.notify("Sent: " + (", ".join(sent) or "nothing configured (bell only)"), timeout=6)
+
+    @on(Button.Pressed, "#nt-save")
+    def save_pressed(self):
+        self.action_save()
+
+    @on(Button.Pressed, "#nt-test")
+    def test_pressed(self):
+        self.action_test()
+
+    @on(Button.Pressed, "#nt-close")
+    def close_pressed(self):
+        self.dismiss(None)

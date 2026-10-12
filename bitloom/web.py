@@ -32,7 +32,7 @@ def history(state: Path, limit=200) -> list[dict]:
     db = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     db.row_factory = sqlite3.Row
     try:
-        rows = [dict(r) for r in db.execute("SELECT * FROM jobs ORDER BY started DESC LIMIT ?", (limit,))]
+        rows = [dict(r) for r in db.execute("SELECT * FROM jobs ORDER BY started DESC, rowid DESC LIMIT ?", (limit,))]
     finally:
         db.close()
     result = []
@@ -131,10 +131,14 @@ class Dashboard:
         except (OSError, ValueError) as exc:
             service = {"error": str(exc), "jobs": {}}
         rows = history(self.state)
+        from .insights import eta, human
         for row in rows:
             live = service["jobs"].get(row["id"])
             if live:
                 row.update(status=live["status"], progress=live["progress"], setscene=live["setscene"], tasks=live["tasks"])
+            if row["status"] == "running":
+                estimate = eta(rows, row["profile"], row["argv"], row["started"], row["progress"])
+                row["eta"] = {"remaining": human(estimate["remaining"]), "basis": estimate["basis"]} if estimate else None
         from .versions import describe, detect_release
         hints = {p.name: read_assignments(p.build_path / "conf/local.conf") for p in settings.profiles}
         return {
@@ -226,6 +230,30 @@ class Dashboard:
             end = len(chunk)
         chunk = chunk[:end]
         return {"text": chunk.decode(errors="replace"), "offset": offset + len(chunk), "size": size}
+
+    def compare(self, ident):
+        from .insights import compare, earlier_run
+        rows = history(self.state, 500)
+        row = next((r for r in rows if r["id"] == ident), None)
+        if row is None:
+            raise LookupError("Unknown job")
+        earlier = earlier_run(rows, row)
+        if not earlier:
+            return {"text": "No earlier run of this command in this profile to compare with."}
+        return {"text": compare(row, earlier)}
+
+    def work_usage(self, query):
+        from .insights import work_report
+        return {"text": work_report(self.profile(query.get("profile", [""])[0]))}
+
+    def notifications(self):
+        from .notify import load
+        return load(self.state)
+
+    def notifications_save(self, body):
+        from .notify import save
+        save(self.state, body)
+        return {"saved": True}
 
     def report(self, ident):
         path = Path(self.job_row(ident)["log"])
@@ -557,6 +585,14 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.submit(self.body())
                 elif len(route) == 4 and route[:2] == ("GET", "jobs") and route[3] == "log":
                     payload = dashboard.log(route[2], query)
+                elif len(route) == 4 and route[:2] == ("GET", "jobs") and route[3] == "compare":
+                    payload = dashboard.compare(route[2])
+                elif route == ("GET", "workusage"):
+                    payload = dashboard.work_usage(query)
+                elif route == ("GET", "notifications"):
+                    payload = dashboard.notifications()
+                elif route == ("POST", "notifications"):
+                    payload = dashboard.notifications_save(self.body())
                 elif len(route) == 4 and route[:2] == ("GET", "jobs") and route[3] == "report":
                     payload = dashboard.report(route[2])
                 elif len(route) == 4 and route[:2] == ("POST", "jobs") and route[3] == "stop":

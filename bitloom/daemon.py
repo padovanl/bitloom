@@ -56,7 +56,15 @@ def ensure_service(state):
     raise ValueError('Build service did not start; inspect service.log')
 
 async def serve(state):
-    store=Store(state); runner=Runner(store,lambda job,line:None)
+    store=Store(state); notified=set()
+    def finished(job,line):
+        # Desktop/webhook notifications come from the service so they arrive without a TUI.
+        if line is None and job.finished and job.status in {'success','failed','cancelled'} and job.id not in notified:
+            notified.add(job.id)
+            from .notify import send
+            try: send(state,job)
+            except Exception: pass
+    runner=Runner(store,finished)
     path=socket_path(state)
     if path.exists(): path.unlink()
     stop=asyncio.Event()
