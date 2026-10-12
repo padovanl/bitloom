@@ -106,3 +106,18 @@ def test_web_setup_endpoints(tmp_path):
         assert Settings(board.config).active == 'product-run-build'
     finally:
         server.shutdown()
+
+
+def test_kas_work_directory_of_a_profile_is_recognised(tmp_path):
+    """Scanning a kas work directory offered a plain host build; it now names the profile that owns it."""
+    from bitloom.models import Profile
+    from bitloom.setup import detect
+    work = tmp_path / 'work'
+    (work / 'openembedded-core').mkdir(parents=True)
+    (work / 'openembedded-core/oe-init-build-env').write_text('# init\n')
+    (work / 'build/conf').mkdir(parents=True)
+    (work / 'build/conf/local.conf').write_text('MACHINE = "qemux86-64"\n')
+    owner = Profile(name='product', root=str(tmp_path), mode='kas-container', kas_file='kas.yml', environment={'KAS_WORK_DIR': str(work)})
+    host = next(c for c in detect(work, [owner]) if c.mode == 'host')
+    assert 'kas work directory of profile product' in host.evidence[0] and host.score == 1 and host.hints
+    assert 'kas work directory' not in detect(work)[0].evidence[0]

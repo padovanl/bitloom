@@ -845,7 +845,8 @@ class BitloomApp(App):
             progress = (progress[1], progress[1])  # BitBake may not log "Running task" for the last ones
         tasks = Text(no_wrap=True, overflow="ellipsis")
         if progress[1]:
-            tasks.append(f"{progress[0]}/{progress[1]} run", style=f"bold {theme.warning}")
+            last = active is not None and progress[0] >= progress[1]
+            tasks.append(f"last task · {progress[0]}/{progress[1]}" if last else f"{progress[0]}/{progress[1]} run", style=f"bold {theme.warning}")
         else:
             tasks.append("no task count", style="dim")
         if setscene[1]:
@@ -1452,7 +1453,8 @@ class BitloomApp(App):
         if job.id == self.selected_job_id and job.status == "success":
             self.main_query("#progress", ProgressBar).update(total=100, progress=100)
         elif job.id == self.selected_job_id and job.progress[1]:
-            self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=job.progress[0])
+            # "task N of M" reaches M when the last task starts: stay below 100% until the job ends.
+            self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=min(job.progress[0], job.progress[1] - 1))
         elif job.id == self.selected_job_id and job.status == "running":
             # Animated indeterminate bar until BitBake reports task counts.
             self.main_query("#progress", ProgressBar).update(total=None)
@@ -1507,7 +1509,8 @@ class BitloomApp(App):
             if row["status"] == "success":
                 self.main_query("#progress", ProgressBar).update(total=100, progress=100)
             elif progress[1]:
-                self.main_query("#progress", ProgressBar).update(total=progress[1], progress=progress[0])
+                done = progress[0] if row["status"] != "running" else min(progress[0], progress[1] - 1)
+                self.main_query("#progress", ProgressBar).update(total=progress[1], progress=done)
             else:
                 self.main_query("#progress", ProgressBar).update(total=100, progress=0)
             glyph, color = self.status_style(row["status"])

@@ -70,7 +70,9 @@ def eta(history: list[dict], profile: str, argv, started: str, progress, now: da
     estimates, basis = [], []
     done, total = (progress or (0, 0))[:2]
     # Early tasks are cheap and the last image tasks slow: trust the rate only after a while.
-    if total and done >= max(20, total * .05) and elapsed > 30:
+    # done == total means the last task has *started* (BitBake counts tasks needing no rerun as done):
+    # its duration is unknown, so only earlier runs can estimate the rest.
+    if total and max(20, total * .05) <= done < total and elapsed > 30:
         estimates.append(elapsed * (total - done) / done)
         basis.append(f"{done}/{total} tasks")
     if typical:
@@ -109,12 +111,20 @@ def log_facts(path: Path) -> dict:
     return facts
 
 
+def executed(facts: dict):
+    """Tasks that really ran: attempted minus those that did not need a rerun (from the task summary)."""
+    if facts["attempted"] is None or facts["reused"] is None:
+        return None
+    return facts["attempted"] - facts["reused"]
+
+
 def compare(current: dict, previous: dict) -> str:
     """Two history rows of the same command: what changed between the runs."""
     a, b = log_facts(Path(previous["log"])), log_facts(Path(current["log"]))
     rows = [("Duration", human(duration(previous)), human(duration(current))),
             ("Status", previous["status"], current["status"]),
-            ("Tasks executed (scheduled)", a["tasks"], b["tasks"]),
+            ("Tasks in the run queue", a["tasks"], b["tasks"]),
+            ("Tasks executed", executed(a), executed(b)),
             ("Setscene tasks (from sstate)", a["setscene"], b["setscene"]),
             ("Sstate hit rate %", a["sstate"], b["sstate"]),
             ("Tasks reused (summary)", a["reused"], b["reused"]),
