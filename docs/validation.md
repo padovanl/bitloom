@@ -2,9 +2,23 @@
 
 ## Status
 
-**Completed on 2026-10-10.** The real kas-container image build exited 0: all **4,064 tasks succeeded**, with no reused tasks. Elapsed wall time was **57 minutes 10 seconds** (10:41:45–11:38:55 UTC). BitBake reported **20 warnings and no errors**. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.
+**Wrynose, 2026-10-12.** [tests/integration/kas-wrynose.yml](https://github.com/padovanl/bitloom/blob/main/tests/integration/kas-wrynose.yml) (yocto-6.0.2: bitbake, openembedded-core and meta-yocto as separate repositories, qemux86-64, core-image-minimal) built through kas-container. A WSL restart interrupted the first run during `qemu-system-native:do_compile`; the rerun completed the last 9 tasks from sstate. `bitloom --ci sbom-cve-enable --ci kas-build` then enabled the `core/yocto/sbom-cve-check` fragment and rebuilt (4,459 tasks, exit 0, 10 warnings from sbom-cve-check). On that build:
+
+| Check | Result |
+| --- | --- |
+| `bitloom --sbom` | SPDX 3.0.1 image SBOM: 37 installed packages, version, PURL and licence 100%, CPE 97.3%; the document also describes 114 recipes, 105 source archives and the image |
+| `bitloom --cra` | Every check from real evidence: release support, SBOM, identifiers, licences, VEX (fixed 142, not affected 34), sbom-cve-check reports, buildhistory |
+| `bitloom --vulns --min-cvss 7 --fail-on-unpatched` | sbom-cve-check findings ranked by CVSS (1,769 unpatched, mostly linux-yocto `version-in-range`); exit code 2 |
+| TUI Vulnerabilities | 1,769 rows in 0.8 s; filtering stays interactive |
+
+Two defects found on this build were fixed: SBOM coverage counted recipes, `-native` tools and source archives (licence coverage read 55%), and the sbom-cve-check output was listed as a second image SBOM.
+
+**Scarthgap, 2026-10-10.** The real kas-container image build exited 0: all **4,064 tasks succeeded**, with no reused tasks. Elapsed wall time was **57 minutes 10 seconds** (10:41:45–11:38:55 UTC). BitBake reported **20 warnings and no errors**. The deployed rootfs archive was independently opened and hashed from the Docker daemon filesystem.
 
 ## Automated checks
+
+The current suite has **158 unit and UI tests** (`python -m pytest -q`); the paragraph below records the first validation session.
+
 
 The expanded suite passed **59 unit and UI tests** on Python 3.10.12 and Textual 1.0.0. It covers argument construction, shell quoting, host/kas/container routing, profile persistence, serial jobs, failure exit codes, cancellation, single-signal graceful stop, cache deletion boundaries, full-file log search, report parsing, failure-log persistence, external kas checkout indexing and TUI navigation, graph traversal through cycles, read-only rootfs inventory, source previews, keyboard navigation, pause/resume and responsive terminal layout. Installation with pip install -e . completed successfully. The installed CLI was also launched in a real 140×42 PTY with the kas profile/history and exited cleanly with Ctrl+Q.
 

@@ -12,6 +12,28 @@ More guides:
 * [Daily helpers](#daily-helpers): build notifications, ETA, comparison with the previous run, tmp/work usage.
 * [Teams, CI/CD and setup](teams.md): headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.
 
+## What Bitloom covers
+
+| Area | Capabilities |
+| --- | --- |
+| Builds | Independent reconnectable build service, serial queue, persistent SQLite history, streaming logs, observed live recipe tasks, task progress, exit status, retries with original profile, cancellation, SDK/eSDK, recipe tasks, forced compile, dry runs, parsing |
+| Runtimes | Initialized host environment; kas config composition; fresh Docker/Podman containers; existing containers; official kas-container wrapper |
+| Layers | Expandable layer tree, search local layers, priorities through BitBake, add/remove/create, overlays, appends, cross-layer dependencies, edit metadata with backups |
+| Recipes | Browse `.bb`, `.bbappend`, `.bbclass` and kas YAML, compile/patch/package individual recipes, list tasks, evaluate environment |
+| Development | devtool modify/add/build/build-image/reset/finish/update/upgrade, upstream version checks, device deployment, devshell, kernel menuconfig and config checks |
+| Errors and logs | Build and task log browsers, case-insensitive search with context, error-only view, pause/resume, failure notifications, exports, build summary and timestamped slow-task reports |
+| Downloads | Fetch a recipe or all target dependencies, size/age inventory, orphan marker and partial-download audit, concrete prune plans |
+| Shared state | Local inventory, age-based prune plans, recipe cleansstate, signature dumps/diffs, `-S printdiff` |
+| Analysis | Runtime file/directory access and backed-up editing, binary artifact export with SHA-256 verification, failure diagnosis, image package/file provenance, preflight, snapshots and comparison, reproducibility bundles, conservative signature-reference cache plans; search metadata contents with file/line locations, compare package manifests by architecture, inspect sstate hit rates, group repeated warnings, export reports |
+| Workbench | Filter evaluated environment variables, compare two snapshots, browse generated dependency edges and transitive/reverse dependency context, buildhistory Git diff |
+| Outputs | Discover images, SDKs, manifests, licenses, SBOMs, buildstats and buildhistory files; text preview, read-only tar rootfs inventory (permissions, owners, links), and binary artifact paths |
+| Configuration | Multiple named profiles, custom environment/runtime arguments, local.conf and bblayers.conf editor, backups, external-change detection, diagnostics |
+| Releases | Local branch/revision/tag report, dirty-tree status and literal layer-series compatibility checks; separate profiles and build directories per release |
+| Testing and security | testimage, ptest, CVE and SPDX command entry points when the required classes/configuration exist |
+| Utilities | Argument-based custom commands, interactive terminal handoff, command filtering, keyboard shortcuts, command palette, CLI diagnostics |
+
+The [command reference](commands.md) documents every built-in action.
+
 ## Install from a GitHub release
 
 Open the [GitHub Releases page](https://github.com/padovanl/bitloom/releases) and download the assets for the version you want. Replace `1.2.3` below with that version.
@@ -134,6 +156,8 @@ Bitloom is fully usable without a mouse; the [keyboard reference](keyboard.md) l
 
 ![Keyboard reference overlay](assets/keys.png)
 
+**140 × 42** shows the complete workspace. Below 105 columns or 30 rows, tabs replace the navigator and side panes disappear; short terminals also hide the task monitor and overview. Below 75 columns or 22 rows, logs take priority over history and metrics; resize to restore those panels. Dialogs fit within the terminal and scroll when necessary. Layout tests cover 160 × 50, 120 × 36, 90 × 28, 80 × 24, 60 × 20 and 140 × 20, including restoration after resizing.
+
 F5 opens interruption options and F6 retries the selected job. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.
 
 ## Daily helpers
@@ -232,7 +256,24 @@ Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline 
 - **Too little space/RAM:** check Health, reduce thread counts, and inspect cache plans before removal.
 - **Small terminal:** use keyboard shortcuts and Tab, or increase to 140×42 for the complete layout.
 
+## Practical limits
+
+Each command remains subject to the selected Yocto release, runtime, device access and configuration. Inventory scans are bounded, age-based pruning does not perform signature reachability analysis, and no cache is pruned automatically. External builders sharing a cache cannot be detected reliably. Logs and profiles can contain proprietary paths or credentials; review exports before sharing them. Custom commands accept argv, not shell expressions. Unit and UI tests in CI do not run a Yocto build; the container integration builds are separate, opt-in validations (see [validation](validation.md)).
+
 ## Documentation and verification
+
+```bash
+pip install -e '.[dev]'
+python -m pytest -q                      # unit and UI tests, no Yocto build needed
+pip install pillow cairosvg playwright   # optional capture tooling
+python tools/capture_docs.py             # TUI screenshots and GIFs
+python tools/capture_web.py              # web dashboard (Playwright with Chromium)
+python tools/generate_reference.py       # commands.md and keyboard.md from the code
+python tools/serve_docs.py --port 8000   # rebuild the HTML and serve docs/
+python tools/check_docs.py               # links, anchors and page behaviour
+```
+
+The Pages workflow publishes `docs/` on pushes to `main` when the repository has **Settings → Pages → Source → GitHub Actions** (private repositories need a plan that includes Pages); otherwise the run is skipped with a notice.
 
 `python tools/capture_docs.py` captures the real Textual interface with Pilot and exports SVG/PNG/GIF. It uses labelled demo data. `python tools/validate_kas.py` executes a real image build through Runner and records a JSON result. Read validation.md for evidence from the current development session.
 
