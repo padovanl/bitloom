@@ -1700,7 +1700,7 @@ class NotificationsScreen(ModalScreen):
     NotificationsScreen .field-label { margin-top: 1; text-style: bold; height: 1; }
     NotificationsScreen .field-info { color: $text-muted; height: auto; }
     NotificationsScreen Input, NotificationsScreen Select { height: 1; }
-    NotificationsScreen SelectionList { height: 3; border: none; background: $surface; }
+    NotificationsScreen SelectionList { height: auto; max-height: 5; border: none; background: $surface; }
     NotificationsScreen Horizontal { height: 1; margin-top: 1; }
     NotificationsScreen Horizontal Button { margin-right: 1; }
     """

@@ -1026,6 +1026,9 @@ class BitloomApp(App):
         for button in self.screen_stack[0].query("#rail Button"):
             button.set_class(button.id == f"nav-{active}", "selected")
         self.refresh_bindings()
+        if active == "builds" and self.selected_log:
+            # Output written while Builds was hidden was wrapped at zero width: render it again.
+            self.reload_log()
         if len(self.screen_stack) == 1 and not isinstance(self.focused, (Input, Select)):
             # Land on the section's list so its single-key actions work at once.
             self.call_after_refresh(self.focus_primary)

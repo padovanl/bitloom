@@ -94,3 +94,21 @@ def test_profiles_from_other_versions_load(tmp_path):
     settings = Settings(config)
     assert settings.profile.name == 'a' and settings.ignored_keys == ['future_field']
     assert Profile.from_dict({'name': 'b', 'launcher': ['x'], 'unknown': 2}).launcher == ['x']
+
+
+async def test_output_written_while_hidden_is_rerendered(tmp_path):
+    from textual.widgets import RichLog
+    app = BitloomApp(make_demo(tmp_path / 'demo'), tmp_path / 'state')
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.3)
+        await pilot.press('2')
+        await pilot.pause(.2)
+        job = app.runner.submit(app.profile, 'hidden', [sys.executable, '-c', 'print("a fairly long line of output written while Builds is hidden")'])
+        app.select_job(job.id, job.log)
+        await app.runner.consumer
+        await pilot.pause(.4)
+        await pilot.press('1')
+        await pilot.pause(.5)
+        lines = [line.text for line in app.query_one('#log', RichLog).lines]
+        assert any('a fairly long line of output' in text for text in lines)
+    app.store.close()

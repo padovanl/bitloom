@@ -9,6 +9,7 @@ More guides:
 * [Projects and guided setup](projects.md): open folders with automatic detection (kas files, launcher scripts, Poky checkouts), create new projects, clone from Git.
 * [SBOM, CRA and Yocto releases](compliance.md): release awareness, SBOM quality, vulnerabilities (cve-check, sbom-cve-check, Grype), CRA readiness, EN 40000 and SBOM settings.
 * [Studio](studio.md): create your own distribution, machines, images, recipes and layers.
+* [Daily helpers](#daily-helpers): build notifications, ETA, comparison with the previous run, tmp/work usage.
 * [Teams, CI/CD and setup](teams.md): headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.
 
 ## Install from a GitHub release
@@ -134,6 +135,34 @@ Bitloom is fully usable without a mouse; the [keyboard reference](keyboard.md) l
 ![Keyboard reference overlay](assets/keys.png)
 
 F5 opens interruption options and F6 retries the selected job. Controls occupy one terminal row. Below 105 columns, tabs replace the navigator and the main pane receives the full width. History stacks above logs so Stop and Retry remain accessible in compact terminals. The expandable layer tree selects local layers or recipes and synchronizes the table filter and preview. It includes inactive local metadata; evaluated BitBake commands remain authoritative. Recipe and kas files have a syntax-highlighted preview capped at 200 lines; Enter opens the complete editable file. The cockpit shows observed active BitBake tasks and persistent history alongside logs. Host CPU/RAM and workspace disk usage are sampled every two seconds; these are not container-specific measurements. Header MACHINE/DISTRO values come from explicit profile overrides or literal local.conf assignments; Resolve env remains authoritative for evaluated configuration.
+
+## Daily helpers
+
+### Know when a build ends
+
+**Configuration → `o`** (or the *Build notifications* panel in the web Configuration section) chooses how the build service announces finished jobs:
+
+* outcomes (success, failed, cancelled) and a minimum duration, so short commands stay quiet;
+* a desktop notification: `notify-send` on Linux, a Windows notification when Bitloom runs in WSL;
+* a webhook: an [ntfy](https://ntfy.sh) topic (phone push, with high priority for failures), a Slack, Teams or Mattermost incoming webhook (`{"text": …}`), or JSON with every job detail for your own tooling.
+
+The service sends them, so they arrive even when no TUI or browser is open; an open TUI also rings the terminal bell. `^T` sends a test. Settings live in `<state>/notifications.json` (mode 0600, as webhook URLs may be secret). In the web dashboard the 🔔 button additionally enables browser notifications for builds that end while the tab is in the background.
+
+![Notification settings](assets/notifications.png)
+
+### How long is left
+
+While a build runs, the Tasks card and the web progress line show an ETA. It combines the current task rate (after enough tasks to be meaningful) with the median duration of the last successful runs of the same command in the same profile, and says which it used.
+
+### What changed since the last run
+
+**Builds → `d`** (web: the *Compare* tab) compares the selected job with the previous run of the same command: duration, tasks executed against setscene tasks restored from sstate, sstate hit rate, reused tasks, warnings that are new or gone, and new errors. Numbers inside messages are normalised so the same warning with another version is not reported as new. Many more executed tasks with fewer setscene tasks point at changed metadata or a cold cache; Analysis → *Why rebuilding?* explains the signatures.
+
+![Comparison with the previous run](assets/compare-runs.png)
+
+### What fills tmp/work
+
+**Caches → `w`** (web Configuration: *tmp/work usage*, CLI: `bitloom --work-usage`) measures each recipe's work directory (bounded to 30 seconds on huge trees), lists the largest, says whether `rm_work` is enabled and gives `bitbake -c clean` commands for the biggest. `INHERIT += "rm_work"` removes work directories after each recipe builds; keep recipes you debug with `RM_WORK_EXCLUDE`.
 
 ## Errors and log search
 
