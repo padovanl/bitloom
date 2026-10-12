@@ -157,8 +157,45 @@
 <li>Filter by source, status (unpatched, all, reviewed), minimum CVSS and text (<code>/</code>).</li>
 <li><strong><code>r</code></strong> records a review for the selected CVE: owner, reason or evidence reference, and an expiry date (the same dispositions as Developer → Security). A review never marks the upstream vulnerability as fixed.</li>
 <li><strong><code>g</code></strong> scans the newest SPDX JSON SBOM with <a href="https://github.com/anchore/grype">Grype</a> (when installed) as a visible job; the list reopens with the results when it finishes. SPDX 2.2 images ship their SBOM as an archive: extract it first.</li>
-<li><strong><code>x</code></strong> exports the visible rows as CSV.</li>
+<li><strong><code>x</code></strong> exports the findings shown (same filters) to <code>&lt;state&gt;/exports</code> in the format you choose; the web dashboard has the same <em>Export</em> menu.</li>
 </ul>
+<h3 id="export-formats">Export formats<a class="anchor" href="#export-formats" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Markdown (<code>.md</code>)</td>
+<td>A readable report for a ticket, a wiki or a pull request: summary by severity and status, the unpatched findings with NVD, CVE.org and OSV links, a section per package, the patched and ignored list in a collapsible block, and the Yocto remediation steps.</td>
+</tr>
+<tr>
+<td>HTML (<code>.html</code>)</td>
+<td>The same report as a self-contained page in light or dark theme; print it to PDF to share it.</td>
+</tr>
+<tr>
+<td>CSV (<code>.csv</code>)</td>
+<td>Spreadsheets; every row carries its NVD and OSV links.</td>
+</tr>
+<tr>
+<td>JSON (<code>.json</code>)</td>
+<td>Scripts and dashboards: sources, filters, counts and every finding with its links.</td>
+</tr>
+<tr>
+<td>SARIF 2.1.0 (<code>.sarif</code>)</td>
+<td>GitHub code scanning and other SARIF viewers: one alert per unpatched finding, ranked by CVSS (<code>security-severity</code>), with remediation help.</td>
+</tr>
+</tbody>
+</table>
+<p>From the command line or CI:</p>
+<pre><code class="language-bash">bitloom --vulns --format md -o vulnerabilities.md               # unpatched findings
+bitloom --vulns --format html --all-statuses -o report.html     # with patched and ignored
+bitloom --vulns --format sarif -o bitloom.sarif --min-cvss 7    # then upload with github/codeql-action/upload-sarif
+</code></pre>
+<p>Identifiers link to NVD, CVE.org and OSV for CVEs and to the GitHub advisory database for GHSA identifiers; the tool's own reference link is kept as well.</p>
 <p><a href="https://github.com/savoirfairelinux/vulnscout">VulnScout</a> (Savoir-faire Linux) reads the same SPDX SBOMs, cve-check JSON, Yocto VEX and Grype results and adds a web assessment workflow and a CI mode (<code>--match-condition</code>, exit code 2); its <a href="https://github.com/savoirfairelinux/meta-vulnscout">meta-vulnscout</a> layer runs it from BitBake.</p>
 <p>CRA readiness lists <em>Unpatched vulnerabilities</em> (critical and high count as a warning), and CI can gate on findings:</p>
 <pre><code class="language-bash">bitloom --vulns --min-cvss 7 --fail-on-unpatched   # exit 2 when an unpatched finding scores 7.0 or more
@@ -264,7 +301,7 @@
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="web.html"><small>Previous</small>Web dashboard</a><a class="next" href="studio.html"><small>Next</small>Studio</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/compliance.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#release-awareness">Release awareness</a><a href="#sbom-quality">SBOM quality</a><a href="#cra-readiness">CRA readiness</a><a href="#en-40000" class="sub">EN 40000</a><a href="#vulnerabilities">Vulnerabilities</a><a href="#sbom-settings">SBOM settings</a><a href="#new-operations">New operations</a><a href="#try-it">Try it</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#release-awareness">Release awareness</a><a href="#sbom-quality">SBOM quality</a><a href="#cra-readiness">CRA readiness</a><a href="#en-40000" class="sub">EN 40000</a><a href="#vulnerabilities">Vulnerabilities</a><a href="#export-formats" class="sub">Export formats</a><a href="#sbom-settings">SBOM settings</a><a href="#new-operations">New operations</a><a href="#try-it">Try it</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

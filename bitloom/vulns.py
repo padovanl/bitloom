@@ -188,6 +188,9 @@ def report(findings: list[Finding], errors: list[str], status="unpatched", min_s
 
 
 def to_csv(findings: list[Finding]) -> str:
+    from .vulnexport import to_csv as export_csv  # the shared exporter adds NVD/OSV links
+    if findings:
+        return export_csv(findings)
     stream = io.StringIO()
     writer = csv.DictWriter(stream, fieldnames=list(asdict(findings[0]).keys()) if findings else ["id"])
     writer.writeheader()

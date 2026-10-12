@@ -87,6 +87,7 @@ The page uses a small JSON API that scripts can use too (all calls need the `X-B
 | `GET /api/console`, `/api/console/log`, `/api/console/report` | Builds started outside Bitloom |
 | `GET /api/compliance` | SBOM summaries, CRA checks, timeline, SBOM options |
 | `GET /api/vulnerabilities`, `POST /api/vulnerabilities/scan` | Findings with filters; Grype scan of the newest SPDX SBOM |
+| `GET /api/vulnerabilities/export?format=md` | The filtered findings as `md`, `html`, `csv`, `json` or `sarif` (attachment) |
 | `GET /api/jobs/<id>/compare` | Comparison with the previous run of the same command |
 | `GET`/`POST /api/notifications` | Build notification settings |
 | `GET /api/workusage` | tmp/work usage per recipe |

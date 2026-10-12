@@ -76,11 +76,11 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
         ("l", "press('dev-clone')", "Clone", "dev-clone"), ("h", "press('dev-devices')", "Devices", "dev-devices"),
     ],
     "healthtab": [
+        ("w", "press('projects')", "Projects", "projects"), ("o", "press('notifications')", "Notifications", "notifications"),
+        ("s", "press('sbom-settings')", "SBOM settings", "sbom-settings"), ("c", "press('cra-report')", "CRA readiness", "cra-report"),
         ("l", "press('local-conf')", "local.conf", "local-conf"), ("y", "press('layers-conf')", "bblayers", "layers-conf"),
         ("e", "press('environment')", "bitbake -e", "environment"), ("d", "press('dev-status')", "devtool", "dev-status"),
         ("v", "press('versions')", "Versions", "versions"), ("n", "press('network-check')", "Network", "network-check"),
-        ("s", "press('sbom-settings')", "SBOM settings", "sbom-settings"), ("c", "press('cra-report')", "CRA readiness", "cra-report"),
-        ("w", "press('projects')", "Projects", "projects"), ("o", "press('notifications')", "Notifications", "notifications"),
     ],
     "guide": [],
 }
@@ -127,11 +127,14 @@ def sectional_actions() -> set[str]:
     return {parse(bound)[1] for keys in SECTION_KEYS.values() for _, bound, _, _ in keys}
 
 
+FOOTER_KEYS = 6  # per section; the rest stay on the buttons and in the keyboard reference (?)
+
+
 def section_bindings() -> list[Binding]:
     bindings = []
     for keys in SECTION_KEYS.values():
-        for key, action, label, _ in keys:
-            bindings.append(Binding(key, action, label))
+        for index, (key, action, label, _) in enumerate(keys):
+            bindings.append(Binding(key, action, label, show=index < FOOTER_KEYS))
     return bindings
 
 

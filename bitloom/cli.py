@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 
@@ -122,6 +123,10 @@ def main():
     parser.add_argument("--vulns", action="store_true", help="Print CVE findings (cve-check, sbom-cve-check, Grype) for the active profile")
     parser.add_argument("--min-cvss", type=float, default=0.0, help="With --vulns: only findings at or above this CVSS score")
     parser.add_argument("--fail-on-unpatched", action="store_true", help="With --vulns: exit 2 when an unpatched finding matches")
+    parser.add_argument("--format", choices=["text", "md", "html", "csv", "json", "sarif"], default="text",
+                        help="With --vulns: report format (md/html readable reports with NVD/OSV links, csv, json, sarif for GitHub code scanning)")
+    parser.add_argument("-o", "--output", type=Path, help="With --vulns: write the report to this file instead of standard output")
+    parser.add_argument("--all-statuses", action="store_true", help="With --vulns: include patched and ignored findings, not only unpatched")
     parser.add_argument("--work-usage", action="store_true", help="Print disk usage per recipe in tmp/work with rm_work advice")
     parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
     parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
@@ -171,8 +176,19 @@ def _commands(parser, args) -> None:
     if args.vulns:
         from .models import Settings
         from .vulns import load, report, select
-        findings, errors = load(Settings(args.config).profile, args.state)
-        print(report(findings, errors, "unpatched", args.min_cvss))
+        profile = Settings(args.config).profile
+        findings, errors = load(profile, args.state)
+        if args.format == "text":
+            text = report(findings, errors, "all" if args.all_statuses else "unpatched", args.min_cvss)
+        else:
+            from .vulnexport import build
+            text, _ = build(profile, args.state, args.format, "all" if args.all_statuses else "unpatched", args.min_cvss)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(text if text.endswith("\n") else text + "\n")
+            print(f"Wrote {args.output} ({args.format})", file=sys.stderr)
+        else:
+            print(text)
         raise SystemExit(2 if args.fail_on_unpatched and select(findings, "unpatched", args.min_cvss) else 0)
     if args.sbom or args.cra:
         from .models import Settings

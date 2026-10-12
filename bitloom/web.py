@@ -399,6 +399,21 @@ class Dashboard:
         return {"sources": [label for label, _ in sources(profile, self.state)], "counts": counts(findings), "errors": errors,
                 "findings": [asdict(f) for f in shown[:500]], "shown": len(shown), "scanners": {k: bool(v) for k, v in scanners().items()}}
 
+    def vulnerability_export(self, query):
+        """The filtered findings as a downloadable report (md, html, csv, json, sarif)."""
+        from .vulnexport import FORMATS, build
+        fmt = query.get("format", ["md"])[0]
+        if fmt not in FORMATS:
+            raise ValueError("format must be one of " + ", ".join(FORMATS))
+        profile = self.profile(query.get("profile", [""])[0])
+        try:
+            minimum = float(query.get("min", ["0"])[0] or 0)
+        except ValueError:
+            minimum = 0.0
+        content, name = build(profile, self.state, fmt, query.get("status", ["unpatched"])[0], minimum,
+                              query.get("q", [""])[0], query.get("source", [""])[0])
+        return content, name, FORMATS[fmt][1]
+
     def vulnerability_scan(self, body):
         from dataclasses import asdict
         from datetime import datetime
@@ -482,9 +497,11 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
         def log_message(self, format, *args):  # Keep the terminal quiet; the TUI may share it.
             pass
 
-        def send(self, status, body: bytes, content_type="application/json"):
+        def send(self, status, body: bytes, content_type="application/json", headers=None):
             self.send_response(status)
             self.send_header("Content-Type", content_type)
+            for name, value in (headers or {}).items():
+                self.send_header(name, value)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
@@ -559,6 +576,11 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.studio_create(self.body())
                 elif route == ("GET", "vulnerabilities"):
                     payload = dashboard.vulnerabilities(query)
+                elif route == ("GET", "vulnerabilities", "export"):
+                    content, name, kind = dashboard.vulnerability_export(query)
+                    self.send(HTTPStatus.OK, content.encode(), f"{kind}; charset=utf-8",
+                              {"Content-Disposition": f'attachment; filename="{name}"'})
+                    return
                 elif route == ("POST", "vulnerabilities", "scan"):
                     payload = dashboard.vulnerability_scan(self.body())
                 elif route == ("GET", "projects"):

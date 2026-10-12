@@ -182,6 +182,10 @@ bitloom --web --config .bitloom/profiles.json --state .bitloom
 <td>Findings with filters; Grype scan of the newest SPDX SBOM</td>
 </tr>
 <tr>
+<td><code>GET /api/vulnerabilities/export?format=md</code></td>
+<td>The filtered findings as <code>md</code>, <code>html</code>, <code>csv</code>, <code>json</code> or <code>sarif</code> (attachment)</td>
+</tr>
+<tr>
 <td><code>GET /api/jobs/&lt;id&gt;/compare</code></td>
 <td>Comparison with the previous run of the same command</td>
 </tr>
