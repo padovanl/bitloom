@@ -12,7 +12,26 @@ concurrency:
   group: pages
   cancel-in-progress: false
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      # Pages must be enabled with "GitHub Actions" as source (Settings → Pages); private
+      # repositories need a plan that includes Pages. Without it, skip instead of failing.
+      - id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null | grep -qx workflow; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Pages not deployed::GitHub Pages is not enabled with GitHub Actions as source for this repository (Settings → Pages). Serve the docs locally with python tools/serve_docs.py."
+          fi
   deploy:
+    needs: check
+    if: needs.check.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
