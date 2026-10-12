@@ -2,6 +2,7 @@
 from __future__ import annotations
 import asyncio
 import json
+import re
 from .commands import invocation
 
 AGENT = r'''
@@ -182,7 +183,26 @@ async def request(profile, op: str, path: str, **values):
             return json.loads(line[len('BITLOOM_JSON:'):])
     traces = [i for i, line in enumerate(lines) if 'Traceback (most recent call last)' in line]
     diagnostic = lines[traces[-1]:traces[-1]+24] if traces else lines[-12:]
-    raise ValueError('Runtime request failed: ' + '\n'.join(line[:1000] for line in diagnostic)[-5000:])
+    raise RuntimeFailure(summarize(lines), '\n'.join(line[:1000] for line in diagnostic)[-5000:])
+
+
+class RuntimeFailure(ValueError):
+    """A runtime probe failed: str() is a one-line summary, .details the evidence (traceback tail)."""
+    def __init__(self, summary: str, details: str = ''):
+        super().__init__(summary)
+        self.details = details
+
+
+def summarize(lines: list[str]) -> str:
+    """The exception line of the last traceback, with a hint for the usual causes."""
+    exception = next((line.strip() for line in reversed(lines) if re.match(r'^\s*[A-Za-z_.]*(Error|Exception|Exit)\b', line)), '')
+    missing = re.search(r"No such file or directory: '([^']+)'", exception)
+    if missing:
+        return (f"{missing[1]} is not available in this runtime. For a host profile set its init script (oe-init-build-env) "
+                f"or start Bitloom from an initialised shell; kas and container profiles run it inside the build environment.")
+    if 'Permission denied' in exception:
+        return f"Permission denied in the runtime: {exception}"
+    return f"Runtime request failed: {exception or (lines[-1].strip() if lines else 'no output')}"
 
 
 async def download(profile, path: str, destination):

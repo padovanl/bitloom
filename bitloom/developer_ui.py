@@ -310,7 +310,7 @@ class DeveloperPanel(Vertical):
         yield Static('Inspect real runtime evidence; Enter opens the selected row.', id='dev-state', markup=False)
         with Horizontal(id='dev-split'):
             yield DataTable(id='dev-rows', cursor_type='row')
-            yield RichLog(id='dev-detail', wrap=True, markup=False, auto_scroll=False)
+            yield RichLog(id='dev-detail', wrap=True, markup=False, auto_scroll=False, min_width=1)  # wrap at the pane width, not 78
 
     def on_mount(self):
         table = self.query_one('#dev-rows', DataTable)
@@ -414,6 +414,15 @@ class DeveloperPanel(Vertical):
                 if view in {'rebuild', 'shutdown'}: path = first or dev.runtime_build(profile)
                 if view == 'performance': path = first; kwargs['build'] = dev.runtime_build(profile)
                 if view in {'security', 'failure', 'downloads', 'kernel'}: path = first
+                if view == 'security' and not first:
+                    from .vulns import sources
+                    found = [str(report) for _, report in sources(profile, self.app.store.directory) if report.suffix == '.json']
+                    if profile.mode == 'host' and found:
+                        path = found[0]  # host paths are runtime paths: use the newest CVE report
+                    else:
+                        raise ValueError('Enter the runtime path of a CVE or SPDX JSON report'
+                                         + (f' (newest found locally: {Path(found[0]).name}; Artifacts → v lists every report)' if found else
+                                            '; enable sbom-cve-check or cve-check and build the image first'))
                 if view in {'image', 'upgrade', 'capabilities'}: kwargs['recipe'] = first or recipe
                 if view == 'kernel': kwargs['config'] = second
                 if view == 'failure':
@@ -457,8 +466,17 @@ class DeveloperPanel(Vertical):
                                     row['value'] += ' · ' + ('EXPIRED review' if expired else 'reviewed by ' + review['owner']) + ' · expires ' + review['expires']
             self.display_report(data, profile, view, job)
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            self.query_one('#dev-state', Static).update('Unavailable: ' + str(exc)[-500:])
-            self.notify(str(exc)[-1000:], severity='warning', timeout=12)
+            summary = str(exc).strip().splitlines()[0][:500] if str(exc).strip() else type(exc).__name__
+            self.query_one('#dev-state', Static).update('Unavailable: ' + summary)
+            # Do not leave the previous view's evidence under this view's name.
+            self.rows = []
+            self.query_one('#dev-rows', DataTable).clear()
+            detail = self.query_one('#dev-detail', RichLog)
+            detail.clear()
+            detail.write(Text(summary, style='bold'))
+            if getattr(exc, 'details', ''):
+                detail.write(Text('\nEvidence from the runtime:\n' + exc.details, style='dim'))
+            self.notify(summary, severity='warning', timeout=12)
         finally:
             self.busy = self.app.developer_busy = False
 
@@ -471,7 +489,7 @@ class DeveloperPanel(Vertical):
         try:
             cap = await request(profile, 'dev-capabilities', '', recipe=recipe)
             rows = [{'name': 'multiconfig', 'value': value} for value in cap.get('multiconfig', [])]
-            rows += [{'name': name, 'value': str(value)} for name, value in cap.get('identity', {}).items()]
+            rows += [{'name': name, 'value': str(value) if value not in (None, '') else 'not set (BitBake default)'} for name, value in cap.get('identity', {}).items()]
             if profile.mode not in {'kas', 'kas-container', 'wrapper'}:
                 return report('PROFILE / MULTICONFIG CONTEXT', rows, json.dumps(asdict(profile), indent=2), identity=cap['identity'])
             inv = invocation(profile, ['kas', 'dump'])
