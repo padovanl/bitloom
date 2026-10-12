@@ -715,3 +715,14 @@ Run the same build twice. Expected: during the second run the Tasks card and the
 
 In GitHub → Actions → *Release Bitloom* → *Run workflow*, enter a new version (for example `0.2.0`) and optionally tick *draft* or *prerelease*. Expected: tests pass, the job builds `bitloom-<version>.tar.gz`, the wheel, `bitloom_<version>_all.deb` and `SHA256SUMS`, installs the `.deb` and smoke-tests it, attaches the assets to the workflow run and creates the `v<version>` release. An existing tag is refused. Locally, `python tools/build_release.py 0.2.0 --output /tmp/release` produces the same files.
 
+
+### E01 — Damaged files and odd inputs
+
+Run each step in a scratch copy (`cp -r .bitloom /tmp/bl`, then `--config /tmp/bl/profiles.json --state /tmp/bl`). Expected: a one-line message naming the file, never a Python traceback.
+
+1. Write `{nope` into `profiles.json` and run `bitloom --cra`: exit 2, `…profiles.json is not valid JSON`. An empty `profiles.json` behaves like a first start; a file without `"active"` uses its first profile; `"active": "ghost"` lists the defined profiles.
+2. Write `not a database` into `history.sqlite3` and run `bitloom --ci parse`: exit 2, `history.sqlite3 cannot be used … move it away`.
+3. Write `[1, 2]` into `security-reviews.json`: CRA readiness shows *Vulnerability dispositions* as WARN with the reason, Vulnerabilities lists it, and recording a review (`r`) is refused without changing the file.
+4. Put a truncated `*.spdx.json` and a `*.sbom-cve-check.yocto.json` containing `{"package": "nope"}` next to the image: `--sbom` and `--vulns` report each file's problem and keep analysing the others.
+5. Build target `core-image-minimal busybox` queues one BitBake command with both targets; `a; id`, `$(id)` or a task `compile; id` are refused with *Not a BitBake target* / *Not a task name*, in the TUI, in the web dashboard and in `--ci build:…`.
+6. Web API: `POST /api/jobs` with `"values": "x"` answers 400 with a JSON error; `DELETE /api/state` answers 405.

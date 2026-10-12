@@ -125,6 +125,8 @@ def availability(action: Action, series: str | None) -> tuple[bool | None, str]:
 
 
 def arguments(action: Action, values: dict[str, str]) -> list[str]:
+    if not isinstance(values, dict) or any(not isinstance(v, str) for v in values.values()):
+        raise ValueError("values must be an object of strings")
     for key in action.inputs:
         if not values.get(key, "").strip():
             raise ValueError(f"{key} is required")
@@ -138,11 +140,32 @@ def arguments(action: Action, values: dict[str, str]) -> list[str]:
         value = values[key].strip()
         if value.startswith("-"):
             raise ValueError(f"{key} must not start with '-'")
-        if key == "task":
+        if key == "target":
+            # Several targets may be given, separated by spaces (bitbake image1 image2).
+            targets = value.split()
+            bad = [t for t in targets if not TARGET.fullmatch(t)]
+            if bad:
+                raise ValueError(f"Not a BitBake target: {bad[0]!r} (recipe, image, virtual/… or mc:…:…)")
+            argv += targets
+        elif key == "task":
+            if not TASK.fullmatch(value):
+                raise ValueError(f"Not a task name: {value!r} (for example compile or do_compile)")
             argv += ["-c", value]
+        elif key == "variable" and not VARIABLE.fullmatch(value):
+            raise ValueError(f"Not a variable name: {value!r} (for example IMAGE_INSTALL or SRC_URI:pn-busybox)")
         else:
             argv.append(value)
     return argv
+
+
+def subject(action: Action, values: dict[str, str]) -> str:
+    """What an operation acts on, for job titles: 'busybox', 'img1 img2', 'busybox · do_compile'."""
+    return " · ".join(" ".join(values.get(key, "").split()) for key in action.inputs if key not in {"command"})
+
+
+TARGET = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+:@/-]*")
+TASK = re.compile(r"[A-Za-z0-9_]+")
+VARIABLE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_:.+/@${}\[\]-]*")
 
 
 @dataclass

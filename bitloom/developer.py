@@ -333,6 +333,21 @@ def device_identity(path):
     return {'path': str(file.resolve()), 'sha256': digest.hexdigest(), 'size': file.stat().st_size}
 
 
+def read_reviews(path) -> dict:
+    """Recorded dispositions keyed by package/CVE; ValueError when the file is damaged
+    (never treated as empty, so saving cannot overwrite the reviews it holds)."""
+    file = Path(path)
+    if not file.exists():
+        return {}
+    try:
+        entries = json.loads(file.read_text(errors='replace'))
+    except ValueError as exc:
+        raise ValueError(f'{file} is not valid JSON ({exc}); fix or move it away') from exc
+    if not isinstance(entries, dict) or any(not isinstance(v, dict) for v in entries.values()):
+        raise ValueError(f'{file} must map package/CVE to review objects; fix or move it away')
+    return entries
+
+
 def security_disposition(path, issue, owner, reason, expiry):
     if not owner.strip() or not reason.strip():
         raise ValueError('Owner and reason are required')
@@ -340,7 +355,7 @@ def security_disposition(path, issue, owner, reason, expiry):
     if date < datetime.now(timezone.utc).date():
         raise ValueError('Expiry must be today or later')
     file = Path(path)
-    entries = json.loads(file.read_text()) if file.exists() else {}
+    entries = read_reviews(file)
     entries[issue['package'] + '/' + issue['id']] = {'owner': owner, 'reason': reason, 'expires': expiry,
         'reviewed_utc': datetime.now(timezone.utc).isoformat(), 'upstream_status': issue['status']}
     file.parent.mkdir(parents=True, exist_ok=True)

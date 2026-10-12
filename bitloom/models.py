@@ -55,8 +55,10 @@ class Profile:
         return p.resolve() if p.is_absolute() else self.root_path / p
 
     def validate(self) -> None:
-        if not self.name.strip():
+        if not isinstance(self.name, str) or not self.name.strip():
             raise ValueError("Profile name is required")
+        if not isinstance(self.root, str) or not self.root.strip():
+            raise ValueError(f"Profile '{self.name}': root must be a folder path")
         if not isinstance(self.environment, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in self.environment.items()):
             raise ValueError("environment must contain string keys and values")
         if not isinstance(self.container_args, list) or any(not isinstance(a, str) for a in self.container_args):
@@ -91,6 +93,10 @@ class Profile:
                 raise ValueError("Container build directory must be inside root") from exc
 
 
+class ConfigError(ValueError):
+    """A profiles file Bitloom cannot use, with a message for the user."""
+
+
 class Settings:
     """Personal profiles plus read-only team profiles from "include" files.
 
@@ -106,11 +112,28 @@ class Settings:
         self.include_warnings: list[str] = []
         self.ignored_keys: list[str] = []
         self.implicit_default: dict | None = None
-        if path.exists():
-            data = json.loads(path.read_text())
-            self.active = data.get("active", "default")
+        try:
+            self._read(path)
+        except ConfigError:
+            raise
+        except (ValueError, TypeError, AttributeError) as exc:
+            raise ConfigError(f"{path}: {exc}. Fix the file, or move it away to start the guided setup again.") from exc
+
+    def _read(self, path: Path) -> None:
+        text = path.read_text(errors="replace") if path.exists() else ""
+        if text.strip():  # an empty file is a first start, like a missing one
+            try:
+                data = json.loads(text)
+            except ValueError as exc:
+                raise ConfigError(f"{path} is not valid JSON ({exc}). Fix it, or move it away to start the guided setup again.") from exc
+            if not isinstance(data, dict):
+                raise ValueError("expected a JSON object with a \"profiles\" array")
+            if not isinstance(data.get("profiles", []), list) or any(not isinstance(p, dict) for p in data.get("profiles", [])):
+                raise ValueError("\"profiles\" must be an array of objects")
             ignored = []
             self.profiles = [Profile.from_dict(p, ignored) for p in data.get("profiles", [])]
+            # Without "active", the first profile is the active one.
+            self.active = data.get("active") or (self.profiles[0].name if self.profiles else "default")
             self.ignored_keys = sorted(set(ignored))
             self.include = data.get("include", [])
             if not isinstance(self.include, list) or any(not isinstance(i, str) for i in self.include):
@@ -127,7 +150,7 @@ class Settings:
         if len({p.name for p in self.profiles}) != len(self.profiles):
             raise ValueError("Profile names must be unique")
         if self.active not in {p.name for p in self.profiles}:
-            raise ValueError("Active profile must exist")
+            raise ValueError(f"active profile '{self.active}' is not defined (profiles: {', '.join(p.name for p in self.profiles)})")
 
     def include_path(self, value: str) -> Path:
         path = Path(os.path.expandvars(value)).expanduser()

@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import statistics
+import subprocess
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -135,7 +137,12 @@ def compare(current: dict, previous: dict) -> str:
 
 
 def disk_usage(path: Path, deadline: float) -> int:
-    total, stack = 0, [path]
+    """Allocated bytes of files and directories, like du -s."""
+    try:
+        total = os.stat(path, follow_symlinks=False).st_blocks * 512
+    except OSError:
+        return 0
+    stack = [path]
     while stack and time.monotonic() < deadline:
         try:
             with os.scandir(stack.pop()) as entries:
@@ -143,8 +150,7 @@ def disk_usage(path: Path, deadline: float) -> int:
                     try:
                         if entry.is_dir(follow_symlinks=False):
                             stack.append(entry.path)
-                        else:
-                            total += entry.stat(follow_symlinks=False).st_blocks * 512
+                        total += entry.stat(follow_symlinks=False).st_blocks * 512
                     except OSError:
                         continue
         except OSError:
@@ -152,16 +158,35 @@ def disk_usage(path: Path, deadline: float) -> int:
     return total
 
 
+def _du(recipes: list, budget: float) -> dict | None:
+    """Sizes with du (several times faster than walking millions of files from Python);
+    None when du fails or exceeds the budget."""
+    try:
+        result = subprocess.run(["du", "-sk", "--", *(str(recipe) for _, recipe in recipes)], capture_output=True,
+                                text=True, errors="replace", timeout=budget)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    sizes = {}
+    for line in result.stdout.splitlines():
+        size, _, name = line.partition("\t")
+        if size.isdigit():
+            sizes[name] = int(size) * 1024
+    return sizes or None
+
+
 def work_usage(profile: Profile, budget: float = 30.0) -> dict:
     """Disk used per recipe work directory in tmp/work (bounded in time)."""
     work = profile.build_path / "tmp/work"
     deadline = time.monotonic() + budget
     rows = []
-    if work.is_dir():
-        for arch in sorted(p for p in work.iterdir() if p.is_dir() and not p.is_symlink()):
-            for recipe in sorted(p for p in arch.iterdir() if p.is_dir() and not p.is_symlink()):
-                rows.append({"recipe": recipe.name, "arch": arch.name, "bytes": disk_usage(recipe, deadline)})
-    complete = time.monotonic() < deadline
+    recipes = [(arch, recipe) for arch in sorted(p for p in work.iterdir() if p.is_dir() and not p.is_symlink())
+               for recipe in sorted(p for p in arch.iterdir() if p.is_dir() and not p.is_symlink())] if work.is_dir() else []
+    measured = _du(recipes, budget) if recipes and shutil.which("du") else None
+    if measured is not None:
+        rows = [{"recipe": recipe.name, "arch": arch.name, "bytes": measured.get(str(recipe), 0)} for arch, recipe in recipes]
+    else:
+        rows = [{"recipe": recipe.name, "arch": arch.name, "bytes": disk_usage(recipe, deadline)} for arch, recipe in recipes]
+    complete = measured is not None or time.monotonic() < deadline
     local = profile.build_path / "conf/local.conf"
     raw = local.read_text(errors="replace") if local.exists() else ""
     return {"rows": sorted(rows, key=lambda r: -r["bytes"]), "complete": complete,
