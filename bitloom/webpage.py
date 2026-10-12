@@ -766,7 +766,12 @@ function renderDetail() {
   }
   const row = current();
   const active = row && ["running", "queued", "cancelling"].includes(row.status);
-  $("stop-btn").disabled = !active; $("graceful-btn").disabled = !row || row.status !== "running"; $("retry-btn").disabled = !row || active;
+  // Graceful stop signals the BitBake client: only host and managed-container runtimes expose it (as in the TUI).
+  const mode = row && ((state.profiles.find((p) => p.name === row.profile) || {}).mode);
+  const argv = row ? (Array.isArray(row.argv) ? row.argv : JSON.parse(row.argv || "[]")) : [];
+  const drainable = (mode === "host" || mode === "container") && argv[0] === "bitbake";
+  $("stop-btn").disabled = !active; $("graceful-btn").disabled = !row || row.status !== "running" || !drainable; $("retry-btn").disabled = !row || active;
+  $("graceful-btn").title = row && !drainable ? "Graceful stop needs a host or container BitBake client; kas runtimes stop with s (force), which stops the owned container" : "Graceful stop: one SIGINT to the BitBake client (g)";
   if (!row) return;
   set($("d-glyph"), row.status);
   $("d-title").textContent = row.title;
