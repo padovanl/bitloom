@@ -223,6 +223,7 @@ python3 -m venv .venv
 <h2 id="troubleshooting">Troubleshooting</h2>
 <ul>
 <li><strong>bitbake not found:</strong> configure an init script or launch from a sourced environment.</li>
+<li><strong>kas or kas-container not found:</strong> the build service keeps the <code>PATH</code> of the shell that started it, plus the <code>bin</code> directory of Bitloom's own Python environment. Install kas in that environment or on the system <code>PATH</code>, then restart the service when idle (<code>bitloom --service-stop</code>).</li>
 <li><strong>Docker permission denied:</strong> the user running Bitloom must have permission to the Docker socket; the app never changes daemon permissions.</li>
 <li><strong>Docker Snap and /tmp:</strong> Snap's daemon can see a different <code>/tmp</code> from the host. A bind mount may be created as root in the daemon namespace. Prefer a dedicated Linux directory visible to both namespaces, or initialize only the dedicated mount ownership inside a container. Never apply broad permissions to Docker or the project root.</li>
 <li><strong>Windows/NTFS build paths:</strong> store Yocto work directories on a Linux filesystem. The TUI source can live under /mnt/c; BitBake source/build caches should not rely on NTFS semantics.</li>

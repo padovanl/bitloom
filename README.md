@@ -276,6 +276,8 @@ PATH="$PWD/.venv/bin:$PATH" python tools/validate_kas.py \
   --work /tmp/bitloom-kas-validation --engine docker
 ```
 
+Bitloom also looks for `kas`, `kas-container` and scanners such as `grype` in the `bin` directory of its own Python environment, after `PATH`, so tools installed in the venv work even when it is not activated (for example when the build service was started from another shell or by the web dashboard).
+
 Docker/Podman must be running. The kas image supplies Yocto build dependencies. The first build downloads sources and can take considerable time/disk space. `.validation/` contains logs, SQLite history and `result.json`; it is ignored by Git. Use a Linux filesystem for work files. Docker installed via Snap has a private `/tmp`; see the [troubleshooting guide](docs/guide.md#troubleshooting).
 
 **Verified on 2026-10-10:** all 4,064 tasks succeeded in 57m 10s through kas-container; the rootfs archive and eight runtime probes passed.

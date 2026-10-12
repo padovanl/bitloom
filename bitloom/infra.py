@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
+from .commands import which
 from .models import Profile, read_assignments
 
 NETWORK_FS = {"nfs", "nfs4", "cifs", "smb3", "smbfs", "9p", "drvfs", "fuse.sshfs", "ceph", "glusterfs", "lustre", "gpfs"}
@@ -76,7 +77,7 @@ def host_checks() -> list[tuple[str, str, str]]:
     engines = [name for name in ("docker", "podman") if shutil.which(name)]
     results.append(("OK" if engines else "INFO", "Container engine", ", ".join(engines) or "none in PATH (needed for container and kas-container profiles)"))
     for tool in ("kas", "kas-container", "git"):
-        found = shutil.which(tool)
+        found = which(tool)
         results.append(("OK" if found else "INFO", tool, found or "not in PATH"))
     if wsl():
         results.append(("INFO", "WSL", "Keep build directories on the Linux filesystem; /mnt/<drive> (drvfs) is slow and breaks permissions"))

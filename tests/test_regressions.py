@@ -112,3 +112,19 @@ async def test_output_written_while_hidden_is_rerendered(tmp_path):
         lines = [line.text for line in app.query_one('#log', RichLog).lines]
         assert any('a fairly long line of output' in text for text in lines)
     app.store.close()
+
+
+def test_tools_next_to_bitloom_are_found_without_an_activated_virtualenv(tmp_path, monkeypatch):
+    """A build service started by another client inherited a bare PATH: kas-container in the
+    virtualenv was not found and the build failed with FileNotFoundError."""
+    import os
+    import sys
+    from pathlib import Path
+    from bitloom.commands import invocation, which
+    from bitloom.models import Profile
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    venv = str(Path(sys.executable).parent)
+    profile = Profile(name="p", root=str(tmp_path), mode="host")
+    path = invocation(profile, ["bitbake", "busybox"]).env["PATH"].split(os.pathsep)
+    assert path[:2] == ["/usr/bin", "/bin"] and path[-1] == venv  # system tools keep precedence
+    assert which(Path(sys.executable).name)

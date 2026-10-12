@@ -10,6 +10,7 @@ import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from .commands import which
 from .models import Profile, Settings, read_assignments
 
 SKIP = {".git", ".venv", "node_modules", ".bitloom", "tmp", "sstate-cache", "downloads", "build", "__pycache__", ".repo"}
@@ -110,13 +111,13 @@ def detect(root: Path) -> list[Candidate]:
         machine = (re.search(r"^machine:\s*(\S+)", values, re.M) or [None, ""])[1]
         target = (re.search(r"^target:\s*(\S+)", values, re.M) or [None, ""])[1]
         evidence = [f"kas configuration {relative}" + (f" (machine {machine})" if machine else "")]
-        container = bool(shutil.which("kas-container")) or not shutil.which("kas")
+        container = bool(which("kas-container")) or not which("kas")
         work = str(Path.home() / "bitloom-work" / slug(root.name + "-" + config.stem))
         profile = {"name": slug(root.name + "-" + config.stem), "root": str(root), "mode": "kas-container" if container else "kas",
                    "kas_file": relative, "machine": machine, "targets": [target] if target else ["core-image-minimal"],
                    "environment": {"KAS_WORK_DIR": work, "KAS_CONTAINER_ENGINE": engine} if container else {}}
         hints = ["kas-container needs a separate work directory on a Linux filesystem (not /mnt/<drive>)."] if container else []
-        evidence.append("kas-container found" if shutil.which("kas-container") else "kas found" if shutil.which("kas") else "neither kas nor kas-container in PATH yet")
+        evidence.append("kas-container found" if which("kas-container") else "kas found" if which("kas") else "neither kas nor kas-container in PATH yet")
         candidates.append(Candidate(profile["mode"], f"kas: {relative}", evidence, profile, 20 if re.search(r"^machine:", values, re.M) else 10, hints))
     for script in INIT_SCRIPTS:
         if (root / script).is_file():
@@ -141,7 +142,7 @@ def check(profile: Profile) -> list[tuple[str, str]]:
         for name in profile.kas_file.split(":"):
             results.append(("OK" if (profile.root_path / name).is_file() else "ERR", f"kas file {name}"))
         binary = "kas-container" if profile.mode == "kas-container" else "kas"
-        results.append(("OK" if shutil.which(binary) else "WARN", f"{binary} {'found' if shutil.which(binary) else 'not in PATH'}"))
+        results.append(("OK" if which(binary) else "WARN", f"{binary} {'found' if which(binary) else 'not in PATH'}"))
         work = profile.environment.get("KAS_WORK_DIR", "")
         if profile.mode == "kas-container":
             if not work:
