@@ -12,6 +12,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Markdown, OptionList, Select, Static, TextArea
 from textual.widgets.option_list import Option
 
+from .toolbar import ToolBar
 from .commands import ACTIONS, Action, arguments, invocation
 from .models import Profile, Settings
 
@@ -679,7 +680,7 @@ class ProfilePickerScreen(ModalScreen):
         options = []
         for p in self.settings.profiles:
             label = Text.assemble(("● " if p.name == self.settings.active else "  ", "bold"), (p.name, "bold"),
-                                  ("  team" if p.name in self.settings.shared else "", "italic"), ("  " + p.mode, "dim"), ("  " + (p.machine or "") + "  " + str(p.build_path), "dim"))
+                                  ("  team" if p.name in self.settings.shared else "", "italic"), ("  " + p.mode, "dim"), ("  " + (p.machine or "") + "  " + str(p.build_path), "dim"), no_wrap=True, overflow="ellipsis")
             options.append(Option(label, id=p.name))
         with Vertical():
             yield Label("↑ ↓ choose · Enter switch · Esc cancel · F4 edits profiles", id="picker-hint")
@@ -802,7 +803,7 @@ class SbomSettingsScreen(ModalScreen):
         from .versions import describe
         self.query_one(Vertical).border_title = f"SBOM & CRA settings · {describe(self.release)} · {target(self.profile)}"
         table = self.query_one("#sbom-options")
-        for name, width in (("State", 14), ("Option", 44), ("Release", 18)):
+        for name, width in (("State", 16), ("Option", 44), ("Release", 15)):
             table.add_column(name, width=width)
         table.border_title = "Options"
         self.query_one("#sbom-preview").border_title = "Managed block preview"
@@ -1574,7 +1575,7 @@ class VulnerabilitiesScreen(ModalScreen):
         from .vulns import sources
         options = [("Newest report of each tool", "")] + [(label, label) for label, _ in sources(self.profile, self.state)]
         with Vertical():
-            with Horizontal(id="vuln-tools"):
+            with ToolBar(id="vuln-tools"):
                 yield Select(options, value="", allow_blank=False, id="vuln-source")
                 yield Select([("Unpatched", "unpatched"), ("All", "all"), ("Reviewed", "reviewed")], value="unpatched", allow_blank=False, id="vuln-status")
                 yield Input(placeholder="min CVSS", id="vuln-min", type="number")

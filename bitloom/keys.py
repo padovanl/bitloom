@@ -8,7 +8,7 @@ SECTIONS = [
     ("builds", "1", "Builds", "◈", "BUILD"),
     ("metadata", "2", "Recipes", "◇", "BUILD"),
     ("tasklogs", "3", "Task logs", "≋", "BUILD"),
-    ("workbench", "4", "Environment", "⌕", "INSPECT"),
+    ("workbench", "4", "Environment", "≡", "INSPECT"),
     ("caches", "5", "Caches", "▣", "INSPECT"),
     ("artifacts", "6", "Artifacts", "◉", "INSPECT"),
     ("analysis", "7", "Analysis", "∑", "INSPECT"),

@@ -22,6 +22,7 @@ from .commands import invocation
 from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, inventory, metadata, prune_cache, search_log, task_logs
 from .models import Profile, Settings, read_assignments
 from .runner import Job, Runner
+from .toolbar import ToolBar
 from .screens import ActionScreen, FileScreen, ProfilesScreen, PruneScreen
 from .store import Store
 from .keys import FILTERS, PRIMARY, SECTION_KEYS, SECTIONS, button_hints, section_bindings, sectional_actions
@@ -103,6 +104,7 @@ class BitloomApp(App):
     #toolbar { height: 1; padding: 0 1; background: $surface; border-bottom: none; }
     #profile { width: 22; height: 1; }
     #target { width: 1fr; }
+    Label { max-width: 100%; }  /* long hints wrap instead of being cut at the dialog edge */
     Button { height: 1; min-width: 6; border: none; background: $surface; color: $foreground; padding: 0 1; text-style: none; }
     Button:hover { background: $primary-muted; color: $foreground; }
     Button.-primary { background: $primary-muted; color: $foreground; text-style: bold; }
@@ -151,6 +153,7 @@ class BitloomApp(App):
     .tools { height: 1; margin-bottom: 1; }
     .tools Input { width: 1fr; }
     .tools Button { min-width: 6; margin-right: 1; }
+    #cache-days-label { width: auto; padding: 0 1 0 0; color: $text-muted; }
     DataTable, RichLog, Tree, #task-monitor, Markdown#help {
         border: round $primary-muted; border-title-color: $foreground-muted; background: $background;
     }
@@ -393,7 +396,7 @@ class BitloomApp(App):
                         with Horizontal(id="build-split"):
                             with Vertical(id="history-panel"):
                                 yield DataTable(id="history", cursor_type="row")
-                                with Horizontal(classes="tools"):
+                                with ToolBar(classes="tools"):
                                     yield Button("Stop…", variant="warning", id="stop")
                                     yield Button("Retry", id="retry")
                                     yield Button("Export", id="export")
@@ -403,13 +406,13 @@ class BitloomApp(App):
                             with Vertical(id="stream-panel"):
                                 yield Static("Select an operation to inspect its output", id="job-state", markup=False)
                                 yield ProgressBar(total=100, show_eta=False, id="progress")
-                                with Horizontal(classes="tools"):
+                                with ToolBar(classes="tools"):
                                     yield Input(placeholder="/ search output · ±3 context lines", id="log-search")
                                     yield Button("Errors only", id="errors")
                                     yield Button("Pause", id="log-follow")
                                 yield RichLog(id="log", min_width=1, wrap=True, highlight=False, markup=False, max_lines=5000)
                     with TabPane(labels["metadata"], id="metadata"):
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Input(placeholder="/ search recipe, layer, append, class, kas file…", id="metadata-search")
                             yield Button("Build recipe", id="recipe-build")
                             yield Button("Modify", id="recipe-modify")
@@ -423,7 +426,7 @@ class BitloomApp(App):
                             yield DataTable(id="metadata-table", cursor_type="row")
                             yield RichLog(id="source-preview", wrap=False, max_lines=200, markup=False)
                     with TabPane(labels["tasklogs"], id="tasklogs"):
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Input(placeholder="/ filter task logs by recipe or task…", id="task-search")
                             yield Button("Refresh logs", id="logs-refresh")
                             yield Button("Read selected", id="logs-read")
@@ -431,13 +434,13 @@ class BitloomApp(App):
                         yield Static("No active tasks in this TUI session.", id="active-tasks", markup=False)
                         yield DataTable(id="task-table", cursor_type="row")
                     with TabPane(labels["workbench"], id="workbench"):
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Select([("Environment", "env"), ("Dependencies", "graph")], value="env", allow_blank=False, id="inspect-kind")
                             yield Input(placeholder="/ filter variable/value or graph node…", id="inspect-search")
                             yield Button("Load", id="inspect-load")
                             yield Button("Resolve env", id="inspect-resolve")
                             yield Button("Env diff", id="inspect-diff")
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Button("Build history diff", id="buildhistory-report")
                             yield Button("Download audit", id="download-audit")
                             yield Button("Build report", id="build-report")
@@ -446,10 +449,11 @@ class BitloomApp(App):
                             yield Button("Timings", id="task-timings")
                         yield DataTable(id="inspect-table", cursor_type="row")
                     with TabPane(labels["caches"], id="caches"):
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Select([("Downloads", "downloads"), ("Shared state", "sstate")], value="downloads", allow_blank=False, id="cache-kind")
                             yield Input(placeholder="/ filter files", id="cache-search")
-                            yield Input(value="30", placeholder="Age days", id="cache-days", type="integer")
+                            yield Static("≥ days", id="cache-days-label")
+                            yield Input(value="30", placeholder="Age days", id="cache-days", type="integer", tooltip="Prune plan: files not used for at least this many days")
                             yield Button("Scan", id="cache-scan")
                             yield Button("Prune plan", variant="warning", id="cache-prune")
                             yield Button("Fetch all", id="fetch-all")
@@ -457,7 +461,7 @@ class BitloomApp(App):
                         yield Static("Scan a cache to inspect files, size and age.", id="scan-state", markup=False)
                         yield DataTable(id="cache-table", cursor_type="row")
                     with TabPane(labels["artifacts"], id="artifacts"):
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Input(placeholder="/ search images, SDK, manifests, licenses, SPDX, buildstats…", id="artifact-search")
                             yield Button("Refresh", id="artifact-refresh")
                             yield Button("Read file", id="artifact-read")
@@ -467,12 +471,12 @@ class BitloomApp(App):
                             yield Button("Vulnerabilities", id="vulnerabilities")
                         yield DataTable(id="artifact-table", cursor_type="row")
                     with TabPane(labels["analysis"], id="analysis"):
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Create runtime file", "runtime-create"), ("Export runtime artifact", "runtime-download"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Package provenance", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
                             yield Input(placeholder="/ literal metadata search phrase · Enter analyzes", id="analysis-query")
                             yield Button("Analyze", id="analysis-run")
                             yield Button("Export", id="analysis-export")
-                        with Horizontal(classes="tools", id="analysis-paths"):
+                        with ToolBar(classes="tools", id="analysis-paths"):
                             yield Input(placeholder="First manifest / build log path (blank uses selected log)", id="analysis-first")
                             yield Input(placeholder="Second manifest path", id="analysis-second")
                         yield Static("Reports and runtime tools. First field: runtime path / recipe / package. Second: comparison file / stamps path. Export saves the report.", id="analysis-note", markup=False)
@@ -481,7 +485,7 @@ class BitloomApp(App):
                         from .developer_ui import DeveloperPanel
                         yield DeveloperPanel(id="developer-panel")
                     with TabPane(labels["healthtab"], id="healthtab"):
-                        with Horizontal(classes="tools"):
+                        with ToolBar(classes="tools"):
                             yield Button("Projects", id="projects", variant="primary")
                             yield Button("Notifications", id="notifications")
                             yield Button("local.conf", id="local-conf")
@@ -496,7 +500,7 @@ class BitloomApp(App):
                         yield DataTable(id="health", cursor_type="row")
                     with TabPane(labels["guide"], id="guide"):
                         yield Markdown(HELP, id="help")
-        yield Footer()
+        yield Footer(show_command_palette=False)  # the palette hint overlapped the last bindings; ^P is in the rail and help
 
     def on_mount(self):
         columns = {
@@ -786,12 +790,12 @@ class BitloomApp(App):
         except ValueError:
             pass
         root = str(p.root_path)
-        if len(root) > 20:
-            root = "…" + root[-19:]
+        if len(root) > 12:  # the rail shows 12 columns after the label: keep the end of the path
+            root = "…" + root[-11:]
         self.main_query("#rail-context", Static).update(Text.assemble(
             ("PROFILE  ", "dim"), (p.name, "bold"), "\n", ("RUNTIME  ", "dim"), p.mode, "\n",
             ("ROOT     ", "dim"), root, "\n", ("BUILD    ", "dim"), str(build)[:15], "\n\n",
-            ("?", f"bold {theme.accent}"), (" keys  ", "dim"), ("F2", f"bold {theme.accent}"), (" commands", "dim"), no_wrap=True))
+            ("?", f"bold {theme.accent}"), (" keys  ", "dim"), ("F2", f"bold {theme.accent}"), (" commands", "dim"), no_wrap=True, overflow="ellipsis"))
 
     def action_cycle_section(self, direction):
         if len(self.screen_stack)>1:
@@ -1012,6 +1016,12 @@ class BitloomApp(App):
         self.screen_stack[0].set_class(event.size.width < 105 or event.size.height < 30, "narrow")
         self.screen_stack[0].set_class(event.size.height < 30, "short")
         self.screen_stack[0].set_class(event.size.width < 75 or event.size.height < 22, "tiny")
+        self.call_after_refresh(self.reflow_toolbars)
+
+    def reflow_toolbars(self):
+        if self.screen_stack:
+            for bar in self.screen_stack[0].query(ToolBar):
+                bar.reflow()
 
     @on(Button.Pressed, "#rail Button")
     @alive
@@ -1028,6 +1038,7 @@ class BitloomApp(App):
         for button in self.screen_stack[0].query("#rail Button"):
             button.set_class(button.id == f"nav-{active}", "selected")
         self.refresh_bindings()
+        self.call_after_refresh(self.reflow_toolbars)  # hidden bars have no width until shown
         if active == "builds" and self.selected_log:
             # Output written while Builds was hidden was wrapped at zero width: render it again.
             self.call_after_refresh(self.reload_log)
@@ -1078,7 +1089,7 @@ class BitloomApp(App):
             else:
                 text.append("CPU …", style="dim")
             text.append("  RAM ", style="dim").append(f"{100*ram:3.0f}%", style=f"bold {theme.secondary}")
-            text.append(f" {human_size((mem['MemTotal']-mem['MemAvailable'])*1024)}", style="dim")
+            text.append(f" {(mem['MemTotal'] - mem['MemAvailable']) / 1024**2:.1f}G", style="dim")
             self.main_query("#resource-metric", Static).update(text)
         except (OSError, ValueError, KeyError):
             self.main_query("#resource-metric", Static).update("Unavailable on this host")

@@ -70,13 +70,18 @@ def check():
             for name in ('guide', 'commands', 'validation', 'testbook', 'roadmap', 'developer'):
                 page.goto(f'{url}/{name}.html', wait_until='networkidle')
                 assert page.locator('h1').count() == 1
+                assert page.locator('.sidebar a[aria-current="page"]').count() == 1
+            page.locator('#search-input').fill('sbom-cve-check')
+            page.wait_for_selector('#search-results a')
+            assert page.locator('#search-results a').count() > 1
+            page.keyboard.press('Escape')
             page.set_viewport_size({'width': 390, 'height': 844})
             page.goto(url, wait_until='networkidle')
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
             page.screenshot(path=str(ROOT / 'docs/assets/docs-mobile.png'), full_page=True)
             assert not failures, failures
             browser.close()
-            print('PASS: feature filter, runtime switch, screenshot dialog, manual pages and mobile layout; no page errors or failed resources')
+            print('PASS: feature filter, runtime switch, screenshot dialog, manual pages with navigation and search, mobile layout; no page errors or failed resources')
     finally:
         server.shutdown()
         server.server_close()
