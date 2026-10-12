@@ -86,6 +86,10 @@ Many products wrap kas in a script that selects the configuration through an env
 
 For the TUI to run BitBake commands, queries and runtime probes, the script must forward a shell command into the build environment (kas's `shell -c`, or whatever `launcher_shell` names) and keep standard input open (`docker run -i`) for Analysis and Developer probes. Health checks verify that the launcher exists and is executable.
 
+## Team chat notifications
+
+Point the build service at a Slack, Teams or Mattermost incoming webhook (or an ntfy topic the team subscribes to) in Configuration → `o`: every long build on a shared build machine posts its outcome, profile, duration and failing task log, with no TUI attached. See [Daily helpers](guide.md#know-when-a-build-ends).
+
 ## Profiles from other versions
 
 Profiles and history written by a newer or older Bitloom load with unknown keys ignored (Configuration lists them). The build service reports its version: when it is older than the client, the TUI and the web dashboard ask you to restart it when idle (`bitloom --service-stop`).

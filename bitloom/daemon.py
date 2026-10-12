@@ -84,7 +84,9 @@ async def serve(state):
             elif op=='status': result={'pid':os.getpid(),'version':__version__,'jobs':[encode(j) for j in runner.jobs],'active':runner.active.id if runner.active else None}
             else: raise ValueError('Unknown operation')
         except Exception as exc: result={'error':str(exc)}
-        writer.write(json.dumps(result).encode()+b'\n'); await writer.drain(); writer.close(); await writer.wait_closed()
+        try:
+            writer.write(json.dumps(result).encode()+b'\n'); await writer.drain(); writer.close(); await writer.wait_closed()
+        except (ConnectionError,OSError): pass  # the client gave up (timeout or exit): nothing to answer
     server=await asyncio.start_unix_server(handle,path=str(path),limit=1024*1024)
     os.chmod(path,0o600)
     try:

@@ -703,6 +703,14 @@ Create a folder with a kas file and a launcher script (the T05 script works), or
 
 On `demo-wrynose`: `6`, `v`. Expected: 3 unpatched findings ordered critical (CVE-0000-0002, 9.8), high, medium; `/openssh` filters; the detail shows source, detail and summary; `r` opens the review dialog and, after saving, the Review column shows owner and expiry; `x` writes a CSV in `<state>/exports`; `g` scans the newest SPDX SBOM with Grype when installed (otherwise it explains). `bitloom --vulns --min-cvss 9 --fail-on-unpatched` exits 2; with `--min-cvss 9.9` it exits 0. On a real Wrynose build with the sbom-cve-check fragment enabled, the report from `tmp/deploy/images` appears as source. Web: `4` → *Vulnerabilities* with chips, filters and CSV export; CRA readiness shows *Unpatched vulnerabilities*.
 
+### H01 — Build notifications
+
+`9`, `o`: tick *failed* and *success*, set the minimum to `0`, keep *desktop* on and enter an ntfy topic (`https://ntfy.sh/<random-topic>`, subscribed on your phone) as webhook; `^T`. Expected: a desktop notification (on WSL a Windows notification), the terminal bell and a push on the phone. Run a short failing command (F2 → custom `python3 -c 'exit(1)'`), close the TUI before it ends in persistent mode: the notification still arrives (sent by the service). Set the minimum to 600: short jobs stay quiet. In the web dashboard enable 🔔, switch to another tab and let a build end: a browser notification appears.
+
+### H02 — ETA, comparison and tmp/work
+
+Run the same build twice. Expected: during the second run the Tasks card and the web progress line show `ETA ~…` with its basis (task rate, previous runs); after it, `1`, `d` (web: *Compare* tab) compares durations, executed vs setscene tasks, sstate hit rate and warnings. `5`, `w` (or `bitloom --work-usage`) lists the largest recipe work directories, says whether rm_work is enabled and suggests clean commands.
+
 ### B04 — GitHub release workflow
 
 In GitHub → Actions → *Release Bitloom* → *Run workflow*, enter a new version (for example `0.2.0`) and optionally tick *draft* or *prerelease*. Expected: tests pass, the job builds `bitloom-<version>.tar.gz`, the wheel, `bitloom_<version>_all.deb` and `SHA256SUMS`, installs the `.deb` and smoke-tests it, attaches the assets to the workflow run and creates the `v<version>` release. An existing tag is refused. Locally, `python tools/build_release.py 0.2.0 --output /tmp/release` produces the same files.

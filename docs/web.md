@@ -37,13 +37,13 @@ ssh -L 8765:127.0.0.1:8765 build-server
 | `5` | Studio | Create a product layer, distribution, machine, image, recipe or append with a live preview. See [Studio](studio.md). |
 | `6` | Configuration | Projects (recent, new, clone), guided project setup, health checks, setup checks and literal `local.conf` values. See [Projects](projects.md). |
 
-The build detail has Toaster-style tabs computed from the stored log: **Summary** (errors, warnings, failed tasks), **Sstate reuse**, grouped **Warnings** and observed task **Timings**.
+The build detail has Toaster-style tabs computed from the stored log: **Summary** (errors, warnings, failed tasks), **Sstate reuse**, grouped **Warnings**, observed task **Timings** and **Compare** with the previous run of the same command. A running build shows its ETA next to the task count.
 
 ![Build summary tab](assets/web-summary.png)
 
 ## Notifications and animations
 
-Toasts slide in for every state change of a job: started, succeeded, failed (with a button that opens the summary) and cancelled. Hover a toast to pause its countdown; failures stay longer. Cards count up, rings and meters animate, the CPU card draws a live sparkline, and views fade in. With the operating system's *reduce motion* setting, all animations are disabled.
+The 🔔 button turns on browser notifications for builds that end while the tab is in the background; the build service's own desktop and webhook notifications are configured in Configuration (see [Daily helpers](guide.md#daily-helpers)). Toasts slide in for every state change of a job: started, succeeded, failed (with a button that opens the summary) and cancelled. Hover a toast to pause its countdown; failures stay longer. Cards count up, rings and meters animate, the CPU card draws a live sparkline, and views fade in. With the operating system's *reduce motion* setting, all animations are disabled.
 
 ## Keyboard
 
@@ -59,7 +59,7 @@ The dashboard works without a mouse.
 | `b` / `q` / `t` | Build the target / queue any operation / edit the target |
 | `s` / `g` / `r` | Force stop / graceful stop / retry the selected operation |
 | `e` | Errors only |
-| `o` `u` `w` `m` | Output, Summary, Warnings, Timings tab |
+| `o` `u` `w` `m` `d` | Output, Summary, Warnings, Timings, Compare tab |
 | `?` | Keyboard help |
 
 ![Command palette filtered for SBOM operations](assets/web-palette.png)
@@ -87,6 +87,9 @@ The page uses a small JSON API that scripts can use too (all calls need the `X-B
 | `GET /api/console`, `/api/console/log`, `/api/console/report` | Builds started outside Bitloom |
 | `GET /api/compliance` | SBOM summaries, CRA checks, timeline, SBOM options |
 | `GET /api/vulnerabilities`, `POST /api/vulnerabilities/scan` | Findings with filters; Grype scan of the newest SPDX SBOM |
+| `GET /api/jobs/<id>/compare` | Comparison with the previous run of the same command |
+| `GET`/`POST /api/notifications` | Build notification settings |
+| `GET /api/workusage` | tmp/work usage per recipe |
 | `/api/projects…`, `/api/setup…` | Projects and guided setup, see [Projects](projects.md#api) |
 | `GET /api/studio/fields`, `POST /api/studio/preview`, `/create` | Studio |
 | `GET /api/metadata`, `/api/tasklogs`, `/api/tasklog`, `/api/health` | Read-only views |

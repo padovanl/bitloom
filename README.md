@@ -57,6 +57,15 @@ Every action has a key. Numbers `1`–`0` open sections, single letters act in t
 ![Studio in the browser](docs/assets/web-studio.png)
 </details>
 
+## Daily helpers
+
+* **Notifications** when a long build ends: desktop (Linux, or Windows from WSL) and webhooks for ntfy, Slack, Teams or Mattermost, sent by the build service even with no TUI open; browser notifications in the web dashboard (`o` in Configuration).
+* **ETA** for running builds from the task rate and earlier runs of the same command.
+* **Compare with the previous run**: duration, executed vs sstate tasks, hit rate, new/resolved warnings and errors (`d` in Builds, web *Compare* tab).
+* **tmp/work usage** per recipe with `rm_work` advice (`w` in Caches, `bitloom --work-usage`).
+
+See [Daily helpers](docs/guide.md#daily-helpers).
+
 ## Projects and guided setup
 
 Every project is a profile; `P` switches between them. **Configuration → `w`** opens the project hub (also in the web dashboard):

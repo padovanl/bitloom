@@ -161,6 +161,21 @@ async def capture():
             await pilot.press('down')
             await shot('release-gating')
             await pilot.press('escape')
+            # Daily helpers: notifications settings and a comparison with the previous run.
+            await pilot.press('9', 'o')
+            await pilot.pause(.4)
+            await shot('notifications', include_in_tour=False)
+            await pilot.press('escape')
+            app.main_query('#profile', ProfileSelect).value = 'demo'
+            await pilot.pause(.8)
+            again = app.runner.submit(app.profile, 'Demo diagnostic — sample output', [sys.executable, str(script)])
+            await app.runner.consumer
+            app.select_job(again.id, again.log)
+            await pilot.pause(.4)
+            await pilot.press('1', 'd')
+            await pilot.pause(1.2)
+            await shot('compare-runs', include_in_tour=False)
+            await pilot.press('escape')
             # Live job: spinner, indeterminate progress, then task counts.
             running = root / 'sample_running.py'
             running.write_text('import time\nprint("NOTE: Running setscene task 120 of 300")\ntime.sleep(1.5)\nfor i in range(1, 40):\n    print(f"NOTE: Running task {i} of 400 (/demo/r{i}.bb:do_compile)", flush=True)\n    print(f"NOTE: recipe demo-r{i}-1.0-r0: task do_compile: Started", flush=True)\n    time.sleep(.1)\n')

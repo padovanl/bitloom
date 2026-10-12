@@ -38,6 +38,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `p` | Pause |
 | `x` | Export |
 | `i` | Summary |
+| `d` | Compare |
 | `f` | Failed log |
 | `c` | Console builds |
 
@@ -83,6 +84,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `t` | DL/sstate |
 | `p` | Prune plan |
 | `a` | Fetch all |
+| `w` | tmp/work usage |
 
 ## 6 · Artifacts
 
@@ -130,6 +132,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `s` | SBOM settings |
 | `c` | CRA readiness |
 | `w` | Projects |
+| `o` | Notifications |
 
 ## Dialogs
 
