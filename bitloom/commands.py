@@ -4,6 +4,8 @@ from __future__ import annotations
 import os
 import re
 import shlex
+import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -154,9 +156,23 @@ class Invocation:
         return shlex.join(self.argv)
 
 
+def search_path(path: str | None = None) -> str:
+    """PATH plus Bitloom's own bin directory, last: kas and kas-container installed in Bitloom's
+    virtualenv work even when it is not activated (a service started by another client or a
+    desktop launcher inherits a bare PATH)."""
+    path = os.environ.get("PATH", "") if path is None else path
+    tools = str(Path(sys.executable).parent)
+    return path if tools in path.split(os.pathsep) else os.pathsep.join(filter(None, [path, tools]))
+
+
+def which(name: str) -> str | None:
+    return shutil.which(name, path=search_path())
+
+
 def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Invocation:
     profile.validate()
     env = os.environ.copy()
+    env["PATH"] = search_path(env.get("PATH", ""))
     env.update(profile.environment)
     root = profile.root_path
     # MACHINE/DISTRO are passed through BitBake's explicit allow-list.

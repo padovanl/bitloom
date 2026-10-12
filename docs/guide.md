@@ -222,6 +222,7 @@ Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline 
 ## Troubleshooting
 
 - **bitbake not found:** configure an init script or launch from a sourced environment.
+- **kas or kas-container not found:** the build service keeps the `PATH` of the shell that started it, plus the `bin` directory of Bitloom's own Python environment. Install kas in that environment or on the system `PATH`, then restart the service when idle (`bitloom --service-stop`).
 - **Docker permission denied:** the user running Bitloom must have permission to the Docker socket; the app never changes daemon permissions.
 - **Docker Snap and /tmp:** Snap's daemon can see a different `/tmp` from the host. A bind mount may be created as root in the daemon namespace. Prefer a dedicated Linux directory visible to both namespaces, or initialize only the dedicated mount ownership inside a container. Never apply broad permissions to Docker or the project root.
 - **Windows/NTFS build paths:** store Yocto work directories on a Linux filesystem. The TUI source can live under /mnt/c; BitBake source/build caches should not rely on NTFS semantics.

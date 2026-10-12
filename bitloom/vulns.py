@@ -11,10 +11,10 @@ import csv
 import io
 import json
 import re
-import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from .commands import which
 from .models import Profile
 
 SEVERITY = (("critical", 9.0), ("high", 7.0), ("medium", 4.0), ("low", 0.1))
@@ -188,11 +188,11 @@ def to_csv(findings: list[Finding]) -> str:
 
 
 def scanners() -> dict:
-    return {name: shutil.which(name) for name in ("grype", "vulnscout")}
+    return {name: which(name) for name in ("grype", "vulnscout")}
 
 
 def grype_argv(sbom: Path, output: Path) -> list[str]:
-    if not shutil.which("grype"):
+    if not which("grype"):
         raise ValueError("grype is not installed (https://github.com/anchore/grype)")
     if sbom.name.endswith(".manifest"):
         raise ValueError("Grype needs an SPDX JSON SBOM; SPDX 2.2 images ship an archive: extract IMAGE.spdx.tar.zst first")
@@ -200,7 +200,7 @@ def grype_argv(sbom: Path, output: Path) -> list[str]:
 
 
 def vulnscout_argv(project: str, sbom: Path, cve_json: Path | None, condition: str) -> list[str]:
-    if not shutil.which("vulnscout"):
+    if not which("vulnscout"):
         raise ValueError("vulnscout is not in PATH (https://github.com/savoirfairelinux/vulnscout)")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", project):
         raise ValueError("Invalid project name")
