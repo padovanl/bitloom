@@ -96,9 +96,19 @@ ROOT_SIGNALS = re.compile(r'(sbom-cve-check: error:| - ERROR +- |:\d+(?::\d+)?: 
                           r'Fetcher failure|Hunk #\d+ FAILED|Nothing PROVIDES|QA Issue|pseudo abort|make(?:\[\d+\])?: \*\*\* )')
 
 
+# Start-up chatter that BitBake and kas print before any task: never evidence of a failure.
+BITBAKE_CHATTER = re.compile(
+    r'^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d - INFO\s+- )?'   # kas prefixes every line it relays
+    r'(?:kas [\d.]+ started|Repository \S+ already contains \S+ as commit|Repository \S+ (?:checked out|cloned)\b.*|'
+    r'(?:Cloning|Updating|Fetching) repository \S+.*|'
+    r'NOTE: Reconnecting to bitbake server\.*|Loading cache\.\.\.done\.|Loaded \d+ entries from dependency cache\.|'
+    r'Parsing recipes\.\.\.done\.|Parsing of \d+ \.bb files complete.*|NOTE: Retrying server connection.*|'
+    r'NOTE: Started PRServer.*|Summary: There (?:was|were) \d+ WARNING messages?\.?)$')
+
+
 def diagnose(text):
     """Point at the root cause, not the first line that mentions failure."""
-    lines = text.splitlines()
+    lines = [line for line in text.splitlines() if not BITBAKE_CHATTER.match(line.strip())]
     category, advice = 'unclassified', 'Open the reported task log; the build stream alone may omit the cause.'
     for name, pattern, hint in KNOWN_CAUSES:
         if re.search(pattern, text):

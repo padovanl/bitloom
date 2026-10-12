@@ -28,9 +28,7 @@ from .models import Profile
 
 
 PARENT_HOP = re.compile(r'(?<=/)[^/\s]+/\.\./')
-BITBAKE_CHATTER = re.compile(r'^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d - INFO\s+- .*|NOTE: Reconnecting to bitbake server\.*|Loading cache\.\.\.done\.|Loaded \d+ entries from dependency cache\.|'
-                             r'Parsing recipes\.\.\.done\.|Parsing of \d+ \.bb files complete.*|NOTE: Retrying server connection.*|'
-                             r'NOTE: Started PRServer.*|Summary: There (?:was|were) \d+ WARNING messages?\.?)$')
+from .workflows import BITBAKE_CHATTER  # shared with the failure diagnosis
 
 
 def tidy(text: str) -> str:
