@@ -32,6 +32,7 @@ class Option:
     verified: bool = True         # False: first release not confirmed; verify with bitbake-getvar
     lines: tuple[str, ...] = field(default=())  # extra fixed lines when enabled
     template: str = ""            # text options: assignment with {value}; default: <name>_name/_type
+    on_since: str = ""            # Poky enables it by default from this release (shown as "on (default)")
 
 
 OPTIONS = [
@@ -39,7 +40,7 @@ OPTIONS = [
            "Writes IMAGE-MACHINE.spdx.json next to every image and per-recipe documents in tmp/deploy/spdx. "
            "Poky enables it by default; other distros may not. SPDX 3.0 is the default format from 5.1 and the only one in 6.0 Wrynose.",
            "CRA Annex I asks manufacturers to identify and document components, including a machine-readable SBOM of at least top-level dependencies.",
-           since="kirkstone"),
+           since="kirkstone", on_since="langdale"),
     Option("supplier", "Package supplier (SPDX_PACKAGE_SUPPLIER)", "text", "SPDX_PACKAGE_SUPPLIER",
            "Organisation recorded as suppliedBy for every package. Sets SPDX_PACKAGE_SUPPLIER_name and _type = \"organization\". "
            "Recipes can override it with SPDX_PACKAGE_SUPPLIER:pn-<recipe>.",

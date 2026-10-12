@@ -163,7 +163,11 @@ def console_status(path: Path) -> str:
         return "success"
     if "Execution was interrupted" in tail:
         return "interrupted"
-    return "unknown"
+    if re.search(r"^(?:.* - )?(?:ERROR|ERROR:)\s*:?.*$", tail, re.M) and re.search(r"(^|\s)ERROR:", tail):
+        return "failed"  # stopped before any task ran: parse errors, Nothing PROVIDES…
+    import time
+    # No task summary: still being written, or the build was cut off (killed, machine restarted).
+    return "running" if time.time() - path.stat().st_mtime < 120 else "interrupted"
 
 
 def diagnostics(profile: Profile) -> list[tuple[str, str, str]]:

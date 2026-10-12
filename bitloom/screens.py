@@ -804,7 +804,7 @@ class SbomSettingsScreen(ModalScreen):
         from .versions import describe
         self.query_one(Vertical).border_title = f"SBOM & CRA settings · {describe(self.release)} · {target(self.profile)}"
         table = self.query_one("#sbom-options")
-        for name, width in (("State", 16), ("Option", 44), ("Release", 15)):
+        for name, width in (("State", 16), ("Option", 40), ("Release", 15)):
             table.add_column(name, width=width)
         table.border_title = "Options"
         self.query_one("#sbom-preview").border_title = "Managed block preview"
@@ -821,6 +821,12 @@ class SbomSettingsScreen(ModalScreen):
             return value if option.kind in {"choice", "text"} else "on"
         if option.id in self.elsewhere:
             return "on (local.conf)" if option.kind != "choice" else self.elsewhere[option.id] + " (local)"
+        # Not set by you: show what the release does by default rather than a misleading "off".
+        from .versions import ORDER
+        if option.on_since and self.release in ORDER and ORDER[self.release] >= ORDER[option.on_since]:
+            return "on (default)"
+        if option.kind == "choice" and option.default:
+            return f"{option.default} (default)"
         return "off"
 
     def refresh_rows(self):

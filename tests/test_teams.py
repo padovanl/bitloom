@@ -112,7 +112,7 @@ def test_image_matrix_and_fleet(tmp_path):
         (folder / f'img-{machine}.rootfs.wic.zst').write_bytes(b'x' * 10)
         (folder / f'img-{machine}.rootfs.manifest').write_text('busybox core2_64 1.36\nbase-files qemux86_64 3.0\n')
     text = image_matrix(profile)
-    assert 'board-a  ·  1 image files' in text and '2 packages' in text
+    assert 'board-a  ·  1 image file' in text and '2 packages' in text
     devices = tmp_path / 'devices.json'
     devices.write_text(json.dumps({'devices': [{'name': 'no-ssh'}, {'name': 'lab', 'labgrid_place': 'place-1'}]}))
     rows = asyncio.run(fleet_status(devices))
