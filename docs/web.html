@@ -25,7 +25,7 @@
 bitloom --web --no-browser --port 9000     # pick the port; 0 chooses a free one
 bitloom --web --config .bitloom/profiles.json --state .bitloom
 </code></pre>
-<p>The command prints a URL such as <code>http://127.0.0.1:8765/#token=…</code>. The token lives in the URL fragment: it is never sent in requests, the page keeps it for the browser tab and sends it as an <code>X-Bitloom-Token</code> header. Ctrl+C stops the web server only; builds keep running in the service. <code>--state</code> must match the TUI to see the same history.</p>
+<p>The command prints a URL such as <code>http://127.0.0.1:8765/#token=…</code> and opens it in a graphical browser: on WSL the Windows browser (through <code>wslview</code> when installed, otherwise PowerShell). Text-mode browsers such as lynx or w3m are never started, because they would take over the terminal; without a graphical browser Bitloom only prints the URL. <code>--no-browser</code> skips opening. The token lives in the URL fragment: it is never sent in requests, the page keeps it for the browser tab and sends it as an <code>X-Bitloom-Token</code> header. Ctrl+C stops the web server only; builds keep running in the service. <code>--state</code> must match the TUI to see the same history.</p>
 <p>The dashboard needs only the Python standard library. It is not a multi-user server: anyone holding the URL can queue builds for your profiles.</p>
 <h3 id="remote-access">Remote access<a class="anchor" href="#remote-access" aria-label="Link to this section">#</a></h3>
 <p>Keep the default loopback address and tunnel it:</p>

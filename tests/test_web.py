@@ -125,3 +125,22 @@ def test_malformed_requests_get_json_answers(dashboard):
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(request, timeout=10)
     assert error.value.code == 405 and json.loads(error.value.read())['error']
+
+
+def test_browser_opening_never_takes_over_the_terminal(monkeypatch):
+    """On WSL Python fell back to lynx (www-browser), which took over the terminal running --web."""
+    import subprocess
+    import webbrowser
+    import bitloom.infra as infra
+    import bitloom.web as web
+    launched = []
+    monkeypatch.setattr(subprocess, 'Popen', lambda argv, **kwargs: launched.append(argv))
+    monkeypatch.setattr(infra, 'wsl', lambda: True)
+    monkeypatch.setattr(web.shutil, 'which', lambda name: '/x/powershell.exe' if name == 'powershell.exe' else None)
+    assert web.open_in_browser('http://127.0.0.1:9000/#token=abc') == 'the Windows browser'
+    assert launched[0][0] == 'powershell.exe' and "Start-Process 'http://127.0.0.1:9000/#token=abc'" in launched[0][-1]
+    monkeypatch.setattr(infra, 'wsl', lambda: False)
+    text = webbrowser.GenericBrowser('www-browser')
+    monkeypatch.setattr(webbrowser, 'get', lambda: text)
+    monkeypatch.setattr(text, 'open', lambda url: launched.append(['lynx']) or True)
+    assert web.open_in_browser('http://127.0.0.1:9000/') == '' and ['lynx'] not in launched

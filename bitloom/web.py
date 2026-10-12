@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import os
 import secrets
 import shutil
 import sqlite3
@@ -649,6 +650,36 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
     return Handler
 
 
+TEXT_BROWSERS = {"www-browser", "lynx", "links", "links2", "elinks", "w3m", "browsh", "x-www-browser-text"}
+
+
+def open_in_browser(url: str) -> str:
+    """Open the dashboard in a graphical browser and say which; never a text-mode browser, which
+    would take over this terminal (Python falls back to lynx/w3m on WSL and on servers)."""
+    import subprocess
+    from .infra import wsl
+    quiet = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "start_new_session": True}
+    if wsl():
+        # The Windows browser: wslview (wslu) when installed, otherwise PowerShell's Start-Process.
+        if shutil.which("wslview"):
+            subprocess.Popen(["wslview", url], **quiet)
+            return "the Windows browser (wslview)"
+        if shutil.which("powershell.exe"):
+            subprocess.Popen(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", f"Start-Process '{url}'"], **quiet)
+            return "the Windows browser"
+    try:
+        browser = webbrowser.get()
+    except webbrowser.Error:
+        return ""
+    name = (getattr(browser, "name", "") or type(browser).__name__).split("/")[-1].lower()
+    if name in TEXT_BROWSERS or type(browser).__name__ == "GenericBrowser" and not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+        return ""
+    try:
+        return name if browser.open(url) else ""
+    except webbrowser.Error:
+        return ""
+
+
 def create_server(dashboard: Dashboard, host="127.0.0.1", port=8765) -> ThreadingHTTPServer:
     server = ThreadingHTTPServer((host, port), None)
     actual = server.server_address[1]
@@ -673,10 +704,9 @@ def serve(config: Path, state: Path, host="127.0.0.1", port=8765, open_browser=T
         print("WARNING: listening beyond loopback. Anyone with the URL can queue builds; prefer an SSH tunnel.")
     sys.stdout.flush()  # the URL carries the token: show it at once under nohup, systemd or a log file
     if open_browser:
-        try:
-            webbrowser.open(url)
-        except webbrowser.Error:
-            pass
+        opened = open_in_browser(url)
+        print(f"Opened in {opened}." if opened else "Open the URL above in your browser (no graphical browser found).")
+        sys.stdout.flush()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
