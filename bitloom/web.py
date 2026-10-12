@@ -186,7 +186,8 @@ class Dashboard:
             raise ValueError("Not available: " + reason)
         invocation(profile, argv)
         from dataclasses import asdict
-        result = self.rpc({"op": "submit", "profile": asdict(profile), "title": action.title + (" · " + subject(action, body.get("values", {})) if action.inputs else ""),
+        about = subject(action, body.get("values", {})) if action.inputs else ""
+        result = self.rpc({"op": "submit", "profile": asdict(profile), "title": action.title + (f" · {about}" if about else ""),
                            "command": argv, "action_id": action.id})
         return {"id": result["job"]["id"]}
 

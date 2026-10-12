@@ -678,8 +678,9 @@ class ProfilePickerScreen(ModalScreen):
     def compose(self):
         from rich.text import Text
         options = []
+        width = max((len(p.name) for p in self.settings.profiles), default=0)
         for p in self.settings.profiles:
-            label = Text.assemble(("● " if p.name == self.settings.active else "  ", "bold"), (p.name, "bold"),
+            label = Text.assemble(("● " if p.name == self.settings.active else "  ", "bold"), (p.name.ljust(width), "bold"),
                                   ("  team" if p.name in self.settings.shared else "", "italic"), ("  " + p.mode, "dim"), ("  " + (p.machine or "") + "  " + str(p.build_path), "dim"), no_wrap=True, overflow="ellipsis")
             options.append(Option(label, id=p.name))
         with Vertical():
@@ -1345,8 +1346,13 @@ class ProjectsScreen(ModalScreen):
             seen.add(item["root"])
             self.items.append(item)
             profile = roots.get(item["root"])
-            label = Text.assemble((Path(item["root"]).name or item["root"], "bold"), ("  " + item["root"], "dim"),
-                                  ("  ● " + profile if profile else "  not set up", "italic"), ("  · " + item.get("how", ""), "dim"))
+            folder = Path(item["root"]).name or item["root"]
+            active = profile == self.settings.active
+            # ● active project, ○ set up (switches profile), + not set up yet (opens the guided setup).
+            mark = ("● ", "bold $accent") if active else ("○ ", "") if profile else ("+ ", "dim")
+            state = "active" if active else (f"profile {profile}" if profile and profile != folder else "switch") if profile else "not set up"
+            label = Text.assemble(mark, (folder, "bold"), ("  " + state, "italic"), ("  " + item["root"], "dim"),
+                                  no_wrap=True, overflow="ellipsis")
             picker.add_option(Option(label, id=str(len(self.items) - 1)))
         if self.items:
             picker.highlighted = 0

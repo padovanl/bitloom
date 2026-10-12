@@ -16,15 +16,18 @@ PAGE = r"""<!doctype html>
   --mono: "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", ui-monospace, monospace;
   --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --ease: cubic-bezier(.2, .8, .2, 1);
+  color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    color-scheme: light;
     --bg: #f4f2ec; --bg2: #efece4; --surface: #fbfaf6; --raised: #ffffff; --line: #e1dccf; --line2: #d3ccbb; --fg: #23292f; --muted: #66707a;
     --accent: #17786d; --accent2: #345b91; --ink: #ffffff; --ok: #1f7a4d; --warn: #8a5a00; --err: #b0302c; --info: #2f5f9e;
     --glow: rgba(23, 120, 109, .12); --shadow: 0 10px 30px rgba(60, 50, 20, .10);
   }
 }
 :root[data-theme="light"] {
+  color-scheme: light;
   --bg: #f4f2ec; --bg2: #efece4; --surface: #fbfaf6; --raised: #ffffff; --line: #e1dccf; --line2: #d3ccbb; --fg: #23292f; --muted: #66707a;
   --accent: #17786d; --accent2: #345b91; --ink: #ffffff; --ok: #1f7a4d; --warn: #8a5a00; --err: #b0302c; --info: #2f5f9e;
   --glow: rgba(23, 120, 109, .12); --shadow: 0 10px 30px rgba(60, 50, 20, .10);
@@ -53,6 +56,29 @@ header { grid-column: 1 / -1; position: sticky; top: 0; z-index: 20; display: fl
 .chip.lts { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
 select, input[type=text], input[type=search] { background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; min-width: 0; transition: border-color .2s, box-shadow .2s; }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+/* Form controls follow the theme: chevron dropdowns, tinted selection, accent checks, thin scrollbars. */
+:root { accent-color: var(--accent); }
+select:not([size]) {
+  appearance: none; -webkit-appearance: none; padding-right: 30px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2384c9c0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+select:not([size]):hover { border-color: var(--line2); }
+select option { background: var(--surface); color: var(--fg); }
+select[size] { padding: 6px; }
+select[size] option { padding: 5px 10px; border-radius: 6px; margin: 1px 0; }
+select[size] option:hover { background: var(--raised); }
+select[size] option:checked { background: var(--glow) linear-gradient(0deg, var(--glow), var(--glow)); color: var(--fg); font-weight: 600; box-shadow: inset 3px 0 0 var(--accent); }
+select[size]:focus option:checked { background: linear-gradient(0deg, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent) 28%, transparent)); }
+select optgroup { color: var(--muted); font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; }
+select optgroup option { text-transform: none; letter-spacing: 0; font: 13px var(--sans); color: var(--fg); }
+input[type=checkbox]:not(.switch input), input[type=radio] { width: 16px; height: 16px; cursor: pointer; }
+* { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
+::-webkit-scrollbar-track { background: transparent; }
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
 button:focus-visible, .row:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn { position: relative; overflow: hidden; background: var(--raised); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 13px; cursor: pointer; white-space: nowrap; transition: transform .15s var(--ease), border-color .2s, background .2s; }
 .btn:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
@@ -119,7 +145,10 @@ main { overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: c
 .s-success { color: var(--ok); } .s-failed { color: var(--err); } .s-running { color: var(--accent); }
 .s-queued, .s-cancelling, .s-interrupted { color: var(--warn); } .s-cancelled, .s-unknown { color: var(--muted); }
 .group-label { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; padding: 14px 16px 6px; border-bottom: 1px solid var(--line); }
-.detail-title { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detail-title { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+#d-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 2 auto; }
+.panel > .head .btn { flex: none; }
+@media (min-width: 901px) { .panel > .head:has(#d-title) { flex-wrap: nowrap; } }
 
 /* Progress */
 .progress { position: relative; height: 8px; background: var(--line); overflow: hidden; }
@@ -251,6 +280,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 1100px) { .kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); } .gauges { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1380px) { header .context { display: none; } }
 @media (max-width: 520px) { .card .value { font-size: 16px; } .card .sub { white-space: normal; } }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
@@ -864,9 +894,12 @@ async function loadProjects() {
   projectInfo = await api("/api/projects");
   const list = $("pj-recent"); list.textContent = "";
   for (const item of projectInfo.recent) {
-    const row = el("div", {class: "row", tabindex: "0"}, el("span", {class: "glyph", text: item.profile ? "●" : "○"}),
-      el("span", {}, el("b", {text: item.root.split("/").pop() || item.root}), el("div", {class: "meta", text: item.root})),
-      el("span", {class: "meta", text: item.profile ? item.profile : "not set up"}));
+    const folder = item.root.split("/").pop() || item.root, active = item.profile && item.profile === $("profile").value;
+    const label = active ? "active" : item.profile ? (item.profile !== folder ? "profile " + item.profile : "switch") : "not set up";
+    const row = el("div", {class: "row" + (active ? " current" : ""), tabindex: "0"},
+      el("span", {class: "glyph" + (active ? " s-success" : ""), text: active ? "●" : item.profile ? "○" : "+"}),
+      el("span", {}, el("b", {text: folder}), el("div", {class: "meta", text: item.root})),
+      el("span", {class: active ? "chip lts" : "meta", text: label}));
     const open = () => {
       if (item.profile) { $("profile").value = item.profile; $("profile").dispatchEvent(new Event("change")); toast("Switched project", item.profile, "info"); }
       else { $("setup-dir").value = item.root; scanSetup(); $("setup-dir").scrollIntoView({behavior: "smooth"}); }
