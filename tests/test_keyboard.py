@@ -57,12 +57,18 @@ async def test_section_keys_are_contextual_and_never_steal_typing(tmp_path):
         assert app.query_one('#metadata-table', DataTable).cursor_row == 1
         await pilot.press('k')
         assert app.query_one('#metadata-table', DataTable).cursor_row == 0
-        # t edits the build target where no section key uses t; Enter opens the build.
+        # t edits the build target where no section key uses t; Enter queues the build at once
+        # (like b, the Build button and the web dashboard); F2 previews other operations.
         await pilot.press('1', 't')
         assert app.focused.id == 'target'
         await pilot.press('enter')
-        await pilot.pause(.2)
-        assert isinstance(app.screen, ActionScreen)
+        await pilot.pause(.5)
+        assert not isinstance(app.screen, ActionScreen)
+        assert any(job.command[:2] == ['bitbake', 'demo-image'] for job in app.runner.jobs)
+        app.query_one('#target').value = 'a; id'
+        await pilot.press('escape', 'b')
+        await pilot.pause(.3)
+        assert app.focused.id == 'target'  # refused, back to the field to fix it
     app.store.close()
 
 

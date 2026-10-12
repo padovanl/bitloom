@@ -600,7 +600,7 @@ Do not touch the mouse. Expected for each step:
 1. `1`…`0` open each section and focus its list; `[`/`]` cycle; the rail highlight follows.
 2. In Builds the footer and buttons show `s r e p x i f c`; `e` toggles errors only; typing `/err` puts the letters in the search field without toggling; `Esc` returns focus to History.
 3. `2` then `j`/`k` move in the metadata table; `t` (Recipes uses `t` for the tree) focuses the layer tree.
-4. `1`, `t`, type a target, Enter: the command center opens with the build; `↓`/`↑` change the operation from the filter; `Tab Tab` reaches the inputs; Enter queues.
+4. `1`, `t`, type a target (several separated by spaces), Enter: the build is queued at once, as with `b` and *Build*; a target such as `a; id` is refused and the field keeps focus. `F2` opens the command center: `↓`/`↑` change the operation from the filter, `Tab Tab` reaches the inputs, Enter queues.
 5. `P` opens the profile switcher (`j`/`k`, Enter); `?`, `F1` and `Ctrl+G` open the keyboard reference; `Ctrl+X` closes it.
 6. `Ctrl+P` lists sections, Studio, console builds and every operation.
 
@@ -705,7 +705,7 @@ On `demo-wrynose`: `6`, `v`. Expected: 3 unpatched findings ordered critical (CV
 
 ### H01 — Build notifications
 
-`9`, `o`: tick *failed* and *success*, set the minimum to `0`, keep *desktop* on and enter an ntfy topic (`https://ntfy.sh/<random-topic>`, subscribed on your phone) as webhook; `^T`. Expected: a desktop notification (on WSL a Windows notification), the terminal bell and a push on the phone. Run a short failing command (F2 → custom `python3 -c 'exit(1)'`), close the TUI before it ends in persistent mode: the notification still arrives (sent by the service). Set the minimum to 600: short jobs stay quiet. In the web dashboard enable 🔔, switch to another tab and let a build end: a browser notification appears.
+`9`, `o`: tick *failed* and *success*, set the minimum to `0`, keep *desktop* on and enter an ntfy topic (`https://ntfy.sh/<random-topic>`, subscribed on your phone) as webhook; `^T`. Expected: a desktop notification (on WSL a Windows notification), the terminal bell and a push on the phone. Run a short failing command (F2 → custom `python3 -c 'exit(1)'`), close the TUI before it ends in persistent mode: the notification still arrives (sent by the service). Set the minimum to 600: short jobs stay quiet. In the web dashboard enable the bell button, switch to another tab and let a build end: a browser notification appears.
 
 ### H02 — ETA, comparison and tmp/work
 
