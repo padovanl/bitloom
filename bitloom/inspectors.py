@@ -36,6 +36,16 @@ def walk_files(root: Path, limit: int = 20000):
                 return
 
 
+def is_kas_config(path: Path) -> bool:
+    """kas configuration files start with a header block (header: / version:); CI workflows and other YAML do not."""
+    try:
+        with path.open(errors="replace") as stream:
+            head = stream.read(4096)
+    except OSError:
+        return False
+    return bool(re.search(r"^header:\s*$", head, re.M)) and "version:" in head
+
+
 def metadata(profile: Profile) -> list[Entry]:
     entries = []
     # Do not traverse tmp/downloads while indexing metadata.
@@ -48,7 +58,10 @@ def metadata(profile: Profile) -> list[Entry]:
     for root in roots:
         for directory, dirs, files in os.walk(root, followlinks=False):
             base = Path(directory)
-            dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".bitloom", "tmp", "sstate-cache", "downloads"} and (base / d).resolve() not in skip)
+            dirs[:] = sorted(d for d in dirs if d not in {".git", ".venv", "node_modules", ".bitloom", "tmp", "sstate-cache", "downloads", "__pycache__", ".github"}
+                             and (base / d).resolve() not in skip
+                             # A BitBake checkout holds its library, selftest fixture layers and a minimal base.bbclass: not project metadata.
+                             and not (base / d / "bin/bitbake").is_file())
             for name in sorted(files):
                 p = base / name
                 if p.is_symlink():
@@ -64,8 +77,8 @@ def metadata(profile: Profile) -> list[Entry]:
                     entries.append(Entry(base.parent.name, "layer", base.parent, size=stat.st_size, modified=stat.st_mtime, detail=v.get("LAYERSERIES_COMPAT:" + base.parent.name, "See layer.conf")))
                 elif p.suffix in {".bb", ".bbappend", ".bbclass"}:
                     entries.append(Entry(name, p.suffix[1:], p, size=stat.st_size, modified=stat.st_mtime, detail=str(base.relative_to(root))))
-                elif p.suffix in {".yml", ".yaml"}:
-                    entries.append(Entry(name, "yaml", p, size=stat.st_size, modified=stat.st_mtime))
+                elif p.suffix in {".yml", ".yaml"} and is_kas_config(p):
+                    entries.append(Entry(name, "yaml", p, size=stat.st_size, modified=stat.st_mtime, detail=str(base.relative_to(root)).replace(".", root.name, 1) if base == root else str(base.relative_to(root))))
                 if len(entries) >= 15000:
                     return entries
     return entries
