@@ -107,19 +107,24 @@ def analyse(path: Path) -> dict:
     if path.stat().st_size > MAX_BYTES:
         raise ValueError(f"{path} exceeds {MAX_BYTES // 1024 // 1024} MiB")
     data = json.loads(path.read_text(errors="replace"))
-    if isinstance(data, dict) and str(data.get("spdxVersion", "")).startswith("SPDX-2"):
-        return _analyse_spdx2(path, data)
-    graph = data.get("@graph") if isinstance(data, dict) else None
-    if not isinstance(graph, list):
-        raise ValueError(f"{path.name}: not an SPDX 2 document or SPDX 3 JSON-LD graph")
-    return _analyse_spdx3(path, data, graph)
+    try:
+        if isinstance(data, dict) and str(data.get("spdxVersion", "")).startswith("SPDX-2"):
+            return _analyse_spdx2(path, data)
+        graph = data.get("@graph") if isinstance(data, dict) else None
+        if not isinstance(graph, list):
+            raise ValueError(f"{path.name}: not an SPDX 2 document or SPDX 3 JSON-LD graph")
+        return _analyse_spdx3(path, data, graph)
+    except (AttributeError, TypeError, KeyError) as exc:
+        raise ValueError(f"{path.name}: unexpected SPDX structure ({exc})") from exc
 
 
 def _analyse_spdx2(path, data):
     packages = data.get("packages", [])
     rows = []
-    for package in packages:
-        refs = package.get("externalRefs", [])
+    for package in packages if isinstance(packages, list) else []:
+        if not isinstance(package, dict):
+            continue
+        refs = [r for r in package.get("externalRefs") or [] if isinstance(r, dict)]
         rows.append({"name": package.get("name"), "version": package.get("versionInfo"),
                      "purl": any("purl" in str(r.get("referenceType", "")).lower() for r in refs),
                      "cpe": any("cpe" in str(r.get("referenceType", "")).lower() for r in refs),
@@ -295,13 +300,17 @@ def cra_checks(profile: Profile, state: Path | None = None, today: date | None =
     inherit = " ".join(re.findall(r'^\s*(?:INHERIT|USER_CLASSES)\s*(?:\+=|\?=|=|:append\s*=)\s*"([^"]*)"', raw, re.M))
     add("OK" if "buildhistory" in inherit else "INFO", "Change traceability", "buildhistory enabled" if "buildhistory" in inherit else "enable buildhistory (BUILDHISTORY_COMMIT = \"1\") to version image/package changes")
     if state:
-        reviews = Path(state) / "security-reviews.json"
-        if reviews.exists():
-            entries = json.loads(reviews.read_text())
-            expired = [k for k, v in entries.items() if v.get("expires", "9999") < today.isoformat()]
-            add("WARN" if expired else "OK", "Vulnerability dispositions", f"{len(entries)} recorded in Bitloom, {len(expired)} expired")
+        from .developer import read_reviews
+        try:
+            entries = read_reviews(Path(state) / "security-reviews.json")
+        except (OSError, ValueError) as exc:
+            add("WARN", "Vulnerability dispositions", str(exc))
         else:
-            add("INFO", "Vulnerability dispositions", "none recorded (Developer → Security → Record review)")
+            if entries:
+                expired = [k for k, v in entries.items() if str(v.get("expires", "9999")) < today.isoformat()]
+                add("WARN" if expired else "OK", "Vulnerability dispositions", f"{len(entries)} recorded in Bitloom, {len(expired)} expired")
+            else:
+                add("INFO", "Vulnerability dispositions", "none recorded (Developer → Security → Record review)")
         bundles = list((Path(state) / "exports").glob("bundle-*.json")) if (Path(state) / "exports").is_dir() else []
         add("OK" if bundles else "INFO", "Reproducibility evidence", f"{len(bundles)} bundles exported" if bundles else "export a reproducibility bundle per release (Analysis)")
     return rows

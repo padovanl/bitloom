@@ -115,19 +115,21 @@ def load(profile: Profile, state: Path | None = None, source: str = "") -> tuple
     for label, path in chosen:
         try:
             findings += parse_grype(path) if label.startswith("grype") else parse_yocto(path, label.split(" · ")[0])
-        except (OSError, ValueError, AttributeError) as exc:
+        except (OSError, ValueError) as exc:
             errors.append(f"{path.name}: {exc}")
+        except (AttributeError, TypeError, KeyError) as exc:
+            errors.append(f"{path.name}: unexpected report structure ({exc})")
     if state:
-        reviews_path = Path(state) / "security-reviews.json"
-        if reviews_path.is_file():
-            try:
-                reviews = json.loads(reviews_path.read_text())
-                for finding in findings:
-                    review = reviews.get(f"{finding.package}/{finding.id}")
-                    if review:
-                        finding.review = f"{review['owner']} until {review['expires']}"
-            except (OSError, ValueError, KeyError):
-                errors.append("security-reviews.json could not be read")
+        from .developer import read_reviews
+        try:
+            reviews = read_reviews(Path(state) / "security-reviews.json")
+        except (OSError, ValueError) as exc:
+            reviews = {}
+            errors.append(str(exc))
+        for finding in findings:
+            review = reviews.get(f"{finding.package}/{finding.id}")
+            if review:
+                finding.review = f"{review.get('owner', '?')} until {review.get('expires', '?')}"
     # One row per CVE and package: prefer the most specific (unpatched) assessment.
     unique = {}
     for finding in findings:

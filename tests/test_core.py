@@ -19,8 +19,16 @@ def test_command_input_cannot_inject_shell(tmp_path):
     script.write_text('mkdir -p "$1"\ncd "$1"\n')
     p = Profile(root=str(tmp_path), init_script=str(script))
     payload = 'recipe; touch /tmp/should-not-exist'
-    inv = invocation(p, arguments(BY_ID['build'], {'target': payload}))
+    with pytest.raises(ValueError, match='Not a BitBake target'):
+        arguments(BY_ID['build'], {'target': payload})
+    # Defence in depth: argv reaching a shell is still quoted.
+    inv = invocation(p, ['bitbake', payload])
     assert "'recipe; touch /tmp/should-not-exist'" in inv.argv[-1]
+    assert arguments(BY_ID['build'], {'target': 'core-image-minimal  mc:qemuarm:busybox'}) == ['bitbake', 'core-image-minimal', 'mc:qemuarm:busybox']
+    with pytest.raises(ValueError):
+        arguments(BY_ID['task'], {'target': 'busybox', 'task': 'compile; id'})
+    with pytest.raises(ValueError, match='object of strings'):
+        arguments(BY_ID['build'], 'core-image-minimal')
     with pytest.raises(ValueError):
         arguments(BY_ID['build'], {'target': '-e'})
     assert arguments(BY_ID['task'], {'target': 'busybox', 'task': 'compile'}) == ['bitbake', 'busybox', '-c', 'compile']

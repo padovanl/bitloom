@@ -112,3 +112,16 @@ def test_console_builds_are_listed_and_confined(dashboard, tmp_path):
     assert 'oe_runmake failed' in json.loads(call(base, f'/api/console/log?path={path}&errors=1')[1])['text']
     assert 'Errors: 2' in json.loads(call(base, f'/api/console/report?path={path}')[1])['summary']
     assert call(base, '/api/console/log?path=' + quote(str(tmp_path / 'demo/build/conf/local.conf')))[0] == 404
+
+
+def test_malformed_requests_get_json_answers(dashboard):
+    board, base = dashboard
+    profile = None  # the active profile
+    status, body = call(base, '/api/jobs', {'profile': profile, 'action': 'build', 'values': 'core-image-minimal'})
+    assert status == 400 and b'object of strings' in body          # used to drop the connection
+    status, body = call(base, '/api/preview', {'profile': profile, 'action': 'build', 'values': {'target': 'a; id'}})
+    assert status == 400 and b'Not a BitBake target' in body
+    request = urllib.request.Request(base + '/api/state', method='DELETE', headers={'X-Bitloom-Token': 'secret-token'})
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request, timeout=10)
+    assert error.value.code == 405 and json.loads(error.value.read())['error']

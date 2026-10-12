@@ -11,13 +11,14 @@ import json
 import secrets
 import shutil
 import sqlite3
+import sys
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .commands import ACTIONS, BY_ID, arguments, invocation
+from .commands import ACTIONS, BY_ID, arguments, invocation, subject
 from .inspectors import console_logs, diagnostics, human_size, metadata, search_log, task_logs
 from .models import Profile, Settings, read_assignments
 
@@ -185,7 +186,7 @@ class Dashboard:
             raise ValueError("Not available: " + reason)
         invocation(profile, argv)
         from dataclasses import asdict
-        result = self.rpc({"op": "submit", "profile": asdict(profile), "title": action.title + (" · " + argv[-1] if action.inputs else ""),
+        result = self.rpc({"op": "submit", "profile": asdict(profile), "title": action.title + (" · " + subject(action, body.get("values", {})) if action.inputs else ""),
                            "command": argv, "action_id": action.id})
         return {"id": result["job"]["id"]}
 
@@ -607,12 +608,20 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                 self.json(HTTPStatus.NOT_FOUND, {"error": str(exc).strip("'\"")})
             except (ValueError, TypeError, OSError) as exc:
                 self.json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            except Exception as exc:  # never drop the connection without an answer
+                self.log_error("%s %s failed: %r", method, self.path, exc)
+                self.json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Internal error: {type(exc).__name__}: {exc}"})
 
         def do_GET(self):
             self.dispatch("GET")
 
         def do_POST(self):
             self.dispatch("POST")
+
+        def unsupported(self):
+            self.json(HTTPStatus.METHOD_NOT_ALLOWED, {"error": "Use GET or POST"})
+
+        do_PUT = do_DELETE = do_PATCH = unsupported
 
     return Handler
 
@@ -639,6 +648,7 @@ def serve(config: Path, state: Path, host="127.0.0.1", port=8765, open_browser=T
     print(f"State: {dashboard.state} · builds run in the shared service; Ctrl+C stops the web server only.")
     if host not in LOOPBACK:
         print("WARNING: listening beyond loopback. Anyone with the URL can queue builds; prefer an SSH tunnel.")
+    sys.stdout.flush()  # the URL carries the token: show it at once under nohup, systemd or a log file
     if open_browser:
         try:
             webbrowser.open(url)

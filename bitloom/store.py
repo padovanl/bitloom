@@ -25,11 +25,16 @@ class Store:
         self.db = sqlite3.connect(directory / "history.sqlite3")
         (directory / "history.sqlite3").chmod(0o600)
         self.db.row_factory = sqlite3.Row
-        self.db.execute("""CREATE TABLE IF NOT EXISTS jobs (
-            id TEXT PRIMARY KEY, profile TEXT, title TEXT, argv TEXT, status TEXT,
-            started TEXT, finished TEXT, code INTEGER, log TEXT, metadata TEXT)""")
-        self.db.execute("UPDATE jobs SET status='interrupted' WHERE status IN ('running','queued','cancelling')")
-        self.db.commit()
+        try:
+            self.db.execute("""CREATE TABLE IF NOT EXISTS jobs (
+                id TEXT PRIMARY KEY, profile TEXT, title TEXT, argv TEXT, status TEXT,
+                started TEXT, finished TEXT, code INTEGER, log TEXT, metadata TEXT)""")
+            self.db.execute("UPDATE jobs SET status='interrupted' WHERE status IN ('running','queued','cancelling')")
+            self.db.commit()
+        except sqlite3.DatabaseError as exc:
+            self.close()
+            from .models import ConfigError
+            raise ConfigError(f"{directory / 'history.sqlite3'} cannot be used ({exc}); move it away to start a new build history") from exc
 
     def put(self, job) -> None:
         self.db.execute("INSERT OR REPLACE INTO jobs VALUES (?,?,?,?,?,?,?,?,?,?)", (

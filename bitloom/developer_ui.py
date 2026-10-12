@@ -440,7 +440,13 @@ class DeveloperPanel(Vertical):
                 if view == 'security':
                     reviews = self.app.store.directory / 'security-reviews.json'
                     if reviews.exists():
-                        data['reviews'] = json.loads(reviews.read_text())
+                        try:
+                            data['reviews'] = dev.read_reviews(reviews)
+                        except ValueError as exc:
+                            data['reviews'] = {}
+                            data['text'] += f'\n{exc}'
+                            reviews = None
+                    if reviews and reviews.exists():
                         data['text'] += '\nRECORDED DISPOSITIONS\n' + reviews.read_text()
                         for row in data['rows']:
                             issue = row.get('issue')

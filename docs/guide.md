@@ -115,7 +115,7 @@ A profiles file can also contain `"include": [...]` with read-only team profile 
 
 ### Host
 
-Set root to your checkout. The TUI sources the init script in bash and executes a quoted argument list. You can also start from an already initialized shell and leave init_script empty. No shell operators in target fields are executed.
+Set root to your checkout. The TUI sources the init script in bash and executes a quoted argument list. You can also start from an already initialized shell and leave init_script empty. Target fields accept one or more BitBake targets separated by spaces (`core-image-minimal busybox`, `virtual/kernel`, `mc:qemuarm:core-image-minimal`); anything else, such as shell operators, is refused before queueing. Task and variable fields are checked the same way.
 
 ### kas
 
@@ -152,7 +152,7 @@ Bitloom is fully usable without a mouse; the [keyboard reference](keyboard.md) l
 * Each section has single-letter actions, shown in the footer and in front of every button label (for example `s` stop, `r` retry, `e` errors only in Builds). Letters typed into a field never trigger them; `/` or `Ctrl+W` focuses the section filter and `Esc` returns to the list.
 * Editors use nano keys: `^O` write, `^X` exit (asks before discarding changes), `^W` search, `^K`/`^U` cut and uncut lines, `^G` help.
 * Status cards show the current job with a spinner, task and setscene counts, CPU/RAM with a CPU sparkline, and disk usage; the Build card flashes green or red when a job ends. The progress bar is indeterminate until BitBake reports task counts.
-* `P` switches profile, `t` edits the build target (Enter builds it), `b` builds, Ctrl+P lists sections, actions and all operations.
+* `P` switches profile, `t` edits the build target (several targets separated by spaces; Enter builds them), `b` builds, Ctrl+P lists sections, actions and all operations.
 
 ![Keyboard reference overlay](assets/keys.png)
 
@@ -247,6 +247,9 @@ Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline 
 
 - **bitbake not found:** configure an init script or launch from a sourced environment.
 - **kas or kas-container not found:** the build service keeps the `PATH` of the shell that started it, plus the `bin` directory of Bitloom's own Python environment. Install kas in that environment or on the system `PATH`, then restart the service when idle (`bitloom --service-stop`).
+- **`bitloom: …profiles.json is not valid JSON` (or another profiles error):** the message names the file and the problem. Fix it, or move it away: the next start opens the guided setup. An empty file counts as a first start; without `"active"` the first profile is used.
+- **`history.sqlite3 cannot be used`:** the build history database is damaged (for example after a disk full). Move it away to start a new history; logs under `<state>/logs` remain.
+- **`security-reviews.json` reported as damaged:** CRA readiness and Vulnerabilities show the problem instead of the reviews, and recording a review is refused, so the file is never overwritten. Fix the JSON (an object of `package/CVE` entries) or move it away.
 - **Docker permission denied:** the user running Bitloom must have permission to the Docker socket; the app never changes daemon permissions.
 - **Docker Snap and /tmp:** Snap's daemon can see a different `/tmp` from the host. A bind mount may be created as root in the daemon namespace. Prefer a dedicated Linux directory visible to both namespaces, or initialize only the dedicated mount ownership inside a container. Never apply broad permissions to Docker or the project root.
 - **Windows/NTFS build paths:** store Yocto work directories on a Linux filesystem. The TUI source can live under /mnt/c; BitBake source/build caches should not rely on NTFS semantics.

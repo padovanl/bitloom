@@ -92,6 +92,14 @@ def test_compare_runs_and_work_usage(tmp_path):
     data = work_usage(Profile(root=str(tmp_path)))
     assert [r['recipe'] for r in data['rows']] == ['big', 'small'] and data['complete'] and not data['rm_work']
     assert 'INHERIT += "rm_work"' in work_report(Profile(root=str(tmp_path)), data) and 'bitbake -c clean big' in work_report(Profile(root=str(tmp_path)), data)
+    import bitloom.insights as insights
+    original = insights.shutil.which
+    insights.shutil.which = lambda name: None  # no du: walk from Python
+    try:
+        walked = work_usage(Profile(root=str(tmp_path)))
+    finally:
+        insights.shutil.which = original
+    assert [(r['recipe'], r['bytes']) for r in walked['rows']] == [(r['recipe'], r['bytes']) for r in data['rows']]
 
 
 async def test_tui_daily_keys(tmp_path):

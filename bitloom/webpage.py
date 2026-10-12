@@ -657,7 +657,7 @@ function renderState() {
   const progress = recent ? recent.progress : [0, 0], setscene = recent ? recent.setscene : [0, 0];
   const fraction = recent && recent.status === "success" ? 1 : progress[1] ? progress[0] / progress[1] : 0;
   ring($("c-ring"), fraction, progress[1] || (recent && recent.status === "success") ? Math.round(100 * fraction) + "%" : "—");
-  if (progress[1]) { const node = $("c-tasks"); countTo(node, progress[0], ` / ${progress[1]}`); } else $("c-tasks").textContent = "no task count";
+  if (progress[1]) { const node = $("c-tasks"); countTo(node, recent.status === "success" ? progress[1] : progress[0], ` / ${progress[1]}`); } else $("c-tasks").textContent = "no task count";
   $("c-sstate").textContent = (setscene && setscene[1] ? `${setscene[0]} / ${setscene[1]} from sstate · ` : "") + state.history.filter((r) => r.status === "queued").length + " queued";
   const host = state.host;
   if (host.cpu !== null && host.cpu !== undefined) $("c-cpu").textContent = `CPU ${host.cpu.toFixed(0)}% · load ${(host.load || []).join(" ")}`;

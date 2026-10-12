@@ -765,6 +765,8 @@ class BitloomApp(App):
         self.main_query("#build-metric", Static).update(metric)
         progress = active.progress if active else tuple(json.loads(recent["metadata"]).get("progress", [0, 0])) if recent else (0, 0)
         setscene = getattr(active, "setscene", (0, 0)) if active else tuple(json.loads(recent["metadata"]).get("setscene", [0, 0])) if recent else (0, 0)
+        if not active and recent and recent["status"] == "success" and progress[1]:
+            progress = (progress[1], progress[1])  # BitBake may not log "Running task" for the last ones
         tasks = Text(no_wrap=True, overflow="ellipsis")
         if progress[1]:
             tasks.append(f"{progress[0]}/{progress[1]} run", style=f"bold {theme.warning}")

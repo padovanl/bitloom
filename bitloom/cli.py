@@ -134,6 +134,14 @@ def main():
     parser.add_argument("--port", type=int, default=8765, help="Web dashboard port (0 picks a free one)")
     parser.add_argument("--no-browser", action="store_true", help="Do not open a browser for --web")
     args = parser.parse_args()
+    from .models import ConfigError
+    try:
+        _commands(parser, args)
+    except ConfigError as exc:
+        parser.exit(2, f"bitloom: {exc}\n")
+
+
+def _commands(parser, args) -> None:
     if args.service_status or args.service_stop:
         from .daemon import rpc
         import json
