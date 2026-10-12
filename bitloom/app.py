@@ -1509,7 +1509,7 @@ class BitloomApp(App):
             if row["status"] == "success":
                 self.main_query("#progress", ProgressBar).update(total=100, progress=100)
             elif progress[1]:
-                done = progress[0] if row["status"] != "running" else min(progress[0], progress[1] - 1)
+                done = min(progress[0], progress[1] - 1)  # success is handled above: anything else is not complete
                 self.main_query("#progress", ProgressBar).update(total=progress[1], progress=done)
             else:
                 self.main_query("#progress", ProgressBar).update(total=100, progress=0)
