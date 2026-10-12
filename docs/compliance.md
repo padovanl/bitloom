@@ -31,6 +31,8 @@ When the release cannot be detected locally (for example layers only inside a co
 * **SPDX 3.0 JSON-LD** (`IMAGE.spdx.json`, Styhead and later).
 * **SPDX 2.2** images, which ship `IMAGE.spdx.tar.zst`: Bitloom joins the image manifest with the per-package and recipe documents in `tmp/deploy/spdx`, so no zstd tooling is needed.
 
+An SPDX 3 image SBOM from OpenEmbedded also describes the recipes that produced the image (including `-native` build tools), the downloaded source archives and the image itself. Coverage is measured on the installed packages (`software_primaryPurpose` *install*), the components that ship; the report lists how many other elements the document describes.
+
 For each SBOM it reports the share of packages with a version, a PURL, a CPE, licence information and a supplier, the VEX status counts (affected, under investigation, fixed, not affected) with the affected CVE identifiers, the CVEs that SPDX 2.2 recipes record as fixed, and the packages without a licence or identifier. The `Organization: OpenEmbedded ()` placeholder does not count as a supplier: set your company in the SBOM settings.
 
 ![SBOM quality of the Wrynose sample workspace](assets/sbom-quality.png)

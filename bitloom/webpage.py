@@ -990,7 +990,7 @@ async function loadCompliance() {
   const gauges = $("sb-gauges"), vex = $("sb-vex"); gauges.textContent = ""; vex.textContent = "";
   const sbom = data.sboms.find((s) => !s.error);
   if (sbom) {
-    $("sb-file").textContent = `${sbom.format} · ${sbom.packages} packages · ${sbom.file.split("/").pop()}`;
+    $("sb-file").textContent = `${sbom.format} · ${sbom.packages} ${Object.keys(sbom.other_elements || {}).length ? "installed " : ""}packages · ${sbom.file.split("/").pop()}`;
     for (const [label, key] of [["Version", "with_version"], ["PURL", "with_purl"], ["CPE", "with_cpe"], ["Licence", "with_license"], ["Supplier", "with_supplier"]]) gauges.append(gauge(label, sbom[key]));
     const colors = {affected: "err", "under investigation": "warn", fixed: "ok", "not affected": "info"};
     for (const [status, count] of Object.entries(sbom.vex)) vex.append(el("span", {class: "badge " + (colors[status] || "muted"), text: `${count} ${status}`}));
