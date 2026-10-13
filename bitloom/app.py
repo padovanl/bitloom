@@ -23,6 +23,9 @@ from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_
 from .models import Profile, Settings, read_assignments
 from .runner import Job, Runner
 from .toolbar import ToolBar
+from textual.widgets._toggle_button import ToggleButton as _ToggleButton
+
+_ToggleButton.BUTTON_INNER = "✓"  # checkboxes, radios and selection lists show a tick instead of an X
 from .screens import ActionScreen, FileScreen, ProfilesScreen, PruneScreen
 from .store import Store
 from .keys import FILTERS, PRIMARY, SECTION_KEYS, SECTIONS, button_hints, section_bindings, sectional_actions
@@ -117,6 +120,33 @@ class BitloomApp(App):
     Select { height: 1; border: none; }
     SelectCurrent { height: 1; border: none; padding: 0 1; background: $surface; }
     Select:focus > SelectCurrent { background: $primary-muted; }
+    SelectCurrent .arrow { color: $accent; }
+
+    /* Form controls: one quiet, theme-aware look for lists, dropdowns, checkboxes and radios.
+       The highlight is a tinted accent bar with readable text, never a solid block. */
+    OptionList, SelectionList { border: none; padding: 0 1; background: $surface; scrollbar-size-vertical: 1; }
+    OptionList:focus, SelectionList:focus { border: none; background-tint: $foreground 0%; }
+    OptionList > .option-list--option-highlighted { background: $primary-muted; color: $foreground; text-style: none; }
+    OptionList:focus > .option-list--option-highlighted { background: $accent 28%; color: $foreground; text-style: bold; }
+    OptionList > .option-list--option-hover { background: $foreground 6%; }
+    OptionList > .option-list--separator { color: $foreground 12%; }
+    SelectOverlay { border: round $accent; background: $surface; padding: 0 1; }
+    SelectOverlay:focus { border: round $accent; }
+    SelectionList > .selection-list--button { color: $foreground 25%; background: $foreground 8%; }
+    SelectionList > .selection-list--button-highlighted { color: $foreground 45%; background: $foreground 12%; }
+    SelectionList > .selection-list--button-selected,
+    SelectionList > .selection-list--button-selected-highlighted { color: $accent; background: $accent 20%; text-style: bold; }
+    ToggleButton { border: none; height: 1; padding: 0 1; background: transparent; }
+    ToggleButton:focus { border: none; background-tint: $foreground 0%; }
+    ToggleButton > .toggle--button { color: $foreground 25%; background: $foreground 8%; }
+    ToggleButton.-on > .toggle--button { color: $accent; background: $accent 20%; text-style: bold; }
+    ToggleButton:focus > .toggle--label { background: $accent 28%; color: $foreground; text-style: bold; }
+    ToggleButton:blur:hover > .toggle--label { background: $foreground 6%; }
+    RadioSet { border: round $primary-muted; background: $surface; padding: 0 1; }
+    RadioSet:focus { border: round $accent; }
+    Switch { border: none; height: 1; padding: 0; background: transparent; }
+    Switch > .switch--slider { color: $foreground 25%; background: $foreground 10%; }
+    Switch.-on > .switch--slider { color: $accent; background: $accent 20%; }
 
     /* Navigator rail: numbered sections, selected one marked by an accent bar. */
     #shell { height: 1fr; }
@@ -135,7 +165,8 @@ class BitloomApp(App):
     #disk-metric { margin-right: 1; }
     #resource-card { layout: vertical; }
     #resource-metric { height: 1; }
-    #cpu-spark { height: 1; margin-top: 0; }
+    #cpu-spark { width: 100%; height: 1; margin-top: 0; }
+    #progress { display: none; }
     #cpu-spark > .sparkline--max-color { color: $accent; }
     #cpu-spark > .sparkline--min-color { color: $primary-muted; }
     .metric.flash-ok { border: round $success; border-title-color: $success; }
@@ -199,7 +230,7 @@ class BitloomApp(App):
     Footer FooterKey .footer-key--key { color: $accent; background: $surface; text-style: bold; }
     Footer FooterKey .footer-key--description { color: $foreground-muted; }
 
-    Screen.compact #rail { width: 21; }
+    Screen.compact #rail { width: 23; }  /* "9  ⚙ Configuration" + Button label padding */
     Screen.compact #history-panel { width: 38; }
     Screen.compact #toolbar #commands, Screen.compact #toolbar #profiles { display: none; }
     Screen.narrow #rail { display: none; }
@@ -1034,6 +1065,24 @@ class BitloomApp(App):
         self.screen_stack[0].set_class(event.size.height < 30, "short")
         self.screen_stack[0].set_class(event.size.width < 75 or event.size.height < 22, "tiny")
         self.call_after_refresh(self.reflow_toolbars)
+        self.call_after_refresh(self.fit_history_columns)
+
+    def fit_history_columns(self):
+        """Operation takes the room Status and Elapsed leave, so no column is cut off."""
+        if not self.screen_stack or not len(self.screen_stack[0].query("#history")):
+            return
+        table = self.main_query("#history", DataTable)
+        if not table.size.width:
+            return
+        keys = list(table.columns)
+        if len(keys) != 3:
+            return
+        # 2 columns of cell padding per column, 1 for the vertical scrollbar.
+        operation = max(10, table.size.width - 11 - 8 - 3 * 2 - 1)
+        if table.columns[keys[0]].width != operation:
+            table.columns[keys[0]].width = operation
+            table._require_update_dimensions = True
+            table.refresh()
 
     def reflow_toolbars(self):
         if self.screen_stack:
@@ -1056,6 +1105,7 @@ class BitloomApp(App):
             button.set_class(button.id == f"nav-{active}", "selected")
         self.refresh_bindings()
         self.call_after_refresh(self.reflow_toolbars)  # hidden bars have no width until shown
+        self.call_after_refresh(self.fit_history_columns)
         if active == "builds" and self.selected_log:
             # Output written while Builds was hidden was wrapped at zero width: render it again.
             self.call_after_refresh(self.reload_log)
@@ -1380,6 +1430,7 @@ class BitloomApp(App):
             self.live_lines.clear()
 
     def select_job(self, ident, path):
+        self.main_query("#progress", ProgressBar).display = True  # hidden until a job is selected
         self.selected_job_id = ident
         self.selected_log = Path(path)
         self.live_lines.clear()
