@@ -128,3 +128,34 @@ def test_tools_next_to_bitloom_are_found_without_an_activated_virtualenv(tmp_pat
     path = invocation(profile, ["bitbake", "busybox"]).env["PATH"].split(os.pathsep)
     assert path[:2] == ["/usr/bin", "/bin"] and path[-1] == venv  # system tools keep precedence
     assert which(Path(sys.executable).name)
+
+
+async def test_failed_start_stops_progress_and_explains(tmp_path):
+    """A command that never started left the progress bar animating and only said 'exit -1'."""
+    from textual.widgets import ProgressBar
+    from bitloom.cli import prepare_demo
+    app = BitloomApp(prepare_demo(tmp_path / 'state'), tmp_path / 'state')
+    notes = []
+    original = app.notify
+    app.notify = lambda message, *a, **k: (notes.append(str(message)), original(message, *a, **k))[1]
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.5)
+        job = app.runner.submit(app.profile, 'Build target · demo-image', ['definitely-not-a-command-xyz', 'demo-image'], 'build')
+        app.select_job(job.id, job.log)
+        await app.runner.consumer
+        await pilot.pause(.5)
+        bar = app.query_one('#progress', ProgressBar)
+        assert bar.total == 100 and bar.progress == 0          # no indeterminate animation after the end
+        assert any('definitely-not-a-command-xyz not found' in n for n in notes)
+        # Jobs carry their target; rows of other profiles name their profile.
+        await pilot.press('P'); await pilot.pause(.3); await pilot.press('down', 'enter'); await pilot.pause(1)
+        title = str(app.query_one('#history').get_row_at(0)[0])
+        assert 'demo-image' in title and title.rstrip().endswith('demo')
+
+
+def test_build_report_names_empty_sections(tmp_path):
+    from bitloom.reports import build_summary
+    log = tmp_path / 'build.log'
+    log.write_text('NOTE: nothing happened\n')
+    text = build_summary(log)
+    assert 'Failed tasks\n  none' in text and 'Warnings\n  none' in text

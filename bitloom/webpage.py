@@ -205,6 +205,8 @@ details.opt .body { padding: 6px 16px 14px; color: var(--muted); animation: ente
 .form label.f { font-weight: 650; margin-top: 12px; }
 .form .help { color: var(--muted); font-size: 12px; }
 .form input[type=text], .form select { width: 100%; }
+#nt-format { width: auto; flex: none; }
+#meta-rows td:first-child { white-space: nowrap; }
 .toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .toggle { all: unset; cursor: pointer; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); font-size: 12.5px; color: var(--muted); transition: all .2s var(--ease); }
 .toggle.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--ink); border-color: transparent; }
@@ -249,6 +251,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 1100px) { .kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); } .gauges { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .card .value { font-size: 16px; } .card .sub { white-space: normal; } }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
   nav { flex-direction: row; overflow-x: auto; padding: 4px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -282,7 +285,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
     <button class="btn" id="queue-btn" title="Queue any operation (q)"><kbd>q</kbd>Operations</button>
     <button class="btn" id="palette-btn" title="Command palette (Ctrl+K)"><kbd>⌘K</kbd>Search</button>
     <span class="chip"><span class="dot" id="service-dot"></span><span id="service-label">connecting…</span></span>
-    <button class="btn" id="notify-btn" title="Browser notifications when builds finish">🔔</button>
+    <button class="btn" id="notify-btn" title="Browser notifications when builds finish" aria-label="Browser notifications when builds finish"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
     <button class="btn" id="keys-btn" title="Keyboard shortcuts (?)">?</button>
   </header>
   <nav aria-label="Sections">

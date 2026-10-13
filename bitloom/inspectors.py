@@ -220,7 +220,7 @@ def search_log(path: Path, query: str = "", errors_only=False, context=3, max_li
             previous.append((i, line))
     if not matches:
         return "No matches in the complete log."
-    return f"{matches} matches · showing at most {max_lines} context lines\n" + "\n".join(output)
+    return f"{matches} {'match' if matches == 1 else 'matches'} · showing at most {max_lines} context lines\n" + "\n".join(output)
 
 
 def cache_candidates(entries: list[Entry], days: int) -> list[Entry]:

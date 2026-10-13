@@ -607,7 +607,8 @@ class BitloomApp(App):
             self.run_interactive(argv)
             return
         try:
-            job = self.runner.submit(self.profile, action.title, argv, action.id)
+            subject = " ".join(argv[1 + len(action.args):]) if action.inputs else ""
+            job = self.runner.submit(self.profile, action.title + (f" · {subject}" if subject else ""), argv, action.id)
             self.select_job(job.id, job.log)
             self.action_section("builds")
         except (ValueError, OSError) as exc:
@@ -950,7 +951,16 @@ class BitloomApp(App):
             widget.scroll_down() if step > 0 else widget.scroll_up()
 
     def action_quick_build(self):
-        self.action_command("build")
+        """b, Enter in the target field and ▶ Build queue the target at once (like the web
+        dashboard); F2 opens the command center to preview or change the operation."""
+        from .commands import BY_ID, arguments
+        try:
+            argv = arguments(BY_ID["build"], {"target": self.main_query("#target", Input).value})
+        except ValueError as exc:
+            self.notify(f"{exc}. Edit the target with t, or press F2 for other operations.", severity="warning")
+            self.action_focus_target()
+            return
+        self.command_result((BY_ID["build"], argv))
 
     def action_page(self, step):
         widget = self.focused
@@ -980,7 +990,7 @@ class BitloomApp(App):
     def field_submitted(self, event):
         ident = event.input.id
         if ident == "target":
-            self.action_command("build")
+            self.action_quick_build()
         elif ident == "log-search":
             self.main_query("#log").focus()
         elif ident in {"analysis-query", "analysis-first", "analysis-second"}:
@@ -1261,7 +1271,10 @@ class BitloomApp(App):
                 end = datetime.fromisoformat(row["finished"]) if row["finished"] else datetime.now(timezone.utc)
                 seconds = max(0, int((end-start).total_seconds()))
                 elapsed = f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
-            table.add_row(row["title"], Text(f"{glyph} {status}", style=color), elapsed, key=row["id"])
+            title = Text(row["title"], no_wrap=True, overflow="ellipsis")
+            if row["profile"] != self.profile.name:
+                title.append(f"  {row['profile']}", style="dim")  # one queue for every profile, as in the web dashboard
+            table.add_row(title, Text(f"{glyph} {status}", style=color), elapsed, key=row["id"])
         if table.row_count:
             # Keep the selected job highlighted when new jobs are inserted above it.
             if self.selected_job_id in self.history_rows:
@@ -1292,7 +1305,10 @@ class BitloomApp(App):
                     Recent(self.store.directory).add(destination, "", "cloned")
                     self.call_after_refresh(lambda: self.open_setup(destination))
             if job.status == "failed":
-                self.notify(f"{job.title} · exit {job.code}. Press f for the failed task log, i for the summary.", title="✖ Build failed", severity="error", timeout=10)
+                if job.code == -1 and job.errors:  # it never started: say why instead of pointing at task logs
+                    self.notify(job.errors[-1].removeprefix("ERROR: "), title=f"✖ {job.title}", severity="error", timeout=15)
+                else:
+                    self.notify(f"{job.title} · exit {job.code}. Press f for the failed task log, i for the summary.", title="✖ Build failed", severity="error", timeout=10)
                 self.flash("failed")
                 self.scan_project()
             elif job.status == "success" and job.finished:
@@ -1317,6 +1333,9 @@ class BitloomApp(App):
         elif job.id == self.selected_job_id and job.status == "running":
             # Animated indeterminate bar until BitBake reports task counts.
             self.main_query("#progress", ProgressBar).update(total=None)
+        elif job.id == self.selected_job_id and job.status not in {"queued", "running", "cancelling"}:
+            # Ended before any task count: stop the indeterminate animation.
+            self.main_query("#progress", ProgressBar).update(total=100, progress=0)
 
     def style_line(self, line, query=""):
         theme = self.current_theme
@@ -1441,7 +1460,10 @@ class BitloomApp(App):
     @alive
     def button_pressed(self, event):
         ident = event.button.id
-        commands = {"build": "build", "commands": "build", "layer-actions": "layers", "environment": "environment", "dev-status": "dev-status", "fetch-all": "fetch-all", "inspect-resolve": "environment", "generate-graph": "graph"}
+        if ident == "build":
+            self.action_quick_build()
+            return
+        commands = {"commands": "build", "layer-actions": "layers", "environment": "environment", "dev-status": "dev-status", "fetch-all": "fetch-all", "inspect-resolve": "environment", "generate-graph": "graph"}
         if ident in commands:
             self.action_command(commands[ident])
         elif ident == "profiles":

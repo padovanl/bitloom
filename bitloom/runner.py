@@ -147,6 +147,10 @@ class Runner:
             job.status = "failed"
             job.code = -1
             message = f"ERROR: {type(exc).__name__}: {exc}"
+            if isinstance(exc, FileNotFoundError) and exc.filename:
+                message = (f"ERROR: {exc.filename} not found. The command never started: for a host profile set its init script "
+                           f"(oe-init-build-env) or start Bitloom from an initialised shell; otherwise pick a kas, container or "
+                           f"wrapper runtime. Configuration (9) shows the runtime check.")
             with job.log.open("a") as output:
                 output.write(message + "\n")
             job.errors.append(message)

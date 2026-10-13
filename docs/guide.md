@@ -170,7 +170,7 @@ F5 opens interruption options and F6 retries the selected job. Controls occupy o
 * a desktop notification: `notify-send` on Linux, a Windows notification when Bitloom runs in WSL;
 * a webhook: an [ntfy](https://ntfy.sh) topic (phone push, with high priority for failures), a Slack, Teams or Mattermost incoming webhook (`{"text": …}`), or JSON with every job detail for your own tooling.
 
-The service sends them, so they arrive even when no TUI or browser is open; an open TUI also rings the terminal bell. `^T` sends a test. Settings live in `<state>/notifications.json` (mode 0600, as webhook URLs may be secret). In the web dashboard the 🔔 button additionally enables browser notifications for builds that end while the tab is in the background.
+The service sends them, so they arrive even when no TUI or browser is open; an open TUI also rings the terminal bell. `^T` sends a test. Settings live in `<state>/notifications.json` (mode 0600, as webhook URLs may be secret). In the web dashboard the bell button in the top bar additionally enables browser notifications for builds that end while the tab is in the background.
 
 ![Notification settings](assets/notifications.png)
 

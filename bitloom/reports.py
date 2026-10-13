@@ -94,7 +94,12 @@ def build_summary(path: Path) -> str:
                 sstate.append(line)
             if 'Tasks Summary:' in line:
                 task = line
-    return '\n'.join([f'Build report: {path}', f'Errors: {len(errors)} · Warnings: {len(warnings)}', '', *sstate, task, '', 'Failed tasks', *failed[-100:], '', 'Errors', *errors[-100:], '', 'Warnings', *warnings[-100:]])
+    def section(title, lines):
+        return ['', title, *(lines[-100:] or ['  none'])]
+    head = [f'Build report: {path}', f'Errors: {len(errors)} · Warnings: {len(warnings)}']
+    if sstate or task:
+        head += ['', *sstate, *([task] if task else [])]
+    return '\n'.join(head + section('Failed tasks', failed) + section('Errors', errors) + section('Warnings', warnings))
 
 
 def dependency_context(edges: list[tuple[str, str]], node: str, limit: int = 200) -> str:
