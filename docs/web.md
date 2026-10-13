@@ -52,7 +52,7 @@ The dashboard works without a mouse.
 | Key | Action |
 | --- | --- |
 | `1` – `6` | Switch section |
-| `Ctrl+K` | Command palette: sections, every operation and recent builds |
+| `Ctrl+K` | Command palette: sections, every operation, profile switching and recent builds |
 | `/` | Focus the search field of the section |
 | `Esc` | Leave a field or close a dialog |
 | `j` / `k`, `↓` / `↑` | Next / previous operation |
