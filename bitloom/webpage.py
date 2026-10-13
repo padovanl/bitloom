@@ -16,18 +16,19 @@ PAGE = r"""<!doctype html>
   --mono: "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", ui-monospace, monospace;
   --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --ease: cubic-bezier(.2, .8, .2, 1);
+  --code: #060a0e;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    color-scheme: light;
+    color-scheme: light; --code: #f3f1ea;
     --bg: #f4f2ec; --bg2: #efece4; --surface: #fbfaf6; --raised: #ffffff; --line: #e1dccf; --line2: #d3ccbb; --fg: #23292f; --muted: #66707a;
     --accent: #17786d; --accent2: #345b91; --ink: #ffffff; --ok: #1f7a4d; --warn: #8a5a00; --err: #b0302c; --info: #2f5f9e;
     --glow: rgba(23, 120, 109, .12); --shadow: 0 10px 30px rgba(60, 50, 20, .10);
   }
 }
 :root[data-theme="light"] {
-  color-scheme: light;
+  color-scheme: light; --code: #f3f1ea;
   --bg: #f4f2ec; --bg2: #efece4; --surface: #fbfaf6; --raised: #ffffff; --line: #e1dccf; --line2: #d3ccbb; --fg: #23292f; --muted: #66707a;
   --accent: #17786d; --accent2: #345b91; --ink: #ffffff; --ok: #1f7a4d; --warn: #8a5a00; --err: #b0302c; --info: #2f5f9e;
   --glow: rgba(23, 120, 109, .12); --shadow: 0 10px 30px rgba(60, 50, 20, .10);
@@ -171,7 +172,9 @@ main { overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: c
 .tabs .ink { position: absolute; bottom: -1px; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: left .3s var(--ease), width .3s var(--ease); }
 
 /* Logs */
-pre.log { position: relative; margin: 0; padding: 12px 16px; font: 12.5px/1.55 var(--mono); white-space: pre-wrap; word-break: break-word; overflow: auto; flex: 1; min-height: 320px; max-height: 64vh; background: color-mix(in srgb, var(--bg) 85%, black); }
+pre.log { position: relative; margin: 0; padding: 12px 16px; font: 12.5px/1.55 var(--mono); white-space: pre-wrap; word-break: break-word; overflow: auto; flex: 1; min-height: 320px; max-height: 64vh; background: var(--code); }
+pre.log:empty::before { content: attr(data-empty); position: absolute; inset: 0; display: grid; place-items: center; padding: 24px;
+  color: var(--muted); font: 13px/1.6 var(--sans); text-align: center; white-space: normal; }
 pre.log span.new { animation: line .5s var(--ease); }
 @keyframes line { from { opacity: 0; background: var(--glow); } to { opacity: 1; background: transparent; } }
 pre.log .l-err { color: var(--err); } pre.log .l-warn { color: var(--warn); } pre.log .l-cmd { color: var(--accent); font-weight: 650; } pre.log .l-note { color: var(--muted); }
@@ -370,7 +373,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
           <label class="check"><span class="switch"><input type="checkbox" id="follow" checked><span></span></span>follow</label>
         </div>
         <div style="position:relative; display:flex; flex:1; min-height:0">
-          <pre class="log" id="log" tabindex="0" aria-live="off" style="flex:1"></pre>
+          <pre class="log" id="log" tabindex="0" aria-live="off" style="flex:1" data-empty="Select an operation in History to read its output, or press b to build the target."></pre>
           <button class="btn primary jump" id="jump">↓ Latest</button>
         </div>
       </div>
@@ -389,7 +392,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
       <div class="panel">
         <div class="head"><h2 id="task-title">Task log</h2></div>
         <div class="tools"><input type="search" id="task-log-search" placeholder="search this task log"><label class="check"><span class="switch"><input type="checkbox" id="task-errors"><span></span></span>errors only</label></div>
-        <pre class="log" id="task-log" tabindex="0"></pre>
+        <pre class="log" id="task-log" tabindex="0" data-empty="Select a task log on the left: the log.do_* and run.do_* files BitBake keeps for every recipe task."></pre>
       </div>
     </section>
 
