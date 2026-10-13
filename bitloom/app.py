@@ -842,12 +842,13 @@ class BitloomApp(App):
             build = build.relative_to(p.root_path)
         except ValueError:
             pass
-        root = str(p.root_path)
-        if len(root) > 12:  # the rail shows 12 columns after the label: keep the end of the path
-            root = "…" + root[-11:]
+        def tail(path) -> str:  # the rail shows 12 columns after the label: keep the end of a path
+            text = str(path)
+            return text if len(text) <= 12 else "…" + text[-11:]
+        root = tail(p.root_path)
         self.main_query("#rail-context", Static).update(Text.assemble(
             ("PROFILE  ", "dim"), (p.name, "bold"), "\n", ("RUNTIME  ", "dim"), p.mode, "\n",
-            ("ROOT     ", "dim"), root, "\n", ("BUILD    ", "dim"), str(build)[:15], "\n\n",
+            ("ROOT     ", "dim"), root, "\n", ("BUILD    ", "dim"), tail(build), "\n\n",
             ("?", f"bold {theme.accent}"), (" keys  ", "dim"), ("F2", f"bold {theme.accent}"), (" commands", "dim"), no_wrap=True, overflow="ellipsis"))
 
     def action_cycle_section(self, direction):
@@ -890,7 +891,7 @@ class BitloomApp(App):
 
     @work(exclusive=True,group='metadata-watch')
     async def watch_metadata(self):
-        if len(self.screen_stack)>1:
+        if len(self.screen_stack)>1 or getattr(self, "scanning", False):
             return
         entries=await asyncio.to_thread(metadata,self.profile)
         if entries!=self.entries:
@@ -1217,17 +1218,41 @@ class BitloomApp(App):
         from .themes import syntax_theme
         preview.write(Syntax(content, "yaml" if path.suffix in {".yml", ".yaml"} else "bash", theme=syntax_theme(self.theme), line_numbers=True, word_wrap=False))
 
-    @work(exclusive=True, group="scan")
-    async def scan_project(self):
+    def scan_project(self):
+        """Scan the workspace; overlapping requests are coalesced into one follow-up scan
+        (parallel walks of a large tree, worse on /mnt/<drive>, made each one many times slower)."""
+        if getattr(self, "scanning", False):
+            self.rescan = True
+            return
+        self.scanning, self.rescan = True, False
+        self.run_scan()
+
+    @work(group="scan")
+    async def run_scan(self):
         p = self.profile
-        entries, logs, health, artifacts = await asyncio.gather(
-            asyncio.to_thread(metadata, p), asyncio.to_thread(task_logs, p),
-            asyncio.to_thread(diagnostics, p), asyncio.to_thread(self.find_artifacts, p),
-        )
-        self.entries, self.logs, self.artifacts = entries, logs, artifacts
-        self.config_hints = await asyncio.to_thread(read_assignments, p.build_path / "conf/local.conf")
+        try:
+            from .versions import detect_release
+            # The release gates operations: read it first from layer.conf, before the slow walks.
+            self.release = await asyncio.to_thread(detect_release, p)
+            self.config_hints = await asyncio.to_thread(read_assignments, p.build_path / "conf/local.conf")
+            self.update_overview()
+            entries, logs, health, artifacts = await asyncio.gather(
+                asyncio.to_thread(metadata, p), asyncio.to_thread(task_logs, p),
+                asyncio.to_thread(diagnostics, p), asyncio.to_thread(self.find_artifacts, p),
+            )
+            if p is not self.profile:
+                self.rescan = True  # the profile changed meanwhile: these results are stale
+                return
+            self.apply_scan(p, entries, logs, health, artifacts)
+        finally:
+            self.scanning = False
+            if self.rescan and self.is_running:
+                self.scan_project()
+
+    def apply_scan(self, p, entries, logs, health, artifacts):
         from .versions import detect_release
-        self.release = await asyncio.to_thread(detect_release, p, entries)
+        self.entries, self.logs, self.artifacts = entries, logs, artifacts
+        self.release = detect_release(p, entries) or self.release
         self.update_overview()
         self.render_metadata()
         self.render_layer_tree()

@@ -122,6 +122,8 @@ class Runner:
                     if not raw:
                         break
                     line = ANSI.sub("", raw.decode(errors="replace")).rstrip()
+                    if "\r" in line:
+                        line = line.rsplit("\r", 1)[-1]  # progress redraws: keep what a terminal would show
                     output.write(line + "\n")
                     if "Execution was interrupted" in line:
                         job.shutdown_message = True
