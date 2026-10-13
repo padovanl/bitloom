@@ -1381,27 +1381,39 @@ class BitloomApp(App):
     def refresh_history(self):
         table = self.main_query("#history", DataTable)
         cursor = table.cursor_row
+        history = self.store.history()
+        self.history_rows = {row["id"]: row for row in history}
+        cells = {row["id"]: self.history_cells(row) for row in history}
+        columns = list(table.columns)
+        if [key.value for key in table.rows] == list(cells):
+            # Same jobs in the same order: update the changed cells, so the table never jumps.
+            for key, values in cells.items():
+                for column, old, new in zip(columns, table.get_row(key), values):
+                    if old != new:
+                        table.update_cell(key, column, new)
+            return
         table.clear()
-        self.history_rows.clear()
-        for row in self.store.history():
-            self.history_rows[row["id"]] = row
-            status = row["status"]
-            glyph, color = self.status_style(status)
-            elapsed = "—"
-            if status != "queued":
-                start = datetime.fromisoformat(row["started"])
-                end = datetime.fromisoformat(row["finished"]) if row["finished"] else datetime.now(timezone.utc)
-                seconds = max(0, int((end-start).total_seconds()))
-                elapsed = f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
-            title = Text(row["title"], no_wrap=True, overflow="ellipsis")
-            if row["profile"] != self.profile.name:
-                title.append(f"  {row['profile']}", style="dim")  # one queue for every profile, as in the web dashboard
-            table.add_row(title, Text(f"{glyph} {status}", style=color), elapsed, key=row["id"])
+        for key, values in cells.items():
+            table.add_row(*values, key=key)
         if table.row_count:
             # Keep the selected job highlighted when new jobs are inserted above it.
             if self.selected_job_id in self.history_rows:
                 cursor = table.get_row_index(self.selected_job_id)
             table.move_cursor(row=min(cursor, table.row_count-1))
+
+    def history_cells(self, row):
+        status = row["status"]
+        glyph, color = self.status_style(status)
+        elapsed = "—"
+        if status != "queued":
+            start = datetime.fromisoformat(row["started"])
+            end = datetime.fromisoformat(row["finished"]) if row["finished"] else datetime.now(timezone.utc)
+            seconds = max(0, int((end-start).total_seconds()))
+            elapsed = f"{seconds//3600:02}:{seconds//60%60:02}:{seconds%60:02}"
+        title = Text(row["title"], no_wrap=True, overflow="ellipsis")
+        if row["profile"] != self.profile.name:
+            title.append(f"  {row['profile']}", style="dim")  # one queue for every profile, as in the web dashboard
+        return title, Text(f"{glyph} {status}", style=color), elapsed
 
     def job_update(self, job: Job, line: str | None):
         if line is not None:

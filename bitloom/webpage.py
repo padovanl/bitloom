@@ -108,6 +108,9 @@ nav .icon { width: 18px; text-align: center; }
 nav .foot { margin-top: auto; padding: 12px 10px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 main { overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .view { display: flex; flex-direction: column; gap: 16px; animation: enter .35s var(--ease); }
+#history .row { animation: none; }
+#history .row.arrive { animation: arrive .45s var(--ease); }
+@keyframes arrive { from { opacity: 0; transform: translateY(-14px); background: color-mix(in srgb, var(--accent) 18%, transparent); } to { opacity: 1; transform: none; } }
 @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* Cards */
@@ -718,26 +721,62 @@ function renderState() {
   renderDetail();
 }
 
+let historyPainted = false;
+function historyRow(id, onclick) {
+  return el("div", {class: "row", role: "option", tabindex: "-1", "data-id": id, onclick},
+    el("span", {class: "glyph"}), el("span", {class: "title"}), el("span", {class: "meta"}));
+}
+function paintRow(node, status, title, tooltip, tag, meta) {
+  // Touch only what changed, so the list stays still while jobs tick.
+  const key = status + "\u0000" + title + "\u0000" + tag + "\u0000" + meta;
+  if (node.dataset.paint === key) return;
+  const old = node.dataset.paint ? node.dataset.paint.split("\u0000") : [];
+  if (old[0] !== status) node.firstChild.replaceWith(glyph(status));
+  const name = node.children[1];
+  if (old[1] !== title || old[2] !== tag) {
+    name.textContent = title; name.title = tooltip;
+    if (tag) name.append(el("span", {class: "meta", text: "  " + tag}));
+  }
+  if (old[3] !== meta) node.children[2].textContent = meta;
+  node.dataset.paint = key;
+}
 function renderHistory(p) {
   const list = $("history"), scroll = list.scrollTop;
-  list.textContent = "";
-  if (!state.history.length) list.append(el("div", {class: "empty", text: "No operations yet. Press b to build or q for any operation."}));
+  const existing = new Map([...list.querySelectorAll(".row")].map((node) => [node.dataset.id, node]));
+  const wanted = [];
   for (const row of state.history) {
-    const item = el("div", {class: "row" + (row.id === selected ? " selected" : ""), role: "option", tabindex: "-1", "data-id": row.id, onclick: () => select_(row.id)},
-      glyph(row.status), el("span", {class: "title", title: row.title, text: row.title}), el("span", {class: "meta", text: elapsed(row)}));
-    if (row.profile !== (p && p.name)) item.querySelector(".title").append(el("span", {class: "meta", text: "  " + row.profile}));
-    list.append(item);
+    let node = existing.get(row.id);
+    if (!node) {
+      node = historyRow(row.id, () => select_(row.id));
+      if (historyPainted) {                                  // a build that just appeared slides in on top
+        node.classList.add("arrive");
+        node.addEventListener("animationend", () => node.classList.remove("arrive"), {once: true});
+      }
+    }
+    paintRow(node, row.status, row.title, row.title, row.profile !== (p && p.name) ? row.profile : "", elapsed(row));
+    wanted.push(node);
+  }
+  let empty = list.querySelector(".empty");
+  if (!state.history.length) {
+    empty = empty || el("div", {class: "empty", text: "No operations yet. Press b to build or q for any operation."});
+    wanted.unshift(empty);
   }
   if (consoleRows.length) {
-    list.append(el("div", {class: "group-label", text: "CONSOLE BUILDS · started outside Bitloom"}));
+    wanted.push(list.querySelector(".group-label") || el("div", {class: "group-label", text: "CONSOLE BUILDS · started outside Bitloom"}));
     for (const row of consoleRows) {
       const id = "console:" + row.path;
-      list.append(el("div", {class: "row" + (id === selected ? " selected" : ""), role: "option", tabindex: "-1", "data-id": id, onclick: () => select_(id)},
-        glyph(row.status), el("span", {class: "title", title: row.path, text: new Date(row.modified * 1000).toLocaleString() + "  " + row.machine}),
-        el("span", {class: "meta", text: size(row.size)})));
+      const node = existing.get(id) || historyRow(id, () => select_(id));
+      paintRow(node, row.status, new Date(row.modified * 1000).toLocaleString() + "  " + row.machine, row.path, "", size(row.size));
+      wanted.push(node);
     }
   }
+  // Reconcile in order: reuse nodes, move only those out of place, drop the rest.
+  const keep = new Set(wanted);
+  for (const node of [...list.children]) if (!keep.has(node)) node.remove();
+  wanted.forEach((node, i) => { if (list.children[i] !== node) list.insertBefore(node, list.children[i] || null); });
+  for (const node of wanted) if (node.dataset.id) node.classList.toggle("selected", node.dataset.id === selected);
   list.scrollTop = scroll;
+  historyPainted = true;
   if (!selected && state.history.length) select_(state.history[0].id);
 }
 
