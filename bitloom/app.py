@@ -82,6 +82,20 @@ class Workspace(TabbedContent):
         event.stop()
 
 
+
+def middle(text: str, width: int) -> str:
+    """Shorten in the middle so both the start and the distinguishing end stay visible."""
+    if len(text) <= width:
+        return text
+    keep = width - 1
+    return text[:keep // 2] + "…" + text[-(keep - keep // 2):]
+
+
+def is_marker(name: str) -> bool:
+    """BitBake's .done fetch markers and lock files: noise in a download listing."""
+    return name.endswith((".done", ".lock")) or name.startswith(".bitloom")
+
+
 class BitloomApp(App):
     TITLE = "Bitloom"
     SUB_TITLE = "Yocto / BitBake workspace"
@@ -564,7 +578,12 @@ class BitloomApp(App):
             "health": ("Status", "Check", "Details"),
             "inspect-table": ("Variable / task", "Value / dependency"),
         }
-        widths = {("history", "Operation"): 17, ("history", "Status"): 11, ("history", "Elapsed"): 8}
+        widths = {("history", "Operation"): 17, ("history", "Status"): 11, ("history", "Elapsed"): 8,
+                  ("metadata-table", "Name"): 26, ("metadata-table", "Type"): 8,
+                  ("task-table", "Recipe"): 30, ("task-table", "Task"): 28, ("task-table", "Size"): 9,
+                  ("cache-table", "File"): 34, ("cache-table", "Size"): 9, ("cache-table", "Age"): 6,
+                  ("artifact-table", "Artifact"): 40, ("artifact-table", "Type"): 9, ("artifact-table", "Size"): 9,
+                  ("health", "Status"): 6, ("health", "Check"): 24, ("inspect-table", "Variable / task"): 28}
         for ident, names in columns.items():
             table = self.main_query(f"#{ident}", DataTable)
             for name in names:
@@ -1335,7 +1354,11 @@ class BitloomApp(App):
             if query in str(e.path).casefold():
                 key = f"artifact-{i}"
                 self.file_rows[key] = e
-                table.add_row(e.name, e.kind, human_size(e.size), str(e.path), key=key)
+                try:
+                    where = str(e.path.parent.relative_to(self.profile.build_path))
+                except ValueError:
+                    where = str(e.path.parent)
+                table.add_row(middle(e.name, 40), e.kind, human_size(e.size), where, key=key)
 
     @on(Input.Changed, "#metadata-search")
     @alive
@@ -1815,7 +1838,10 @@ class BitloomApp(App):
             return
         self.cache_entries = entries
         self.render_cache()
-        self.main_query("#scan-state", Static).update(f"{p} · {len(entries)} files · {human_size(sum(e.size for e in entries))} · scan capped at 20,000 files")
+        markers = sum(1 for e in entries if is_marker(e.name))
+        self.main_query("#scan-state", Static).update(
+            f"{p} · {len(entries) - markers} files · {human_size(sum(e.size for e in entries))}"
+            + (f" · {markers} .done/.lock markers hidden (type .done to list them)" if markers else "") + " · scan capped at 20,000 files")
 
     @on(Select.Changed, "#cache-kind")
     @alive
@@ -1835,8 +1861,11 @@ class BitloomApp(App):
         query = self.main_query("#cache-search", Input).value.casefold()
         table.clear()
         for e in self.cache_entries:
+            if is_marker(e.name) and query not in {".done", ".lock"}:
+                continue
             if query in str(e.path).casefold():
-                table.add_row(e.name, human_size(e.size), f"{int((time.time()-e.modified)/86400)}d", e.detail)
+                folder = str(Path(e.detail).parent)
+                table.add_row(middle(e.name, 34), human_size(e.size), f"{int((time.time()-e.modified)/86400)}d", "" if folder == "." else folder)
 
     def prune_plan(self):
         if any(j.status in {"running", "queued", "cancelling"} for j in self.runner.jobs):
