@@ -22,7 +22,7 @@ Python 3.10+ · Textual · Linux / WSL2 · Host · Docker · Podman · kas · ka
 * **Keyboard first**: numbers open sections, letters act, `/` searches, `?` lists every key; editors use nano keys (`^O`, `^X`, `^W`). → [Keyboard](docs/keyboard.md)
 * **Web dashboard**: `bitloom --web`, the same service in a browser with live output, Toaster-style summaries, toasts and a `Ctrl+K` palette. → [Web](docs/web.md)
 * **Projects**: guided setup that detects kas files, Poky checkouts and kas launcher scripts; new projects pinned to Scarthgap or Wrynose; clone from Git. → [Projects](docs/projects.md)
-* **SBOM, CRA and releases**: SPDX 3 / 2.2 quality, VEX, vulnerabilities from sbom-cve-check, cve-check and Grype, CRA readiness and timeline, SBOM settings with explanations; features follow the detected Yocto release. → [Compliance](docs/compliance.md)
+* **SBOM, CRA and releases**: SPDX 3 / 2.2 quality, VEX, vulnerabilities from sbom-cve-check, cve-check and Grype with Markdown, HTML, CSV, JSON and SARIF reports, CRA readiness and timeline, SBOM settings with explanations; features follow the detected Yocto release. → [Compliance](docs/compliance.md)
 * **Studio**: create your own distribution, machines, images, recipes and layers with a live preview. → [Studio](docs/studio.md)
 * **Developer workbench** (`F10`): variable origins, rebuild signatures, failed-task investigation, devtool, SDK/IDE setup, image comparisons, devices. → [Developer](docs/developer.md)
 * **Daily helpers**: notifications when a build ends (desktop, ntfy, Slack/Teams), ETA, run comparison, tmp/work usage. → [Guide](docs/guide.md#daily-helpers)

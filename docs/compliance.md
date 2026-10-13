@@ -77,7 +77,27 @@ Each finding shows the severity (from CVSS v4, then v3, then v2), the score, the
 * Filter by source, status (unpatched, all, reviewed), minimum CVSS and text (`/`).
 * **`r`** records a review for the selected CVE: owner, reason or evidence reference, and an expiry date (the same dispositions as Developer → Security). A review never marks the upstream vulnerability as fixed.
 * **`g`** scans the newest SPDX JSON SBOM with [Grype](https://github.com/anchore/grype) (when installed) as a visible job; the list reopens with the results when it finishes. SPDX 2.2 images ship their SBOM as an archive: extract it first.
-* **`x`** exports the visible rows as CSV.
+* **`x`** exports the findings shown (same filters) to `<state>/exports` in the format you choose; the web dashboard has the same *Export* menu.
+
+### Export formats
+
+| Format | Use |
+| --- | --- |
+| Markdown (`.md`) | A readable report for a ticket, a wiki or a pull request: summary by severity and status, the unpatched findings with NVD, CVE.org and OSV links, a section per package, the patched and ignored list in a collapsible block, and the Yocto remediation steps. |
+| HTML (`.html`) | The same report as a self-contained page in light or dark theme; print it to PDF to share it. |
+| CSV (`.csv`) | Spreadsheets; every row carries its NVD and OSV links. |
+| JSON (`.json`) | Scripts and dashboards: sources, filters, counts and every finding with its links. |
+| SARIF 2.1.0 (`.sarif`) | GitHub code scanning and other SARIF viewers: one alert per unpatched finding, ranked by CVSS (`security-severity`), with remediation help. |
+
+From the command line or CI:
+
+```bash
+bitloom --vulns --format md -o vulnerabilities.md               # unpatched findings
+bitloom --vulns --format html --all-statuses -o report.html     # with patched and ignored
+bitloom --vulns --format sarif -o bitloom.sarif --min-cvss 7    # then upload with github/codeql-action/upload-sarif
+```
+
+Identifiers link to NVD, CVE.org and OSV for CVEs and to the GitHub advisory database for GHSA identifiers; the tool's own reference link is kept as well.
 
 [VulnScout](https://github.com/savoirfairelinux/vulnscout) (Savoir-faire Linux) reads the same SPDX SBOMs, cve-check JSON, Yocto VEX and Grype results and adds a web assessment workflow and a CI mode (`--match-condition`, exit code 2); its [meta-vulnscout](https://github.com/savoirfairelinux/meta-vulnscout) layer runs it from BitBake.
 

@@ -402,7 +402,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
       <div class="panel"><div class="head"><h2>SBOM quality</h2><span class="meta" id="sb-file"></span></div><div class="gauges" id="sb-gauges"></div><div class="chips" id="sb-vex"></div></div>
       <div class="panel">
         <div class="head"><h2>Vulnerabilities</h2><span class="meta" id="vu-summary"></span><span style="flex:1"></span>
-          <button class="btn" id="vu-csv">Export CSV</button><button class="btn primary" id="vu-grype" title="Scan the newest SPDX SBOM with Grype">Scan with Grype</button></div>
+          <select id="vu-format" aria-label="Export format" title="Export the findings shown"><option value="md">Markdown report</option><option value="html">HTML report</option><option value="csv">CSV</option><option value="json">JSON</option><option value="sarif">SARIF (GitHub)</option></select><button class="btn" id="vu-csv" title="Export the findings shown, with NVD/OSV links">Export</button><button class="btn primary" id="vu-grype" title="Scan the newest SPDX SBOM with Grype">Scan with Grype</button></div>
         <div class="tools">
           <select id="vu-source"><option value="">Newest report of each tool</option></select>
           <select id="vu-status"><option value="unpatched">Unpatched</option><option value="all">All</option><option value="reviewed">Reviewed</option></select>
@@ -1085,12 +1085,17 @@ async function loadVulns() {
   });
   if (!vulnRows.length && data.sources.length) body.append(el("tr", {}, el("td", {colspan: "6", class: "empty", text: "No finding matches the filters."})));
 }
-function exportVulns() {
-  const header = ["id", "package", "version", "status", "score", "severity", "detail", "source", "review"];
-  const quote = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const csv = [header.join(","), ...vulnRows.map((f) => header.map((k) => quote(f[k])).join(","))].join("\n");
-  const link = el("a", {href: URL.createObjectURL(new Blob([csv], {type: "text/csv"})), download: "vulnerabilities.csv"});
-  document.body.append(link); link.click(); link.remove();
+async function exportVulns() {
+  // Same filters as the table; the server builds the report with links and remediation guidance.
+  const query = `profile=${prof()}&source=${encodeURIComponent($("vu-source").value)}&status=${$("vu-status").value}&min=${encodeURIComponent($("vu-min").value)}&q=${encodeURIComponent($("vu-q").value)}&format=${$("vu-format").value}`;
+  try {
+    const response = await fetch(`/api/vulnerabilities/export?${query}`, {headers: {"X-Bitloom-Token": token}});
+    if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || response.statusText); }
+    const name = (/filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") || "") || [])[1] || "vulnerabilities";
+    const link = el("a", {href: URL.createObjectURL(await response.blob()), download: name});
+    document.body.append(link); link.click(); link.remove();
+    toast("Exported", name, "success");
+  } catch (error) { toast("Export failed", error.message, "error"); }
 }
 async function scanGrype() {
   try { const job = await api("/api/vulnerabilities/scan", {method: "POST", body: JSON.stringify({profile: $("profile").value})}); toast("Grype scan queued", "Follow it in Builds; results appear here when it finishes.", "info"); pendingScan = job.id; }

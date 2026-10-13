@@ -123,16 +123,16 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 
 | Key | Action |
 | --- | --- |
+| `w` | Projects |
+| `o` | Notifications |
+| `s` | SBOM settings |
+| `c` | CRA readiness |
 | `l` | local.conf |
 | `y` | bblayers |
 | `e` | bitbake -e |
 | `d` | devtool |
 | `v` | Versions |
 | `n` | Network |
-| `s` | SBOM settings |
-| `c` | CRA readiness |
-| `w` | Projects |
-| `o` | Notifications |
 
 ## Dialogs
 

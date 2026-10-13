@@ -124,6 +124,10 @@ class BitloomApp(App):
 
     /* Form controls: one quiet, theme-aware look for lists, dropdowns, checkboxes and radios.
        The highlight is a tinted accent bar with readable text, never a solid block. */
+    /* Thin scrollbars in theme colours (the default horizontal bar took two rows). */
+    * { scrollbar-size-horizontal: 1; scrollbar-size-vertical: 1; scrollbar-background: $surface;
+        scrollbar-background-hover: $surface; scrollbar-background-active: $surface;
+        scrollbar-color: $primary-muted; scrollbar-color-hover: $accent 60%; scrollbar-color-active: $accent; scrollbar-corner-color: $surface; }
     OptionList, SelectionList { border: none; padding: 0 1; background: $surface; scrollbar-size-vertical: 1; }
     OptionList:focus, SelectionList:focus { border: none; background-tint: $foreground 0%; }
     OptionList > .option-list--option-highlighted { background: $primary-muted; color: $foreground; text-style: none; }

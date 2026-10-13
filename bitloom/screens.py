@@ -1568,7 +1568,7 @@ class VulnerabilitiesScreen(ModalScreen):
     VulnerabilitiesScreen Input, VulnerabilitiesScreen Select { height: 1; }
     """
     BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
-                ("r", "review", "Review"), ("g", "grype", "Grype scan"), ("x", "export", "Export CSV"),
+                ("r", "review", "Review"), ("g", "grype", "Grype scan"), ("x", "export", "Export"),
                 ("slash", "focus_filter", "Filter"), ("j", "move(1)", "Down"), ("k", "move(-1)", "Up")]
 
     def __init__(self, profile, state):
@@ -1593,7 +1593,7 @@ class VulnerabilitiesScreen(ModalScreen):
 
     def on_mount(self):
         from .versions import describe
-        self.query_one(Vertical).border_title = "Vulnerabilities · r review · g scan with Grype · x export CSV · / filter · Esc close"
+        self.query_one(Vertical).border_title = "Vulnerabilities · r review · g scan with Grype · x export (Markdown, HTML, CSV, JSON, SARIF) · / filter · Esc close"
         table = self.query_one("#vuln-table")
         for name, width in (("Severity", 10), ("CVSS", 5), ("CVE", 18), ("Package", 22), ("Status", 11), ("Review", 16)):
             table.add_column(name, width=width)
@@ -1675,12 +1675,23 @@ class VulnerabilitiesScreen(ModalScreen):
         self.app.push_screen(DispositionScreen(self.state, {"package": finding.package, "id": finding.id, "status": finding.status}), lambda saved: saved and self.reload())
 
     def action_export(self):
-        from .vulns import to_csv
-        from datetime import datetime
-        destination = self.state / "exports" / f"vulnerabilities-{datetime.now():%Y%m%d-%H%M%S}.csv"
+        self.app.push_screen(ExportFormatScreen(), self.export_as)
+
+    def export_as(self, fmt):
+        """Write the findings shown (same filters) as a report with NVD/OSV links."""
+        if not fmt:
+            return
+        from .vulnexport import build
+        try:
+            minimum = float(self.query_one("#vuln-min", Input).value or 0)
+        except ValueError:
+            minimum = 0.0
+        content, name = build(self.profile, self.state, fmt, str(self.query_one("#vuln-status", Select).value), minimum,
+                              self.query_one("#vuln-filter", Input).value, str(self.query_one("#vuln-source", Select).value))
+        destination = self.state / "exports" / name
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(to_csv(self.shown))
-        self.notify(f"Exported {len(self.shown)} rows to {destination}", timeout=8)
+        destination.write_text(content)
+        self.notify(f"Exported {len(self.shown)} findings to {destination}", title="✔ Report written", timeout=10)
 
     def action_grype(self):
         from datetime import datetime
@@ -1785,3 +1796,28 @@ class NotificationsScreen(ModalScreen):
     @on(Button.Pressed, "#nt-close")
     def close_pressed(self):
         self.dismiss(None)
+
+
+class ExportFormatScreen(ModalScreen):
+    """Choose a report format: ↑↓, Enter; Esc cancels."""
+    DEFAULT_CSS = """
+    ExportFormatScreen { align: center middle; background: $background 60%; }
+    ExportFormatScreen > Vertical { width: 58; height: auto; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    ExportFormatScreen Label { color: $text-muted; }
+    ExportFormatScreen OptionList { height: auto; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True)]
+
+    def compose(self):
+        from .vulnexport import FORMATS
+        with Vertical():
+            yield Label("The findings shown, with NVD / CVE.org / OSV links and remediation steps")
+            yield OptionList(*[Option(f"{title}  ·  .{ident}", id=ident) for ident, (title, _) in FORMATS.items()], id="export-formats")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = "Export findings"
+        self.query_one(OptionList).focus()
+
+    def on_option_list_option_selected(self, event):
+        self.dismiss(event.option.id)
+
