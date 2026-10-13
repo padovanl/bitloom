@@ -79,7 +79,7 @@ async def test_terminal_navigation_preview_and_pause(tmp_path):
         layer = next(node for node in tree.root.children if node.data and node.data.kind == 'layer')
         tree.select_node(layer)
         await pilot.pause(.3)
-        assert app.query_one('#metadata-search', Input).value == str(layer.data.path)
+        assert app.query_one('#metadata-search', Input).value == str(layer.data.path) + '/'   # the slash keeps meta from matching meta-poky
         assert app.query_one('#metadata-table').row_count >= 2
         await pilot.press('alt+1')
         await pilot.click('#log-follow')
