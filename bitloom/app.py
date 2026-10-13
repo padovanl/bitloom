@@ -121,6 +121,13 @@ class BitloomApp(App):
     SelectCurrent { height: 1; border: none; padding: 0 1; background: $surface; }
     Select:focus > SelectCurrent { background: $primary-muted; }
     SelectCurrent .arrow { color: $accent; }
+    /* Dialogs sit on $surface: fields and buttons take the darker background so they stay visible. */
+    ModalScreen Input, ModalScreen SelectCurrent { background: $background; }
+    ModalScreen Input:focus, ModalScreen Select:focus > SelectCurrent { background: $primary-muted; }
+    ModalScreen Button { background: $background; }
+    ModalScreen Button:hover { background: $primary-muted; }
+    ModalScreen Button.-primary { background: $primary-muted; }
+    ModalScreen Button:focus { background: $accent 30%; text-style: bold; }
 
     /* Form controls: one quiet, theme-aware look for lists, dropdowns, checkboxes and radios.
        The highlight is a tinted accent bar with readable text, never a solid block. */
@@ -132,6 +139,9 @@ class BitloomApp(App):
     OptionList:focus, SelectionList:focus { border: none; background-tint: $foreground 0%; }
     OptionList > .option-list--option-highlighted { background: $primary-muted; color: $foreground; text-style: none; }
     OptionList:focus > .option-list--option-highlighted { background: $accent 28%; color: $foreground; text-style: bold; }
+    /* Lists that are panels of their own keep a rounded border, accented while focused. */
+    #studio-kinds, #setup-found, #projects-list { border: round $primary-muted; }
+    #studio-kinds:focus, #setup-found:focus, #projects-list:focus { border: round $accent; }
     OptionList > .option-list--option-hover { background: $foreground 6%; }
     OptionList > .option-list--separator { color: $foreground 12%; }
     SelectOverlay { border: round $accent; background: $surface; padding: 0 1; }
