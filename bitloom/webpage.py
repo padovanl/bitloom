@@ -272,7 +272,7 @@ dialog::backdrop { background: rgba(4, 8, 10, .6); backdrop-filter: blur(3px); }
 dialog .body { padding: 18px 20px; display: flex; flex-direction: column; gap: 11px; }
 dialog h2 { margin: 0; font-size: 16px; }
 dialog .fields { display: grid; grid-template-columns: 110px 1fr; gap: 8px 10px; align-items: center; }
-dialog .preview { font: 12px var(--mono); background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; white-space: pre-wrap; word-break: break-all; min-height: 2.6em; }
+dialog .preview { font: 12px var(--mono); background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; min-height: 2.6em; }
 dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 #palette { width: min(620px, 94vw); }
 #palette input { width: 100%; font-size: 16px; padding: 10px 12px; }
@@ -295,10 +295,10 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .split { grid-template-columns: 1fr; } main { padding: 14px; }
   .context { display: none; } .hero { grid-template-columns: 1fr; } .checks li { grid-template-columns: 26px 1fr; } .checks li .meta { grid-column: 2; }
   .kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two { grid-template-columns: 1fr; }
-  .panel > .head .detail-title { flex-basis: 100%; order: -1; }
+  .panel > .head .detail-title { flex-basis: 100%; max-width: none; order: -1; } #d-meta { flex: 1 1 auto; }
   #toasts { top: auto; bottom: 14px; right: 14px; }
   #palette-btn, #keys-btn, header .context { display: none; }
-  header { gap: 8px; padding: 8px 12px; } #target { flex: 1; }
+  header { gap: 8px; padding: 8px 12px; } #target { flex: 1 1 160px; min-width: 150px; }
 }
 </style>
 </head>
@@ -694,7 +694,7 @@ function renderState() {
   $("c-status").className = "value " + (recent ? "s-" + recent.status : "");
   $("c-title").textContent = recent ? recent.title : "No jobs in this profile";
   const progress = recent ? recent.progress : [0, 0], setscene = recent ? recent.setscene : [0, 0];
-  const fraction = recent && recent.status === "success" ? 1 : progress[1] ? progress[0] / progress[1] : 0;
+  const fraction = recent && recent.status === "success" ? 1 : progress[1] ? Math.min(progress[0] / progress[1], 0.99) : 0;
   ring($("c-ring"), fraction, progress[1] || (recent && recent.status === "success") ? Math.round(100 * fraction) + "%" : "—");
   if (progress[1]) { const node = $("c-tasks"); countTo(node, recent.status === "success" ? progress[1] : progress[0], ` / ${progress[1]}`); } else $("c-tasks").textContent = "no task count";
   $("c-sstate").textContent = (setscene && setscene[1] ? `${setscene[0]} / ${setscene[1]} from sstate · ` : "") + state.history.filter((r) => r.status === "queued").length + " queued";
@@ -752,7 +752,8 @@ function setProgress(status, progress) {
   bar.className = "progress " + status + (status === "running" && !known ? " indeterminate" : "");
   // BitBake's "task N of M" counts tasks that need no rerun too: N reaches M when the last task *starts*.
   const lastRunning = status === "running" && known && progress[0] >= progress[1];
-  const fraction = status === "success" ? 1 : known ? Math.min(progress[0] / progress[1], status === "running" ? 0.99 : 1) : 0;
+  // Only a successful job is complete: a failed or cancelled one stopped during its last started task.
+  const fraction = status === "success" ? 1 : known ? Math.min(progress[0] / progress[1], 0.99) : 0;
   bar.firstElementChild.style.width = (100 * fraction).toFixed(1) + "%";
   $("d-progress-text").textContent = known ? (lastRunning ? `last task running · ${progress[0]} of ${progress[1]}` : `task ${progress[0]} of ${progress[1]}`)
     : status === "running" ? "waiting for BitBake task counts…" : "";
