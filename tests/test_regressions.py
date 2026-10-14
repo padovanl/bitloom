@@ -159,3 +159,19 @@ def test_build_report_names_empty_sections(tmp_path):
     log.write_text('NOTE: nothing happened\n')
     text = build_summary(log)
     assert 'Failed tasks\n  none' in text and 'Warnings\n  none' in text
+
+
+async def test_reconnecting_does_not_announce_old_job_ends(tmp_path):
+    """Reopening the TUI on a running service announced every finished job again."""
+    from bitloom.runner import Job
+    app = BitloomApp(make_demo(tmp_path / 'demo'), tmp_path / 'state')
+    notes = []
+    original = app.notify
+    app.notify = lambda message, *a, **k: (notes.append(str(message)), original(message, *a, **k))[1]
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause(.5)
+        old = Job(id='old1', profile=app.profile, title='Old build', command=['bitbake', 'x'], log=tmp_path / 'old.log',
+                  status='failed', started='2020-01-01T00:00:00+00:00', finished='2020-01-01T00:10:00+00:00', code=1)
+        app.job_update(old, None)
+        await pilot.pause(.2)
+        assert not any('Old build' in n for n in notes)

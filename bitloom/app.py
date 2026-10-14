@@ -382,6 +382,8 @@ class BitloomApp(App):
         self.pending_clones: dict[str, str] = {}
         self.pending_scans: set[str] = set()
         self.announced: set[str] = set()
+        self.seen_status: dict[str, str] = {}
+        self.session_started = datetime.now(timezone.utc).isoformat(timespec="seconds")
         self.cpu_history: list[float] = []
         self.frame = 0
         self.was_busy = False
@@ -1411,6 +1413,13 @@ class BitloomApp(App):
         else:
             self.refresh_history()
             self.update_overview()
+            # Announce an end only when this session saw the job active: reconnecting to the service
+            # lists finished jobs too, and those are history, not news.
+            first_sight = job.id not in self.seen_status
+            self.seen_status[job.id] = job.status
+            if first_sight and job.status in {"success", "failed", "cancelled", "interrupted"} and (job.finished or "") < self.session_started:
+                self.announced.add(job.id)
+                return
             if job.status == "success" and job.action_id == "graph-read" and job.profile.name == self.profile.name:
                 self.read_runtime_graph(job.log)
             if job.id in self.pending_scans and job.status in {"success", "failed", "cancelled"}:
@@ -1454,7 +1463,7 @@ class BitloomApp(App):
             self.main_query("#progress", ProgressBar).update(total=100, progress=100)
         elif job.id == self.selected_job_id and job.progress[1]:
             # "task N of M" reaches M when the last task starts: stay below 100% until the job ends.
-            self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=min(job.progress[0], job.progress[1] - 1))
+            self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=min(job.progress[0], int(job.progress[1] * .99)))
         elif job.id == self.selected_job_id and job.status == "running":
             # Animated indeterminate bar until BitBake reports task counts.
             self.main_query("#progress", ProgressBar).update(total=None)
@@ -1509,7 +1518,7 @@ class BitloomApp(App):
             if row["status"] == "success":
                 self.main_query("#progress", ProgressBar).update(total=100, progress=100)
             elif progress[1]:
-                done = min(progress[0], progress[1] - 1)  # success is handled above: anything else is not complete
+                done = min(progress[0], int(progress[1] * .99))  # success is handled above; 99% so it never rounds to 100%
                 self.main_query("#progress", ProgressBar).update(total=progress[1], progress=done)
             else:
                 self.main_query("#progress", ProgressBar).update(total=100, progress=0)
