@@ -257,7 +257,8 @@ def scaffold_plan(name, layer, system, owner, series='scarthgap'):
     files = {f'{base}/files/source/{path}': text for path, text in source.items()}
     files[f'{base}/{name}_1.0.bb'] = (f'SUMMARY = "{name} developer fixture"\nLICENSE = "MIT"\n'
         f'LIC_FILES_CHKSUM = "file://LICENSE;md5={hashlib.md5(license_text.encode()).hexdigest()}"\n'
-        'SRC_URI = "file://source"\nUNPACKDIR ??= "${WORKDIR}"\nS = "${UNPACKDIR}/source"\n' + build)
+        # UNPACKDIR exists from 5.1 (and must not be WORKDIR there); older releases unpack into WORKDIR.
+        'SRC_URI = "file://source"\nS = "${@d.getVar(\'UNPACKDIR\') or d.getVar(\'WORKDIR\')}/source"\n' + build)
     files['conf/layer.conf'] = ('BBPATH .= ":${LAYERDIR}"\nBBFILES += "${LAYERDIR}/recipes-*/*/*.bb ${LAYERDIR}/recipes-*/*/*.bbappend"\n'
         f'BBFILE_COLLECTIONS += "{layer}"\nBBFILE_PATTERN_{layer} = "^${{LAYERDIR}}/"\n'
         f'BBFILE_PRIORITY_{layer} = "6"\nLAYERSERIES_COMPAT_{layer} = "{series}"\nLAYERDEPENDS_{layer} = "core"\n')

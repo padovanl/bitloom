@@ -111,6 +111,8 @@ bitloom --vulns --min-cvss 7 --fail-on-unpatched   # exit 2 when an unpatched fi
 
 ![Vulnerabilities panel in the web dashboard](assets/web-vulnerabilities.png)
 
+**`do_sbom_cve_check` fails with “No such file or directory: …rootfs-<timestamp>.spdx.json”.** The image SBOM was reused from an earlier build (sstate or hash equivalence) and carries that build's `IMAGE_NAME` timestamp, while sbom-cve-check looks for the name of the current run. It happens after a change that rebuilds the root filesystem but not the SBOM. Rebuild the SBOM in the same run: `bitbake core-image-minimal -C create_image_sbom_spdx` (about three minutes on a warm build). Bitloom's failure diagnosis recognises it (*stale SBOM*) and gives the command.
+
 Fixing a finding in Yocto: update the recipe or backport the fix with a patch carrying a `CVE: CVE-…` tag (sbom-cve-check and cve-check mark it Patched), correct the product/version matching with `CVE_PRODUCT`/`CVE_VERSION`, or record an assessment with `CVE_STATUS[CVE-…] = "reason: explanation"`.
 
 ## SBOM settings

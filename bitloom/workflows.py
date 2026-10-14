@@ -66,6 +66,10 @@ KNOWN_CAUSES = [
     ('resources', r'(Killed signal terminated program|fatal error: Killed|virtual memory exhausted|Cannot allocate memory|out of memory)',
      'The compiler was killed, usually by the out-of-memory killer. Lower PARALLEL_MAKE / BB_NUMBER_THREADS for this recipe '
      '(PARALLEL_MAKE:pn-<recipe> = "-j4"), add swap or memory, then retry.'),
+    ('stale SBOM', r"sbom-cve-check: error: \[Errno 2\] No such file or directory: '[^']*\.spdx\.json'",
+     'The image SBOM was reused from an earlier build, under that build\'s IMAGE_NAME timestamp, while sbom-cve-check looks for '
+     'the name of this run. Rebuild the SBOM in the same run: bitbake <image> -C create_image_sbom_spdx (or a kas build after '
+     'cleaning the image: bitbake -c cleansstate <image>).'),
     ('resources', r'No space left on device', 'The disk is full. Free space (Caches → prune plan, rm_work) and retry.'),
     ('interrupted', r"(undefined reference to [`']main'|file truncated|file format not recognized|is truncated|unexpected end of file)",
      'Object files were left empty or truncated by an interrupted build (killed container, power loss, WSL or machine restart); '
@@ -88,7 +92,7 @@ KNOWN_CAUSES = [
     ('link', r'(undefined reference to|ld: cannot find|collect2: error)', 'Linking failed: a library or symbol is missing. Check DEPENDS and the link flags.'),
     ('compile', r'(:\d+:\d+: error:|:\d+: error:|fatal error: [^K]|error: )', 'Inspect the first compiler error and its include paths.'),
 ]
-ROOT_SIGNALS = re.compile(r'( - ERROR +- |:\d+(?::\d+)?: (?:fatal )?error:|undefined reference to|Killed signal|No space left|Your Makefile has been rebuilt|'
+ROOT_SIGNALS = re.compile(r'(sbom-cve-check: error:| - ERROR +- |:\d+(?::\d+)?: (?:fatal )?error:|undefined reference to|Killed signal|No space left|Your Makefile has been rebuilt|'
                           r'Fetcher failure|Hunk #\d+ FAILED|Nothing PROVIDES|QA Issue|pseudo abort|make(?:\[\d+\])?: \*\*\* )')
 
 
