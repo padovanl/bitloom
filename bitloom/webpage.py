@@ -146,8 +146,10 @@ main { overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: c
 .s-success { color: var(--ok); } .s-failed { color: var(--err); } .s-running { color: var(--accent); }
 .s-queued, .s-cancelling, .s-interrupted { color: var(--warn); } .s-cancelled, .s-unknown { color: var(--muted); }
 .group-label { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; padding: 14px 16px 6px; border-bottom: 1px solid var(--line); }
-.detail-title { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
-#d-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 2 auto; }
+.detail-title { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 14ch; max-width: 60%; flex: 0 0 auto; }
+#d-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 0; } /* metadata gives way before the title */
+#task-rows td:nth-child(2), #task-rows td:nth-child(3) { white-space: nowrap; }
+#task-rows td:nth-child(2) { font-size: 12px; }
 .panel > .head .btn { flex: none; }
 @media (min-width: 901px) { .panel > .head:has(#d-title) { flex-wrap: nowrap; } }
 
@@ -284,7 +286,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 1100px) { .kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); } .gauges { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1380px) { header .context { display: none; } }
-@media (max-width: 520px) { .card .value { font-size: 16px; } .card .sub { white-space: normal; } }
+@media (max-width: 520px) { .card .value { font-size: 16px; } .card .sub { white-space: normal; } #c-ring { display: none; } }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
   nav { flex-direction: row; overflow-x: auto; padding: 4px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -748,9 +750,12 @@ function current() { return state && state.history.find((row) => row.id === sele
 function setProgress(status, progress) {
   const bar = $("d-progress"), known = progress && progress[1];
   bar.className = "progress " + status + (status === "running" && !known ? " indeterminate" : "");
-  const fraction = status === "success" ? 1 : known ? progress[0] / progress[1] : 0;
+  // BitBake's "task N of M" counts tasks that need no rerun too: N reaches M when the last task *starts*.
+  const lastRunning = status === "running" && known && progress[0] >= progress[1];
+  const fraction = status === "success" ? 1 : known ? Math.min(progress[0] / progress[1], status === "running" ? 0.99 : 1) : 0;
   bar.firstElementChild.style.width = (100 * fraction).toFixed(1) + "%";
-  $("d-progress-text").textContent = known ? `task ${progress[0]} of ${progress[1]}` : status === "running" ? "waiting for BitBake task counts…" : "";
+  $("d-progress-text").textContent = known ? (lastRunning ? `last task running · ${progress[0]} of ${progress[1]}` : `task ${progress[0]} of ${progress[1]}`)
+    : status === "running" ? "waiting for BitBake task counts…" : "";
   $("d-progress-pct").textContent = known || status === "success" ? (100 * fraction).toFixed(1) + "%" : "";
 }
 function renderDetail() {

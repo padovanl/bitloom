@@ -1193,7 +1193,7 @@ class SetupScreen(ModalScreen):
         found = self.query_one("#setup-found", OptionList)
         found.clear_options()
         try:
-            self.candidates = detect(Path(self.query_one("#setup-dir", Input).value))
+            self.candidates = detect(Path(self.query_one("#setup-dir", Input).value), self.settings.profiles)
         except (OSError, ValueError) as exc:
             self.candidates = []
             found.add_option(Option("✖ " + str(exc), disabled=True))

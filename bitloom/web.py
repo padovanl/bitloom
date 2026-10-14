@@ -432,7 +432,7 @@ class Dashboard:
     def setup_scan(self, query):
         from .setup import candidate_json, detect
         directory = query.get("dir", [""])[0] or str(self.profile().root_path)
-        return {"dir": str(Path(directory).expanduser().resolve()), "candidates": [candidate_json(c) for c in detect(Path(directory))]}
+        return {"dir": str(Path(directory).expanduser().resolve()), "candidates": [candidate_json(c) for c in detect(Path(directory), self.settings().profiles)]}
 
     def setup_profile(self, body):
         from .models import Profile

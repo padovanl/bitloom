@@ -165,7 +165,8 @@ def task_timings(path: Path) -> str:
                 if seconds >= 0:
                     complete.append((seconds, *key, event[3]))
     if not complete:
-        return 'No completed timestamped task pairs found. kas timestamped output is supported. Plain BitBake output does not provide timings; enable buildstats and inspect its artifacts.'
+        return ('No task timings in this output: plain BitBake console output has no timestamps (kas adds them to its own lines only). '
+                'Per-task durations come from buildstats: Developer → Build performance shows the slowest tasks of the latest build.')
     rows = [f'{seconds:9.0f}s  {recipe:45} {task:30} {status}' for seconds, recipe, task, status in sorted(complete, reverse=True)[:200]]
     return '\n'.join([f'Observed task timings: {path}', f'Completed pairs: {len(complete)} · unmatched starts: {len(running)}', 'Sorted by wall duration. Tasks overlap; summed durations are not build elapsed time.', '', *rows])
 

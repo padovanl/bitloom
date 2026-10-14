@@ -86,8 +86,12 @@ def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9-]+", "-", text.lower()).strip("-") or "project"
 
 
-def detect(root: Path) -> list[Candidate]:
+def detect(root: Path, profiles=()) -> list[Candidate]:
+    """Proposals for a folder. `profiles` lets the scan recognise a kas work directory an existing
+    profile already builds, so it is not offered again as an unrelated host build."""
     root = Path(root).expanduser().resolve()
+    owners = [p for p in profiles if p.environment.get("KAS_WORK_DIR")
+              and Path(p.environment["KAS_WORK_DIR"]).expanduser().resolve() == root]
     if not root.is_dir():
         raise ValueError(f"{root} is not a directory")
     candidates = []
@@ -126,10 +130,16 @@ def detect(root: Path) -> list[Candidate]:
                 conf = read_assignments(build / "conf/local.conf")
                 evidence = [f"init script {script}", f"build directory {build.relative_to(root) if build.is_relative_to(root) else build}" +
                             (" with conf/local.conf" if (build / "conf/local.conf").exists() else " (created on first build)")]
+                hints = []
+                if owners:
+                    names = ", ".join(f"{p.name} ({p.mode})" for p in owners)
+                    evidence.insert(0, f"kas work directory of profile {names}: switch to it with P instead")
+                    hints.append("kas regenerates conf/local.conf here on every kas build; a host build bypasses the kas configuration "
+                                 "and needs the Yocto host dependencies installed.")
                 candidates.append(Candidate("host", f"Host build: {build.name}", evidence,
                                             {"name": slug(root.name + "-" + build.name), "root": str(root), "mode": "host", "init_script": script,
                                              "build_dir": str(build.relative_to(root)) if build.is_relative_to(root) else str(build),
-                                             "machine": conf.get("MACHINE", ""), "distro": conf.get("DISTRO", "")}, 15))
+                                             "machine": conf.get("MACHINE", ""), "distro": conf.get("DISTRO", "")}, 1 if owners else 15, hints))
             break
     return sorted(candidates, key=lambda c: -c.score)
 

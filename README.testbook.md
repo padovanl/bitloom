@@ -157,7 +157,7 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | # | Do | You should see |
 | --- | --- | --- |
 | 9.1 | `9`, `w` (projects). | Recent projects; the active one marked *active*. |
-| 9.2 | `o`, enter `~/bitloom-kas-wrynose`… or any folder with a kas file. | The guided setup proposes profiles (kas file, launcher scripts, Poky checkouts) with evidence; `Esc` without saving. |
+| 9.2 | `o`, Enter on the project folder (the Bitloom checkout). Then `o` again with `~/bitloom-kas-wrynose`. | The checkout: kas proposals for `kas-minimal.yml` and `kas-wrynose.yml` with evidence. The work directory: only a host proposal, marked as the kas work directory of `kas-wrynose` with a warning to switch with `P` instead. `Esc` without saving. Web: `6` → *Set up a project* shows the same. |
 | 9.3 | `n` (new project). | Release, MACHINE, image and runtime fields with a live preview; `Esc` without creating. |
 | 9.4 | `9`, `o`, `^T`. | A test notification arrives. |
 

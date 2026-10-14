@@ -164,3 +164,18 @@ def test_web_compare_eta_and_notifications(tmp_path):
             rpc(board.state, {'op': 'stop'})
         except (OSError, ValueError):
             pass
+
+
+def test_last_task_running_and_executed_tasks(tmp_path):
+    """An incremental build reports 'task 554 of 554' when its only real task starts: that is not done."""
+    from datetime import datetime, timedelta, timezone
+    from bitloom.insights import compare, eta
+    now = datetime.now(timezone.utc)
+    started = (now - timedelta(seconds=40)).isoformat()
+    assert eta([], 'p', ['bitbake', 'x'], started, (554, 554), now) is None          # no rate estimate of 0 s
+    old, new = tmp_path / 'a.log', tmp_path / 'b.log'
+    for path in (old, new):
+        path.write_text('NOTE: Running task 554 of 554\nNOTE: Tasks Summary: Attempted 554 tasks of which 553 didn\'t need to be rerun and all succeeded.\n')
+    row = lambda log: {'title': 'Force compile', 'log': str(log), 'status': 'success', 'started': '2026-10-12T08:00:00+00:00', 'finished': '2026-10-12T08:00:30+00:00'}
+    text = compare(row(new), row(old))
+    assert 'Tasks in the run queue' in text and [line.split()[-1] for line in text.splitlines() if line.startswith('Tasks executed')] == ['1']
