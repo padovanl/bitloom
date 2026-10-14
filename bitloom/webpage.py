@@ -108,6 +108,26 @@ nav .icon { width: 18px; text-align: center; }
 nav .foot { margin-top: auto; padding: 12px 10px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 main { overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .view { display: flex; flex-direction: column; gap: 16px; animation: enter .35s var(--ease); }
+.combo { position: relative; display: flex; align-items: center; }
+.combo > input { padding-right: 30px; width: 100%; }
+.combo-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; transition: color .15s, background .15s, transform .2s var(--ease); }
+.combo-toggle:hover { color: var(--fg); background: var(--raised); }
+.combo.open .combo-toggle { color: var(--accent); transform: translateY(-50%) rotate(180deg); }
+.combo-list { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; width: 460px; max-width: calc(100vw - 24px); max-height: min(440px, 70vh); overflow: auto; padding: 6px; border: 1px solid var(--line2); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); animation: pop .16s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+.combo-group { padding: 8px 10px 4px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.combo-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 10px; border-radius: 8px; cursor: pointer; scroll-margin: 6px; }
+.combo-item .name { font: 13px var(--mono); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combo-item .name mark { background: none; color: var(--accent); font-weight: 700; }
+.combo-item .tags { display: flex; gap: 4px; justify-content: flex-end; }
+.combo-item .sum { grid-column: 1 / -1; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combo-item.active { background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
+.combo-item[aria-selected="true"] .name::after { content: "  ✓"; color: var(--accent); }
+.combo-foot { display: flex; gap: 12px; padding: 8px 10px 4px; margin-top: 4px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+.combo-empty { padding: 14px 10px; color: var(--muted); font-size: 12.5px; }
+.tag { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--line2); color: var(--muted); white-space: nowrap; }
+.tag.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.tag.accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 #history .row { animation: none; }
 #history .row.arrive { animation: arrive .45s var(--ease); }
 @keyframes arrive { from { opacity: 0; transform: translateY(-14px); background: color-mix(in srgb, var(--accent) 18%, transparent); } to { opacity: 1; transform: none; } }
@@ -210,6 +230,46 @@ tbody tr.clickable { cursor: pointer; } tbody tr.clickable:hover, tbody tr.selec
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 650; border: 1px solid currentColor; }
 .badge.ok { color: var(--ok); } .badge.warn { color: var(--warn); } .badge.err { color: var(--err); } .badge.info { color: var(--info); } .badge.muted { color: var(--muted); }
 
+/* Recipes */
+.recipes { grid-template-columns: minmax(220px, 290px) minmax(0, 1fr); }
+#meta-search { min-width: 220px; }
+.layer-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 9px 16px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .15s; }
+.layer-item:hover { background: color-mix(in srgb, var(--raised) 70%, var(--glow)); }
+.layer-item.selected { background: linear-gradient(90deg, var(--glow), transparent 85%); box-shadow: inset 3px 0 var(--accent); }
+.layer-item .n { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-item .c { font: 12px var(--mono); color: var(--muted); }
+.layer-item .d { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); }
+.layer-item.example .n { color: var(--muted); font-weight: 500; }
+.layer-label { padding: 12px 16px 6px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 9px; overflow: hidden; background: var(--bg2); }
+.seg button { all: unset; padding: 5px 10px; font-size: 12.5px; color: var(--muted); cursor: pointer; transition: color .15s, background .15s; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--line2); }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-checked="true"] { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--fg); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.seg button .k { font: 11px var(--mono); color: var(--muted); margin-left: 5px; }
+details.folder { border-bottom: 1px solid var(--line); }
+details.folder > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; position: sticky; top: 0; z-index: 1; background: var(--surface); user-select: none; }
+details.folder > summary::-webkit-details-marker { display: none; }
+details.folder > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .2s var(--ease); flex: none; }
+details.folder[open] > summary::before { transform: rotate(45deg); }
+details.folder > summary:hover { background: var(--raised); }
+details.folder > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+details.folder .fname { font: 600 13px var(--mono); }
+details.folder .fcount { color: var(--muted); font: 12px var(--mono); }
+details.folder .flayer { margin-left: auto; color: var(--muted); font-size: 12px; }
+.recipe { display: grid; grid-template-columns: minmax(0, 1.2fr) 110px 74px minmax(0, 1fr) 190px; gap: 10px; align-items: center; padding: 7px 16px 7px 33px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); font-size: 13px; }
+.recipe:hover { background: color-mix(in srgb, var(--raised) 70%, var(--glow)); }
+.recipe .rn { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recipe .rn mark { background: none; color: var(--accent); }
+.recipe .rv { font: 12px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recipe .rp { font: 11.5px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+.recipe .ra { display: flex; gap: 6px; justify-content: flex-end; opacity: 0; transition: opacity .15s; }
+.recipe:hover .ra, .recipe:focus-within .ra { opacity: 1; }
+.recipe .ra button { all: unset; font-size: 12px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line2); color: var(--muted); cursor: pointer; }
+.recipe .ra button:hover, .recipe .ra button:focus-visible { color: var(--fg); border-color: var(--accent); }
+@media (max-width: 760px) { #meta-search { min-width: 0; } .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; } .recipe { grid-template-columns: minmax(0, 1fr) auto; padding-left: 26px; } .recipe .rv, .recipe .rp { display: none; } .recipe .ra { opacity: 1; } .recipes .layers .list { max-height: 220px; } }
+
 /* Compliance */
 .hero { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 18px; }
 .hero .big { font: 750 26px var(--sans); }
@@ -243,7 +303,6 @@ details.opt .body { padding: 6px 16px 14px; color: var(--muted); animation: ente
 .form .help { color: var(--muted); font-size: 12px; }
 .form input[type=text], .form select { width: 100%; }
 #nt-format { width: auto; flex: none; }
-#meta-rows td:first-child { white-space: nowrap; }
 .toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .toggle { all: unset; cursor: pointer; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); font-size: 12.5px; color: var(--muted); transition: all .2s var(--ease); }
 .toggle.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--ink); border-color: transparent; }
@@ -301,7 +360,7 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
   .panel > .head .detail-title { flex-basis: 100%; max-width: none; order: -1; } #d-meta { flex: 1 1 auto; }
   #toasts { top: auto; bottom: 14px; right: 14px; }
   #palette-btn, #keys-btn, header .context { display: none; }
-  header { gap: 8px; padding: 8px 12px; } #target { flex: 1 1 160px; min-width: 150px; }
+  header { gap: 8px; padding: 8px 12px; } #target-combo { flex: 1 1 160px; min-width: 150px; }
 }
 </style>
 </head>
@@ -318,7 +377,11 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
     <select id="profile" aria-label="Profile"></select>
     <span class="chip" id="release-chip">release …</span>
     <span class="context" id="context"></span>
-    <input type="text" id="target" placeholder="Build target / recipe" aria-label="Build target" size="20">
+    <div class="combo" id="target-combo">
+      <input type="text" id="target" placeholder="Build target / recipe" aria-label="Build target" size="20" role="combobox" aria-expanded="false" aria-controls="target-list" aria-autocomplete="list" autocomplete="off" spellcheck="false">
+      <button type="button" class="combo-toggle" id="target-toggle" tabindex="-1" aria-label="Images in this project" title="Images in this project (Alt+↓)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      <div class="combo-list" id="target-list" role="listbox" aria-label="Images in this project" hidden></div>
+    </div>
     <button class="btn primary" id="build-btn" title="Build target (b)"><kbd>b</kbd>Build</button>
     <button class="btn" id="queue-btn" title="Queue any operation (q)"><kbd>q</kbd>Operations</button>
     <button class="btn" id="palette-btn" title="Command palette (Ctrl+K)"><kbd>⌘K</kbd>Search</button>
@@ -384,9 +447,20 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
       </div>
     </section>
 
-    <section id="view-recipes" class="view panel" hidden>
-      <div class="tools"><input type="search" id="meta-search" placeholder="/ search recipes, layers, appends, classes, kas files"><span class="hint" id="meta-count"></span></div>
-      <div class="list"><table><thead><tr><th>Name</th><th>Type</th><th>Location</th></tr></thead><tbody id="meta-rows"></tbody></table></div>
+    <section id="view-recipes" class="view split recipes" hidden>
+      <nav class="panel layers" aria-label="Layers">
+        <div class="head"><h2>Layers</h2><span class="hint" id="layer-count"></span></div>
+        <div class="list" id="layer-list" role="listbox" aria-label="Layers"></div>
+      </nav>
+      <div class="panel">
+        <div class="tools">
+          <input type="search" id="meta-search" placeholder="/ search recipes, appends, classes, kas files">
+          <div class="seg" id="meta-kinds" role="radiogroup" aria-label="Kind"></div>
+          <span class="hint" id="meta-count"></span>
+          <button class="btn" id="meta-expand" title="Open or close every folder">Expand all</button>
+        </div>
+        <div class="list" id="meta-groups"></div>
+      </div>
     </section>
 
     <section id="view-tasklogs" class="view split" hidden>
@@ -780,6 +854,68 @@ function renderHistory(p) {
   if (!selected && state.history.length) select_(state.history[0].id);
 }
 
+// Target combobox: the image recipes found in the project, filtered as you type; any recipe still works.
+let imageRows = null, imagesFor = "", comboActive = -1, comboItems = [];
+async function loadImages() {
+  const key = prof();
+  if (imageRows && imagesFor === key) return;
+  imagesFor = key; imageRows = null;
+  try { const rows = (await api(`/api/images?profile=${key}`)).rows; if (imagesFor === key) imageRows = rows; } catch (error) { imageRows = []; }
+}
+function highlight(text, needle) {
+  const at = needle ? text.toLowerCase().indexOf(needle) : -1;
+  if (at < 0) return [document.createTextNode(text)];
+  return [document.createTextNode(text.slice(0, at)), el("mark", {text: text.slice(at, at + needle.length)}), document.createTextNode(text.slice(at + needle.length))];
+}
+function renderCombo(filter = true) {
+  const list = $("target-list"), input = $("target"), value = input.value.trim(), needle = filter ? value.toLowerCase() : "";
+  list.textContent = ""; comboItems = []; comboActive = -1;
+  if (!imageRows) { list.append(el("div", {class: "combo-empty", text: "Looking for images in the project…"})); return; }
+  const rows = imageRows.filter((row) => !needle || (row.name + " " + row.summary + " " + row.layer).toLowerCase().includes(needle));
+  const groups = [["In this project", rows.filter((r) => r.configured || r.built)], ["Images in your layers", rows.filter((r) => !r.configured && !r.built && !r.example)], ["Examples and test images", rows.filter((r) => !r.configured && !r.built && r.example)]];
+  for (const [label, items] of groups) {
+    if (!items.length) continue;
+    list.append(el("div", {class: "combo-group", text: label}));
+    for (const row of items) {
+      const tags = el("span", {class: "tags"});
+      if (row.configured) tags.append(el("span", {class: "tag accent", text: "kas target"}));
+      if (row.built) tags.append(el("span", {class: "tag ok", text: "built"}));
+      if (row.layer) tags.append(el("span", {class: "tag", text: row.layer}));
+      const item = el("div", {class: "combo-item", role: "option", id: "target-opt-" + comboItems.length, "aria-selected": String(row.name === value),
+        onmousedown: (event) => { event.preventDefault(); pickTarget(row.name); }, onmousemove: () => activate(comboItems.indexOf(item))},
+        el("span", {class: "name"}, ...highlight(row.name, needle)), tags, ...(row.summary || !row.path ? [el("span", {class: "sum", text: row.summary || "Target from the kas configuration"})] : []));
+      item.title = row.path || row.name;
+      list.append(item); comboItems.push(item);
+    }
+  }
+  if (!comboItems.length) list.append(el("div", {class: "combo-empty", text: value ? `No image matches “${value}”. Press Enter to build it anyway: any recipe is a valid target.` : "No image recipes found in this project's layers."}));
+  list.append(el("div", {class: "combo-foot"}, el("span", {}, el("kbd", {text: "↑↓"}), " choose"), el("span", {}, el("kbd", {text: "Enter"}), " pick, again to build"), el("span", {}, el("kbd", {text: "Esc"}), " close")));
+  if (needle && comboItems.length) activate(0);
+}
+function activate(i) {
+  comboItems.forEach((item, n) => item.classList.toggle("active", n === i));
+  comboActive = i;
+  $("target").setAttribute("aria-activedescendant", i >= 0 ? "target-opt-" + i : "");
+  if (i >= 0) comboItems[i].scrollIntoView({block: "nearest"});
+}
+async function openCombo(filter = false) {
+  const combo = $("target-combo"), list = $("target-list");
+  if (!list.hidden) return;
+  list.hidden = false; combo.classList.add("open"); $("target").setAttribute("aria-expanded", "true");
+  renderCombo(filter);
+  const right = list.getBoundingClientRect().right;      // keep it on screen on narrow windows
+  list.style.left = right > innerWidth - 12 ? `${Math.min(0, innerWidth - 12 - right)}px` : "0";
+  await loadImages();
+  if (!list.hidden) renderCombo(filter);
+}
+function closeCombo() {
+  $("target-list").hidden = true; $("target-combo").classList.remove("open");
+  $("target").setAttribute("aria-expanded", "false"); $("target").removeAttribute("aria-activedescendant"); comboActive = -1;
+}
+function pickTarget(name) {
+  $("target").value = name; $("target").dataset.touched = "1"; closeCombo(); $("target").focus();
+}
+
 async function loadConsole() {
   try { consoleRows = (await api(`/api/console?profile=${prof()}`)).rows; } catch (error) { consoleRows = []; }
 }
@@ -892,13 +1028,86 @@ function skeleton(body, columns) {
   for (let i = 0; i < 4; i++) body.append(el("tr", {}, el("td", {colspan: String(columns)}, el("div", {class: "skeleton", style: `width:${60 + i * 9}%`}))));
 }
 let metaTimer;
-async function loadMeta() {
-  const body = $("meta-rows"); if (!body.children.length) skeleton(body, 3);
-  const data = await api(`/api/metadata?profile=${prof()}&q=${encodeURIComponent($("meta-search").value)}`);
-  body.textContent = "";
-  $("meta-count").textContent = `${data.total} entries` + (data.total > data.rows.length ? ` · first ${data.rows.length}` : "");
-  data.rows.forEach((row, i) => { const tr = el("tr", {}, el("td", {text: row.name}), el("td", {}, el("span", {class: "badge muted", text: row.kind})), el("td", {class: "mono", text: row.detail || row.path})); tr.style.animationDelay = Math.min(i, 20) * 12 + "ms"; body.append(tr); });
-  if (!data.rows.length) body.append(el("tr", {}, el("td", {colspan: "3", class: "empty", text: "No matching metadata"})));
+// Recipes: layers on the left, folders (recipes-core, classes…) that open on demand, kind filter.
+let metaRows = [], metaLayer = "", metaKind = "all", metaFor = "";
+const META_KINDS = [["all", "All"], ["bb", "Recipes"], ["image", "Images"], ["bbappend", "Appends"], ["bbclass", "Classes"], ["yaml", "kas"]];
+const EXAMPLE_LAYERS = new Set(["meta-selftest", "meta-skeleton"]);
+async function loadMeta(fresh = false) {
+  const box = $("meta-groups");
+  if (!metaRows.length || metaFor !== prof() || fresh) {
+    box.textContent = ""; skeletonIn(box);
+    try { metaRows = (await api(`/api/metadata?profile=${prof()}${fresh ? "&fresh=1" : ""}`)).rows; metaFor = prof(); }
+    catch (error) { box.textContent = ""; box.append(el("div", {class: "empty", text: "Could not read the workspace: " + error.message})); return; }
+  }
+  renderLayers(); renderMeta();
+}
+function skeletonIn(box) { for (let i = 0; i < 6; i++) box.append(el("div", {class: "skeleton", style: `width:${50 + (i * 37) % 45}%`})); }
+function metaMatch(row, needle) {
+  if (metaKind === "image" ? !row.image : metaKind !== "all" && row.kind !== metaKind) return false;
+  return !needle || `${row.name} ${row.kind} ${row.detail} ${row.layer}`.toLowerCase().includes(needle);
+}
+function renderLayers() {
+  const list = $("layer-list"), needle = $("meta-search").value.trim().toLowerCase();
+  const counts = new Map(); let total = 0;
+  for (const row of metaRows) if (row.kind !== "layer" && metaMatch(row, needle)) { counts.set(row.layer, (counts.get(row.layer) || 0) + 1); total++; }
+  const layers = metaRows.filter((row) => row.kind === "layer");
+  layers.sort((a, b) => EXAMPLE_LAYERS.has(a.name) - EXAMPLE_LAYERS.has(b.name) || (counts.get(b.name) || 0) - (counts.get(a.name) || 0) || a.name.localeCompare(b.name));
+  list.textContent = "";
+  const item = (name, label, count, detail, extra = "") => {
+    const node = el("div", {class: "layer-item" + (metaLayer === name ? " selected" : "") + extra, role: "option", tabindex: "0", "aria-selected": String(metaLayer === name),
+      onclick: () => { metaLayer = name; renderLayers(); renderMeta(); }, onkeydown: (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); node.click(); } }},
+      el("span", {class: "n", text: label}), el("span", {class: "c", text: String(count)}), ...(detail ? [el("span", {class: "d", text: detail})] : []));
+    list.append(node);
+  };
+  item("", "All layers", total, "");
+  let examples = false;
+  for (const layer of layers) {
+    if (EXAMPLE_LAYERS.has(layer.name) && !examples) { list.append(el("div", {class: "layer-label", text: "Examples and tests"})); examples = true; }
+    item(layer.name, layer.name, counts.get(layer.name) || 0, layer.detail && layer.detail !== "See layer.conf" ? "compatible: " + layer.detail : "", EXAMPLE_LAYERS.has(layer.name) ? " example" : "");
+  }
+  if (counts.get("")) item("\u0000", "Outside layers", counts.get(""), "kas files and workspace files");
+  $("layer-count").textContent = layers.length + " layers";
+}
+function renderMeta() {
+  const box = $("meta-groups"), needle = $("meta-search").value.trim().toLowerCase();
+  const kinds = $("meta-kinds");
+  if (!kinds.children.length) for (const [kind, label] of META_KINDS) kinds.append(el("button", {role: "radio", "data-kind": kind, "aria-checked": String(kind === metaKind), text: label,
+    onclick: () => { metaKind = kind; [...kinds.children].forEach((b) => b.setAttribute("aria-checked", String(b.dataset.kind === kind))); renderLayers(); renderMeta(); }}));
+  const layer = metaLayer === "\u0000" ? "" : metaLayer;
+  const rows = metaRows.filter((row) => row.kind !== "layer" && (metaLayer === "" || row.layer === layer) && metaMatch(row, needle));
+  const groups = new Map();
+  for (const row of rows) { const key = (metaLayer === "" ? row.layer + "\u0000" : "") + row.group; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(row); }
+  const keys = [...groups.keys()].sort((a, b) => { const [la, ga] = a.includes("\u0000") ? a.split("\u0000") : ["", a], [lb, gb] = b.includes("\u0000") ? b.split("\u0000") : ["", b];
+    return EXAMPLE_LAYERS.has(la) - EXAMPLE_LAYERS.has(lb) || (la === lb ? 0 : la.localeCompare(lb)) || (!ga.startsWith("recipes-")) - (!gb.startsWith("recipes-")) || ga.localeCompare(gb); });
+  box.textContent = "";
+  $("meta-count").textContent = `${rows.length} ${rows.length === 1 ? "file" : "files"} · ${keys.length} ${keys.length === 1 ? "folder" : "folders"}`;
+  if (!rows.length) { box.append(el("div", {class: "empty", text: needle ? `Nothing matches “${needle}” here.` : "No metadata in this layer for this filter."})); return; }
+  // Open everything when the result is small or searched for; otherwise folders open on click.
+  const open = !!needle || rows.length <= 60 || keys.length === 1;
+  for (const key of keys) {
+    const [layerName, group] = key.includes("\u0000") ? key.split("\u0000") : [layer, key];
+    const items = groups.get(key).sort((a, b) => (a.recipe || a.name).localeCompare(b.recipe || b.name));
+    const details = el("details", {class: "folder"},
+      el("summary", {}, el("span", {class: "fname", text: group}), el("span", {class: "fcount", text: String(items.length)}), ...(metaLayer === "" && layerName ? [el("span", {class: "flayer", text: layerName})] : [])));
+    const fill = () => { if (details.dataset.filled) return; details.dataset.filled = "1"; for (const row of items) details.append(recipeRow(row, needle)); };
+    details.addEventListener("toggle", () => { if (details.open) fill(); });
+    if (open) { details.open = true; fill(); }
+    box.append(details);
+  }
+  $("meta-expand").textContent = open ? "Collapse all" : "Expand all";
+}
+function recipeRow(row, needle) {
+  const name = row.recipe || row.name;
+  const kind = {bb: row.image ? "image" : "recipe", bbappend: "append", bbclass: "class", yaml: "kas"}[row.kind] || row.kind;
+  const actions = el("span", {class: "ra"});
+  if (row.kind === "bb") actions.append(el("button", {text: "Use as target", title: "Put " + name + " in the build target field", onclick: () => { $("target").value = name; $("target").dataset.touched = "1"; toast("Target set", name + " · press b to build it", "success", {label: "Build", run: () => queue("build", {target: name})}); }}));
+  actions.append(el("button", {text: "Copy path", title: row.path, onclick: () => navigator.clipboard && navigator.clipboard.writeText(row.path).then(() => toast("Path copied", row.path, "info"))}));
+  return el("div", {class: "recipe", title: row.path},
+    el("span", {class: "rn"}, ...highlight(name, needle)),
+    el("span", {class: "rv", text: row.version === "%" ? "any version" : row.version || ""}),
+    el("span", {}, el("span", {class: "badge " + (kind === "image" ? "info" : "muted"), text: kind})),
+    el("span", {class: "rp", text: "‎" + (row.detail || row.path)}),
+    actions);
 }
 async function loadTasks() {
   const body = $("task-rows"); if (!body.children.length) skeleton(body, 3);
@@ -1309,7 +1518,24 @@ function wire() {
   window.addEventListener("resize", moveInk);
   $("profile").addEventListener("change", async () => { $("target").dataset.touched = ""; await loadConsole(); renderState(); setView(view); });
   $("target").addEventListener("input", () => { $("target").dataset.touched = "1"; });
-  $("target").addEventListener("keydown", (event) => { if (event.key === "Enter") queue("build", {target: $("target").value}); });
+  $("target").addEventListener("keydown", (event) => {
+    const open = !$("target-list").hidden;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) { openCombo(false); return; }
+      if (comboItems.length) activate((comboActive + (event.key === "ArrowDown" ? 1 : -1) + comboItems.length) % comboItems.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const choice = open && comboActive >= 0 ? comboItems[comboActive].querySelector(".name").textContent : "";
+      if (choice && choice !== $("target").value.trim()) pickTarget(choice);
+      else { closeCombo(); queue("build", {target: $("target").value}); }
+    } else if (event.key === "Escape" && open) { event.stopPropagation(); closeCombo(); }
+    else if (event.key === "Tab") closeCombo();
+  });
+  $("target").addEventListener("input", () => { if ($("target-list").hidden) openCombo(true); else renderCombo(true); });
+  $("target").addEventListener("click", () => openCombo(false));
+  $("target").addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== $("target")) closeCombo(); }, 120));
+  $("target-toggle").addEventListener("mousedown", (event) => { event.preventDefault(); if ($("target-list").hidden) { $("target").focus(); openCombo(false); } else closeCombo(); });
   $("build-btn").addEventListener("click", () => queue("build", {target: $("target").value}));
   $("queue-btn").addEventListener("click", () => openQueue());
   $("palette-btn").addEventListener("click", openPalette);
@@ -1352,7 +1578,8 @@ function wire() {
   $("errors-only").addEventListener("change", loadTab);
   $("log").addEventListener("scroll", () => { const log = $("log"); $("jump").classList.toggle("show", log.scrollHeight - log.scrollTop - log.clientHeight > 80); });
   $("jump").addEventListener("click", () => { const log = $("log"); log.scrollTo({top: log.scrollHeight, behavior: "smooth"}); $("follow").checked = true; });
-  $("meta-search").addEventListener("input", () => { clearTimeout(metaTimer); metaTimer = setTimeout(loadMeta, 200); });
+  $("meta-search").addEventListener("input", () => { clearTimeout(metaTimer); metaTimer = setTimeout(() => { renderLayers(); renderMeta(); }, 150); });
+  $("meta-expand").addEventListener("click", () => { const all = [...document.querySelectorAll("#meta-groups details.folder")], open = !all.every((d) => d.open); all.forEach((d) => { d.open = open; }); $("meta-expand").textContent = open ? "Collapse all" : "Expand all"; });
   $("task-search").addEventListener("input", () => { clearTimeout(metaTimer); metaTimer = setTimeout(loadTasks, 200); });
   for (const id of ["task-log-search", "task-errors"]) $(id).addEventListener(id === "task-errors" ? "change" : "input", () => openTaskRow && openTask(openTaskRow, document.querySelector("#task-rows tr.selected")));
   $("op-filter").addEventListener("input", fillOperations);
@@ -1392,7 +1619,7 @@ function wire() {
     else if (event.key === "?") { $("keys-dialog").showModal(); handled(); }
     else if (event.key === "b") { queue("build", {target: $("target").value}); handled(); }
     else if (event.key === "q") { openQueue(); handled(); }
-    else if (event.key === "t") { $("target").focus(); $("target").select(); handled(); }
+    else if (event.key === "t") { $("target").focus(); $("target").select(); openCombo(false); handled(); }
     else if (view === "builds") {
       const rows = state ? [...state.history.map((row) => row.id), ...consoleRows.map((row) => "console:" + row.path)] : [], index = rows.indexOf(selected);
       if ((event.key === "j" || event.key === "ArrowDown") && index < rows.length - 1) { select_(rows[index + 1]); handled(); }

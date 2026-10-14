@@ -703,6 +703,97 @@ class ProfilePickerScreen(ModalScreen):
         self.dismiss(event.option.id)
 
 
+class ImagePickerScreen(ModalScreen):
+    """Image recipes found in the project: type to filter, ↑ ↓ choose, Enter picks. Any recipe can
+    still be typed in the target field; this only spares remembering image names."""
+    DEFAULT_CSS = """
+    ImagePickerScreen { align: center middle; background: $background 60%; }
+    ImagePickerScreen > Vertical { width: 84; max-width: 96%; height: auto; max-height: 85%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    ImagePickerScreen #image-filter { margin: 1 0 0 0; }
+    ImagePickerScreen OptionList { height: auto; max-height: 24; border: none; background: $surface; padding: 0; }
+    ImagePickerScreen #picker-hint { color: $text-muted; padding: 0 1; }
+    """
+    BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
+                Binding("down", "move(1)", "Down", show=False, priority=True), Binding("up", "move(-1)", "Up", show=False, priority=True),
+                Binding("enter", "choose", "Pick", show=False, priority=True)]
+
+    GROUPS = (("In this project", lambda r: r["configured"] or r["built"]),
+              ("Images in your layers", lambda r: not (r["configured"] or r["built"] or r.get("example"))),
+              ("Examples and test images", lambda r: not (r["configured"] or r["built"]) and r.get("example")))
+
+    def __init__(self, rows: list[dict], current: str = "", profile: str = ""):
+        super().__init__()
+        self.rows, self.current, self.profile = rows, current, profile
+
+    def compose(self):
+        with Vertical():
+            yield Input(placeholder="filter images…", id="image-filter")
+            yield OptionList(id="picker")
+            yield Label("type to filter · ↑ ↓ choose · Enter pick · Esc close · any recipe can be typed in the target field", id="picker-hint")
+
+    def on_mount(self):
+        self.query_one(Vertical).border_title = f"Images in {self.profile}" if self.profile else "Images"
+        self.fill("")
+        self.query_one("#image-filter", Input).focus()
+
+    def fill(self, needle: str):
+        from rich.text import Text
+        from textual.widgets.option_list import Option
+        picker = self.query_one("#picker", OptionList)
+        picker.clear_options()
+        needle = needle.casefold().strip()
+        rows = [r for r in self.rows if needle in f"{r['name']} {r['summary']} {r['layer']}".casefold()]
+        width = max((len(r["name"]) for r in rows), default=0)
+        first = None
+        for title, belongs in self.GROUPS:
+            group = [r for r in rows if belongs(r)]
+            if not group:
+                continue
+            picker.add_option(Option(Text(title.upper(), style="bold dim"), disabled=True))
+            for r in group:
+                label = Text(("● " if r["name"] == self.current else "  "), style="bold")
+                name = Text(r["name"].ljust(width), style="bold")
+                if needle:
+                    name.highlight_words([needle], style="bold underline", case_sensitive=False)
+                label.append(name)
+                if r["configured"]:
+                    label.append("  kas target", style="italic")
+                if r["built"]:
+                    label.append("  built", style="green")
+                if r["layer"]:
+                    label.append("  " + r["layer"], style="dim")
+                if r["summary"]:
+                    label.append("\n    " + r["summary"], style="dim")
+                picker.add_option(Option(label, id=r["name"]))
+                first = first or r["name"]
+        if first is None:
+            message = (f"No image matches “{needle}”. Esc, then type it in the target field: any recipe is a valid target." if needle
+                       else "No image recipes found in this project's layers yet (the scan may still be running).")
+            picker.add_option(Option(Text(message, style="dim"), disabled=True))
+            return
+        index = next((i for i in range(picker.option_count) if picker.get_option_at_index(i).id == (self.current if not needle and any(r["name"] == self.current for r in rows) else first)), 0)
+        picker.highlighted = index
+
+    @on(Input.Changed, "#image-filter")
+    def filtered(self, event):
+        self.fill(event.value)
+
+    def action_move(self, step):
+        picker = self.query_one("#picker", OptionList)
+        picker.action_cursor_down() if step > 0 else picker.action_cursor_up()
+
+    def action_choose(self):
+        picker = self.query_one("#picker", OptionList)
+        if picker.highlighted is not None:
+            option = picker.get_option_at_index(picker.highlighted)
+            if option.id and not option.disabled:
+                self.dismiss(option.id)
+
+    @on(OptionList.OptionSelected, "#picker")
+    def chosen(self, event):
+        self.dismiss(event.option.id)
+
+
 class ConsoleBuildsScreen(ModalScreen):
     """Pick a BitBake console log, including builds started outside Bitloom."""
     DEFAULT_CSS = """

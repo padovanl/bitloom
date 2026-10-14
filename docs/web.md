@@ -31,11 +31,17 @@ ssh -L 8765:127.0.0.1:8765 build-server
 | Key | Section | What it shows |
 | --- | --- | --- |
 | `1` | Builds | History with live spinners, the selected job with an animated progress bar (stripes while running, indeterminate until BitBake reports task counts), streaming output, search with context, errors-only filter, stop, graceful stop and retry. Console builds started outside Bitloom appear under the history. |
-| `2` | Recipes | Recipes, appends, classes, layers and kas files, filtered as you type. |
+| `2` | Recipes | Every layer on the left with its file count (example and selftest layers last); on the right the folders of the selected layer (`recipes-core`, `classes-recipe`…) open on click, with recipe name, version, kind and path. Filter by kind (Recipes, Images, Appends, Classes, kas) and search as you type; **Use as target** puts a recipe in the build field. |
 | `3` | Task logs | `tmp/work/*/temp/log.*` files with search and an errors-only view. Only indexed task logs can be read. |
 | `4` | SBOM & CRA | Release support, SBOM quality gauges, VEX status, vulnerabilities from cve-check, sbom-cve-check and Grype, CRA readiness checks, the regulation timeline and every SBOM option with its explanation. See [SBOM, CRA and releases](compliance.md). |
 | `5` | Studio | Create a product layer, distribution, machine, image, recipe or append with a live preview. See [Studio](studio.md). |
 | `6` | Configuration | Projects (recent, new, clone), guided project setup, health checks, setup checks and literal `local.conf` values. See [Projects](projects.md). |
+
+## Build target
+
+The target field in the top bar is a combobox. Click it, press `t` or `↓` to list the image recipes found in the project's layers: the kas `target:` and images already built come first, example and test images last, each with its layer and `SUMMARY`. Type to filter, `↑`/`↓` to choose, `Enter` to pick, `Enter` again to build. Any other recipe or several space-separated targets can still be typed.
+
+An image recipe is a `.bb` that inherits `core-image` or `image`, or requires another image recipe. Only files with "image" in their path are read, so the list is ready in a few milliseconds.
 
 The build detail has Toaster-style tabs computed from the stored log: **Summary** (errors, warnings, failed tasks), **Sstate reuse**, grouped **Warnings**, observed task **Timings** and **Compare** with the previous run of the same command. A running build shows its ETA next to the task count.
 
@@ -43,7 +49,7 @@ The build detail has Toaster-style tabs computed from the stored log: **Summary*
 
 ## Notifications and animations
 
-The bell button in the top bar turns on browser notifications for builds that end while the tab is in the background; the build service's own desktop and webhook notifications are configured in Configuration (see [Daily helpers](guide.md#daily-helpers)). Toasts slide in for every state change of a job: started, succeeded, failed (with a button that opens the summary) and cancelled. Hover a toast to pause its countdown; failures stay longer. Cards count up, rings and meters animate, the CPU card draws a live sparkline, and views fade in. With the operating system's *reduce motion* setting, all animations are disabled.
+The bell button in the top bar turns on browser notifications for builds that end while the tab is in the background; the build service's own desktop and webhook notifications are configured in Configuration (see [Daily helpers](guide.md#daily-helpers)). New jobs slide in at the top of the history; existing rows update in place, so the list never flickers while a job runs. Toasts slide in for every state change of a job: started, succeeded, failed (with a button that opens the summary) and cancelled. Hover a toast to pause its countdown; failures stay longer. Cards count up, rings and meters animate, the CPU card draws a live sparkline, and views fade in. With the operating system's *reduce motion* setting, all animations are disabled.
 
 ## Keyboard
 

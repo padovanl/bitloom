@@ -18,6 +18,8 @@ class Entry:
     size: int = 0
     modified: float = 0
     detail: str = ""
+    layer: str = ""      # the layer holding it, filled by organize()
+    group: str = ""      # recipes-core, classes, conf… inside that layer
 
 
 def walk_files(root: Path, limit: int = 20000):
@@ -82,6 +84,72 @@ def metadata(profile: Profile) -> list[Entry]:
                 if len(entries) >= 15000:
                     return entries
     return entries
+
+
+def organize(entries: list[Entry]) -> list[Entry]:
+    """Give every entry its layer and the folder it sits in inside that layer (recipes-core, classes…),
+    so 1300 recipes can be browsed by layer and category instead of as one flat list."""
+    layers = {e.path: e.name for e in entries if e.kind == "layer"}
+    for entry in entries:
+        if entry.kind == "layer":
+            entry.layer, entry.group = entry.name, "layer"
+            continue
+        home = next((parent for parent in entry.path.parents if parent in layers), None)
+        if home is None:
+            entry.layer, entry.group = "", "kas" if entry.kind == "yaml" else "workspace"
+            continue
+        entry.layer = layers[home]
+        first = entry.path.relative_to(home).parts[0] if len(entry.path.relative_to(home).parts) > 1 else ""
+        entry.group = first if first.startswith(("recipes-", "classes", "conf", "dynamic-layers")) else first or "top level"
+    return entries
+
+
+def recipe_name(entry: Entry) -> tuple[str, str]:
+    """busybox_1.36.1.bb -> ("busybox", "1.36.1"); core-image-minimal.bb -> ("core-image-minimal", "")."""
+    stem = entry.name.rsplit(".", 1)[0]
+    name, _, version = stem.partition("_")
+    return name, version
+
+
+IMAGE_RE = re.compile(r"^\s*(inherit\s+[^\n#]*(?<![\w-])(core-image|image)(?![\w-])|require\s+\S*image\S*\.bb\b|IMAGE_INSTALL\b)", re.M)
+EXAMPLE_LAYERS = {"meta-selftest", "meta-skeleton"}   # test and example images: offered last
+
+
+def is_image(entry: Entry) -> bool:
+    """An image recipe inherits core-image or image, or requires another image recipe. Only files with
+    "image" in their path are read, so scanning 1300 recipes stays instant."""
+    if entry.kind != "bb" or "image" not in str(entry.path).casefold():
+        return False
+    try:
+        with entry.path.open(errors="replace") as stream:
+            text = stream.read(16384)
+    except OSError:
+        return False
+    return bool(IMAGE_RE.search(text))
+
+
+def images(profile: Profile, entries: list[Entry] | None = None) -> list[dict]:
+    """Image recipes found in the project for the target field: configured targets first, then images
+    already built (tmp/deploy/images), then the rest alphabetically."""
+    entries = organize(entries if entries is not None else metadata(profile))
+    deploy = profile.build_path / "tmp/deploy/images"
+    # <image>-<machine>.rootfs.manifest; machine names have dashes too, so match known names by prefix.
+    manifests = [m.name for m in deploy.glob("*/*.manifest")] if deploy.is_dir() else []
+    found = {}
+    for entry in entries:
+        if is_image(entry):
+            name = recipe_name(entry)[0]
+            values = read_assignments(entry.path)
+            summary = re.sub(r"\$\{[^}]*\}\s*", "", values.get("SUMMARY", "") or values.get("DESCRIPTION", "")).strip()
+            found.setdefault(name, {"name": name, "layer": entry.layer, "summary": summary.strip('"'), "path": str(entry.path)})
+    for target in profile.targets:
+        found.setdefault(target, {"name": target, "layer": "", "summary": "", "path": ""})
+    rank = {name: i for i, name in enumerate(profile.targets)}
+    built = {name for name in found if any(m.startswith(name + "-") for m in manifests)}
+    rows = sorted(found.values(), key=lambda r: (r["name"] not in rank, rank.get(r["name"], 0), r["name"] not in built, r["layer"] in EXAMPLE_LAYERS, r["name"]))
+    for row in rows:
+        row["configured"], row["built"], row["example"] = row["name"] in rank, row["name"] in built, row["layer"] in EXAMPLE_LAYERS
+    return rows
 
 
 def cache_path(profile: Profile, kind: str) -> Path:

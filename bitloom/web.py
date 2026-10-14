@@ -20,7 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .commands import ACTIONS, BY_ID, arguments, invocation, subject
-from .inspectors import console_logs, diagnostics, human_size, metadata, search_log, task_logs
+from .inspectors import console_logs, diagnostics, human_size, images, is_image, metadata, organize, recipe_name, search_log, task_logs
 from .models import Profile, Settings, read_assignments
 
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
@@ -80,6 +80,7 @@ class Dashboard:
         self.token = token or secrets.token_urlsafe(24)
         self.cpu_sample = None
         self.cpu_history: list[float] = []
+        self.metadata_cache: dict[str, tuple[float, list]] = {}
 
     def cpu(self):
         """Host CPU utilisation between two polls (labelled host: a container runtime may differ)."""
@@ -464,12 +465,34 @@ class Dashboard:
         profile = self.profile(query.get("profile", [""])[0])
         return {"checks": [{"status": s, "name": n, "detail": d} for s, n, d in diagnostics(profile)]}
 
+    def entries(self, profile):
+        """The workspace metadata, organised by layer; a walk takes ~0.7 s, so it is reused for 30 s."""
+        import time
+        key = f"{profile.name}:{profile.root}"
+        cached = self.metadata_cache.get(key)
+        if cached and time.monotonic() - cached[0] < 30:
+            return cached[1]
+        entries = organize(metadata(profile))
+        self.metadata_cache[key] = (time.monotonic(), entries)
+        return entries
+
     def metadata(self, query):
         profile = self.profile(query.get("profile", [""])[0])
+        if query.get("fresh", [""])[0]:
+            self.metadata_cache.pop(f"{profile.name}:{profile.root}", None)
         needle = query.get("q", [""])[0].casefold()
-        rows = [{"name": e.name, "kind": e.kind, "path": str(e.path), "detail": e.detail} for e in metadata(profile)
-                if needle in f"{e.name} {e.kind} {e.path}".casefold()]
-        return {"total": len(rows), "rows": rows[:500]}
+        rows = []
+        for e in self.entries(profile):
+            if needle not in f"{e.name} {e.kind} {e.path} {e.layer}".casefold():
+                continue
+            name, version = recipe_name(e) if e.kind in {"bb", "bbappend"} else (e.name, "")
+            rows.append({"name": e.name, "recipe": name, "version": version, "kind": e.kind, "path": str(e.path),
+                         "detail": e.detail, "layer": e.layer, "group": e.group, "image": is_image(e)})
+        return {"total": len(rows), "rows": rows[:5000]}
+
+    def images(self, query):
+        profile = self.profile(query.get("profile", [""])[0])
+        return {"rows": images(profile, self.entries(profile))}
 
     def task_logs(self, query):
         profile = self.profile(query.get("profile", [""])[0])
@@ -563,6 +586,8 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.health(query)
                 elif route == ("GET", "metadata"):
                     payload = dashboard.metadata(query)
+                elif route == ("GET", "images"):
+                    payload = dashboard.images(query)
                 elif route == ("GET", "tasklogs"):
                     payload = dashboard.task_logs(query)
                 elif route == ("GET", "tasklog"):

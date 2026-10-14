@@ -19,7 +19,8 @@ from textual.widgets import Button, DataTable, Footer, Input, Label, Markdown, P
 
 from . import __version__
 from .commands import invocation
-from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, inventory, metadata, prune_cache, search_log, task_logs
+from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, images, inventory, metadata, organize, prune_cache, search_log, task_logs
+from textual.suggester import SuggestFromList
 from .models import Profile, Settings, read_assignments
 from .runner import Job, Runner
 from .toolbar import ToolBar
@@ -73,6 +74,14 @@ def alive(handler):
         if self.screen_stack:
             return handler(self, *args, **kwargs)
     return wrapped
+
+
+ARTIFACT_ROWS = 2000
+
+
+class TargetInput(Input):
+    """The build target: ↓ lists the images found in the project, → accepts the inline suggestion."""
+    BINDINGS = [Binding("down", "app.pick_image", "Images", show=False)]
 
 
 class Workspace(TabbedContent):
@@ -370,6 +379,7 @@ class BitloomApp(App):
         self.last_line = ""
         self.live_lines: list[str] = []
         self.history_rows: dict[str, dict] = {}
+        self.image_rows: list[dict] = []
         self.metadata_rows: dict[str, Entry] = {}
         self.file_rows: dict[str, Entry] = {}
         self.inspection_rows: list[tuple[str, str]] = []
@@ -437,7 +447,7 @@ class BitloomApp(App):
             yield Static(id="clock")
         with Horizontal(id="toolbar"):
             yield Select([(p.name, p.name) for p in self.settings.profiles], value=self.profile.name, allow_blank=False, id="profile")
-            yield Input(placeholder="Build target / recipe  (t to edit · Enter builds)", value=self.profile.targets[0] if self.profile.targets else "", id="target")
+            yield TargetInput(placeholder="Build target / recipe  (t edit · ↓ images · Enter builds)", value=self.profile.targets[0] if self.profile.targets else "", id="target")
             yield Button("▶ Build", variant="primary", id="build")
             yield Button("Commands", id="commands")
             yield Button("Profiles", id="profiles")
@@ -1047,6 +1057,19 @@ class BitloomApp(App):
     def action_focus_target(self):
         self.main_query("#target", Input).focus()
 
+    def action_pick_image(self):
+        """The image recipes found in the project's layers; any other recipe can still be typed."""
+        from .screens import ImagePickerScreen
+        target = self.main_query("#target", Input)
+        self.push_screen(ImagePickerScreen(self.image_rows, target.value.strip(), self.profile.name), self.image_picked)
+
+    def image_picked(self, name):
+        if name:
+            target = self.main_query("#target", Input)
+            target.value = name
+            target.cursor_position = len(name)
+            target.focus()
+
     def action_switch_profile(self):
         from .screens import ProfilePickerScreen
         self.push_screen(ProfilePickerScreen(self.settings), self.profile_picked)
@@ -1259,12 +1282,13 @@ class BitloomApp(App):
             self.config_hints = await asyncio.to_thread(read_assignments, p.build_path / "conf/local.conf")
             self.update_overview()
             entries, logs, health, artifacts = await asyncio.gather(
-                asyncio.to_thread(metadata, p), asyncio.to_thread(task_logs, p),
+                asyncio.to_thread(lambda: organize(metadata(p))), asyncio.to_thread(task_logs, p),
                 asyncio.to_thread(diagnostics, p), asyncio.to_thread(self.find_artifacts, p),
             )
             if p is not self.profile:
                 self.rescan = True  # the profile changed meanwhile: these results are stale
                 return
+            self.image_rows = await asyncio.to_thread(images, p, entries)
             self.apply_scan(p, entries, logs, health, artifacts)
         finally:
             self.scanning = False
@@ -1274,6 +1298,7 @@ class BitloomApp(App):
     def apply_scan(self, p, entries, logs, health, artifacts):
         from .versions import detect_release
         self.entries, self.logs, self.artifacts = entries, logs, artifacts
+        self.main_query("#target", Input).suggester = SuggestFromList([row["name"] for row in self.image_rows], case_sensitive=False)
         self.release = detect_release(p, entries) or self.release
         self.update_overview()
         self.render_metadata()
@@ -1297,22 +1322,33 @@ class BitloomApp(App):
         return sorted(result, key=lambda e: e.modified, reverse=True)
 
     def render_layer_tree(self):
+        """Layers, then the folders inside them (recipes-core, classes…), then the files, with counts:
+        a workspace has 1300+ entries, too many to read as one list."""
         tree = self.main_query("#layer-tree", Tree)
-        expanded={str(n.data.path) for n in tree.root.children if n.data and n.is_expanded}
+        expanded = {str(node.data.path) for node in tree.root.children if node.data and node.is_expanded}
+        expanded |= {str(group.data.path) for node in tree.root.children for group in node.children if group.data and group.is_expanded}
         tree.clear()
         tree.show_root = False
-        layers = sorted((e for e in self.entries if e.kind == "layer"), key=lambda e: len(e.path.parts), reverse=True)
-        nodes = {str(e.path): tree.root.add(e.name, data=e, expand=str(e.path) in expanded) for e in layers}
-        layer_paths = {e.path: e for e in layers}
-        other = tree.root.add("Workspace files", expand=True)
+        layers = {e.name: e for e in self.entries if e.kind == "layer"}
+        content: dict[str, dict[str, list[Entry]]] = {}
         for entry in self.entries:
-            if entry.kind == "layer":
+            if entry.kind != "layer":
+                content.setdefault(entry.layer, {}).setdefault(entry.group, []).append(entry)
+        order = sorted(layers, key=lambda name: (name in {"meta-selftest", "meta-skeleton"}, -sum(map(len, content.get(name, {}).values())), name))
+        for name in order + [""]:
+            groups = content.get(name, {})
+            if not name and not groups:
                 continue
-            layer = next((layer_paths[parent] for parent in entry.path.parents if parent in layer_paths), None)
-            parent = nodes[str(layer.path)] if layer else other
-            parent.add_leaf(entry.name, data=entry)
-        if not other.children:
-            other.remove()
+            layer = layers.get(name) or Entry("Workspace files", "workspace", self.profile.root_path)
+            total = sum(map(len, groups.values()))
+            label = Text.assemble((layer.name, "bold"), (f"  {total}", "dim"))
+            node = tree.root.add(label, data=layer, expand=str(layer.path) in expanded)
+            for group in sorted(groups, key=lambda g: (not g.startswith("recipes-"), g)):
+                path = layer.path / group if name else layer.path
+                child = node.add(Text.assemble(group, (f"  {len(groups[group])}", "dim")), data=Entry(group, "group", path, layer=name, group=group),
+                                 expand=str(path) in expanded)
+                for entry in groups[group]:
+                    child.add_leaf(entry.name, data=entry)
         tree.root.expand()
 
     @on(Tree.NodeSelected, "#layer-tree")
@@ -1320,9 +1356,12 @@ class BitloomApp(App):
     def layer_tree_selected(self, event):
         entry = event.node.data
         if isinstance(entry, Entry):
-            self.main_query("#metadata-search", Input).value = str(entry.path) if entry.kind == "layer" else entry.name
-            path = entry.path / "conf/layer.conf" if entry.kind == "layer" else entry.path
-            self.read_preview(path)
+            # A layer or a folder narrows the table to what it holds; a file opens in the preview.
+            self.main_query("#metadata-search", Input).value = str(entry.path) + "/" if entry.kind in {"layer", "group", "workspace"} else entry.name
+            if entry.kind == "layer":
+                self.read_preview(entry.path / "conf/layer.conf")
+            elif entry.kind not in {"group", "workspace"}:
+                self.read_preview(entry.path)
 
     def render_metadata(self):
         selected=self.selected_entry()
@@ -1353,15 +1392,19 @@ class BitloomApp(App):
         query = self.main_query("#artifact-search", Input).value.casefold()
         table = self.main_query("#artifact-table", DataTable)
         table.clear()
-        for i, e in enumerate(self.artifacts):
-            if query in str(e.path).casefold():
-                key = f"artifact-{i}"
-                self.file_rows[key] = e
-                try:
-                    where = str(e.path.parent.relative_to(self.profile.build_path))
-                except ValueError:
-                    where = str(e.path.parent)
-                table.add_row(middle(e.name, 40), e.kind, human_size(e.size), where, key=key)
+        matches = [(i, e) for i, e in enumerate(self.artifacts) if query in str(e.path).casefold()]
+        # A built workspace holds 10 000+ outputs: list the newest and let search find the rest,
+        # instead of freezing the interface while a table of every file is drawn.
+        build = self.profile.build_path        # resolves the path: once, not once per row
+        for i, e in matches[:ARTIFACT_ROWS]:
+            key = f"artifact-{i}"
+            self.file_rows[key] = e
+            try:
+                where = str(e.path.parent.relative_to(build))
+            except ValueError:
+                where = str(e.path.parent)
+            table.add_row(middle(e.name, 40), e.kind, human_size(e.size), where, key=key)
+        table.border_subtitle = f"newest {ARTIFACT_ROWS} of {len(matches)} · / search for the rest" if len(matches) > ARTIFACT_ROWS else f"{len(matches)} files"
 
     @on(Input.Changed, "#metadata-search")
     @alive

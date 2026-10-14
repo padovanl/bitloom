@@ -15,6 +15,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `↑ ↓  j / k` | Move down / up in tables, trees and logs |
 | `Ctrl+Y / Ctrl+V` | Page up / page down (nano) |
 | `t` | Edit the build target (when no section uses t) |
+| `↓` (in the target field) | List the image recipes found in the project; type to filter, Enter picks. `→` accepts the inline suggestion. Same in the web dashboard. |
 | `b` | Build the target (outside Recipes) |
 | `P` | Switch profile |
 | `F2` | Command center (every operation, filtered as you type) |
