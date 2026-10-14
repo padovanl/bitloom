@@ -4,6 +4,7 @@ This is an executable learning path and acceptance checklist, not a report of te
 
 ## Contents
 
+0. [Guided tour — start here](#0-guided-tour--start-here): every feature on the two built workspaces, no long builds
 1. [Build and installation](#1-build-and-installation)
 2. [Launch with kas-container](#2-launch-with-kas-container)
 3. [UI and profile acceptance](#3-ui-and-profile-acceptance)
@@ -19,7 +20,171 @@ This is an executable learning path and acceptance checklist, not a report of te
 13. [Developer acceptance](#13-developer-acceptance)
 14. [Keyboard, web, compliance, Studio and teams](#14-keyboard-web-compliance-studio-and-teams)
 
-Run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.
+New here? Follow chapter 0 first. For full acceptance, run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.
+
+## 0. Guided tour — start here
+
+One path through every feature of the TUI and the web dashboard, in an order where each step builds on the previous one. It uses the two real kas workspaces that are already built on this machine, so no step runs a long build: the longest optional step takes about nine minutes, everything else seconds. Build times below were measured on these workspaces with a warm sstate cache.
+
+Each step says **what to do** and **what you should see**. If you do not see it, note the step number: that is a bug.
+
+### Before you start (5 minutes)
+
+Two terminals in the repository, both with the project environment:
+
+```bash
+cd ~/…/yoctotui                      # the Bitloom checkout
+source .venv/bin/activate             # fresh checkout: ./setup-demo.sh --dev --no-launch first
+export PATH="$PWD/.venv/bin:$PATH"    # kas-container lives in the venv
+bitloom --state .validation --service-stop   # only if a service from an older Bitloom is still running
+```
+
+The profiles file `.validation/profiles.json` already contains the two built workspaces:
+
+| Profile | Release | Work directory |
+| --- | --- | --- |
+| `kas-scarthgap` | Scarthgap 5.0 LTS (poky) | `~/bitloom-kas-validation` |
+| `kas-wrynose` | Wrynose 6.0 LTS (split repositories, sbom-cve-check enabled) | `~/bitloom-kas-wrynose` |
+
+If the file is missing, recreate it without building: `python tools/prepare_validation.py --release both --work ~/bitloom-kas-validation --wrynose-work ~/bitloom-kas-wrynose`.
+
+Terminal A, the TUI:
+
+```bash
+COLORTERM=truecolor bitloom --config .validation/profiles.json --state .validation
+```
+
+Terminal B, the web dashboard (same service, same history):
+
+```bash
+bitloom --web --config .validation/profiles.json --state .validation --port 9000
+```
+
+Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side by side for the rest of the tour.
+
+### Stage 1 — Find your way around (no builds, 5 minutes)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 1.1 | TUI: press `?`, scroll, `Esc`. | The keyboard reference: global keys, every section's letters, nano keys for editors. |
+| 1.2 | Press `1` … `9`, `0`, then `[` and `]`. | Each section opens; the rail marks it; the footer shows the section's own letters. |
+| 1.3 | Press `P`, choose `kas-scarthgap`, then `P` again and `kas-wrynose`. | The top bar shows *scarthgap 5.0 LTS* then *wrynose 6.0 LTS* within a second. |
+| 1.4 | Web: press `1` … `6`, then `?`. | The six views fade in; the help lists the web keys. |
+| 1.5 | Web: `Ctrl+K`, type `scarth`, Enter; then `Ctrl+K`, `wry`, Enter. | The palette switches profile; the release chip changes. |
+| 1.6 | TUI: `F7`, try *Linen* and *High Contrast*, `Esc`. | The palette previews live; `Esc` restores yours. |
+
+### Stage 2 — Inspect the real workspace (no builds, 10 minutes, profile `kas-wrynose`)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 2.1 | `2` Recipes. Type `busybox` in the search, Enter on the recipe. | About 1300 entries (layers, recipes, appends, classes, kas files only); the preview shows the recipe; Enter opens it read-only in the editor (`^X` closes). |
+| 2.2 | `t` (tree), expand `meta`. | Layers with their recipes; no BitBake test fixtures, no CI YAML. |
+| 2.3 | `3` Task logs, filter `do_compile`, open one. | Thousands of task logs; the log opens with search (`^W`). |
+| 2.4 | `5` Caches, `s` (scan), then `w` (tmp/work). | Downloads: about 1000 files and 14 GiB, `.done` markers hidden and counted. tmp/work: about 60 GiB per recipe, largest first, with rm_work advice (≈7 s). |
+| 2.5 | `6` Artifacts, then `m`, `s`, `i`. | Image matrix per MACHINE; SBOM quality (SPDX 3.0.1, 37 installed packages, PURL/licence 100%); rootfs inventory of the newest image. |
+| 2.6 | `1` Builds, `c` (console builds). | Every BitBake run of this build directory, also those started outside Bitloom, each marked success, failed or interrupted. Enter opens one in Builds. |
+| 2.7 | Web: `2` Recipes, `3` Task logs, `4` SBOM & CRA. | The same data in the browser; the SBOM gauges animate. |
+
+### Stage 3 — First real jobs, followed in both interfaces (≈1 minute of builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 3.1 | `9`, `o` (notifications): tick *success* and *failed*, set the minimum to `0`, `^O`. | Saved; from now on every job end raises a desktop notification (a Windows notification on WSL). |
+| 3.2 | TUI: `t`, type `busybox`, Enter. | *Build target · busybox* queued and done in ≈10 s (nothing to rebuild); toast/notification *Completed*. The web history shows the same job at once. |
+| 3.3 | `F2`, type `force`, choose *Force compile*, Enter (target `busybox`). | ≈45 s: live output, task count `N/M`, active BitBake tasks, ETA once enough tasks ran; the web progress bar is striped and moving. |
+| 3.4 | When it ends: `1`, select it, `d` (compare). | Comparison with the previous force compile, if any; otherwise with the closest earlier run. Run 3.3 again and press `d`: durations and task counts side by side. |
+| 3.5 | `e` (errors only), `/` search `busybox`, `x` (export), `i` (summary). | Filtered views of the same log; the export lands in `.validation/exports`. |
+| 3.6 | Web: select the job, tabs *Summary*, *Sstate reuse*, *Warnings*, *Timings*, *Compare* (`u o w m d`). | Toaster-style reports computed from the log. |
+
+### Stage 4 — Failures and their diagnosis (≈10 seconds; optional real story ≈9 minutes)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 4.1 | `t`, type `no-such-recipe`, Enter. | Fails in ≈5 s; toast *Build failed*; the web raises the same failure toast. |
+| 4.2 | `7` Analysis, type *Failure diagnosis*, `a`. | Category *metadata*, the root-cause lines (*Nothing PROVIDES*) and the next step. |
+| 4.3 | `t`, type `a; id`, Enter. | Refused before queueing: *Not a BitBake target*. |
+| 4.4 | Optional, Wrynose with sbom-cve-check: after 3.3, build `core-image-minimal` (`t`, Enter). | ≈4.5 min, then `do_sbom_cve_check` fails. `f` opens the failed task log; Analysis → *Failure diagnosis* says *stale SBOM* and gives the fix. |
+| 4.5 | Optional fix: `F2`, *Custom command*, `bitbake core-image-minimal -C create_image_sbom_spdx`, Enter. | ≈3.5 min, success. `6`, `v` then shows the new CVE report. |
+
+### Stage 5 — Stop, retry, detach (≈1 minute)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 5.1 | Start the force compile again (3.3); while it runs press `s`. | The stop dialog: *Graceful stop* is disabled with the reason (kas runtimes expose no BitBake client to signal); *Let finish* leaves it running. |
+| 5.2 | Choose *Force + recovery*. | The job's own container is stopped and the job ends *cancelled*; recovery offers `bitbake -c clean busybox` for the recipe that was running. Accept or skip it. |
+| 5.3 | `r` (retry). | The same command queued again with its original profile. |
+| 5.4 | While it runs: `Ctrl+Q`, then launch the TUI again (terminal A command). | The job kept running in the service; the TUI reconnects to it and its output. |
+| 5.5 | Web: on a running job, hover *Graceful*, then press `s`. | *Graceful* is disabled with the same reason; `s` asks for confirmation and stops the job. |
+
+### Stage 6 — Developer workbench (≈2 minutes of probes in the container)
+
+`8` Developer. Choose the view with `v`, set the field, press `i` (Inspect). Each probe runs inside the kas container.
+
+| # | View and input | You should see |
+| --- | --- | --- |
+| 6.1 | *Variable history*, recipe `busybox`, variable `SUMMARY`. | ≈8 s: every assignment of SUMMARY with file and line (`/work/openembedded-core/…`). |
+| 6.2 | *Recipe context*. | ≈13 s: PN, PV, FILE, DL_DIR and the rest of the evaluated recipe. |
+| 6.3 | *Runtime capabilities*. | ≈25 s: bitbake, devtool, runqemu… found or unavailable in the container. |
+| 6.4 | *Image regressions*, field blank. | ≈20 s: the build target's installed packages and sizes from buildhistory. `c` captures a baseline; after a rebuild `d` compares. |
+| 6.5 | *Build performance*. | The slowest tasks of the latest real build (sbom-cve-check database fetches first). |
+| 6.6 | *Kernel fragments* with the field blank. | A clear message asking for a `.cfg` path (no traceback). |
+| 6.7 | *Runtime browser*, Enter on `build`, then on a file. | Directory listing inside the container; files open in the runtime editor. |
+
+### Stage 7 — Studio: your own layer and recipe (≈1 minute of build)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 7.1 | `2`, `c` (Studio), choose *Application recipe*. Layer *new layer…* `meta-tour`, name `tour-hello`, build system `make`. | The preview lists every file: layer.conf, licence, Makefile, `tour-hello_1.0.bb`. |
+| 7.2 | `^O` (create, use for this profile). | Files written; `kas-studio-meta-tour.yml` appended to the profile's kas files; target set to `tour-hello`. |
+| 7.3 | `b`. | ≈45 s on Wrynose (≈75 s on Scarthgap): the recipe builds; the new layer appears in Recipes. |
+| 7.4 | Web: `5` Studio, *Distribution*. | Live preview of `conf/distro/acme.conf`; nothing is written until *Create files*. |
+| 7.5 | Clean up when done: `F4`, remove `:kas-studio-meta-tour.yml` from `kas_file`, `^O`; delete `meta-tour/` and the overlay. | The profile builds the plain image again. |
+
+### Stage 8 — SBOM, CVE and CRA (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8.1 | `6`, `v`. | ≈1800 unpatched of ≈21500 assessed, critical first; detail with CVSS vector and link. |
+| 8.2 | `/` type `openssl`; `r` on a row: owner, reason, expiry `^O`. | Filtered list; the review appears in the *Review* column. |
+| 8.3 | `x`, choose *Markdown report*; repeat with *HTML*, *SARIF*. | Files in `.validation/exports`: the Markdown links every CVE to NVD, CVE.org and OSV; open the HTML in a browser and print it to PDF. |
+| 8.4 | `9`, `c` (CRA readiness). | Every check from real evidence; *Unpatched vulnerabilities* warns; dispositions now count your review. |
+| 8.5 | `9`, `s` (SBOM settings). Move through the options; `Esc` (do not apply). | Each option explains itself; *Generate SPDX SBOMs* shows *on (default)* on Wrynose; on `kas-scarthgap` the Wrynose-only options show *n/a*. |
+| 8.6 | `P` → `kas-scarthgap`, `F2`, type `sbom-cve`. | *(not in this release)* with the Scarthgap alternative (cve-check). |
+| 8.7 | Web: `4`, Export menu → *Markdown report*. | The same report downloads. |
+
+### Stage 9 — Projects, setup and notifications (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 9.1 | `9`, `w` (projects). | Recent projects; the active one marked *active*. |
+| 9.2 | `o`, enter `~/bitloom-kas-wrynose`… or any folder with a kas file. | The guided setup proposes profiles (kas file, launcher scripts, Poky checkouts) with evidence; `Esc` without saving. |
+| 9.3 | `n` (new project). | Release, MACHINE, image and runtime fields with a live preview; `Esc` without creating. |
+| 9.4 | `9`, `o`, `^T`. | A test notification arrives. |
+
+### Stage 10 — Web extras (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 10.1 | The bell button, allow notifications; switch to another tab and run a short build from the TUI. | A browser notification when it ends. |
+| 10.2 | Narrow the window to phone width (or the browser's device mode). | One column; the navigation becomes a scrolling bar; nothing scrolls sideways. |
+| 10.3 | Switch the operating system to light theme. | The dashboard follows it. |
+
+### Stage 11 — Command line and CI (≈30 seconds)
+
+```bash
+bitloom --state .validation --service-stop        # after closing the TUI and the web server
+bitloom --config .validation/profiles.json --state .validation --ci build:busybox --profile kas-wrynose \
+  --junit /tmp/results.xml --summary /tmp/summary.json        # ≈10 s, PASS line, JUnit and JSON written
+bitloom --config .validation/profiles.json --state .validation --vulns --min-cvss 9 --fail-on-unpatched; echo "exit $?"   # exit 2
+bitloom --config .validation/profiles.json --state .validation --vulns --format md -o /tmp/vulns.md
+bitloom --config .validation/profiles.json --cra; bitloom --config .validation/profiles.json --doctor --network
+```
+
+`--ci` runs its own serial queue on the state directory, so first close the web server (`Ctrl+C`) and the TUI (`Ctrl+Q`) and stop the idle service: `bitloom --state .validation --service-stop`. The other commands only read and work at any time.
+
+### Stage 12 — Finish
+
+If they are still open, close the web server with `Ctrl+C` and the TUI with `Ctrl+Q`, then `bitloom --state .validation --service-stop`. Builds already done stay in the work directories; nothing else needs cleaning except the Studio files of step 7.5.
 
 ## 1. Build and installation
 

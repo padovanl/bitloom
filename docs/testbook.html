@@ -20,7 +20,8 @@
 <article class="doc"><h1 id="bitloom-manual-testbook">Bitloom manual testbook</h1>
 <p>This is an executable learning path and acceptance checklist, not a report of tests already performed. Run it yourself against your environment. All project text and evidence should remain in English. Record PASS, FAIL or N/A with the reason and a log/screenshot. Do not count an unavailable device, class or runtime as a successful test.</p>
 <h2 id="contents">Contents<a class="anchor" href="#contents" aria-label="Link to this section">#</a></h2>
-<ol>
+<ol start="0">
+<li><a href="#0-guided-tour--start-here">Guided tour — start here</a>: every feature on the two built workspaces, no long builds</li>
 <li><a href="#1-build-and-installation">Build and installation</a></li>
 <li><a href="#2-launch-with-kas-container">Launch with kas-container</a></li>
 <li><a href="#3-ui-and-profile-acceptance">UI and profile acceptance</a></li>
@@ -36,7 +37,454 @@
 <li><a href="#13-developer-acceptance">Developer acceptance</a></li>
 <li><a href="#14-keyboard-web-compliance-studio-and-teams">Keyboard, web, compliance, Studio and teams</a></li>
 </ol>
-<p>Run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.</p>
+<p>New here? Follow chapter 0 first. For full acceptance, run chapters 1–5 first. Image builds, SDKs, security databases and hardware tests take substantially longer than UI/navigation tests. Chapter 11 is the command coverage ledger; it references fixtures and prerequisites from the preceding chapters.</p>
+<h2 id="0-guided-tour--start-here">0. Guided tour — start here<a class="anchor" href="#0-guided-tour--start-here" aria-label="Link to this section">#</a></h2>
+<p>One path through every feature of the TUI and the web dashboard, in an order where each step builds on the previous one. It uses the two real kas workspaces that are already built on this machine, so no step runs a long build: the longest optional step takes about nine minutes, everything else seconds. Build times below were measured on these workspaces with a warm sstate cache.</p>
+<p>Each step says <strong>what to do</strong> and <strong>what you should see</strong>. If you do not see it, note the step number: that is a bug.</p>
+<h3 id="before-you-start-5-minutes">Before you start (5 minutes)<a class="anchor" href="#before-you-start-5-minutes" aria-label="Link to this section">#</a></h3>
+<p>Two terminals in the repository, both with the project environment:</p>
+<pre><code class="language-bash">cd ~/…/yoctotui                      # the Bitloom checkout
+source .venv/bin/activate             # fresh checkout: ./setup-demo.sh --dev --no-launch first
+export PATH=&quot;$PWD/.venv/bin:$PATH&quot;    # kas-container lives in the venv
+bitloom --state .validation --service-stop   # only if a service from an older Bitloom is still running
+</code></pre>
+<p>The profiles file <code>.validation/profiles.json</code> already contains the two built workspaces:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Release</th>
+<th>Work directory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kas-scarthgap</code></td>
+<td>Scarthgap 5.0 LTS (poky)</td>
+<td><code>~/bitloom-kas-validation</code></td>
+</tr>
+<tr>
+<td><code>kas-wrynose</code></td>
+<td>Wrynose 6.0 LTS (split repositories, sbom-cve-check enabled)</td>
+<td><code>~/bitloom-kas-wrynose</code></td>
+</tr>
+</tbody>
+</table>
+<p>If the file is missing, recreate it without building: <code>python tools/prepare_validation.py --release both --work ~/bitloom-kas-validation --wrynose-work ~/bitloom-kas-wrynose</code>.</p>
+<p>Terminal A, the TUI:</p>
+<pre><code class="language-bash">COLORTERM=truecolor bitloom --config .validation/profiles.json --state .validation
+</code></pre>
+<p>Terminal B, the web dashboard (same service, same history):</p>
+<pre><code class="language-bash">bitloom --web --config .validation/profiles.json --state .validation --port 9000
+</code></pre>
+<p>Open the printed <code>http://127.0.0.1:9000/#token=…</code> in a browser. Keep both side by side for the rest of the tour.</p>
+<h3 id="stage-1--find-your-way-around-no-builds-5-minutes">Stage 1 — Find your way around (no builds, 5 minutes)<a class="anchor" href="#stage-1--find-your-way-around-no-builds-5-minutes" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.1</td>
+<td>TUI: press <code>?</code>, scroll, <code>Esc</code>.</td>
+<td>The keyboard reference: global keys, every section's letters, nano keys for editors.</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Press <code>1</code> … <code>9</code>, <code>0</code>, then <code>[</code> and <code>]</code>.</td>
+<td>Each section opens; the rail marks it; the footer shows the section's own letters.</td>
+</tr>
+<tr>
+<td>1.3</td>
+<td>Press <code>P</code>, choose <code>kas-scarthgap</code>, then <code>P</code> again and <code>kas-wrynose</code>.</td>
+<td>The top bar shows <em>scarthgap 5.0 LTS</em> then <em>wrynose 6.0 LTS</em> within a second.</td>
+</tr>
+<tr>
+<td>1.4</td>
+<td>Web: press <code>1</code> … <code>6</code>, then <code>?</code>.</td>
+<td>The six views fade in; the help lists the web keys.</td>
+</tr>
+<tr>
+<td>1.5</td>
+<td>Web: <code>Ctrl+K</code>, type <code>scarth</code>, Enter; then <code>Ctrl+K</code>, <code>wry</code>, Enter.</td>
+<td>The palette switches profile; the release chip changes.</td>
+</tr>
+<tr>
+<td>1.6</td>
+<td>TUI: <code>F7</code>, try <em>Linen</em> and <em>High Contrast</em>, <code>Esc</code>.</td>
+<td>The palette previews live; <code>Esc</code> restores yours.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-2--inspect-the-real-workspace-no-builds-10-minutes-profile-kas-wrynose">Stage 2 — Inspect the real workspace (no builds, 10 minutes, profile <code>kas-wrynose</code>)<a class="anchor" href="#stage-2--inspect-the-real-workspace-no-builds-10-minutes-profile-kas-wrynose" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2.1</td>
+<td><code>2</code> Recipes. Type <code>busybox</code> in the search, Enter on the recipe.</td>
+<td>About 1300 entries (layers, recipes, appends, classes, kas files only); the preview shows the recipe; Enter opens it read-only in the editor (<code>^X</code> closes).</td>
+</tr>
+<tr>
+<td>2.2</td>
+<td><code>t</code> (tree), expand <code>meta</code>.</td>
+<td>Layers with their recipes; no BitBake test fixtures, no CI YAML.</td>
+</tr>
+<tr>
+<td>2.3</td>
+<td><code>3</code> Task logs, filter <code>do_compile</code>, open one.</td>
+<td>Thousands of task logs; the log opens with search (<code>^W</code>).</td>
+</tr>
+<tr>
+<td>2.4</td>
+<td><code>5</code> Caches, <code>s</code> (scan), then <code>w</code> (tmp/work).</td>
+<td>Downloads: about 1000 files and 14 GiB, <code>.done</code> markers hidden and counted. tmp/work: about 60 GiB per recipe, largest first, with rm_work advice (≈7 s).</td>
+</tr>
+<tr>
+<td>2.5</td>
+<td><code>6</code> Artifacts, then <code>m</code>, <code>s</code>, <code>i</code>.</td>
+<td>Image matrix per MACHINE; SBOM quality (SPDX 3.0.1, 37 installed packages, PURL/licence 100%); rootfs inventory of the newest image.</td>
+</tr>
+<tr>
+<td>2.6</td>
+<td><code>1</code> Builds, <code>c</code> (console builds).</td>
+<td>Every BitBake run of this build directory, also those started outside Bitloom, each marked success, failed or interrupted. Enter opens one in Builds.</td>
+</tr>
+<tr>
+<td>2.7</td>
+<td>Web: <code>2</code> Recipes, <code>3</code> Task logs, <code>4</code> SBOM &amp; CRA.</td>
+<td>The same data in the browser; the SBOM gauges animate.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-3--first-real-jobs-followed-in-both-interfaces-1-minute-of-builds">Stage 3 — First real jobs, followed in both interfaces (≈1 minute of builds)<a class="anchor" href="#stage-3--first-real-jobs-followed-in-both-interfaces-1-minute-of-builds" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3.1</td>
+<td><code>9</code>, <code>o</code> (notifications): tick <em>success</em> and <em>failed</em>, set the minimum to <code>0</code>, <code>^O</code>.</td>
+<td>Saved; from now on every job end raises a desktop notification (a Windows notification on WSL).</td>
+</tr>
+<tr>
+<td>3.2</td>
+<td>TUI: <code>t</code>, type <code>busybox</code>, Enter.</td>
+<td><em>Build target · busybox</em> queued and done in ≈10 s (nothing to rebuild); toast/notification <em>Completed</em>. The web history shows the same job at once.</td>
+</tr>
+<tr>
+<td>3.3</td>
+<td><code>F2</code>, type <code>force</code>, choose <em>Force compile</em>, Enter (target <code>busybox</code>).</td>
+<td>≈45 s: live output, task count <code>N/M</code>, active BitBake tasks, ETA once enough tasks ran; the web progress bar is striped and moving.</td>
+</tr>
+<tr>
+<td>3.4</td>
+<td>When it ends: <code>1</code>, select it, <code>d</code> (compare).</td>
+<td>Comparison with the previous force compile, if any; otherwise with the closest earlier run. Run 3.3 again and press <code>d</code>: durations and task counts side by side.</td>
+</tr>
+<tr>
+<td>3.5</td>
+<td><code>e</code> (errors only), <code>/</code> search <code>busybox</code>, <code>x</code> (export), <code>i</code> (summary).</td>
+<td>Filtered views of the same log; the export lands in <code>.validation/exports</code>.</td>
+</tr>
+<tr>
+<td>3.6</td>
+<td>Web: select the job, tabs <em>Summary</em>, <em>Sstate reuse</em>, <em>Warnings</em>, <em>Timings</em>, <em>Compare</em> (<code>u o w m d</code>).</td>
+<td>Toaster-style reports computed from the log.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-4--failures-and-their-diagnosis-10-seconds-optional-real-story-9-minutes">Stage 4 — Failures and their diagnosis (≈10 seconds; optional real story ≈9 minutes)<a class="anchor" href="#stage-4--failures-and-their-diagnosis-10-seconds-optional-real-story-9-minutes" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4.1</td>
+<td><code>t</code>, type <code>no-such-recipe</code>, Enter.</td>
+<td>Fails in ≈5 s; toast <em>Build failed</em>; the web raises the same failure toast.</td>
+</tr>
+<tr>
+<td>4.2</td>
+<td><code>7</code> Analysis, type <em>Failure diagnosis</em>, <code>a</code>.</td>
+<td>Category <em>metadata</em>, the root-cause lines (<em>Nothing PROVIDES</em>) and the next step.</td>
+</tr>
+<tr>
+<td>4.3</td>
+<td><code>t</code>, type <code>a; id</code>, Enter.</td>
+<td>Refused before queueing: <em>Not a BitBake target</em>.</td>
+</tr>
+<tr>
+<td>4.4</td>
+<td>Optional, Wrynose with sbom-cve-check: after 3.3, build <code>core-image-minimal</code> (<code>t</code>, Enter).</td>
+<td>≈4.5 min, then <code>do_sbom_cve_check</code> fails. <code>f</code> opens the failed task log; Analysis → <em>Failure diagnosis</em> says <em>stale SBOM</em> and gives the fix.</td>
+</tr>
+<tr>
+<td>4.5</td>
+<td>Optional fix: <code>F2</code>, <em>Custom command</em>, <code>bitbake core-image-minimal -C create_image_sbom_spdx</code>, Enter.</td>
+<td>≈3.5 min, success. <code>6</code>, <code>v</code> then shows the new CVE report.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-5--stop-retry-detach-1-minute">Stage 5 — Stop, retry, detach (≈1 minute)<a class="anchor" href="#stage-5--stop-retry-detach-1-minute" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5.1</td>
+<td>Start the force compile again (3.3); while it runs press <code>s</code>.</td>
+<td>The stop dialog: <em>Graceful stop</em> is disabled with the reason (kas runtimes expose no BitBake client to signal); <em>Let finish</em> leaves it running.</td>
+</tr>
+<tr>
+<td>5.2</td>
+<td>Choose <em>Force + recovery</em>.</td>
+<td>The job's own container is stopped and the job ends <em>cancelled</em>; recovery offers <code>bitbake -c clean busybox</code> for the recipe that was running. Accept or skip it.</td>
+</tr>
+<tr>
+<td>5.3</td>
+<td><code>r</code> (retry).</td>
+<td>The same command queued again with its original profile.</td>
+</tr>
+<tr>
+<td>5.4</td>
+<td>While it runs: <code>Ctrl+Q</code>, then launch the TUI again (terminal A command).</td>
+<td>The job kept running in the service; the TUI reconnects to it and its output.</td>
+</tr>
+<tr>
+<td>5.5</td>
+<td>Web: on a running job, hover <em>Graceful</em>, then press <code>s</code>.</td>
+<td><em>Graceful</em> is disabled with the same reason; <code>s</code> asks for confirmation and stops the job.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-6--developer-workbench-2-minutes-of-probes-in-the-container">Stage 6 — Developer workbench (≈2 minutes of probes in the container)<a class="anchor" href="#stage-6--developer-workbench-2-minutes-of-probes-in-the-container" aria-label="Link to this section">#</a></h3>
+<p><code>8</code> Developer. Choose the view with <code>v</code>, set the field, press <code>i</code> (Inspect). Each probe runs inside the kas container.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>View and input</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6.1</td>
+<td><em>Variable history</em>, recipe <code>busybox</code>, variable <code>SUMMARY</code>.</td>
+<td>≈8 s: every assignment of SUMMARY with file and line (<code>/work/openembedded-core/…</code>).</td>
+</tr>
+<tr>
+<td>6.2</td>
+<td><em>Recipe context</em>.</td>
+<td>≈13 s: PN, PV, FILE, DL_DIR and the rest of the evaluated recipe.</td>
+</tr>
+<tr>
+<td>6.3</td>
+<td><em>Runtime capabilities</em>.</td>
+<td>≈25 s: bitbake, devtool, runqemu… found or unavailable in the container.</td>
+</tr>
+<tr>
+<td>6.4</td>
+<td><em>Image regressions</em>, field blank.</td>
+<td>≈20 s: the build target's installed packages and sizes from buildhistory. <code>c</code> captures a baseline; after a rebuild <code>d</code> compares.</td>
+</tr>
+<tr>
+<td>6.5</td>
+<td><em>Build performance</em>.</td>
+<td>The slowest tasks of the latest real build (sbom-cve-check database fetches first).</td>
+</tr>
+<tr>
+<td>6.6</td>
+<td><em>Kernel fragments</em> with the field blank.</td>
+<td>A clear message asking for a <code>.cfg</code> path (no traceback).</td>
+</tr>
+<tr>
+<td>6.7</td>
+<td><em>Runtime browser</em>, Enter on <code>build</code>, then on a file.</td>
+<td>Directory listing inside the container; files open in the runtime editor.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-7--studio-your-own-layer-and-recipe-1-minute-of-build">Stage 7 — Studio: your own layer and recipe (≈1 minute of build)<a class="anchor" href="#stage-7--studio-your-own-layer-and-recipe-1-minute-of-build" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7.1</td>
+<td><code>2</code>, <code>c</code> (Studio), choose <em>Application recipe</em>. Layer <em>new layer…</em> <code>meta-tour</code>, name <code>tour-hello</code>, build system <code>make</code>.</td>
+<td>The preview lists every file: layer.conf, licence, Makefile, <code>tour-hello_1.0.bb</code>.</td>
+</tr>
+<tr>
+<td>7.2</td>
+<td><code>^O</code> (create, use for this profile).</td>
+<td>Files written; <code>kas-studio-meta-tour.yml</code> appended to the profile's kas files; target set to <code>tour-hello</code>.</td>
+</tr>
+<tr>
+<td>7.3</td>
+<td><code>b</code>.</td>
+<td>≈45 s on Wrynose (≈75 s on Scarthgap): the recipe builds; the new layer appears in Recipes.</td>
+</tr>
+<tr>
+<td>7.4</td>
+<td>Web: <code>5</code> Studio, <em>Distribution</em>.</td>
+<td>Live preview of <code>conf/distro/acme.conf</code>; nothing is written until <em>Create files</em>.</td>
+</tr>
+<tr>
+<td>7.5</td>
+<td>Clean up when done: <code>F4</code>, remove <code>:kas-studio-meta-tour.yml</code> from <code>kas_file</code>, <code>^O</code>; delete <code>meta-tour/</code> and the overlay.</td>
+<td>The profile builds the plain image again.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-8--sbom-cve-and-cra-no-builds">Stage 8 — SBOM, CVE and CRA (no builds)<a class="anchor" href="#stage-8--sbom-cve-and-cra-no-builds" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8.1</td>
+<td><code>6</code>, <code>v</code>.</td>
+<td>≈1800 unpatched of ≈21500 assessed, critical first; detail with CVSS vector and link.</td>
+</tr>
+<tr>
+<td>8.2</td>
+<td><code>/</code> type <code>openssl</code>; <code>r</code> on a row: owner, reason, expiry <code>^O</code>.</td>
+<td>Filtered list; the review appears in the <em>Review</em> column.</td>
+</tr>
+<tr>
+<td>8.3</td>
+<td><code>x</code>, choose <em>Markdown report</em>; repeat with <em>HTML</em>, <em>SARIF</em>.</td>
+<td>Files in <code>.validation/exports</code>: the Markdown links every CVE to NVD, CVE.org and OSV; open the HTML in a browser and print it to PDF.</td>
+</tr>
+<tr>
+<td>8.4</td>
+<td><code>9</code>, <code>c</code> (CRA readiness).</td>
+<td>Every check from real evidence; <em>Unpatched vulnerabilities</em> warns; dispositions now count your review.</td>
+</tr>
+<tr>
+<td>8.5</td>
+<td><code>9</code>, <code>s</code> (SBOM settings). Move through the options; <code>Esc</code> (do not apply).</td>
+<td>Each option explains itself; <em>Generate SPDX SBOMs</em> shows <em>on (default)</em> on Wrynose; on <code>kas-scarthgap</code> the Wrynose-only options show <em>n/a</em>.</td>
+</tr>
+<tr>
+<td>8.6</td>
+<td><code>P</code> → <code>kas-scarthgap</code>, <code>F2</code>, type <code>sbom-cve</code>.</td>
+<td><em>(not in this release)</em> with the Scarthgap alternative (cve-check).</td>
+</tr>
+<tr>
+<td>8.7</td>
+<td>Web: <code>4</code>, Export menu → <em>Markdown report</em>.</td>
+<td>The same report downloads.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-9--projects-setup-and-notifications-no-builds">Stage 9 — Projects, setup and notifications (no builds)<a class="anchor" href="#stage-9--projects-setup-and-notifications-no-builds" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9.1</td>
+<td><code>9</code>, <code>w</code> (projects).</td>
+<td>Recent projects; the active one marked <em>active</em>.</td>
+</tr>
+<tr>
+<td>9.2</td>
+<td><code>o</code>, enter <code>~/bitloom-kas-wrynose</code>… or any folder with a kas file.</td>
+<td>The guided setup proposes profiles (kas file, launcher scripts, Poky checkouts) with evidence; <code>Esc</code> without saving.</td>
+</tr>
+<tr>
+<td>9.3</td>
+<td><code>n</code> (new project).</td>
+<td>Release, MACHINE, image and runtime fields with a live preview; <code>Esc</code> without creating.</td>
+</tr>
+<tr>
+<td>9.4</td>
+<td><code>9</code>, <code>o</code>, <code>^T</code>.</td>
+<td>A test notification arrives.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-10--web-extras-no-builds">Stage 10 — Web extras (no builds)<a class="anchor" href="#stage-10--web-extras-no-builds" aria-label="Link to this section">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10.1</td>
+<td>The bell button, allow notifications; switch to another tab and run a short build from the TUI.</td>
+<td>A browser notification when it ends.</td>
+</tr>
+<tr>
+<td>10.2</td>
+<td>Narrow the window to phone width (or the browser's device mode).</td>
+<td>One column; the navigation becomes a scrolling bar; nothing scrolls sideways.</td>
+</tr>
+<tr>
+<td>10.3</td>
+<td>Switch the operating system to light theme.</td>
+<td>The dashboard follows it.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage-11--command-line-and-ci-30-seconds">Stage 11 — Command line and CI (≈30 seconds)<a class="anchor" href="#stage-11--command-line-and-ci-30-seconds" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">bitloom --state .validation --service-stop        # after closing the TUI and the web server
+bitloom --config .validation/profiles.json --state .validation --ci build:busybox --profile kas-wrynose \
+  --junit /tmp/results.xml --summary /tmp/summary.json        # ≈10 s, PASS line, JUnit and JSON written
+bitloom --config .validation/profiles.json --state .validation --vulns --min-cvss 9 --fail-on-unpatched; echo &quot;exit $?&quot;   # exit 2
+bitloom --config .validation/profiles.json --state .validation --vulns --format md -o /tmp/vulns.md
+bitloom --config .validation/profiles.json --cra; bitloom --config .validation/profiles.json --doctor --network
+</code></pre>
+<p><code>--ci</code> runs its own serial queue on the state directory, so first close the web server (<code>Ctrl+C</code>) and the TUI (<code>Ctrl+Q</code>) and stop the idle service: <code>bitloom --state .validation --service-stop</code>. The other commands only read and work at any time.</p>
+<h3 id="stage-12--finish">Stage 12 — Finish<a class="anchor" href="#stage-12--finish" aria-label="Link to this section">#</a></h3>
+<p>If they are still open, close the web server with <code>Ctrl+C</code> and the TUI with <code>Ctrl+Q</code>, then <code>bitloom --state .validation --service-stop</code>. Builds already done stay in the work directories; nothing else needs cleaning except the Studio files of step 7.5.</p>
 <h2 id="1-build-and-installation">1. Build and installation<a class="anchor" href="#1-build-and-installation" aria-label="Link to this section">#</a></h2>
 <h3 id="b01--fresh-checkout-and-demo">B01 — Fresh checkout and demo<a class="anchor" href="#b01--fresh-checkout-and-demo" aria-label="Link to this section">#</a></h3>
 <p>Requires Linux/WSL2, Bash, Python 3.10+ with venv support and internet access.</p>
@@ -1328,7 +1776,7 @@ chmod +x /tmp/launcher.sh
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="validation.html"><small>Previous</small>Validation</a><a class="next" href="roadmap.html"><small>Next</small>Research map</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/README.testbook.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#contents">Contents</a><a href="#1-build-and-installation">1. Build and installation</a><a href="#b01--fresh-checkout-and-demo" class="sub">B01 — Fresh checkout and demo</a><a href="#b02--wheel-and-source-archive" class="sub">B02 — Wheel and source archive</a><a href="#b03--debian-release-package" class="sub">B03 — Debian release package</a><a href="#2-launch-with-kas-container">2. Launch with kas-container</a><a href="#k01--reuse-this-checkouts-verified-build" class="sub">K01 — Reuse this checkout&#x27;s verified build</a><a href="#k02--prepare-an-isolated-manual-test-profile" class="sub">K02 — Prepare an isolated manual-test profile</a><a href="#k03--checkout-and-validate-configuration" class="sub">K03 — Checkout and validate configuration</a><a href="#k04--automated-real-developer-fixture-setup" class="sub">K04 — Automated real Developer fixture setup</a><a href="#3-ui-and-profile-acceptance">3. UI and profile acceptance</a><a href="#4-build-downloads-and-recipe-tasks">4. Build, downloads and recipe tasks</a><a href="#r01--incremental-recipe-and-image-builds" class="sub">R01 — Incremental recipe and image builds</a><a href="#r02--cleanup-behavior" class="sub">R02 — Cleanup behavior</a><a href="#r03--fetch-and-download-audit" class="sub">R03 — Fetch and download audit</a><a href="#5-create-a-layer-and-recipes-from-the-tui">5. Create a layer and recipes from the TUI</a><a href="#l01--layer-creation-and-registration" class="sub">L01 — Layer creation and registration</a><a href="#l02--new-recipe-and-file-handling" class="sub">L02 — New recipe and file handling</a><a href="#l03--persist-the-layer-and-image-customization-in-kas" class="sub">L03 — Persist the layer and image customization in kas</a><a href="#l04--bbappend-and-external-refresh" class="sub">L04 — .bbappend and external refresh</a><a href="#6-editing-and-devtool">6. Editing and devtool</a><a href="#d01--existing-recipe-development" class="sub">D01 — Existing recipe development</a><a href="#d02--create-a-source-based-recipe" class="sub">D02 — Create a source-based recipe</a><a href="#d03--interactive-terminal-handoff" class="sub">D03 — Interactive terminal handoff</a><a href="#7-logs-reports-and-analysis">7. Logs, reports and analysis</a><a href="#a01--logs-and-controlled-failure" class="sub">A01 — Logs and controlled failure</a><a href="#a02--workbench" class="sub">A02 — Workbench</a><a href="#a03--runtime-files-artifacts-and-package-ownership" class="sub">A03 — Runtime files, artifacts and package ownership</a><a href="#a04--every-analysis-report" class="sub">A04 — Every Analysis report</a><a href="#8-state-reconnect-and-interruption">8. State, reconnect and interruption</a><a href="#s01--queue-history-and-reconnect" class="sub">S01 — Queue, history and reconnect</a><a href="#s02--interruption-and-recovery" class="sub">S02 — Interruption and recovery</a><a href="#9-caches">9. Caches</a><a href="#c01--inventory-and-reviewed-prune" class="sub">C01 — Inventory and reviewed prune</a><a href="#c02--signatures" class="sub">C02 — Signatures</a><a href="#10-runtime-variants-and-optional-features">10. Runtime variants and optional features</a><a href="#11-every-command-center-action">11. Every command-center action</a><a href="#12-record-results-and-restore-the-experiment">12. Record results and restore the experiment</a><a href="#13-developer-acceptance">13. Developer acceptance</a><a href="#shared-procedure" class="sub">Shared procedure</a><a href="#p01--follow-a-variable-to-its-source" class="sub">P01 — Follow a variable to its source</a><a href="#p02--navigate-real-runtime-files" class="sub">P02 — Navigate real runtime files</a><a href="#p03--investigate-a-rebuild" class="sub">P03 — Investigate a rebuild</a><a href="#p04--connect-the-failed-task-script-and-log" class="sub">P04 — Connect the failed task, script and log</a><a href="#p05--create-and-register-a-licensed-fixture-from-the-tui" class="sub">P05 — Create and register a licensed fixture from the TUI</a><a href="#p06--ide-source-iteration" class="sub">P06 — IDE source iteration</a><a href="#p07--compare-images-and-trace-a-package" class="sub">P07 — Compare images and trace a package</a><a href="#p08--find-measured-bottlenecks" class="sub">P08 — Find measured bottlenecks</a><a href="#p09--clone-profiles-and-inspect-multiconfig" class="sub">P09 — Clone profiles and inspect multiconfig</a><a href="#p10--diagnose-downloads-and-verify-offline-readiness" class="sub">P10 — Diagnose downloads and verify offline readiness</a><a href="#p11--review-actual-cvespdx-evidence" class="sub">P11 — Review actual CVE/SPDX evidence</a><a href="#p12--check-kernel-fragments-and-recipe-upgrades" class="sub">P12 — Check kernel fragments and recipe upgrades</a><a href="#p13--use-a-real-board-and-retain-evidence" class="sub">P13 — Use a real board and retain evidence</a><a href="#p14--probe-optional-tasks-and-verify-stopping" class="sub">P14 — Probe optional tasks and verify stopping</a><a href="#developer-evidence-ledger" class="sub">Developer evidence ledger</a><a href="#14-keyboard-web-compliance-studio-and-teams">14. Keyboard, web, compliance, Studio and teams</a><a href="#u01--keyboard-only-session" class="sub">U01 — Keyboard-only session</a><a href="#u02--nano-keys-in-editors" class="sub">U02 — nano keys in editors</a><a href="#w01--start-the-web-dashboard-securely" class="sub">W01 — Start the web dashboard securely</a><a href="#w02--follow-stop-and-retry-from-the-browser" class="sub">W02 — Follow, stop and retry from the browser</a><a href="#w03--palette-phone-and-light-theme" class="sub">W03 — Palette, phone and light theme</a><a href="#v01--release-awareness" class="sub">V01 — Release awareness</a><a href="#v02--sbom-quality" class="sub">V02 — SBOM quality</a><a href="#v03--sbom-settings" class="sub">V03 — SBOM settings</a><a href="#v04--cra-readiness" class="sub">V04 — CRA readiness</a><a href="#n01--studio-your-own-distribution" class="sub">N01 — Studio: your own distribution</a><a href="#n02--studio-on-a-kas-profile-and-in-the-browser" class="sub">N02 — Studio on a kas profile and in the browser</a><a href="#t01--headless-ci-matrix" class="sub">T01 — Headless CI matrix</a><a href="#t02--team-profiles" class="sub">T02 — Team profiles</a><a href="#t03--setup-filesystem-and-network-checks" class="sub">T03 — Setup, filesystem and network checks</a><a href="#t04--images-fleet-and-console-builds" class="sub">T04 — Images, fleet and console builds</a><a href="#t05--project-launcher-script" class="sub">T05 — Project launcher script</a><a href="#j01--guided-setup-of-an-existing-project" class="sub">J01 — Guided setup of an existing project</a><a href="#j02--new-project" class="sub">J02 — New project</a><a href="#j03--clone-from-git" class="sub">J03 — Clone from Git</a><a href="#v05--vulnerabilities" class="sub">V05 — Vulnerabilities</a><a href="#h01--build-notifications" class="sub">H01 — Build notifications</a><a href="#h02--eta-comparison-and-tmpwork" class="sub">H02 — ETA, comparison and tmp/work</a><a href="#b04--github-release-workflow" class="sub">B04 — GitHub release workflow</a><a href="#e01--damaged-files-and-odd-inputs" class="sub">E01 — Damaged files and odd inputs</a><a href="#d01--documentation-site" class="sub">D01 — Documentation site</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#contents">Contents</a><a href="#0-guided-tour--start-here">0. Guided tour — start here</a><a href="#before-you-start-5-minutes" class="sub">Before you start (5 minutes)</a><a href="#stage-1--find-your-way-around-no-builds-5-minutes" class="sub">Stage 1 — Find your way around (no builds, 5 minutes)</a><a href="#stage-2--inspect-the-real-workspace-no-builds-10-minutes-profile-kas-wrynose" class="sub">Stage 2 — Inspect the real workspace (no builds, 10 minutes, profile kas-wrynose)</a><a href="#stage-3--first-real-jobs-followed-in-both-interfaces-1-minute-of-builds" class="sub">Stage 3 — First real jobs, followed in both interfaces (≈1 minute of builds)</a><a href="#stage-4--failures-and-their-diagnosis-10-seconds-optional-real-story-9-minutes" class="sub">Stage 4 — Failures and their diagnosis (≈10 seconds; optional real story ≈9 minutes)</a><a href="#stage-5--stop-retry-detach-1-minute" class="sub">Stage 5 — Stop, retry, detach (≈1 minute)</a><a href="#stage-6--developer-workbench-2-minutes-of-probes-in-the-container" class="sub">Stage 6 — Developer workbench (≈2 minutes of probes in the container)</a><a href="#stage-7--studio-your-own-layer-and-recipe-1-minute-of-build" class="sub">Stage 7 — Studio: your own layer and recipe (≈1 minute of build)</a><a href="#stage-8--sbom-cve-and-cra-no-builds" class="sub">Stage 8 — SBOM, CVE and CRA (no builds)</a><a href="#stage-9--projects-setup-and-notifications-no-builds" class="sub">Stage 9 — Projects, setup and notifications (no builds)</a><a href="#stage-10--web-extras-no-builds" class="sub">Stage 10 — Web extras (no builds)</a><a href="#stage-11--command-line-and-ci-30-seconds" class="sub">Stage 11 — Command line and CI (≈30 seconds)</a><a href="#stage-12--finish" class="sub">Stage 12 — Finish</a><a href="#1-build-and-installation">1. Build and installation</a><a href="#b01--fresh-checkout-and-demo" class="sub">B01 — Fresh checkout and demo</a><a href="#b02--wheel-and-source-archive" class="sub">B02 — Wheel and source archive</a><a href="#b03--debian-release-package" class="sub">B03 — Debian release package</a><a href="#2-launch-with-kas-container">2. Launch with kas-container</a><a href="#k01--reuse-this-checkouts-verified-build" class="sub">K01 — Reuse this checkout&#x27;s verified build</a><a href="#k02--prepare-an-isolated-manual-test-profile" class="sub">K02 — Prepare an isolated manual-test profile</a><a href="#k03--checkout-and-validate-configuration" class="sub">K03 — Checkout and validate configuration</a><a href="#k04--automated-real-developer-fixture-setup" class="sub">K04 — Automated real Developer fixture setup</a><a href="#3-ui-and-profile-acceptance">3. UI and profile acceptance</a><a href="#4-build-downloads-and-recipe-tasks">4. Build, downloads and recipe tasks</a><a href="#r01--incremental-recipe-and-image-builds" class="sub">R01 — Incremental recipe and image builds</a><a href="#r02--cleanup-behavior" class="sub">R02 — Cleanup behavior</a><a href="#r03--fetch-and-download-audit" class="sub">R03 — Fetch and download audit</a><a href="#5-create-a-layer-and-recipes-from-the-tui">5. Create a layer and recipes from the TUI</a><a href="#l01--layer-creation-and-registration" class="sub">L01 — Layer creation and registration</a><a href="#l02--new-recipe-and-file-handling" class="sub">L02 — New recipe and file handling</a><a href="#l03--persist-the-layer-and-image-customization-in-kas" class="sub">L03 — Persist the layer and image customization in kas</a><a href="#l04--bbappend-and-external-refresh" class="sub">L04 — .bbappend and external refresh</a><a href="#6-editing-and-devtool">6. Editing and devtool</a><a href="#d01--existing-recipe-development" class="sub">D01 — Existing recipe development</a><a href="#d02--create-a-source-based-recipe" class="sub">D02 — Create a source-based recipe</a><a href="#d03--interactive-terminal-handoff" class="sub">D03 — Interactive terminal handoff</a><a href="#7-logs-reports-and-analysis">7. Logs, reports and analysis</a><a href="#a01--logs-and-controlled-failure" class="sub">A01 — Logs and controlled failure</a><a href="#a02--workbench" class="sub">A02 — Workbench</a><a href="#a03--runtime-files-artifacts-and-package-ownership" class="sub">A03 — Runtime files, artifacts and package ownership</a><a href="#a04--every-analysis-report" class="sub">A04 — Every Analysis report</a><a href="#8-state-reconnect-and-interruption">8. State, reconnect and interruption</a><a href="#s01--queue-history-and-reconnect" class="sub">S01 — Queue, history and reconnect</a><a href="#s02--interruption-and-recovery" class="sub">S02 — Interruption and recovery</a><a href="#9-caches">9. Caches</a><a href="#c01--inventory-and-reviewed-prune" class="sub">C01 — Inventory and reviewed prune</a><a href="#c02--signatures" class="sub">C02 — Signatures</a><a href="#10-runtime-variants-and-optional-features">10. Runtime variants and optional features</a><a href="#11-every-command-center-action">11. Every command-center action</a><a href="#12-record-results-and-restore-the-experiment">12. Record results and restore the experiment</a><a href="#13-developer-acceptance">13. Developer acceptance</a><a href="#shared-procedure" class="sub">Shared procedure</a><a href="#p01--follow-a-variable-to-its-source" class="sub">P01 — Follow a variable to its source</a><a href="#p02--navigate-real-runtime-files" class="sub">P02 — Navigate real runtime files</a><a href="#p03--investigate-a-rebuild" class="sub">P03 — Investigate a rebuild</a><a href="#p04--connect-the-failed-task-script-and-log" class="sub">P04 — Connect the failed task, script and log</a><a href="#p05--create-and-register-a-licensed-fixture-from-the-tui" class="sub">P05 — Create and register a licensed fixture from the TUI</a><a href="#p06--ide-source-iteration" class="sub">P06 — IDE source iteration</a><a href="#p07--compare-images-and-trace-a-package" class="sub">P07 — Compare images and trace a package</a><a href="#p08--find-measured-bottlenecks" class="sub">P08 — Find measured bottlenecks</a><a href="#p09--clone-profiles-and-inspect-multiconfig" class="sub">P09 — Clone profiles and inspect multiconfig</a><a href="#p10--diagnose-downloads-and-verify-offline-readiness" class="sub">P10 — Diagnose downloads and verify offline readiness</a><a href="#p11--review-actual-cvespdx-evidence" class="sub">P11 — Review actual CVE/SPDX evidence</a><a href="#p12--check-kernel-fragments-and-recipe-upgrades" class="sub">P12 — Check kernel fragments and recipe upgrades</a><a href="#p13--use-a-real-board-and-retain-evidence" class="sub">P13 — Use a real board and retain evidence</a><a href="#p14--probe-optional-tasks-and-verify-stopping" class="sub">P14 — Probe optional tasks and verify stopping</a><a href="#developer-evidence-ledger" class="sub">Developer evidence ledger</a><a href="#14-keyboard-web-compliance-studio-and-teams">14. Keyboard, web, compliance, Studio and teams</a><a href="#u01--keyboard-only-session" class="sub">U01 — Keyboard-only session</a><a href="#u02--nano-keys-in-editors" class="sub">U02 — nano keys in editors</a><a href="#w01--start-the-web-dashboard-securely" class="sub">W01 — Start the web dashboard securely</a><a href="#w02--follow-stop-and-retry-from-the-browser" class="sub">W02 — Follow, stop and retry from the browser</a><a href="#w03--palette-phone-and-light-theme" class="sub">W03 — Palette, phone and light theme</a><a href="#v01--release-awareness" class="sub">V01 — Release awareness</a><a href="#v02--sbom-quality" class="sub">V02 — SBOM quality</a><a href="#v03--sbom-settings" class="sub">V03 — SBOM settings</a><a href="#v04--cra-readiness" class="sub">V04 — CRA readiness</a><a href="#n01--studio-your-own-distribution" class="sub">N01 — Studio: your own distribution</a><a href="#n02--studio-on-a-kas-profile-and-in-the-browser" class="sub">N02 — Studio on a kas profile and in the browser</a><a href="#t01--headless-ci-matrix" class="sub">T01 — Headless CI matrix</a><a href="#t02--team-profiles" class="sub">T02 — Team profiles</a><a href="#t03--setup-filesystem-and-network-checks" class="sub">T03 — Setup, filesystem and network checks</a><a href="#t04--images-fleet-and-console-builds" class="sub">T04 — Images, fleet and console builds</a><a href="#t05--project-launcher-script" class="sub">T05 — Project launcher script</a><a href="#j01--guided-setup-of-an-existing-project" class="sub">J01 — Guided setup of an existing project</a><a href="#j02--new-project" class="sub">J02 — New project</a><a href="#j03--clone-from-git" class="sub">J03 — Clone from Git</a><a href="#v05--vulnerabilities" class="sub">V05 — Vulnerabilities</a><a href="#h01--build-notifications" class="sub">H01 — Build notifications</a><a href="#h02--eta-comparison-and-tmpwork" class="sub">H02 — ETA, comparison and tmp/work</a><a href="#b04--github-release-workflow" class="sub">B04 — GitHub release workflow</a><a href="#e01--damaged-files-and-odd-inputs" class="sub">E01 — Damaged files and odd inputs</a><a href="#d01--documentation-site" class="sub">D01 — Documentation site</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>
