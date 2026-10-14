@@ -302,7 +302,11 @@ def resources(build):
 def performance(path, build):
     root = Path(path) if path else Path(build) / 'tmp/buildstats'
     sessions = sorted([p for p in root.iterdir() if p.is_dir()], key=lambda p: p.stat().st_mtime, reverse=True) if root.is_dir() else []
-    session = sessions[0] if sessions and not any(p.name.startswith('do_') for p in root.glob('*/*')) else root
+    def tasks(candidate, cap=10):
+        return sum(1 for _ in zip(range(cap), candidate.glob('*/do_*')))
+    # "Latest" means the latest real build: probes and parse-only runs leave sessions with no or few tasks.
+    session = (next((s for s in sessions if tasks(s) >= 10), None) or next((s for s in sessions if tasks(s, 1)), None)
+               or (sessions[0] if sessions else root)) if sessions and not any(p.name.startswith('do_') for p in root.glob('*/*')) else root
     entries = []
     for count, file in enumerate(session.rglob('do_*')):
         if count >= 10000:
@@ -337,7 +341,7 @@ def performance(path, build):
             length = max(1, int((entry['ended'] - entry['started']) / wall * 40))
             timeline.append(' ' * max(0, offset) + '━' * length + ' ' + entry['task'])
     return report('BUILD PERFORMANCE AND RUNTIME LIMITS', rows,
-                  f'Stats: {session}\nObserved task span: {wall if wall is not None else "unavailable"} seconds\n' + '\n'.join(timeline) +
+                  f'Stats: {session}\nObserved task span: {f"{wall:.1f} seconds" if wall is not None else "unavailable (no complete task timestamps)"}\n' + '\n'.join(timeline) +
                   '\nTask durations overlap. These limits apply to the probe runtime, not automatically to other jobs. No automatic tuning.',
                   buildstats=entries, wall_seconds=wall, available=bool(entries), session=str(session))
 

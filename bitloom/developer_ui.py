@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import re
 import os
 import shutil
 import shlex
@@ -24,6 +25,25 @@ from . import developer as dev
 from .developer_agent import report
 from .models import Profile
 
+
+
+PARENT_HOP = re.compile(r'(?<=/)[^/\s]+/\.\./')
+BITBAKE_CHATTER = re.compile(r'^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d - INFO\s+- .*|NOTE: Reconnecting to bitbake server\.*|Loading cache\.\.\.done\.|Loaded \d+ entries from dependency cache\.|'
+                             r'Parsing recipes\.\.\.done\.|Parsing of \d+ \.bb files complete.*|NOTE: Retrying server connection.*|'
+                             r'NOTE: Started PRServer.*|Summary: There (?:was|were) \d+ WARNING messages?\.?)$')
+
+
+def tidy(text: str) -> str:
+    """/work/build/../openembedded-core → /work/openembedded-core, for reading only (paths stay exact in data)."""
+    previous = None
+    while previous != text:
+        previous, text = text, PARENT_HOP.sub('', text)
+    return text
+
+
+def quiet(text: str) -> str:
+    """Drop BitBake's start-up chatter (cache, parsing, server) from evidence shown to the user."""
+    return '\n'.join(line for line in text.splitlines() if not BITBAKE_CHATTER.match(line.strip()))
 
 class FormScreen(ModalScreen):
     DEFAULT_CSS = '''
@@ -373,10 +393,10 @@ class DeveloperPanel(Vertical):
         table = self.query_one('#dev-rows', DataTable)
         table.clear()
         for i, row in enumerate(self.rows):
-            table.add_row(Text(str(row.get('name', ''))), Text(str(row.get('value', ''))), key=str(i))
+            table.add_row(Text(tidy(str(row.get('name', '')))), Text(tidy(str(row.get('value', '')))), key=str(i))
         output = self.query_one('#dev-detail', RichLog)
         output.clear()
-        output.write(Text(data['title'] + '\n\n' + data.get('text', '')[:50000]))
+        output.write(Text(data['title'] + '\n\n' + tidy(quiet(data.get('text', '')[:50000]))))
         output.scroll_home(animate=False)
         self.query_one('#dev-state', Static).update(self.report_profile.name + ' · ' + data['title'] + ' · ' + str(len(self.rows)) + ' rows')
 
@@ -423,7 +443,12 @@ class DeveloperPanel(Vertical):
                         raise ValueError('Enter the runtime path of a CVE or SPDX JSON report'
                                          + (f' (newest found locally: {Path(found[0]).name}; Artifacts → v lists every report)' if found else
                                             '; enable sbom-cve-check or cve-check and build the image first'))
-                if view in {'image', 'upgrade', 'capabilities'}: kwargs['recipe'] = first or recipe
+                if view in {'upgrade', 'capabilities'}: kwargs['recipe'] = first or recipe
+                if view == 'image':
+                    # An image, not the package recipe above: blank uses the build target (core-image-…).
+                    kwargs['recipe'] = first or self.app.main_query('#target', Input).value.strip().split(' ')[0] or recipe
+                if view == 'kernel' and not first:
+                    raise ValueError('Enter the runtime path of a kernel configuration fragment (.cfg), for example one created by devtool or menuconfig')
                 if view == 'kernel': kwargs['config'] = second
                 if view == 'failure':
                     selected = first or str(self.app.selected_log or '')

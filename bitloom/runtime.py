@@ -202,6 +202,8 @@ def summarize(lines: list[str]) -> str:
                 f"or start Bitloom from an initialised shell; kas and container profiles run it inside the build environment.")
     if 'Permission denied' in exception:
         return f"Permission denied in the runtime: {exception}"
+    if exception.startswith('ValueError: '):
+        return exception[len('ValueError: '):]  # the probe's own explanation (missing input, unsupported view…)
     return f"Runtime request failed: {exception or (lines[-1].strip() if lines else 'no output')}"
 
 
