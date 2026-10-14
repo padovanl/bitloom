@@ -195,7 +195,7 @@ def image_matrix(profile: Profile) -> str:
             elif path.name.endswith(IMAGE_SUFFIXES) and path.is_file() and not path.is_symlink():
                 images.append(path)
         images.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-        lines.append(f'{machine.name}  ·  {len(images)} image files  ·  {len(manifests)} manifests')
+        lines.append(f'{machine.name}  ·  {len(images)} image file{"s" if len(images) != 1 else ""}  ·  {len(manifests)} manifest{"s" if len(manifests) != 1 else ""}')
         for path in images[:40]:
             stat = path.stat()
             stem = next((name for name in manifests if path.name.startswith(name)), '')
