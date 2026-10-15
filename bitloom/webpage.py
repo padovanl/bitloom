@@ -1270,6 +1270,12 @@ async function scanSetup() {
     const data = await api(`/api/setup/scan?dir=${encodeURIComponent($("setup-dir").value)}`);
     setupRoot = data.dir; $("setup-dir").value = data.dir; setupCandidates = data.candidates; list.textContent = "";
     if (!setupCandidates.length) { list.append(el("div", {class: "empty", text: "Nothing recognised: fill the form by hand."})); fillSetup({name: "project", mode: "kas-container"}); return; }
+    const products = setupCandidates.filter((candidate) => candidate.mode === "wrapper");
+    if (products.length > 1) {
+      // One launcher, several products (YML=a.yml / YML=b.yml): one profile each, P or the profile menu switches.
+      list.append(el("div", {class: "tools"}, el("span", {class: "hint", text: `${products.length} products use the same launcher`}), el("span", {style: "flex:1"}),
+        el("button", {class: "btn primary", text: `Save all ${products.length} products`, onclick: () => saveAllProducts(products)})));
+    }
     setupCandidates.forEach((candidate, i) => {
       const row = el("div", {class: "row" + (i === 0 ? " selected" : ""), tabindex: "0"}, el("span", {class: "glyph", text: {wrapper: "⇄", host: "⌂", kas: "◇", "kas-container": "▣"}[candidate.mode] || "·"}),
         el("span", {}, el("b", {text: candidate.title}), el("div", {class: "meta", text: candidate.evidence.join(" · ")}), ...candidate.hints.map((h) => el("div", {class: "hint", text: h}))), el("span"));
@@ -1278,6 +1284,14 @@ async function scanSetup() {
     });
     fillSetup(setupCandidates[0].profile);
   } catch (error) { list.textContent = ""; list.append(el("div", {class: "empty", text: error.message})); }
+}
+async function saveAllProducts(products) {
+  let saved = [], skipped = [];
+  try { saved = (await api("/api/setup/save", {method: "POST", body: JSON.stringify({profiles: products.map((c) => c.profile)})})).saved; }
+  catch (error) { skipped.push(error.message); }
+  $("profile").textContent = ""; await refresh(); if (saved.length) $("profile").value = saved[0]; $("target").dataset.touched = ""; await loadConsole(); renderState(); loadProjects();
+  if (saved.length) toast(`Saved ${saved.length} profiles`, saved.join(", ") + " · switch with the profile menu or P", "success", {label: "Go to Builds", run: () => setView("builds")});
+  if (skipped.length) toast("Not saved", skipped.join("; "), "warning");
 }
 function fillSetup(profile) {
   $("sp-mode").value = profile.mode || "kas-container";
@@ -1771,6 +1785,13 @@ function wire() {
   if (!token) { toast("Session token missing", "Open the URL printed by bitloom --web: it carries the session token.", "error"); return; }
   try { actions = await api("/api/actions"); } catch (error) { toast("Cannot reach Bitloom", error.message, "error"); }
   await refresh(); await loadConsole(); renderState();
+  if (state && state.first_run) {
+    // First start in a project: propose profiles for this folder, as the TUI does.
+    $("setup-dir").value = state.cwd; setView("health"); await scanSetup();
+    $("setup-dir").scrollIntoView({behavior: "smooth", block: "center"});
+    toast("Welcome to Bitloom", "Pick how this project builds: the proposals come from " + state.cwd + ". Save makes it your first profile.", "info");
+    return void setInterval(refresh, 1500);
+  }
   toast("Connected", state ? `${state.profiles.length} profiles · ${state.history.length} operations in history` : "", "success");
   setInterval(refresh, 1500);
 })();

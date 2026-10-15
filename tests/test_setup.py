@@ -102,7 +102,7 @@ def test_web_setup_endpoints(tmp_path):
         assert found[0]['mode'] == 'wrapper'
         checks = call('/api/setup/check', {'profile': found[0]['profile']})['checks']
         assert all(row['status'] != 'ERR' for row in checks)
-        assert call('/api/setup/save', {'profile': found[0]['profile']}) == {'active': 'product-run-build'}
+        assert call('/api/setup/save', {'profile': found[0]['profile']})['active'] == 'product-run-build'
         assert Settings(board.config).active == 'product-run-build'
     finally:
         server.shutdown()
@@ -123,11 +123,8 @@ def test_kas_work_directory_of_a_profile_is_recognised(tmp_path):
     assert 'kas work directory' not in detect(work)[0].evidence[0]
 
 
-def test_wrapper_per_product_with_includes_and_work_dir(tmp_path):
-    """YML=<product>.yml ./run_kas.sh build projects: one profile per product, fragments skipped,
-    machine resolved through includes and KAS_WORK_DIR read from the script."""
-    from bitloom.setup import check, detect, kas_files, script_work_dir
-    from bitloom.models import Profile
+def products(tmp_path):
+    """A launcher with two products sharing a base file, the way company projects pick what to build."""
     (tmp_path / "kas").mkdir()
     (tmp_path / "kas/base.yml").write_text("header:\n  version: 14\nmachine: qemux86-64\ntarget: core-image-minimal\nrepos:\n  poky:\n")
     (tmp_path / "kas/alpha.yml").write_text("header:\n  version: 14\n  includes:\n    - kas/base.yml\n")
@@ -136,6 +133,15 @@ def test_wrapper_per_product_with_includes_and_work_dir(tmp_path):
     script.write_text('#!/bin/bash\nTOP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\nexport KAS_WORK_DIR=$TOP/builds/$(basename "$YML" .yml)\n'
                       'cmd=$1; shift\nexec kas-container "$cmd" "$@" "$YML"\n')
     script.chmod(0o755)
+    return script
+
+
+def test_wrapper_per_product_with_includes_and_work_dir(tmp_path):
+    """YML=<product>.yml ./run_kas.sh build projects: one profile per product, fragments skipped,
+    machine resolved through includes and KAS_WORK_DIR read from the script."""
+    from bitloom.setup import check, detect, kas_files, script_work_dir
+    from bitloom.models import Profile
+    script = products(tmp_path)
     assert [p.name for p in kas_files(tmp_path)][-1] == "base.yml"          # the fragment comes last
     wrappers = [c for c in detect(tmp_path) if c.mode == "wrapper"]
     assert [c.profile["name"] for c in wrappers] == ["alpha", "beta"]
@@ -153,3 +159,49 @@ def test_wrapper_per_product_with_includes_and_work_dir(tmp_path):
     script.write_text("#!/bin/bash\nKAS_WORK_DIR=$SOMETHING/x kas-container build $YML\n")
     assert script_work_dir(script, tmp_path, {"YML": "kas/alpha.yml"}) == ""
     assert any("does not seem to pass its arguments" in text for _, text in check(Profile.from_dict(alpha)))
+
+
+async def test_tui_save_all_products(tmp_path, monkeypatch):
+    """^A in the guided setup saves one profile per product; the first is active, P switches."""
+    from bitloom.app import BitloomApp
+    from bitloom.models import Settings
+    from bitloom.screens import SetupScreen
+    root = tmp_path / "project"
+    root.mkdir()
+    products(root)
+    monkeypatch.chdir(root)
+    app = BitloomApp(tmp_path / "state/profiles.json", tmp_path / "state")
+    async with app.run_test(size=(160, 50)) as pilot:
+        await pilot.pause(.8)
+        assert isinstance(app.screen, SetupScreen)
+        await pilot.press("ctrl+a")
+        await pilot.pause(.8)
+        assert not isinstance(app.screen, SetupScreen) and app.profile.name == "alpha"
+    app.store.close()
+    saved = Settings(tmp_path / "state/profiles.json")
+    assert [p.name for p in saved.profiles] == ["alpha", "beta"] and saved.active == "alpha"
+    assert {p.environment["YML"] for p in saved.profiles} == {"kas/alpha.yml", "kas/beta.yml"}
+
+
+def test_web_saves_all_products(tmp_path):
+    import json
+    import threading
+    import urllib.request
+    from bitloom.models import Settings
+    from bitloom.setup import detect
+    from bitloom.web import Dashboard, create_server
+    root = tmp_path / "project"
+    root.mkdir()
+    products(root)
+    board = Dashboard(tmp_path / "state/profiles.json", tmp_path / "state", token="t")
+    server = create_server(board, "127.0.0.1", 0)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        found = [c.profile for c in detect(root) if c.mode == "wrapper"]
+        request = urllib.request.Request(f"http://127.0.0.1:{server.server_address[1]}/api/setup/save", json.dumps({"profiles": found}).encode(),
+                                         {"X-Bitloom-Token": "t", "Content-Type": "application/json"})
+        assert json.loads(urllib.request.urlopen(request).read()) == {"active": "alpha", "saved": ["alpha", "beta"]}
+        saved = Settings(tmp_path / "state/profiles.json")
+        assert [p.name for p in saved.profiles] == ["alpha", "beta"] and saved.active == "alpha"
+    finally:
+        server.shutdown()

@@ -146,6 +146,8 @@ class Dashboard:
         hints = {p.name: read_assignments(p.build_path / "conf/local.conf") for p in settings.profiles}
         return {
             "active": settings.active,
+            # No profiles file yet: the page opens the guided setup on the folder bitloom --web started in.
+            "first_run": not settings.path.exists(), "cwd": str(Path.cwd()),
             "profiles": [{"name": p.name, "mode": p.mode, "machine": p.machine or hints[p.name].get("MACHINE", ""),
                           "distro": p.distro or hints[p.name].get("DISTRO", ""), "root": str(p.root_path),
                           "build": str(p.build_path), "targets": p.targets, "release": describe(detect_release(p)),
@@ -449,14 +451,22 @@ class Dashboard:
         return {"checks": [{"status": s, "message": m} for s, m in rows]}
 
     def setup_save(self, body):
+        """Save one profile ({"profile": …}) or several products of one launcher ({"profiles": […]}, the first
+        becomes active). Each must pass its checks; nothing is saved when one does not."""
         from .setup import check, save
-        profile = self.setup_profile(body)
-        if any(status == "ERR" for status, _ in check(profile)):
-            raise ValueError("Fix the checks marked ✖ first")
-        save(self.settings(), profile)
         from .projects import Recent
-        Recent(self.state).add(profile.root_path, profile.name, "set up")
-        return {"active": profile.name}
+        items = body.get("profiles") if isinstance(body.get("profiles"), list) else [body.get("profile")]
+        profiles = [self.setup_profile({"profile": item}) for item in items]
+        for profile in profiles:
+            if any(status == "ERR" for status, _ in check(profile)):
+                raise ValueError(f"{profile.name}: fix the checks marked ✖ first")
+        settings = self.settings()
+        for profile in profiles:
+            save(settings, profile)
+        settings.active = profiles[0].name
+        settings.save()
+        Recent(self.state).add(profiles[0].root_path, profiles[0].name, "set up")
+        return {"active": profiles[0].name, "saved": [p.name for p in profiles]}
 
     def health(self, query):
         profile = self.profile(query.get("profile", [""])[0])

@@ -106,7 +106,9 @@ def make_demo(directory: Path, release: str | None = None):
 
 
 def main():
+    from . import __version__
     parser = argparse.ArgumentParser(description="Bitloom — Yocto / BitBake development cockpit")
+    parser.add_argument("--version", action="version", version=f"bitloom {__version__}")
     parser.add_argument("--config", type=Path, default=Path(".bitloom/profiles.json"))
     parser.add_argument("--state", type=Path, default=Path(".bitloom"))
     parser.add_argument("--demo", action="store_true", help="Create an isolated sample workspace; no fake build execution")

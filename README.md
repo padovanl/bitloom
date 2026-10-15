@@ -8,23 +8,46 @@
 [![Release CI](https://github.com/padovanl/bitloom/actions/workflows/release.yml/badge.svg)](https://github.com/padovanl/bitloom/actions/workflows/release.yml)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-**A terminal cockpit and web dashboard for everyday Yocto and BitBake development.** Build images, inspect recipes, develop with devtool, follow failures, create your own distribution, check SBOMs for the Cyber Resilience Act and manage caches, from a keyboard-first terminal UI or a browser, sharing one build service.
+**A web dashboard and terminal cockpit for everyday Yocto and BitBake development.** Build images, follow and diagnose failures, browse recipes by layer, create your own distribution, check SBOMs and vulnerabilities for the Cyber Resilience Act and manage caches: in the browser or in a keyboard-first terminal UI, both on one build service that keeps running when you close them.
 
-*Weaving layers, recipes and builds into one terminal workspace.*
+*Weaving layers, recipes and builds into one workspace.*
 
-Python 3.10+ · Textual · Linux / WSL2 · Host · Docker · Podman · kas · kas-container
+Python 3.10+ · Linux / WSL2 · Host · Docker · Podman · kas · kas-container · project launcher scripts
 
-![Bitloom idle demo workspace](docs/assets/welcome.png)
+![Bitloom web dashboard following a build](docs/assets/web-builds.png)
+
+## Web dashboard
+
+```bash
+bitloom --web              # prints the URL (with its access token) and opens your browser
+```
+
+* **Builds**: live history (new jobs slide in on top), streaming output with search and an errors-only view, progress and ETA, stop, graceful stop and retry, Toaster-style **Summary**, **Sstate reuse**, **Warnings**, **Timings** and **Compare** with the previous run, root-cause diagnosis of failures.
+* **Target picker**: the build field lists the image recipes found in your layers, kas target and images already built first.
+* **Recipes**: every layer with its counts, folders (`recipes-core`, `classes-recipe`…) that open on demand, filters for recipes, images, appends, classes and kas files, *Use as target*.
+* **SBOM & CRA**: release support, SBOM quality gauges, vulnerabilities from sbom-cve-check, cve-check and Grype, exports to Markdown, HTML, CSV, JSON and SARIF, CRA readiness.
+* **Studio**: a guided form for a layer, distribution, machine, image, recipe or append, with every option explained, the lines each field writes highlighted and the exact steps Create will take.
+* **Projects**: guided setup from a folder (kas files, Poky checkouts, `YML=… ./run_kas.sh build` launcher scripts, one profile per product), new projects pinned to Scarthgap or Wrynose, clone from Git.
+* `Ctrl+K` palette, `?` keys, toasts and browser notifications, light and dark themes, phone and tablet layouts. → [Web dashboard](docs/web.md)
+
+| ![Recipes by layer and folder](docs/assets/web-recipes.png) | ![Studio with the focused field highlighted](docs/assets/web-studio.png) |
+| --- | --- |
+| ![SBOM and CRA](docs/assets/web-compliance.png) | ![Target combobox listing the project's images](docs/assets/web-target.png) |
+
+Over SSH keep the default loopback address and tunnel it: `ssh -L 8765:127.0.0.1:8765 build-server`.
+
+## Terminal UI
+
+`bitloom` opens the same service in the terminal, for SSH sessions and keyboard-only work: numbers open sections, letters act, `/` searches, `?` lists every key, editors use nano keys (`^O`, `^X`, `^W`). TUI and dashboard share queue and history, so a build started in one is followed in the other. → [Keyboard](docs/keyboard.md)
+
+![Bitloom terminal UI](docs/assets/welcome.png)
 
 ## Highlights
 
-* **Builds that survive the terminal**: a local build service with a serial queue and history; detach, reconnect, follow from the browser. Live progress, ETA, errors-only view, root-cause diagnosis of failed builds, comparison with the previous run, graceful stop and recovery.
-* **Keyboard first**: numbers open sections, letters act, `/` searches, `?` lists every key; editors use nano keys (`^O`, `^X`, `^W`). → [Keyboard](docs/keyboard.md)
-* **Web dashboard**: `bitloom --web`, the same service in a browser with live output, Toaster-style summaries, toasts and a `Ctrl+K` palette. → [Web](docs/web.md)
-* **Projects**: guided setup that detects kas files, Poky checkouts and kas launcher scripts; new projects pinned to Scarthgap or Wrynose; clone from Git. → [Projects](docs/projects.md)
-* **SBOM, CRA and releases**: SPDX 3 / 2.2 quality, VEX, vulnerabilities from sbom-cve-check, cve-check and Grype with Markdown, HTML, CSV, JSON and SARIF reports, CRA readiness and timeline, SBOM settings with explanations; features follow the detected Yocto release. → [Compliance](docs/compliance.md)
-* **Studio**: create your own distribution, machines, images, recipes and layers with a live preview. → [Studio](docs/studio.md)
-* **Developer workbench** (`F10`): variable origins, rebuild signatures, failed-task investigation, devtool, SDK/IDE setup, image comparisons, devices. → [Developer](docs/developer.md)
+* **Builds that survive the window**: a local build service with a serial queue and history; detach, reconnect, follow from the browser or the terminal. Graceful stop and recovery.
+* **SBOM, CRA and releases**: SPDX 3 / 2.2 quality, VEX, vulnerabilities with reports, CRA readiness and timeline, SBOM settings with explanations; features follow the detected Yocto release. → [Compliance](docs/compliance.md)
+* **Studio**: your own distribution, machines, images, recipes and layers, explained field by field. → [Studio](docs/studio.md)
+* **Developer workbench** (`F10` in the TUI): variable origins, rebuild signatures, failed-task investigation, devtool, SDK/IDE setup, image comparisons, devices. → [Developer](docs/developer.md)
 * **Daily helpers**: notifications when a build ends (desktop, ntfy, Slack/Teams), ETA, run comparison, tmp/work usage. → [Guide](docs/guide.md#daily-helpers)
 * **Teams and CI/CD**: headless `--ci` matrix with JUnit and annotations, shared team profiles, infrastructure checks, device fleet, image matrix, builds started outside Bitloom. → [Teams](docs/teams.md)
 
@@ -39,18 +62,20 @@ tar -xzf bitloom-1.2.3.tar.gz && cd bitloom-1.2.3   # any Linux / WSL2
 python3 -m venv .venv && .venv/bin/python -m pip install .
 ```
 
-Verify with `sha256sum --check --ignore-missing SHA256SUMS`. Docker or Podman, kas and Yocto are separate tools for real builds. Details: [installation](docs/guide.md#install-from-a-github-release).
+Verify with `sha256sum --check --ignore-missing SHA256SUMS`; `bitloom --version` prints the installed version. Each release also ships `bitloom-1.2.3.spdx.json`, the SPDX SBOM of Bitloom and every Python package bundled in the `.deb` (also installed as `/usr/share/doc/bitloom/sbom.spdx.json`). Docker or Podman, kas and Yocto are separate tools for real builds. Details: [installation](docs/guide.md#install-from-a-github-release).
 
 ## Start
 
 ```bash
 ./setup-demo.sh            # from a checkout: venv, sample workspace, opens the TUI
-bitloom --demo             # Scarthgap and Wrynose samples (P switches profile)
-bitloom --web --demo       # the dashboard
-bitloom                    # in your project: the guided setup proposes a profile
+bitloom --web --demo       # the dashboard on the Scarthgap and Wrynose samples
+bitloom --demo             # the same samples in the terminal (P switches profile)
+bitloom --web              # in your project: the guided setup proposes a profile
 ```
 
-<details><summary>Animation: tour of the TUI</summary>
+<details><summary>Animations: tours of the dashboard and the TUI</summary>
+
+![Animated tour of the web dashboard](docs/assets/web-tour.gif)
 
 ![Animated tour of the actual TUI](docs/assets/tour.gif)
 </details>
