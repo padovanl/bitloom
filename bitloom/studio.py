@@ -21,26 +21,68 @@ NAME = re.compile(r"[a-z][a-z0-9-]*")
 @dataclass(frozen=True)
 class Field:
     id: str
-    label: str
+    label: str                    # plain words; the BitBake variable goes in var
     kind: str = "text"            # text | choice | multi | bool
     default: str = ""
     choices: tuple[str, ...] = ()
     info: str = ""
     required: bool = False
+    section: str = ""             # Where · Identity · Contents · Policy
+    var: str = ""                 # the variable it writes, shown next to the label and highlighted in the preview
+    hints: tuple[tuple[str, str], ...] = ()   # (choice, what it means)
+    placeholder: str = ""
+
+
+class FieldError(ValueError):
+    """A value the form must fix; field names the input to point at."""
+    def __init__(self, field: str, message: str):
+        super().__init__(message)
+        self.field = field
 
 
 KINDS = {
-    "layer": ("Product layer", "A layer for your company's metadata: distro, machines, images and recipes live here."),
-    "distro": ("Distribution", "Your own DISTRO instead of poky: identity, init system, features, hardening and SBOM policy."),
-    "machine": ("Machine", "A MACHINE derived from a reference board, with your features and console settings."),
-    "image": ("Image recipe", "A product image: base packages, developer access, extra packages and filesystem types."),
-    "recipe": ("Application recipe", "A licensed sample application built with CMake, Meson, Make, Python or Rust."),
-    "append": ("Recipe append", "A .bbappend that adds your files or configuration to an existing recipe."),
+    "layer": ("Product layer", "A folder for your own metadata. Start here: distributions, machines, images and recipes you create go into it."),
+    "distro": ("Distribution", "Your product's name, version and policies (init system, features, security, SBOM) instead of Poky's."),
+    "machine": ("Machine", "Your board: a copy of a reference machine with your hardware features and serial console."),
+    "image": ("Image", "What ends up on the device: a base image plus your packages, developer access and file system formats."),
+    "recipe": ("Application recipe", "A working sample application with its source, license and build system, ready to replace with yours."),
+    "append": ("Recipe append", "Change an existing recipe without editing it: add a file to /etc or set extra options."),
 }
+SECTIONS = {"where": "Where the files go", "identity": "Name and identity", "contents": "What goes in", "policy": "Policies"}
+
 DISTRO_FEATURES = ("systemd", "usrmerge", "pam", "seccomp", "ipv6", "wifi", "bluetooth", "x11", "wayland", "opengl", "vulkan",
                    "polkit", "zeroconf", "nfs", "ptest", "sota")
+FEATURE_HINTS = {
+    "systemd": "systemd as the init system and service manager", "usrmerge": "/bin, /sbin and /lib are links into /usr (needed by systemd)",
+    "pam": "pluggable authentication modules for logins", "seccomp": "system-call filtering for sandboxed services and containers",
+    "ipv6": "IPv6 networking support", "wifi": "Wi-Fi tools and drivers", "bluetooth": "Bluetooth stack (BlueZ)",
+    "x11": "the X11 graphical server", "wayland": "the Wayland graphical stack (Weston)", "opengl": "OpenGL / EGL 3D graphics",
+    "vulkan": "Vulkan graphics API", "polkit": "PolicyKit privilege rules", "zeroconf": "Avahi zero-configuration networking (mDNS)",
+    "nfs": "NFS client and server", "ptest": "package tests installable on the device", "sota": "software-over-the-air update hooks",
+    "3g": "mobile broadband (ofono)", "nfc": "NFC (neard)", "pcmcia": "PCMCIA cards",
+}
 MACHINE_FEATURES = ("serial", "usbhost", "usbgadget", "wifi", "bluetooth", "screen", "keyboard", "pci", "rtc", "efi", "vfat", "ext2", "alsa")
+MACHINE_HINTS = {
+    "serial": "a serial console", "usbhost": "USB host ports", "usbgadget": "the board acts as a USB device", "wifi": "Wi-Fi hardware",
+    "bluetooth": "Bluetooth hardware", "screen": "a display", "keyboard": "a keyboard", "pci": "a PCI bus", "rtc": "a real-time clock",
+    "efi": "boots through UEFI", "vfat": "FAT boot partition", "ext2": "ext2/3/4 file systems", "alsa": "sound through ALSA",
+}
 BASE_MACHINES = ("qemux86-64", "qemuarm64", "qemuarm", "qemuriscv64", "genericx86-64", "beaglebone-yocto")
+MACHINE_BASE_HINTS = {
+    "qemux86-64": "64-bit x86 emulated by QEMU: fastest to try", "qemuarm64": "64-bit Arm emulated by QEMU",
+    "qemuarm": "32-bit Arm emulated by QEMU", "qemuriscv64": "64-bit RISC-V emulated by QEMU",
+    "genericx86-64": "real 64-bit PCs (needs meta-yocto-bsp)", "beaglebone-yocto": "BeagleBone Black (needs meta-yocto-bsp)",
+}
+IMAGE_HINTS = {
+    "ssh-server-dropbear": "small SSH server", "ssh-server-openssh": "full OpenSSH server", "package-management": "keep the package manager on the device",
+    "tools-debug": "gdb, strace and other debugging tools", "tools-profile": "perf, valgrind and other profilers", "dev-pkgs": "headers and development files",
+    "read-only-rootfs": "mount the root file system read-only", "splash": "boot splash screen", "hwcodecs": "hardware video codecs",
+    "debug-tweaks": "empty root password and root login (development only)", "allow-empty-password": "accounts may have an empty password (development only)",
+    "empty-root-password": "root has no password (development only)", "allow-root-login": "root may log in over SSH (development only)",
+}
+FSTYPE_HINTS = {"ext4": "disk image for one partition", "tar.bz2": "compressed archive of the root file system", "tar.zst": "faster compressed archive",
+                "wic": "complete partitioned disk image (boot + root), flash with dd or bmaptool", "wic.zst": "compressed wic", "squashfs": "compressed read-only file system",
+                "cpio.gz": "initramfs archive"}
 
 
 def newer(series, than):
@@ -60,68 +102,93 @@ def product_layers(entries, profile: Profile) -> list[Path]:
     return sorted(set(result))
 
 
+def _hints(table, choices):
+    return tuple((c, table[c]) for c in choices if c in table)
+
+
 def fields(kind: str, series: str | None, layers: list[Path]) -> list[Field]:
     layer_choices = tuple(str(p) for p in layers) + ("new layer…",)
-    target = Field("layer", "Target layer", "choice", layer_choices[0], layer_choices,
-                   "Where the files go. Upstream layers are never modified; choose 'new layer…' to create one.")
-    new_layer = Field("new_layer", "New layer name", "text", "meta-acme", info="Directory created under the project root, e.g. meta-acme.")
+    target = Field("layer", "Layer", "choice", layer_choices[0], layer_choices,
+                   "Your layers are listed; upstream layers (Poky, OE-Core) are never modified." if layers else
+                   "This project has no layer of its own yet, so a new one is created together with these files.",
+                   section="where", hints=(("new layer…", "create a new layer next to the project and put the files there"),))
+    new_layer = Field("new_layer", "New layer folder", "text", "meta-acme", info="Created in the project root; by convention meta-<company or product>.",
+                      section="where", placeholder="meta-acme")
     if kind == "layer":
-        return [Field("name", "Layer name", "text", "meta-acme", info="meta-<company or product>; becomes the directory name.", required=True),
-                Field("collection", "Collection", "text", "acme", info="BBFILE_COLLECTIONS identifier used by LAYERDEPENDS of other layers.", required=True),
-                Field("priority", "Priority", "choice", "7", ("5", "6", "7", "8", "9", "10"), "BBFILE_PRIORITY: higher wins when two layers provide the same recipe."),
-                Field("depends", "Depends on", "multi", "core", ("core", "yocto", "yoctobsp", "openembedded-layer", "networking-layer"),
-                      "LAYERDEPENDS: collections that must be present (core = OE-Core, yocto = meta-poky)."),
-                Field("license", "Layer licence", "choice", "MIT", ("MIT", "Apache-2.0", "proprietary"), "Licence of your metadata (not of the software it builds)."),
-                Field("owner", "Copyright owner", "text", "Acme Corp", required=True)]
+        return [Field("name", "Folder name", "text", "meta-acme", info="meta-<company or product>; created in the project root.", required=True, section="identity", placeholder="meta-acme"),
+                Field("collection", "Short id", "text", "acme", info="Other layers name it in LAYERDEPENDS to say they need yours.", required=True, section="identity", var="BBFILE_COLLECTIONS"),
+                Field("owner", "Copyright owner", "text", "Acme Corp", info="Written in the license file of the layer.", required=True, section="identity"),
+                Field("priority", "Priority", "choice", "7", ("5", "6", "7", "8", "9", "10"), "When two layers provide the same recipe, the higher number wins. Poky's layers use 5.",
+                      section="policy", var="BBFILE_PRIORITY"),
+                Field("depends", "Needs these layers", "multi", "core", ("core", "yocto", "yoctobsp", "openembedded-layer", "networking-layer"),
+                      "Layers that must be present for yours to parse.", section="policy", var="LAYERDEPENDS",
+                      hints=(("core", "OE-Core (always needed)"), ("yocto", "meta-poky, needed by distributions based on Poky"), ("yoctobsp", "meta-yocto-bsp reference boards"),
+                             ("openembedded-layer", "meta-oe from meta-openembedded"), ("networking-layer", "meta-networking"))),
+                Field("license", "License of the metadata", "choice", "MIT", ("MIT", "Apache-2.0", "proprietary"), "Covers your recipes and configuration, not the software they build.", section="policy")]
     if kind == "distro":
         modern = newer(series, "wrynose")
         return [target, new_layer,
-                Field("name", "DISTRO id", "text", "acme", info="Lowercase id used as DISTRO = \"…\" and conf/distro/<id>.conf.", required=True),
-                Field("title", "DISTRO_NAME", "text", "Acme Linux", required=True),
-                Field("version", "DISTRO_VERSION", "text", "1.0.0", info="Shown in /etc/os-release; bump it for every product release.", required=True),
-                Field("base", "Based on", "choice", "poky", ("poky", "oe-core defaults"),
-                      "poky: inherit Poky's policy and only change what differs (needs meta-poky). oe-core defaults: a standalone distro without meta-poky."),
-                Field("init", "Init manager", "choice", "systemd" if modern else "sysvinit", ("systemd", "sysvinit", "mdev-busybox"),
-                      "INIT_MANAGER selects the init system and its DISTRO_FEATURES. Wrynose defaults to systemd."),
-                Field("features", "Add DISTRO_FEATURES", "multi", "ipv6 seccomp", DISTRO_FEATURES, "Features added to the base set."),
-                Field("remove", "Remove DISTRO_FEATURES", "multi", "", DISTRO_FEATURES + ("3g", "nfc", "pcmcia", "zeroconf"), "Features your product must not carry."),
-                Field("packages", "Package format", "choice", "package_ipk", ("package_ipk", "package_rpm", "package_deb"), "PACKAGE_CLASSES default for this distro."),
-                Field("hardening", "Security flags", "bool", "1", info="Includes conf/distro/include/security_flags.inc (stack protector, FORTIFY, PIE)."),
-                Field("sbom", "SBOM policy", "bool", "1", info="INHERIT create-spdx and supplier fields (SPDX 3 releases) for CRA-ready SBOMs."),
-                Field("supplier", "Supplier for SBOMs", "text", "Acme Corp", info="SPDX_PACKAGE_SUPPLIER / SPDX_IMAGE_SUPPLIER on releases with SPDX 3."),
-                Field("maintainer", "MAINTAINER", "text", "Acme Linux team <linux@acme.example>")]
+                Field("name", "Id", "text", "acme", info="Lowercase. Selecting it later means DISTRO = \"acme\".", required=True, section="identity", var="DISTRO", placeholder="acme"),
+                Field("title", "Product name", "text", "Acme Linux", info="Shown in /etc/os-release and login banners.", required=True, section="identity", var="DISTRO_NAME"),
+                Field("version", "Version", "text", "1.0.0", info="Bump it for every product release.", required=True, section="identity", var="DISTRO_VERSION"),
+                Field("maintainer", "Maintainer", "text", "Acme Linux team <linux@acme.example>", section="identity", var="MAINTAINER"),
+                Field("base", "Start from", "choice", "poky", ("poky", "oe-core defaults"), section="contents",
+                      hints=(("poky", "inherit Poky's tested settings and change only what differs (needs meta-poky)"),
+                             ("oe-core defaults", "a standalone distribution without meta-poky: you set everything"))),
+                Field("init", "Init system", "choice", "systemd" if modern else "sysvinit", ("systemd", "sysvinit", "mdev-busybox"), section="contents", var="INIT_MANAGER",
+                      hints=(("systemd", "full service manager; default from Wrynose"), ("sysvinit", "classic init scripts, smaller"),
+                             ("mdev-busybox", "minimal BusyBox init for tiny systems"))),
+                Field("features", "Add features", "multi", "ipv6 seccomp", DISTRO_FEATURES, "Added to the base distribution's features.", section="contents",
+                      var="DISTRO_FEATURES", hints=_hints(FEATURE_HINTS, DISTRO_FEATURES)),
+                Field("remove", "Remove features", "multi", "", DISTRO_FEATURES + ("3g", "nfc", "pcmcia", "zeroconf"), "Features your product must not carry.", section="contents",
+                      var="DISTRO_FEATURES", hints=_hints(FEATURE_HINTS, DISTRO_FEATURES + ("3g", "nfc", "pcmcia"))),
+                Field("packages", "Package format", "choice", "package_ipk", ("package_ipk", "package_rpm", "package_deb"), section="contents", var="PACKAGE_CLASSES",
+                      hints=(("package_ipk", "opkg packages: small and fast, the Yocto default"), ("package_rpm", "RPM packages (dnf on the device)"),
+                             ("package_deb", "Debian packages (apt on the device)"))),
+                Field("hardening", "Compiler hardening", "bool", "1", info="Stack protector, FORTIFY_SOURCE and PIE for every package (security_flags.inc).", section="policy"),
+                Field("sbom", "Software bill of materials", "bool", "1", info="An SPDX SBOM for every image, as the EU Cyber Resilience Act expects.", section="policy", var="create-spdx"),
+                Field("supplier", "SBOM supplier", "text", "Acme Corp", info="The organisation named as supplier in the SBOM.", section="policy", var="SPDX_PACKAGE_SUPPLIER" if newer(series, "styhead") else "SPDX_SUPPLIER")]
     if kind == "machine":
         return [target, new_layer,
-                Field("name", "MACHINE id", "text", "acme-board", info="conf/machine/<id>.conf; used as MACHINE = \"…\".", required=True),
-                Field("title", "Description", "text", "Acme board (derived from the reference machine)"),
-                Field("base", "Derived from", "choice", "qemux86-64", BASE_MACHINES, "Reference machine whose configuration is required; its overrides keep applying."),
-                Field("features", "Add MACHINE_FEATURES", "multi", "serial usbhost", MACHINE_FEATURES),
-                Field("console", "Serial console", "text", "115200;ttyS0", info="SERIAL_CONSOLES entries: baud;device, space separated."),
-                Field("kernel", "Preferred kernel", "choice", "linux-yocto", ("linux-yocto", "linux-yocto-rt", "linux-yocto-tiny"), "PREFERRED_PROVIDER_virtual/kernel.")]
+                Field("name", "Id", "text", "acme-board", info="Lowercase. Selecting it later means MACHINE = \"acme-board\".", required=True, section="identity", var="MACHINE", placeholder="acme-board"),
+                Field("title", "Description", "text", "Acme board (derived from the reference machine)", section="identity", var="#@NAME"),
+                Field("base", "Start from", "choice", "qemux86-64", BASE_MACHINES, "Its whole configuration is reused; you only add what differs.", section="contents",
+                      var="require", hints=_hints(MACHINE_BASE_HINTS, BASE_MACHINES)),
+                Field("features", "Hardware it has", "multi", "serial usbhost", MACHINE_FEATURES, "Recipes enable support only for hardware listed here.", section="contents",
+                      var="MACHINE_FEATURES", hints=_hints(MACHINE_HINTS, MACHINE_FEATURES)),
+                Field("console", "Serial console", "text", "115200;ttyS0", info="baud;device, several separated by spaces. Empty for none.", section="contents", var="SERIAL_CONSOLES"),
+                Field("kernel", "Kernel", "choice", "linux-yocto", ("linux-yocto", "linux-yocto-rt", "linux-yocto-tiny"), section="contents", var="PREFERRED_PROVIDER_virtual/kernel",
+                      hints=(("linux-yocto", "the standard Yocto kernel"), ("linux-yocto-rt", "with PREEMPT_RT real-time patches"), ("linux-yocto-tiny", "minimal configuration for small systems")))]
     if kind == "image":
         access = ("allow-empty-password", "empty-root-password", "allow-root-login") if newer(series, "styhead") else ("debug-tweaks",)
+        features = ("ssh-server-dropbear", "ssh-server-openssh", "package-management", "tools-debug", "tools-profile", "dev-pkgs", "read-only-rootfs", "splash", "hwcodecs") + access
+        fstypes = ("ext4", "tar.bz2", "tar.zst", "wic", "wic.zst", "squashfs", "cpio.gz")
         return [target, new_layer,
-                Field("name", "Image name", "text", "acme-image", info="recipes-core/images/<name>.bb; build it with bitbake <name>.", required=True),
-                Field("summary", "Summary", "text", "Acme product image"),
-                Field("base", "Starting point", "choice", "core-image", ("core-image", "core-image-minimal", "core-image-base"),
-                      "core-image: an empty class-based image; or require an existing image and extend it."),
-                Field("features", "IMAGE_FEATURES", "multi", "ssh-server-dropbear", ("ssh-server-dropbear", "ssh-server-openssh", "package-management",
-                      "tools-debug", "tools-profile", "dev-pkgs", "read-only-rootfs", "splash", "hwcodecs") + access,
-                      "Developer access features changed in 5.1: debug-tweaks was split into allow-empty-password, empty-root-password and allow-root-login."),
-                Field("packages", "IMAGE_INSTALL additions", "text", "htop", info="Space-separated packages or packagegroups."),
-                Field("fstypes", "IMAGE_FSTYPES", "multi", "ext4 tar.bz2", ("ext4", "tar.bz2", "tar.zst", "wic", "wic.zst", "squashfs", "cpio.gz")),
-                Field("size", "Extra free space (KiB)", "text", "", info="IMAGE_ROOTFS_EXTRA_SPACE; empty keeps the default.")]
+                Field("name", "Image name", "text", "acme-image", info="You build it with: bitbake acme-image.", required=True, section="identity", placeholder="acme-image"),
+                Field("summary", "Summary", "text", "Acme product image", section="identity", var="SUMMARY"),
+                Field("base", "Start from", "choice", "core-image", ("core-image", "core-image-minimal", "core-image-base"), section="contents",
+                      hints=(("core-image", "an empty image: only what you add below"), ("core-image-minimal", "boots to a shell, plus what you add"),
+                             ("core-image-base", "console image with hardware support for the machine, plus what you add"))),
+                Field("packages", "Extra packages", "text", "htop", info="Space separated recipes or packagegroups, e.g. htop nano packagegroup-core-ssh-openssh.", section="contents", var="IMAGE_INSTALL"),
+                Field("features", "Image features", "multi", "ssh-server-dropbear", features,
+                      "Development access features were renamed in 5.1 (debug-tweaks became three separate ones)." if newer(series, "styhead") else "",
+                      section="contents", var="IMAGE_FEATURES", hints=_hints(IMAGE_HINTS, features)),
+                Field("fstypes", "Output formats", "multi", "ext4 tar.bz2", fstypes, "Files written to tmp/deploy/images.", section="contents", var="IMAGE_FSTYPES",
+                      hints=_hints(FSTYPE_HINTS, fstypes)),
+                Field("size", "Extra free space (KiB)", "text", "", info="Room left free in the root file system; empty keeps the default.", section="contents", var="IMAGE_ROOTFS_EXTRA_SPACE", placeholder="e.g. 102400")]
     if kind == "recipe":
         return [target, new_layer,
-                Field("name", "Recipe name", "text", "acme-hello", info="Lowercase name; creates recipes-example/<name>/<name>_1.0.bb.", required=True),
-                Field("system", "Build system", "choice", "cmake", ("cmake", "meson", "make", "python", "rust")),
-                Field("owner", "Copyright owner", "text", "Acme Corp", required=True)]
+                Field("name", "Recipe name", "text", "acme-hello", info="Creates recipes-example/<name>/<name>_1.0.bb with its source; build it with bitbake <name>.", required=True, section="identity", var="PN", placeholder="acme-hello"),
+                Field("owner", "Copyright owner", "text", "Acme Corp", info="Written in the MIT license of the sample source.", required=True, section="identity"),
+                Field("system", "Build system", "choice", "cmake", ("cmake", "meson", "make", "python", "rust"), section="contents", var="inherit",
+                      hints=(("cmake", "C program built with CMake"), ("meson", "C program built with Meson"), ("make", "C program with a plain Makefile"),
+                             ("python", "Python package built with setuptools"), ("rust", "Rust program built with Cargo")))]
     if kind == "append":
         return [target, new_layer,
-                Field("recipe", "Recipe to extend", "text", "base-files", info="Recipe name (PN); the append matches every version (_%.bbappend).", required=True),
-                Field("category", "Category directory", "text", "recipes-core", info="recipes-* directory mirroring the original recipe."),
-                Field("file", "Add a file", "text", "motd", info="Created under files/ and installed into /etc by the append; empty for configuration only."),
-                Field("config", "Extra lines", "text", "", info="Optional assignments, e.g. PACKAGECONFIG:append = \" foo\"")]
+                Field("recipe", "Recipe to change", "text", "base-files", info="Its name without version (PN); the append applies to every version.", required=True, section="identity", placeholder="base-files"),
+                Field("category", "Folder", "text", "recipes-core", info="Mirror the original's folder, e.g. recipes-core for base-files.", section="identity", placeholder="recipes-core"),
+                Field("file", "Add a file to /etc", "text", "motd", info="Created under files/ and installed as /etc/<name>. Empty to only set options.", section="contents", var="SRC_URI"),
+                Field("config", "Extra lines", "text", "", info="BitBake lines added as they are, e.g. PACKAGECONFIG:append = \" foo\".", section="contents", placeholder='PACKAGECONFIG:append = " foo"')]
     raise ValueError("Unknown kind")
 
 
@@ -144,9 +211,9 @@ def layer_files(name, collection, priority, depends, series, owner, licence="MIT
     return files
 
 
-def _check(name, label):
+def _check(name, label, field="name"):
     if not NAME.fullmatch(name or ""):
-        raise ValueError(f"{label} must be lowercase letters, digits and hyphens, starting with a letter")
+        raise FieldError(field, f"{label} must be lowercase letters, digits and hyphens, starting with a letter")
 
 
 def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
@@ -155,17 +222,17 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
     compat = series or values.get("series") or "scarthgap"
     notes, activate = [], {}
     if kind == "layer":
-        _check(values.get("name"), "Layer name")
+        _check(values.get("name"), "Folder name")
         if not re.fullmatch(r"[A-Za-z0-9_-]+", values.get("collection", "")):
-            raise ValueError("Collection must contain letters, digits, underscores or hyphens")
+            raise FieldError("collection", "Short id must contain letters, digits, underscores or hyphens")
         root = profile.root_path / values["name"]
         files = layer_files(values["name"], values["collection"], values.get("priority", "7"), values.get("depends", "core") or "core",
                             compat, values.get("owner") or "Unknown", values.get("license", "MIT"))
-        return {"kind": kind, "layer": str(root), "new_layer": True, "files": files, "activate": activate,
+        return {"kind": kind, "layer": str(root), "new_layer": True, "files": files, "activate": activate, "main": "conf/layer.conf",
                 "notes": [f"LAYERSERIES_COMPAT = {compat} (detected release)" if series else "Release not detected: set LAYERSERIES_COMPAT to your release."]}
     choice = values.get("layer", "")
     if not choice or choice.startswith("new layer"):
-        _check(values.get("new_layer"), "New layer name")
+        _check(values.get("new_layer"), "New layer folder", "new_layer")
         root, new = profile.root_path / values["new_layer"], True
     else:
         root, new = Path(choice), False
@@ -175,7 +242,7 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
         files.update(layer_files(values["new_layer"], collection, "7", "core yocto" if values.get("base") == "poky" else "core",
                                  compat, values.get("owner") or values.get("maintainer") or "Unknown"))
     if kind == "distro":
-        _check(values.get("name"), "DISTRO id")
+        _check(values.get("name"), "Id")
         lines = [f"# {values.get('title') or values['name']}: created with Bitloom Studio", ""]
         if values.get("base", "poky") == "poky":
             lines += ["require conf/distro/poky.conf", ""]
@@ -205,7 +272,7 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
         files[f"conf/distro/{values['name']}.conf"] = "\n".join(lines) + "\n"
         activate["distro"] = values["name"]
     elif kind == "machine":
-        _check(values.get("name"), "MACHINE id")
+        _check(values.get("name"), "Id")
         base = values.get("base") or "qemux86-64"
         lines = ["#@TYPE: Machine", f"#@NAME: {values.get('title') or values['name']}", f"#@DESCRIPTION: Derived from {base} with Bitloom Studio", "",
                  f"require conf/machine/{base}.conf", f'MACHINEOVERRIDES =. "{base}:"', ""]
@@ -226,7 +293,7 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
         lines += ["inherit core-image"] if base == "core-image" else [f"require recipes-core/images/{base}.bb"]
         features = values.get("features", "")
         if "debug-tweaks" in features.split() and newer(series, "styhead"):
-            raise ValueError("debug-tweaks was removed in 5.1 Styhead; use allow-empty-password, empty-root-password and allow-root-login")
+            raise FieldError("features", "debug-tweaks was removed in 5.1 Styhead; use allow-empty-password, empty-root-password and allow-root-login")
         if features:
             lines.append(f'IMAGE_FEATURES += "{features}"')
         if values.get("packages"):
@@ -235,7 +302,7 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
             lines.append(f'IMAGE_FSTYPES = "{values["fstypes"]}"')
         if values.get("size"):
             if not values["size"].isdigit():
-                raise ValueError("Extra free space must be a number of KiB")
+                raise FieldError("size", "Extra free space must be a number of KiB")
             lines.append(f'IMAGE_ROOTFS_EXTRA_SPACE = "{values["size"]}"')
         files[f"recipes-core/images/{values['name']}.bb"] = "\n".join(lines) + "\n"
         activate["target"] = values["name"]
@@ -246,16 +313,16 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
         files.update({k: v for k, v in generated.items() if k != "conf/layer.conf"})
         activate["target"] = values["name"]
     elif kind == "append":
-        _check(values.get("recipe"), "Recipe")
+        _check(values.get("recipe"), "Recipe", "recipe")
         category = values.get("category") or "recipes-core"
         if not re.fullmatch(r"recipes-[a-z0-9-]+", category):
-            raise ValueError("Category must look like recipes-<name>")
+            raise FieldError("category", "Folder must look like recipes-<name>")
         base = f"{category}/{values['recipe']}"
         lines = ['FILESEXTRAPATHS:prepend := "${THISDIR}/files:"', ""]
         name = values.get("file", "")
         if name:
             if not re.fullmatch(r"[A-Za-z0-9._-]+", name):
-                raise ValueError("File name may contain letters, digits, dots, underscores and hyphens")
+                raise FieldError("file", "File name may contain letters, digits, dots, underscores and hyphens")
             lines += [f'SRC_URI += "file://{name}"', "", "do_install:append() {", "    install -d ${D}${sysconfdir}",
                       f"    install -m 0644 ${{UNPACKDIR}}/{name} ${{D}}${{sysconfdir}}/{name}" if newer(series, "styhead") else
                       f"    install -m 0644 ${{WORKDIR}}/{name} ${{D}}${{sysconfdir}}/{name}", "}"]
@@ -266,7 +333,42 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
         files[f"{base}/{values['recipe']}_%.bbappend"] = "\n".join(lines) + "\n"
     else:
         raise ValueError("Unknown kind")
-    return {"kind": kind, "layer": str(root), "new_layer": new, "files": files, "activate": activate, "notes": notes}
+    main = next((name for name in files if name.startswith(("conf/distro/", "conf/machine/", "recipes-core/images/")) or name.endswith((".bb", ".bbappend"))), next(iter(files)))
+    return {"kind": kind, "layer": str(root), "new_layer": new, "files": files, "activate": activate, "notes": notes, "main": main}
+
+
+def explain(profile: Profile, result: dict, use: bool, shared: bool = False) -> list[str]:
+    """What Create will do, in order, so nothing happens by surprise (mirrors register())."""
+    root = Path(result["layer"])
+    steps = [f"Write {len(result['files'])} new {'file' if len(result['files']) == 1 else 'files'} into "
+             + (f"a new layer {root.name} (in {root.parent})" if result["new_layer"] else root.name) + "; existing files are never overwritten."]
+    activate = result["activate"]
+    selected = ", ".join(f"{k.upper() if k != 'target' else 'build target'} {v}" for k, v in activate.items() if k != "target")
+    if profile.mode in {"kas", "kas-container", "wrapper"} and (result["new_layer"] or activate):
+        name = kas_overlay(profile, result)[0]
+        what = " and ".join(filter(None, ["adds the layer" if result["new_layer"] else "", f"selects {selected}" if selected else "",
+                                          f"builds {activate['target']} by default" if activate.get("target") else ""]))
+        if profile.mode == "wrapper":
+            steps.append(f"Write {name}, which {what}; add it to the configuration your launcher passes to kas.")
+        elif shared:
+            steps.append(f"Write {name}, which {what}; this is a team profile, so clone it and append {name} to kas_file.")
+        else:
+            steps.append(f"Write {name}, which {what}, and add it to this profile's kas files: the next build uses it.")
+    else:
+        if result["new_layer"]:
+            steps.append("Queue bitbake-layers add-layer so BitBake reads the new layer.")
+        if activate.get("distro") or activate.get("machine"):
+            if use:
+                steps.append(f"Set {selected} in profile {profile.name}: the next build uses it.")
+            else:
+                assignments = " and ".join(f'{k.upper()} = "{v}"' for k, v in activate.items() if k != "target")
+                steps.append(f"Nothing selects it yet: set {assignments} in conf/local.conf when you want it.")
+    if activate.get("target"):
+        steps.append(f"Offer to build {activate['target']} right away.")
+    elif result["kind"] == "append":
+        recipe = Path(result["main"]).name.split("_")[0]
+        steps.append(f"Rebuild {recipe} (or an image containing it) to apply the change.")
+    return steps
 
 
 def allowed_roots(profile: Profile) -> list[Path]:

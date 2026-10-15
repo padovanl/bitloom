@@ -1058,15 +1058,23 @@ class StudioScreen(ModalScreen):
     StudioScreen > Vertical { width: 98%; height: 96%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
     StudioScreen #studio-hint { color: $text-muted; height: 1; }
     StudioScreen #studio-split { height: 1fr; }
-    StudioScreen #studio-kinds { width: 30; height: 1fr; border: round $primary-muted; background: $surface; }
+    StudioScreen #studio-kinds { width: 24; height: 1fr; border: round $primary-muted; background: $surface; }
     StudioScreen #studio-kinds:focus { border: round $accent; }
     StudioScreen #studio-form { width: 1fr; height: 1fr; margin: 0 1; border: round $primary-muted; padding: 0 1; }
     StudioScreen #studio-form:focus-within { border: round $accent; }
-    StudioScreen #studio-preview { width: 1fr; height: 1fr; border: round $primary-muted; }
-    StudioScreen .field-label { margin-top: 1; text-style: bold; height: 1; }
+    StudioScreen #studio-right { width: 1fr; height: 1fr; }
+    StudioScreen #studio-steps { height: auto; max-height: 9; border: round $primary-muted; padding: 0 1; }
+    StudioScreen #studio-preview { height: 1fr; border: round $primary-muted; }
+    StudioScreen .section { margin-top: 1; color: $accent; text-style: bold; height: 1; }
+    StudioScreen .field-label { margin-top: 1; height: 1; }
     StudioScreen .field-info { color: $text-muted; height: auto; }
-    StudioScreen SelectionList { height: auto; max-height: 8; border: none; background: $surface; }
+    StudioScreen .field-why { height: auto; }
+    StudioScreen .field-error { color: $error; height: auto; display: none; }
+    StudioScreen .field-error.-shown { display: block; }
+    StudioScreen .new-layer-hidden { display: none; }
+    StudioScreen SelectionList { height: auto; max-height: 10; border: none; background: $surface; }
     StudioScreen Input, StudioScreen Select { height: 1; }
+    StudioScreen Input.-invalid { border: tall $error; }
     StudioScreen #studio-notes { height: auto; max-height: 3; color: $warning; }
     """
     BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
@@ -1079,24 +1087,29 @@ class StudioScreen(ModalScreen):
         self.kind = "distro"
         self.plan = None
         self.ready = False
+        self.focus_var = ""
+        self.kept: dict[str, str] = {}      # the layer choice survives switching kinds
 
     def compose(self):
         from textual.containers import VerticalScroll
         from textual.widgets import RichLog
         from .studio import KINDS
         with Vertical():
-            yield Label("↑↓ choose what to create · Tab to the form · every field explains itself · ^O creates (never overwrites) · Esc closes", id="studio-hint")
+            yield Label("↑↓ what to create · Tab to the form · the focused field's lines light up in the preview · ^O creates (never overwrites) · Esc closes", id="studio-hint")
             with Horizontal(id="studio-split"):
                 yield OptionList(*[Option(f"{title}", id=kind) for kind, (title, _) in KINDS.items()], id="studio-kinds")
                 yield VerticalScroll(id="studio-form")
-                yield RichLog(id="studio-preview", wrap=False, markup=False, auto_scroll=False)
+                with Vertical(id="studio-right"):
+                    yield Static(id="studio-steps", markup=False)
+                    yield RichLog(id="studio-preview", wrap=True, markup=False, auto_scroll=False, min_width=1)
             yield Static(id="studio-notes", markup=False)
 
     def on_mount(self):
         from .versions import describe
         self.query_one(Vertical).border_title = f"Studio · {self.profile.name} · {describe(self.release)}"
         self.query_one("#studio-kinds").border_title = "Create"
-        self.query_one("#studio-preview").border_title = "Files to create"
+        self.query_one("#studio-steps").border_title = "When you press ^O"
+        self.query_one("#studio-preview").border_title = "Files"
         kinds = self.query_one("#studio-kinds", OptionList)
         kinds.highlighted = list(__import__("bitloom.studio", fromlist=["KINDS"]).KINDS).index(self.kind)
         kinds.focus()
@@ -1106,7 +1119,10 @@ class StudioScreen(ModalScreen):
 
     def on_option_list_option_highlighted(self, event):
         if self.ready and event.option_list.id == "studio-kinds" and event.option.id != self.kind:
+            values = self.values()
+            self.kept = {k: values[k] for k in ("layer", "new_layer") if k in values}
             self.kind = event.option.id
+            self.focus_var = ""
             self.run_worker(self.build_form(), exclusive=True, group="studio-form")
 
     def on_option_list_option_selected(self, event):
@@ -1114,31 +1130,57 @@ class StudioScreen(ModalScreen):
             self.call_after_refresh(lambda: self.query_one("#studio-form").focus_next())
 
     async def build_form(self):
+        from rich.text import Text
         from textual.widgets import Checkbox, SelectionList
-        from .studio import KINDS, fields
+        from .studio import KINDS, SECTIONS, fields
         form = self.query_one("#studio-form")
         await form.remove_children()
         title, description = KINDS[self.kind]
         form.border_title = title
+        self.fields = {f.id: f for f in fields(self.kind, self.release, self.target_layers)}
         widgets = [Static(description, classes="field-info")]
-        for field in fields(self.kind, self.release, self.target_layers):
-            widgets.append(Label(field.label + (" *" if field.required else ""), classes="field-label"))
+        section, number = None, 0
+        for field in self.fields.values():
+            if field.section != section:
+                section, number = field.section, number + 1
+                widgets.append(Label(f"{number}  {SECTIONS.get(section, section).upper()}", classes="section"))
+            group = " field-new_layer" if field.id == "new_layer" else ""
+            label = Text.assemble((field.label, "bold"), (" *" if field.required else "", self.app.current_theme.accent or "cyan"),
+                                  ("   " + field.var if field.var else "", "dim italic"))
+            widgets.append(Label(label, classes="field-label" + group))
+            value = self.kept.get(field.id, field.default)
             if field.kind == "choice":
-                widgets.append(Select([(c, c) for c in field.choices], value=field.default, allow_blank=False, id="f-" + field.id))
+                value = value if value in field.choices else field.default
+                # Layers by folder name: the full path is in the preview header.
+                widgets.append(Select([(Path(c).name if field.id == "layer" and c.startswith("/") else c, c) for c in field.choices], value=value, allow_blank=False, id="f-" + field.id, classes=group))
             elif field.kind == "multi":
-                chosen = set(field.default.split())
-                widgets.append(SelectionList(*[(c, c, c in chosen) for c in field.choices], id="f-" + field.id))
+                chosen, hints = set(field.default.split()), dict(field.hints)
+                widgets.append(SelectionList(*[(Text.assemble(c, ("  " + hints[c], "dim") if c in hints else ""), c, c in chosen) for c in field.choices], id="f-" + field.id))
             elif field.kind == "bool":
-                widgets.append(Checkbox("enabled", value=field.default == "1", id="f-" + field.id))
+                widgets.append(Checkbox("on", value=field.default == "1", id="f-" + field.id))
             else:
-                widgets.append(Input(value=field.default, id="f-" + field.id))
+                widgets.append(Input(value=value, placeholder=field.placeholder, id="f-" + field.id, classes=group))
+            if field.kind == "choice" and field.hints:
+                widgets.append(Static(self.why(field, value), id="why-" + field.id, classes="field-why" + group, markup=False))
             if field.info:
-                widgets.append(Static(field.info, classes="field-info"))
+                widgets.append(Static(field.info, classes="field-info" + group, markup=False))
+            widgets.append(Static("", id="err-" + field.id, classes="field-error" + group, markup=False))
         if self.kind in {"distro", "machine"} and self.profile.mode in {"host", "container"}:
             widgets += [Label("Use for this profile", classes="field-label"),
                         Checkbox("set " + ("DISTRO" if self.kind == "distro" else "MACHINE") + " of " + self.profile.name, value=True, id="f-use")]
         await form.mount_all(widgets)
+        self.sync_new_layer()
         self.refresh_preview()
+
+    def why(self, field, choice):
+        hint = dict(field.hints).get(choice, "")
+        return f"→ {hint}" if hint else ""
+
+    def sync_new_layer(self):
+        values = self.values()
+        hidden = not values.get("layer", "new layer").startswith("new layer")
+        for widget in self.query(".field-new_layer"):
+            widget.set_class(hidden, "new-layer-hidden")
 
     def values(self):
         from textual.widgets import Checkbox, SelectionList
@@ -1162,6 +1204,11 @@ class StudioScreen(ModalScreen):
         self.refresh_preview()
 
     def on_select_changed(self, event):
+        key = (event.select.id or "")[2:]
+        if key in getattr(self, "fields", {}) and len(self.query("#why-" + key)):
+            self.query_one("#why-" + key, Static).update(self.why(self.fields[key], str(event.value)))
+        if key == "layer":
+            self.sync_new_layer()
         self.refresh_preview()
 
     def on_selection_list_selected_changed(self, event):
@@ -1170,25 +1217,61 @@ class StudioScreen(ModalScreen):
     def on_checkbox_changed(self, event):
         self.refresh_preview()
 
+    def on_descendant_focus(self, event):
+        ident = (getattr(event.widget, "id", "") or "")
+        field = getattr(self, "fields", {}).get(ident[2:]) if ident.startswith("f-") else None
+        var = field.var if field else ""
+        if var != self.focus_var:
+            self.focus_var = var
+            self.refresh_preview()
+
     def refresh_preview(self):
+        import re
         from rich.text import Text
         from textual.widgets import RichLog
-        from .studio import plan
+        from .studio import explain, plan
         log = self.query_one("#studio-preview", RichLog)
+        steps = self.query_one("#studio-steps", Static)
         log.clear()
+        for widget in self.query(".field-error"):
+            widget.remove_class("-shown")
+        for widget in self.query("#studio-form Input.-invalid"):
+            widget.remove_class("-invalid")
+        theme = self.app.current_theme
+        values = self.values()
         try:
-            self.plan = plan(self.kind, self.values(), self.profile, self.release)
+            self.plan = plan(self.kind, values, self.profile, self.release)
         except ValueError as exc:
             self.plan = None
-            log.write(Text("✖ " + str(exc), style=self.app.current_theme.error))
+            field = getattr(exc, "field", "name")
+            if len(self.query("#err-" + field)):
+                self.query_one("#err-" + field, Static).update("✖ " + str(exc))
+                self.query_one("#err-" + field, Static).add_class("-shown")
+                for widget in self.query("#f-" + field):
+                    widget.add_class("-invalid")
+            steps.update(Text("Fix the field marked ✖ to see the files.", style=theme.error))
+            log.write(Text("✖ " + str(exc), style=theme.error))
             self.query_one("#studio-notes", Static).update("")
             return
-        root = self.plan["layer"]
-        log.write(Text(("NEW LAYER " if self.plan["new_layer"] else "INTO ") + root, style=f"bold {self.app.current_theme.accent}"))
-        for name, text in self.plan["files"].items():
-            log.write(Text("\n+++ " + name, style=f"bold {self.app.current_theme.success}"))
-            log.write(Text(text))
-        log.scroll_home(animate=False)
+        lines = explain(self.profile, self.plan, values.get("use") == "1", self.profile.name in getattr(self.app.settings, "shared", {}))
+        steps.update(Text("\n".join(f"{n}. {line}" for n, line in enumerate(lines, 1))))
+        word = re.compile(r"(^|[^\w@{-])" + re.escape(self.focus_var) + r"(?![\w-])") if self.focus_var else None
+        main = self.plan.get("main")
+        names = [main] + [n for n in self.plan["files"] if n != main] if main in self.plan["files"] else list(self.plan["files"])
+        log.write(Text(("NEW LAYER " if self.plan["new_layer"] else "INTO ") + self.plan["layer"], style=f"bold {theme.accent}"))
+        first = None
+        for name in names:
+            log.write(Text("\n+++ " + name + ("   (main file)" if name == main else ""), style=f"bold {theme.success}"))
+            for line in self.plan["files"][name].rstrip("\n").split("\n"):
+                if word and word.search(line):
+                    first = first if first is not None else len(log.lines)
+                    log.write(Text("▌" + line, style=f"bold reverse {theme.accent}"))
+                else:
+                    log.write(Text(" " + line, style="dim" if line.lstrip().startswith("#") else ""))
+        if first is not None:
+            log.scroll_to(y=max(0, first - 3), animate=False)
+        else:
+            log.scroll_home(animate=False)
         self.query_one("#studio-notes", Static).update("  ".join("⚠ " + n for n in self.plan["notes"]))
 
     def action_create(self):

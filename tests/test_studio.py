@@ -90,3 +90,29 @@ async def test_studio_keyboard_flow(tmp_path):
         assert (tmp_path / 'demo/meta-demo/conf/distro/demo-os.conf').exists()
         assert app.profile.distro == 'demo-os'
     app.store.close()
+
+
+def test_fields_explain_themselves_and_errors_name_the_field(tmp_path):
+    """Every field says which section it belongs to; choices explain what they mean; errors point at a field."""
+    from bitloom.studio import FieldError, SECTIONS, explain
+    for kind in ("layer", "distro", "machine", "image", "recipe", "append"):
+        for field in fields(kind, "wrynose", []):
+            assert field.section in SECTIONS, (kind, field.id)
+            if field.kind in {"choice", "multi"} and field.id not in {"layer", "priority", "license"}:
+                assert field.hints, (kind, field.id)          # every option set is explained
+    profile = Profile(name="p", root=str(tmp_path), mode="host")
+    with pytest.raises(FieldError) as error:
+        plan("image", values("image", "wrynose", [], size="lots"), profile, "wrynose")
+    assert error.value.field == "size"
+    with pytest.raises(FieldError) as error:
+        plan("distro", values("distro", "wrynose", [], name="Acme"), profile, "wrynose")
+    assert error.value.field == "name"
+    result = plan("distro", values("distro", "wrynose", []), profile, "wrynose")
+    assert result["main"] == "conf/distro/acme.conf"
+    steps = explain(profile, result, use=False)
+    assert "new layer meta-acme" in steps[0] and "bitbake-layers add-layer" in steps[1] and 'DISTRO = "acme"' in steps[2]
+    assert "Set DISTRO acme in profile p" in explain(profile, result, use=True)[2]
+    kas = Profile(name="k", root=str(tmp_path), mode="kas-container", kas_file="kas.yml")
+    image = plan("image", values("image", "wrynose", []), kas, "wrynose")
+    assert image["main"] == "recipes-core/images/acme-image.bb"
+    assert any("kas-studio-meta-acme.yml" in step and "builds acme-image" in step for step in explain(kas, image, use=False))

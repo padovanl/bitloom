@@ -313,14 +313,14 @@ class Dashboard:
 
     def studio_fields(self, query):
         from dataclasses import asdict
-        from .studio import KINDS, fields, product_layers
+        from .studio import KINDS, SECTIONS, fields, product_layers
         from .versions import detect_release
         profile = self.profile(query.get("profile", [""])[0])
         kind = query.get("kind", ["distro"])[0]
         if kind not in KINDS:
             raise ValueError("Unknown kind")
-        layers = product_layers(metadata(profile), profile)
-        return {"kinds": [{"id": k, "title": t, "description": d} for k, (t, d) in KINDS.items()],
+        layers = product_layers(self.entries(profile), profile)
+        return {"kinds": [{"id": k, "title": t, "description": d} for k, (t, d) in KINDS.items()], "sections": SECTIONS,
                 "fields": [asdict(f) for f in fields(kind, detect_release(profile), layers)], "mode": profile.mode}
 
     def studio_plan(self, body):
@@ -333,12 +333,15 @@ class Dashboard:
         return profile, plan(body.get("kind", ""), values, profile, detect_release(profile))
 
     def studio_preview(self, body):
-        return self.studio_plan(body)[1]
+        from .studio import explain
+        profile, result = self.studio_plan(body)
+        return {**result, "steps": explain(profile, result, body.get("use") is True, profile.name in self.settings().shared)}
 
     def studio_create(self, body):
         from .studio import create, register
         profile, result = self.studio_plan(body)
         written = create(profile, result)
+        self.metadata_cache.clear()            # the new layer and files show up in Recipes and the image list at once
         settings = self.settings()
         profile = next(p for p in settings.profiles if p.name == profile.name)
 
@@ -656,7 +659,7 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
             except LookupError as exc:
                 self.json(HTTPStatus.NOT_FOUND, {"error": str(exc).strip("'\"")})
             except (ValueError, TypeError, OSError) as exc:
-                self.json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                self.json(HTTPStatus.BAD_REQUEST, {"error": str(exc), **({"field": exc.field} if getattr(exc, "field", None) else {})})
             except Exception as exc:  # never drop the connection without an answer
                 self.log_error("%s %s failed: %r", method, self.path, exc)
                 self.json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Internal error: {type(exc).__name__}: {exc}"})
