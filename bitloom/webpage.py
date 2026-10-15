@@ -305,16 +305,82 @@ details.opt summary::-webkit-details-marker { display: none; }
 details.opt[open] summary { background: var(--glow); }
 details.opt .body { padding: 6px 16px 14px; color: var(--muted); animation: enter .3s var(--ease); }
 
-/* Studio */
-.studio { display: flex; flex-direction: column; gap: 16px; }
-.kinds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-.kind { all: unset; cursor: pointer; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--raised), var(--surface)); transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; align-content: start; min-height: 78px; }
-.kind:hover { transform: translateY(-2px); border-color: var(--line2); }
-.kind.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+/* Studio: an editor for your layers */
+body[data-view=studio] .cards { display: none; }
+.studio-ide { display: flex; flex-direction: column; gap: 10px; min-height: calc(100vh - 230px); }
+.ide-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ide-crumbs { display: flex; align-items: center; gap: 6px; font: 12.5px var(--mono); color: var(--muted); min-width: 0; overflow: hidden; }
+.ide-crumbs b { color: var(--fg); font-weight: 600; } .ide-crumbs .sep { opacity: .5; }
+.ide-crumbs .tag { margin-left: 6px; }
+.ide-new { position: relative; }
+.ide-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 340px; padding: 6px; border: 1px solid var(--line2); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); animation: pop .16s var(--ease); }
+.ide-menu button { all: unset; display: grid; grid-template-columns: 24px 1fr; gap: 0 8px; width: calc(100% - 20px); padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.ide-menu button:hover, .ide-menu button:focus-visible { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.ide-menu .ico { color: var(--accent); grid-row: span 2; font-size: 16px; } .ide-menu small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.ide { display: grid; grid-template-columns: 260px minmax(0, 1fr) 360px; gap: 10px; flex: 1; min-height: 600px; }
+.ide.no-inspector { grid-template-columns: 260px minmax(0, 1fr); }
+.ide.no-inspector .ide-inspector { display: none; }
+.ide-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--line); }
+.ide-head button { all: unset; margin-left: auto; cursor: pointer; color: var(--muted); padding: 0 4px; border-radius: 4px; font-size: 13px; letter-spacing: 0; }
+.ide-head button:hover { color: var(--fg); }
+.ide-explorer #ide-filter { margin: 8px; width: calc(100% - 16px); padding: 6px 10px; font-size: 12.5px; }
+.ide-tree { overflow: auto; flex: 1; padding: 0 0 10px; font: 12.5px var(--mono); }
+.tnode { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px calc(10px + var(--d, 0) * 14px); cursor: pointer; white-space: nowrap; color: var(--fg); user-select: none; border-left: 2px solid transparent; }
+.tnode:hover { background: color-mix(in srgb, var(--raised) 70%, var(--glow)); }
+.tnode.active { background: color-mix(in srgb, var(--accent) 14%, transparent); border-left-color: var(--accent); }
+.tnode:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.tnode .tw { width: 10px; color: var(--muted); flex: none; transition: transform .15s; } .tnode.open > .tw { transform: rotate(90deg); }
+.tnode .ti { width: 14px; text-align: center; flex: none; color: var(--muted); }
+.tnode .tn { overflow: hidden; text-overflow: ellipsis; }
+.tnode.layer .tn { font-weight: 650; } .tnode.layer.ro .tn { color: var(--muted); font-weight: 500; }
+.tnode .lock { margin-left: auto; color: var(--muted); font-size: 11px; }
+.tnode.planned .tn { color: var(--ok); } .tnode.planned .ti { color: var(--ok); }
+.tnode .badge-new { margin-left: auto; font-size: 10px; color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); border-radius: 999px; padding: 0 6px; }
+.tgroup { padding: 10px 12px 4px; font: 10.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.ide-main { display: flex; flex-direction: column; min-width: 0; }
+.ide-tabs { display: flex; gap: 1px; background: var(--bg2); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; min-height: 36px; }
+.ide-tab { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; height: 36px; font: 12.5px var(--mono); color: var(--muted); cursor: pointer; white-space: nowrap; border-right: 1px solid var(--line); border-top: 2px solid transparent; }
+.ide-tab:hover { color: var(--fg); }
+.ide-tab.active { color: var(--fg); background: var(--code); border-top-color: var(--accent); }
+.ide-tab.plan .nm { color: var(--ok); } .ide-tab.plan .nm::before { content: "+ "; }
+.ide-tab .x { all: unset; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 4px; font-size: 12px; color: var(--muted); }
+.ide-tab .x:hover { background: var(--line); color: var(--fg); }
+.ide-tab.dirty .x::before { content: "●"; font-size: 10px; } .ide-tab.dirty .x { font-size: 0; } .ide-tab.dirty .x:hover { font-size: 12px; } .ide-tab.dirty .x:hover::before { content: ""; }
+.ide-path { display: flex; gap: 10px; align-items: center; padding: 6px 14px; font: 11.5px var(--mono); color: var(--muted); background: var(--code); border-bottom: 1px solid var(--line); min-height: 30px; }
+.ide-path span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.ide-editor { position: relative; flex: 1; display: grid; grid-template-columns: 48px 1fr; background: var(--code); min-height: 320px; overflow: hidden; }
+.ide-gutter { padding: 10px 8px 10px 0; text-align: right; font: 12.5px/1.65 var(--mono); color: color-mix(in srgb, var(--muted) 60%, transparent); overflow: hidden; user-select: none; }
+.ide-gutter div.hl { color: var(--accent); }
+.ide-code { position: relative; overflow: hidden; }
+.ide-code pre, .ide-code textarea { position: absolute; inset: 0; margin: 0; padding: 10px 14px; border: 0; font: 12.5px/1.65 var(--mono); white-space: pre; tab-size: 4; overflow: auto; letter-spacing: 0; }
+.ide-code pre { pointer-events: none; color: var(--fg); }
+.ide-code textarea { background: transparent; color: transparent; caret-color: var(--accent); resize: none; outline: none; box-shadow: none; border-radius: 0; }
+.ide-code textarea::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); color: transparent; }
+.ide-code textarea[readonly] { caret-color: transparent; }
+.ide-code pre .ln { display: block; min-height: 1.65em; } .ide-code pre .ln.hl { background: color-mix(in srgb, var(--accent) 15%, transparent); box-shadow: inset 3px 0 var(--accent); margin: 0 -14px; padding: 0 14px; }
+.t-com { color: var(--muted); font-style: italic; } .t-var { color: var(--accent2); } .t-op { color: var(--warn); } .t-str { color: var(--ok); } .t-exp { color: var(--warn); } .t-kw { color: var(--accent); font-weight: 600; } .t-fn { color: var(--info); }
+.ide-welcome { flex: 1; display: grid; place-content: center; gap: 18px; padding: 30px; text-align: center; background: var(--code); }
+.ide-welcome h3 { margin: 0; font-size: 20px; } .ide-welcome p { margin: 0; color: var(--muted); max-width: 560px; }
+.ide-welcome .kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 200px)); gap: 10px; justify-content: center; text-align: left; }
+.kind { all: unset; cursor: pointer; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--raised), var(--surface)); transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; align-content: start; }
+.kind:hover { transform: translateY(-2px); border-color: var(--accent); }
 .kind:focus-visible { outline: 2px solid var(--accent); }
 .kind .ico { font-size: 17px; color: var(--accent); grid-row: span 2; line-height: 1.3; } .kind b { font-size: 14px; }
 .kind small { color: var(--muted); line-height: 1.35; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.studio-split { grid-template-columns: minmax(360px, 1fr) minmax(0, 1.15fr); min-height: 560px; }
+.ide-bottom { border-top: 1px solid var(--line); max-height: 210px; display: flex; flex-direction: column; }
+.ide-btabs { display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid var(--line); }
+.ide-btabs button { all: unset; cursor: pointer; padding: 7px 10px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid transparent; }
+.ide-btabs button.active { color: var(--fg); border-bottom-color: var(--accent); }
+.ide-btabs .count { margin-left: 5px; padding: 0 6px; border-radius: 999px; background: var(--line); font-size: 10px; }
+.ide-btabs .count.warn { background: color-mix(in srgb, var(--warn) 25%, transparent); color: var(--warn); } .ide-btabs .count.err { background: color-mix(in srgb, var(--err) 25%, transparent); color: var(--err); }
+#ide-bottom-body { overflow: auto; }
+#ide-bottom-body .st-steps { border-bottom: 0; }
+.problem { display: flex; gap: 8px; padding: 6px 14px; font-size: 13px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.problem.err { color: var(--err); } .problem.warn { color: var(--warn); } .problem.ok { color: var(--muted); }
+.ide-inspector { display: flex; flex-direction: column; min-height: 0; }
+.ide-inspector .form { flex: 1; }
+@media (max-width: 1250px) { .ide { grid-template-columns: 220px minmax(0, 1fr) 320px; } }
+@media (max-width: 1050px) { .ide, .ide.no-inspector { grid-template-columns: 1fr; } .ide-explorer { max-height: 260px; } .ide-welcome .kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .st-intro { padding: 12px 16px 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
 .form { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
 .form.swap { animation: enter .3s var(--ease); }
@@ -348,24 +414,6 @@ details.opt .body { padding: 6px 16px 14px; color: var(--muted); animation: ente
 .st-steps .cap { margin-left: -24px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; list-style: none; padding-bottom: 4px; }
 .st-steps .cap::before { display: none; }
 .st-steps.done li::before { content: "✓"; background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); border-color: transparent; }
-.file-tabs { display: flex; gap: 2px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; }
-.file-tabs button { all: unset; cursor: pointer; padding: 7px 11px; font: 12px var(--mono); color: var(--muted); border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: 0; white-space: nowrap; position: relative; top: 1px; }
-.file-tabs button:hover { color: var(--fg); }
-.file-tabs button.active { color: var(--fg); background: var(--code); border-color: var(--line); }
-.file-tabs button.main::after { content: " ●"; color: var(--accent); }
-.file-tabs button.has::before { content: ""; position: absolute; top: 5px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-.file-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.st-path { padding: 7px 16px; font: 11.5px var(--mono); color: var(--muted); background: var(--code); border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-pre.st-code { margin: 0; flex: 1; overflow: auto; padding: 10px 0; background: var(--code); font: 12.5px/1.6 var(--mono); counter-reset: line; min-height: 200px; }
-pre.st-code span { display: block; padding: 0 16px 0 52px; position: relative; white-space: pre-wrap; word-break: break-word; transition: background .25s; }
-pre.st-code span::before { counter-increment: line; content: counter(line); position: absolute; left: 0; width: 36px; text-align: right; color: color-mix(in srgb, var(--muted) 60%, transparent); }
-pre.st-code span.c { color: var(--muted); }
-pre.st-code span.hl { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: inset 3px 0 var(--accent); }
-@media (max-width: 1100px) { .kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); } .studio-split { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kind small { display: none; } .kind { min-height: 0; } }
-.files details { border-bottom: 1px solid var(--line); }
-.files summary { cursor: pointer; padding: 9px 16px; font: 12.5px var(--mono); color: var(--ok); }
-.files pre { margin: 0; padding: 10px 16px; background: color-mix(in srgb, var(--bg) 85%, black); font: 12px/1.5 var(--mono); white-space: pre-wrap; }
 .notice { padding: 10px 16px; color: var(--warn); font-size: 13px; }
 
 /* Toasts */
@@ -559,23 +607,36 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
       <div class="panel"><div class="head"><h2>SBOM, vulnerability and traceability options</h2><span style="flex:1"></span><span class="hint">Change them in the TUI: Configuration → <kbd>s</kbd> (writes a managed block with a backup)</span></div><div id="sb-options"></div></div>
     </section>
 
-    <section id="view-studio" class="view studio" hidden>
-      <div class="kinds" id="kinds" role="tablist" aria-label="What to create"></div>
-      <div class="split studio-split">
-        <div class="panel">
-          <div class="head"><h2 id="st-title">Distribution</h2></div>
+    <section id="view-studio" class="view studio-ide" hidden>
+      <div class="ide-bar">
+        <div class="ide-crumbs" id="ide-crumbs"><b>Studio</b><span class="sep">·</span><span>your layers, recipes and configuration</span></div>
+        <span style="flex:1"></span>
+        <div class="ide-new"><button class="btn" id="ide-new-btn" aria-haspopup="menu" aria-expanded="false" title="Create a layer, distribution, machine, image, recipe or append (n)"><kbd>n</kbd>New ▾</button><div class="ide-menu" id="ide-menu" role="menu" hidden></div></div>
+        <button class="btn" id="ide-save" title="Save the open file (Ctrl+S)" disabled><kbd>⌃S</kbd>Save</button>
+        <button class="btn primary" id="st-create" disabled title="Create the planned files (Ctrl+Enter)">✦ Create files</button>
+      </div>
+      <div class="ide no-inspector" id="ide">
+        <nav class="panel ide-explorer" aria-label="Explorer">
+          <div class="ide-head">Explorer<button id="ide-refresh" title="Reload the layers" aria-label="Reload the layers">⟳</button></div>
+          <input type="search" id="ide-filter" placeholder="Filter files" aria-label="Filter files">
+          <div class="ide-tree" id="ide-tree" role="tree" aria-label="Layers and files"></div>
+        </nav>
+        <section class="panel ide-main">
+          <div class="ide-tabs" id="ide-tabs" role="tablist" aria-label="Open files"></div>
+          <div class="ide-path" id="ide-path" hidden><span id="ide-path-text"></span><span id="ide-path-state"></span></div>
+          <div class="ide-editor" id="ide-editor" hidden><div class="ide-gutter" id="ide-gutter"></div><div class="ide-code"><pre id="ide-hl" aria-hidden="true"></pre><textarea id="ide-text" spellcheck="false" autocomplete="off" aria-label="File content"></textarea></div></div>
+          <div class="ide-welcome" id="ide-welcome"><h3>Your layers, in one place</h3><p>Open any file from the Explorer: files of your own layers can be edited and saved; upstream layers (Poky, OE-Core) are read-only. To add something, pick what to create: a guided form opens on the right and the files it will write open here as new tabs, which you can still edit before creating them.</p><div class="kinds" id="kinds"></div></div>
+          <div class="ide-bottom" id="ide-bottom" hidden>
+            <div class="ide-btabs" role="tablist"><button data-b="steps" class="active" role="tab">Create will…</button><button data-b="problems" role="tab">Problems<span class="count" id="ide-problems-n">0</span></button></div>
+            <div id="ide-bottom-body"><ol class="st-steps" id="st-steps"></ol><div id="ide-problems" hidden></div></div>
+          </div>
+        </section>
+        <aside class="panel ide-inspector" aria-label="Inspector">
+          <div class="ide-head"><span id="st-title">Inspector</span><button id="ide-close-form" title="Close the form and its planned files" aria-label="Close the form">✕</button></div>
           <div class="st-intro" id="st-desc"></div>
           <div class="form" id="st-form"></div>
-          <div class="tools st-actions"><label class="check" id="st-use-wrap"><span class="switch"><input type="checkbox" id="st-use" checked><span></span></span><span id="st-use-label">use for this profile</span></label><span style="flex:1"></span><span class="hint">nothing is overwritten</span><button class="btn primary" id="st-create">✦ Create files</button></div>
-        </div>
-        <div class="panel">
-          <div class="head"><h2>Preview</h2><span class="meta" id="st-layer"></span></div>
-          <ol class="st-steps" id="st-steps"></ol>
-          <div class="notice" id="st-notes" hidden></div>
-          <div class="file-tabs" id="st-tabs" role="tablist" aria-label="Files"></div>
-          <div class="st-path" id="st-path"></div>
-          <pre class="st-code" id="st-code" tabindex="0"></pre>
-        </div>
+          <div class="tools st-actions"><label class="check" id="st-use-wrap"><span class="switch"><input type="checkbox" id="st-use" checked><span></span></span><span id="st-use-label">use for this profile</span></label></div>
+        </aside>
       </div>
     </section>
 
@@ -1083,7 +1144,7 @@ async function refresh() {
 }
 
 function setView(name) {
-  view = name;
+  view = name; document.body.dataset.view = name;
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
   if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); loadNotifications(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
@@ -1454,28 +1515,214 @@ async function scanGrype() {
   catch (error) { toast("Grype", error.message, "error"); }
 }
 
-/* Studio */
-let lastPlan = null, studioFile = "", studioVar = "", studioSections = {}, studioMode = "";
-async function loadStudio() {
+/* Studio: explorer, editor with tabs, inspector with the guided form */
+let studioPreviewTimer = null;
+function previewStudioSoon() { clearTimeout(studioPreviewTimer); studioPreviewTimer = setTimeout(previewStudio, 300); }
+let lastPlan = null, studioVar = "", studioSections = {}, studioMode = "", studioKinds = [], studioActive = false;
+let ideLayers = [], ideRoot = "", ideOpen = new Set(), ideFiles = {}, ideTabs = [], ideCurrent = null, planEdits = {};
+const KIND_KEYS = {layer: "l", distro: "d", machine: "m", image: "i", recipe: "r", append: "a"};
+
+async function loadStudio(reload = false) {
   const data = await api(`/api/studio/fields?profile=${prof()}&kind=${studioKind}`);
-  studioSections = data.sections || {}; studioMode = data.mode;
+  studioSections = data.sections || {}; studioMode = data.mode; studioKinds = data.kinds;
+  renderNewMenu(); renderWelcome();
+  if (!ideLayers.length || reload) await loadLayers();
+  if (studioActive) await openForm(studioKind, data);
+  else renderEditor();
+}
+function renderNewMenu() {
+  const menu = $("ide-menu"); menu.textContent = "";
+  for (const kind of studioKinds) menu.append(el("button", {role: "menuitem", title: kind.description, onclick: () => { closeMenu(); startForm(kind.id); }},
+    el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title}), el("small", {text: kind.description})));
+}
+function renderWelcome() {
   const kinds = $("kinds"); kinds.textContent = "";
-  for (const kind of data.kinds) {
-    const card = el("button", {class: "kind" + (kind.id === studioKind ? " active" : ""), role: "tab", "aria-selected": String(kind.id === studioKind)},
-      el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title}), el("small", {text: kind.description}));
-    card.title = kind.description;
-    card.addEventListener("click", () => {
-      if (kind.id === studioKind) return;
-      // The layer choice is the same for every kind: keep it, start the rest from defaults.
-      studioKind = kind.id; studioValues = {layer: studioValues.layer, new_layer: studioValues.new_layer}; studioFile = ""; studioVar = ""; loadStudio();
-    });
-    kinds.append(card);
-    if (kind.id === studioKind) { $("st-title").textContent = kind.title; $("st-desc").textContent = kind.description; }
+  for (const kind of studioKinds) kinds.append(el("button", {class: "kind", title: kind.description, onclick: () => startForm(kind.id)},
+    el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title}), el("small", {text: kind.description})));
+}
+function closeMenu() { $("ide-menu").hidden = true; $("ide-new-btn").setAttribute("aria-expanded", "false"); }
+
+/* Explorer */
+async function loadLayers() {
+  try { const data = await api(`/api/studio/layers?profile=${prof()}`); ideLayers = data.layers; ideRoot = data.root; }
+  catch (error) { ideLayers = []; toast("Studio", error.message, "error"); }
+  if (!ideOpen.size) for (const layer of ideLayers.filter((l) => l.writable)) ideOpen.add(layer.path);
+  for (const path of ideOpen) if (ideLayers.some((l) => l.path === path) && !ideFiles[path]) await loadFiles(path);
+  renderTree();
+}
+async function loadFiles(path) {
+  try { ideFiles[path] = (await api(`/api/studio/files?profile=${prof()}&layer=${encodeURIComponent(path)}`)).files; } catch (error) { ideFiles[path] = []; }
+}
+function plannedFor(layerPath) {
+  if (!lastPlan || !studioActive) return [];
+  return lastPlan.layer === layerPath || (lastPlan.new_layer && !layerPath) ? Object.keys(lastPlan.files) : [];
+}
+function renderTree() {
+  const tree = $("ide-tree"), needle = $("ide-filter").value.trim().toLowerCase(); tree.textContent = "";
+  const node = (props, depth, ...children) => { const n = el("div", {...props, tabindex: "0", role: "treeitem", style: `--d:${depth}`}, ...children);
+    n.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); n.click(); } }); return n; };
+  const fileRow = (layerPath, rel, planned) => {
+    const depth = rel.split("/").length, name = rel.split("/").pop(), id = planned ? "plan:" + rel : layerPath + "/" + rel;
+    return node({class: "tnode file" + (planned ? " planned" : "") + (ideCurrent === id ? " active" : ""), title: planned ? "Will be created: " + rel : rel,
+      onclick: () => planned ? openPlanTab(rel) : openFile(layerPath + "/" + rel)}, depth,
+      el("span", {class: "tw"}), el("span", {class: "ti", text: planned ? "+" : iconFor(name)}), el("span", {class: "tn", text: name}), ...(planned ? [el("span", {class: "badge-new", text: "new"})] : []));
+  };
+  const layerBlock = (layer, files, planned) => {
+    const open = ideOpen.has(layer.path) || !!needle || planned.length > 0;
+    tree.append(node({class: "tnode layer" + (layer.writable ? "" : " ro") + (open ? " open" : ""), title: layer.path,
+      onclick: async () => { ideOpen.has(layer.path) ? ideOpen.delete(layer.path) : ideOpen.add(layer.path); if (!ideFiles[layer.path] && layer.path) await loadFiles(layer.path); renderTree(); }}, 0,
+      el("span", {class: "tw", text: "▸"}), el("span", {class: "ti", text: layer.writable ? "▤" : "▢"}), el("span", {class: "tn", text: layer.name}),
+      ...(layer.writable ? [] : [el("span", {class: "lock", title: "Upstream layer: read-only", text: "read-only"})]), ...(layer.planned ? [el("span", {class: "badge-new", text: "new"})] : [])));
+    if (!open) return;
+    // Folders are implied by the paths: show each folder once, then its files.
+    const all = [...new Set([...(files || []), ...planned])].filter((rel) => !needle || rel.toLowerCase().includes(needle)).sort();
+    const seen = new Set();
+    for (const rel of all) {
+      const parts = rel.split("/");
+      for (let i = 1; i < parts.length; i++) {
+        const folder = parts.slice(0, i).join("/");
+        if (!seen.has(folder)) { seen.add(folder); tree.append(node({class: "tnode dir"}, i, el("span", {class: "tw"}), el("span", {class: "ti", text: "▾"}), el("span", {class: "tn", text: parts[i - 1]}))); }
+      }
+      tree.append(fileRow(layer.path, rel, planned.includes(rel) && !(files || []).includes(rel)));
+    }
+  };
+  if (lastPlan && studioActive && lastPlan.new_layer) {
+    tree.append(el("div", {class: "tgroup", text: "New layer"}));
+    layerBlock({name: lastPlan.layer.split("/").pop(), path: "", writable: true, planned: true}, [], Object.keys(lastPlan.files));
   }
+  const mine = ideLayers.filter((l) => l.writable), upstream = ideLayers.filter((l) => !l.writable);
+  tree.append(el("div", {class: "tgroup", text: mine.length ? "Your layers" : "Your layers · none yet"}));
+  for (const layer of mine) layerBlock(layer, ideFiles[layer.path], lastPlan && !lastPlan.new_layer && lastPlan.layer === layer.path ? Object.keys(lastPlan.files) : []);
+  if (upstream.length) { tree.append(el("div", {class: "tgroup", text: "Upstream · read-only"})); for (const layer of upstream) layerBlock(layer, ideFiles[layer.path], []); }
+}
+function iconFor(name) { return name.endsWith(".bb") ? "◆" : name.endsWith(".bbappend") ? "⊕" : name.endsWith(".bbclass") ? "◇" : name.endsWith(".conf") ? "⚙" : name.endsWith(".inc") ? "≡" : name.endsWith(".md") ? "¶" : "·"; }
+
+/* Tabs and editor */
+async function openFile(path) {
+  let tab = ideTabs.find((t) => t.id === path);
+  if (!tab) {
+    try {
+      const data = await api(`/api/studio/file?profile=${prof()}&path=${encodeURIComponent(path)}`);
+      tab = {id: path, kind: "file", path: data.path, name: data.path.split("/").pop(), text: data.text, original: data.text, mtime: data.mtime, writable: data.writable};
+      ideTabs.push(tab);
+    } catch (error) { toast("Cannot open " + path.split("/").pop(), error.message, "error"); return; }
+  }
+  ideCurrent = tab.id; renderTabs(); renderEditor(); renderTree();
+}
+function openPlanTab(name) {
+  if (!lastPlan || !(name in lastPlan.files)) return;
+  ideCurrent = "plan:" + name; renderTabs(); renderEditor(); renderTree();
+}
+function planTabs() { return lastPlan && studioActive ? [lastPlan.main, ...Object.keys(lastPlan.files).filter((n) => n !== lastPlan.main)].filter((n) => n in lastPlan.files).map((name) => ({id: "plan:" + name, kind: "plan", name, path: (lastPlan.layer + "/" + name).replace(/\/+/g, "/")})) : []; }
+function allTabs() { return [...planTabs(), ...ideTabs]; }
+function tabText(tab) { return tab.kind === "plan" ? (planEdits[tab.name] ?? lastPlan.files[tab.name]) : tab.text; }
+function renderTabs() {
+  const box = $("ide-tabs"); box.textContent = "";
+  for (const tab of allTabs()) {
+    const dirty = tab.kind === "plan" ? tab.name in planEdits : tab.text !== tab.original;
+    const close = el("button", {class: "x", title: tab.kind === "plan" ? "Planned files close with the form" : "Close", "aria-label": "Close", text: "✕",
+      onclick: (event) => { event.stopPropagation(); if (tab.kind === "plan") return closeForm(); closeTab(tab.id); }});
+    box.append(el("div", {class: "ide-tab" + (tab.id === ideCurrent ? " active" : "") + (tab.kind === "plan" ? " plan" : "") + (dirty ? " dirty" : ""), role: "tab", title: tab.path,
+      "aria-selected": String(tab.id === ideCurrent), onclick: () => { ideCurrent = tab.id; renderTabs(); renderEditor(); renderTree(); }},
+      el("span", {class: "nm", text: tab.name.split("/").pop()}), close));
+  }
+}
+function closeTab(id) {
+  const tab = ideTabs.find((t) => t.id === id);
+  if (tab && tab.text !== tab.original && !confirm(`Discard your changes to ${tab.name}?`)) return;
+  ideTabs = ideTabs.filter((t) => t.id !== id);
+  if (ideCurrent === id) { const rest = allTabs(); ideCurrent = rest.length ? rest[rest.length - 1].id : null; }
+  renderTabs(); renderEditor(); renderTree();
+}
+function currentTab() { return allTabs().find((t) => t.id === ideCurrent) || null; }
+function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function highlightLine(line) {
+  // A small BitBake highlighter: comments, assignments, keywords, strings and ${expansions}.
+  const strings = (text) => escapeHtml(text).replace(/"([^"\\]|\\.)*"/g, (m) => `<span class="t-str">${m.replace(/\$\{[^}]*\}/g, (e) => `<span class="t-exp">${e}</span>`)}</span>`).replace(/(^|[^>])(\$\{[^}"]*\})/g, '$1<span class="t-exp">$2</span>');
+  if (/^\s*#/.test(line)) return `<span class="t-com">${escapeHtml(line)}</span>`;
+  let m = line.match(/^(\s*)(export\s+)?([A-Za-z_][\w${}:/.+-]*?)(\s*)(\?\?=|\?=|:=|\+=|=\+|\.=|=\.|=)(.*)$/);
+  if (m) return `${m[1]}${m[2] ? `<span class="t-kw">${m[2]}</span>` : ""}<span class="t-var">${escapeHtml(m[3])}</span>${m[4]}<span class="t-op">${escapeHtml(m[5])}</span>${strings(m[6])}`;
+  m = line.match(/^(\s*)(inherit|require|include|addtask|deltask|EXPORT_FUNCTIONS|addhandler|python|fakeroot)\b(.*)$/);
+  if (m) return `${m[1]}<span class="t-kw">${m[2]}</span>${strings(m[3])}`;
+  m = line.match(/^(\s*)([\w:-]+)(\s*\(\s*\)\s*\{.*)$/);
+  if (m) return `${m[1]}<span class="t-fn">${escapeHtml(m[2])}</span>${strings(m[3])}`;
+  return strings(line);
+}
+function renderEditor() {
+  const tab = currentTab(), editor = $("ide-editor"), text = $("ide-text");
+  $("ide-welcome").hidden = !!tab; editor.hidden = !tab; $("ide-path").hidden = !tab;
+  $("ide-save").disabled = !(tab && tab.kind === "file" && tab.writable && tab.text !== tab.original);
+  renderCrumbs(tab);
+  if (!tab) return;
+  if (text.value !== tabText(tab)) text.value = tabText(tab);
+  text.readOnly = tab.kind === "file" && !tab.writable;
+  $("ide-path-text").textContent = tab.path;
+  $("ide-path-state").textContent = tab.kind === "plan" ? (tab.name in planEdits ? "new · edited by hand" : "new · follows the form") : tab.writable ? (tab.text !== tab.original ? "modified · Ctrl+S saves" : "saved") : "read-only (upstream layer)";
+  paintCode();
+}
+function paintCode() {
+  const tab = currentTab(); if (!tab) return;
+  const lines = $("ide-text").value.split("\n");
+  // Whole words only: DISTRO must not light up DISTRO_NAME or ${DISTRO}.
+  const word = tab.kind === "plan" && studioVar ? new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])") : null;
+  let first = -1;
+  $("ide-hl").innerHTML = lines.map((line, i) => { const hit = word && word.test(line); if (hit && first < 0) first = i; return `<span class="ln${hit ? " hl" : ""}">${highlightLine(line) || " "}</span>`; }).join("");
+  $("ide-gutter").innerHTML = lines.map((_, i) => `<div${word && word.test(lines[i]) ? ' class="hl"' : ""}>${i + 1}</div>`).join("");
+  syncScroll();
+  if (first >= 0) { const top = first * parseFloat(getComputedStyle($("ide-text")).lineHeight); const area = $("ide-text"); if (top < area.scrollTop || top > area.scrollTop + area.clientHeight - 40) { area.scrollTop = Math.max(0, top - 60); syncScroll(); } }
+}
+function syncScroll() {
+  const area = $("ide-text");
+  $("ide-hl").scrollTop = area.scrollTop; $("ide-hl").scrollLeft = area.scrollLeft; $("ide-gutter").scrollTop = area.scrollTop;
+}
+function renderCrumbs(tab) {
+  const crumbs = $("ide-crumbs"); crumbs.textContent = "";
+  if (!tab) { crumbs.append(el("b", {text: "Studio"}), el("span", {class: "sep", text: "·"}), el("span", {text: "your layers, recipes and configuration"})); return; }
+  const layer = tab.kind === "plan" ? lastPlan.layer.split("/").pop() : (ideLayers.find((l) => tab.path.startsWith(l.path + "/")) || {name: ""}).name;
+  const rel = tab.kind === "plan" ? tab.name : tab.path.slice(((ideLayers.find((l) => tab.path.startsWith(l.path + "/")) || {path: ""}).path.length) + 1);
+  const parts = [layer, ...rel.split("/")].filter(Boolean);
+  parts.forEach((part, i) => { if (i) crumbs.append(el("span", {class: "sep", text: "›"})); crumbs.append(i === parts.length - 1 ? el("b", {text: part}) : el("span", {text: part})); });
+  crumbs.append(el("span", {class: "tag " + (tab.kind === "plan" ? "ok" : tab.writable ? "accent" : ""), text: tab.kind === "plan" ? "new" : tab.writable ? "your layer" : "read-only"}));
+}
+// Kept for the form: focusing a field repaints the highlighted lines.
+function renderCode(follow) {
+  if (follow && studioVar && lastPlan) {
+    const word = new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])");
+    const tab = currentTab();
+    if (!(tab && tab.kind === "plan" && tabText(tab).split("\n").some((l) => word.test(l)))) {
+      const other = planTabs().find((t) => tabText(t).split("\n").some((l) => word.test(l)));
+      if (other) { ideCurrent = other.id; renderTabs(); renderEditor(); renderTree(); return; }
+    }
+  }
+  paintCode();
+}
+let saving = false;
+async function saveFile() {
+  const tab = currentTab();
+  if (saving || !tab || tab.kind !== "file" || !tab.writable || tab.text === tab.original) return;
+  saving = true;
+  try {
+    const result = await api("/api/studio/file", {method: "POST", body: JSON.stringify({profile: prof(), path: tab.path, text: tab.text, mtime: tab.mtime})});
+    tab.original = tab.text; tab.mtime = result.mtime; metaRows = []; imageRows = null;
+    toast("Saved", tab.name, "success"); renderTabs(); renderEditor();
+  } catch (error) { toast("Not saved", error.message, "error"); }
+  finally { saving = false; }
+}
+
+/* The guided form (inspector) */
+async function startForm(kind) {
+  studioKind = kind; studioValues = {layer: studioValues.layer, new_layer: studioValues.new_layer}; planEdits = {}; studioVar = ""; studioActive = true;
+  await openForm(kind);
+}
+async function openForm(kind, data = null) {
+  data = data && data.fields ? data : await api(`/api/studio/fields?profile=${prof()}&kind=${kind}`);
+  const info = studioKinds.find((k) => k.id === kind) || {title: kind, description: ""};
+  $("st-title").textContent = info.title; $("st-desc").textContent = info.description;
+  $("ide").classList.remove("no-inspector"); $("ide-bottom").hidden = false;
   studioFields = data.fields;
-  const choosable = ["distro", "machine"].includes(studioKind) && ["host", "container"].includes(data.mode);
+  const choosable = ["distro", "machine"].includes(kind) && ["host", "container"].includes(data.mode);
   $("st-use-wrap").hidden = !choosable;
-  $("st-use-label").textContent = `use this ${studioKind === "distro" ? "DISTRO" : "MACHINE"} in profile ${prof()}`;
+  $("st-use-label").textContent = `use this ${kind === "distro" ? "DISTRO" : "MACHINE"} in profile ${prof()}`;
   const form = $("st-form"); form.textContent = ""; form.classList.remove("swap"); void form.offsetWidth; form.classList.add("swap");
   let section = null, number = 0;
   for (const field of studioFields) {
@@ -1489,8 +1736,18 @@ async function loadStudio() {
     form.lastChild.append(studioField(field, value));
   }
   syncNewLayer();
-  previewStudio();
+  await previewStudio();
+  if (lastPlan) { ideCurrent = "plan:" + lastPlan.main; renderTabs(); renderEditor(); renderTree(); }
+  const first = form.querySelector("input[type=text], select"); if (first) first.focus();
 }
+function closeForm() {
+  if (Object.keys(planEdits).length && !confirm("Close the form and drop your edits to the planned files?")) return;
+  studioActive = false; lastPlan = null; planEdits = {}; studioVar = "";
+  $("ide").classList.add("no-inspector"); $("ide-bottom").hidden = true; $("st-create").disabled = true; $("st-create").textContent = "✦ Create files";
+  if (ideCurrent && ideCurrent.startsWith("plan:")) ideCurrent = ideTabs.length ? ideTabs[ideTabs.length - 1].id : null;
+  renderTabs(); renderEditor(); renderTree();
+}
+
 function hintFor(field, choice) { const pair = (field.hints || []).find(([c]) => c === choice); return pair ? pair[1] : ""; }
 function studioField(field, value) {
   const box = el("div", {class: "fld", "data-field": field.id});
@@ -1545,64 +1802,55 @@ function syncNewLayer() {
   if (node) node.hidden = !(studioValues.layer || "").startsWith("new layer");
 }
 async function previewStudio() {
-  const notes = $("st-notes"), steps = $("st-steps");
+  if (!studioActive) return;
+  const steps = $("st-steps"), problems = $("ide-problems");
   for (const node of document.querySelectorAll("#st-form .fld.invalid")) { node.classList.remove("invalid"); node.querySelector(".err")?.remove(); }
+  const issues = [];
   try {
     const plan = await api("/api/studio/preview", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues, use: $("st-use").checked})});
+    // Hand edits survive only for files the plan still writes.
+    for (const name of Object.keys(planEdits)) if (!(name in plan.files)) delete planEdits[name];
     lastPlan = plan;
     const count = Object.keys(plan.files).length;
     $("st-create").disabled = false; $("st-create").textContent = `✦ Create ${count} ${count === 1 ? "file" : "files"}`;
-    $("st-layer").textContent = (plan.new_layer ? "new layer · " : "into · ") + plan.layer;
     steps.className = "st-steps"; steps.textContent = "";
-    steps.append(el("li", {class: "cap", text: "When you press Create"}), ...plan.steps.map((text) => el("li", {text})));
-    notes.hidden = !plan.notes.length; notes.textContent = plan.notes.map((n) => "⚠ " + n).join("  ");
-    if (!plan.files[studioFile]) studioFile = plan.main || Object.keys(plan.files)[0];
-    renderCode(false);
+    steps.append(...plan.steps.map((text) => el("li", {text})));
+    for (const note of plan.notes) issues.push(["warn", note]);
+    if (Object.keys(planEdits).length) issues.push(["ok", `Edited by hand: ${Object.keys(planEdits).join(", ")}. Changing the form no longer updates ${Object.keys(planEdits).length === 1 ? "it" : "them"}.`]);
+    if (!ideCurrent || (ideCurrent.startsWith("plan:") && !(ideCurrent.slice(5) in plan.files))) ideCurrent = "plan:" + plan.main;
   } catch (error) {
     lastPlan = null; $("st-create").disabled = true; $("st-create").textContent = "✦ Create files";
-    // Point at the field to fix, as a form would, instead of only blanking the preview.
+    // Point at the field to fix, as a form would, and list it under Problems.
     const field = error.field && document.querySelector(`#st-form [data-field="${error.field}"]`) || document.querySelector('#st-form [data-field="name"]');
     if (field) { field.classList.add("invalid"); field.append(el("div", {class: "err", text: "✖ " + error.message})); }
-    steps.className = "st-steps"; steps.textContent = ""; steps.append(el("li", {class: "cap", text: "Fix the highlighted field to see the files"}));
-    notes.hidden = true; $("st-tabs").textContent = ""; $("st-code").textContent = ""; $("st-path").textContent = "";
+    steps.className = "st-steps"; steps.textContent = ""; steps.append(el("li", {class: "cap", text: "Fix the problem to see what Create will do"}));
+    issues.push(["err", error.message]);
+    if (ideCurrent && ideCurrent.startsWith("plan:")) ideCurrent = ideTabs.length ? ideTabs[ideTabs.length - 1].id : null;
+    showBottom("problems");
   }
+  problems.textContent = "";
+  for (const [level, text] of issues) problems.append(el("div", {class: "problem " + level, text: (level === "err" ? "✖ " : level === "warn" ? "⚠ " : "ℹ ") + text}));
+  if (!issues.length) problems.append(el("div", {class: "problem ok", text: "No problems."}));
+  const counter = $("ide-problems-n"), serious = issues.filter(([l]) => l !== "ok");
+  counter.textContent = String(serious.length); counter.className = "count" + (issues.some(([l]) => l === "err") ? " err" : serious.length ? " warn" : "");
+  renderTabs(); renderEditor(); renderTree();
 }
-function renderCode(follow) {
-  if (!lastPlan) return;
-  const files = Object.keys(lastPlan.files), tabs = $("st-tabs");
-  // Whole words only: DISTRO must not light up DISTRO_NAME.
-  const word = studioVar ? new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])") : null;
-  const hit = (line) => !!word && word.test(line);
-  const matches = (text) => text.split("\n").some(hit);
-  // Focusing a field shows the file it writes to, with its lines highlighted.
-  if (follow && word && !matches(lastPlan.files[studioFile])) { const other = files.find((name) => matches(lastPlan.files[name])); if (other) studioFile = other; }
-  const ordered = [lastPlan.main, ...files.filter((name) => name !== lastPlan.main)].filter((name) => name in lastPlan.files);
-  tabs.textContent = "";
-  for (const name of ordered) {
-    const button = el("button", {role: "tab", "aria-selected": String(name === studioFile), class: [name === studioFile ? "active" : "", name === lastPlan.main ? "main" : "", matches(lastPlan.files[name]) ? "has" : ""].join(" ").trim(),
-      title: name, text: name.split("/").pop(), onclick: () => { studioFile = name; renderCode(false); }});
-    tabs.append(button);
-  }
-  $("st-path").textContent = (lastPlan.layer + "/" + studioFile).replace(/\/+/g, "/");
-  const code = $("st-code"); code.textContent = "";
-  let first = null;
-  for (const line of lastPlan.files[studioFile].replace(/\n$/, "").split("\n")) {
-    const lit = hit(line);
-    const span = el("span", {class: (lit ? "hl " : "") + (/^\s*#/.test(line) && !lit ? "c" : ""), text: line || " "});
-    code.append(span); if (lit && !first) first = span;
-  }
-  if (first) first.scrollIntoView({block: "nearest"});
+function showBottom(name) {
+  for (const b of document.querySelectorAll(".ide-btabs button")) b.classList.toggle("active", b.dataset.b === name);
+  $("st-steps").hidden = name !== "steps"; $("ide-problems").hidden = name !== "problems";
 }
 async function createStudio() {
   if (!lastPlan) return;
   try {
-    const result = await api("/api/studio/create", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues, use: $("st-use").checked})});
-    toast("Created " + result.written.length + " files", result.messages.join(" · "), "success", result.target ? {label: "Build " + result.target, run: () => { $("target").value = result.target; $("target").dataset.touched = "1"; queue("build", {target: result.target}); }} : null);
-    const steps = $("st-steps"); steps.className = "st-steps done"; steps.textContent = "";
-    steps.append(el("li", {class: "cap", text: "Done"}), ...result.written.map((path) => el("li", {text: "created " + path})), ...result.messages.map((text) => el("li", {text})));
+    const result = await api("/api/studio/create", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues, use: $("st-use").checked, edits: planEdits})});
+    toast(`Created ${result.written.length} ${result.written.length === 1 ? "file" : "files"}`, result.messages.join(" · "), "success", result.target ? {label: "Build " + result.target, run: () => { $("target").value = result.target; $("target").dataset.touched = "1"; queue("build", {target: result.target}); }} : null);
     metaRows = []; imageRows = null;                 // Recipes and the image list pick the new files up
-    $("st-create").disabled = true; $("st-create").textContent = "✓ Created";
-    setTimeout(() => { loadStudio(); }, 2500);
+    const main = result.written.find((path) => path.endsWith("/" + lastPlan.main)) || result.written[0];
+    studioActive = false; lastPlan = null; planEdits = {};
+    $("ide").classList.add("no-inspector"); $("ide-bottom").hidden = true; $("st-create").disabled = true; $("st-create").textContent = "✦ Create files";
+    ideFiles = {}; ideOpen = new Set(ideOpen); await loadLayers();
+    const layer = ideLayers.find((l) => main && main.startsWith(l.path + "/")); if (layer) { ideOpen.add(layer.path); await loadFiles(layer.path); renderTree(); }
+    if (main) await openFile(main); else { ideCurrent = null; renderTabs(); renderEditor(); }
   } catch (error) { toast("Studio", error.message, "error"); }
 }
 
@@ -1727,6 +1975,36 @@ function wire() {
   $("retry-btn").addEventListener("click", () => control("retry"));
   $("st-create").addEventListener("click", createStudio);
   $("st-use").addEventListener("change", previewStudio);
+  $("ide-new-btn").addEventListener("click", (event) => { event.stopPropagation(); const menu = $("ide-menu"); menu.hidden = !menu.hidden; $("ide-new-btn").setAttribute("aria-expanded", String(!menu.hidden)); if (!menu.hidden) menu.querySelector("button")?.focus(); });
+  document.addEventListener("click", (event) => { if (!event.target.closest(".ide-new")) closeMenu(); });
+  $("ide-menu").addEventListener("keydown", (event) => {
+    const items = [...$("ide-menu").querySelectorAll("button")], at = items.indexOf(document.activeElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); items[(at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); }
+    else if (event.key === "Escape") { event.stopPropagation(); closeMenu(); $("ide-new-btn").focus(); }
+  });
+  $("ide-save").addEventListener("click", saveFile);
+  $("ide-close-form").addEventListener("click", closeForm);
+  $("ide-refresh").addEventListener("click", async () => { ideFiles = {}; await loadLayers(); toast("Explorer", "Layers reloaded", "info"); });
+  $("ide-filter").addEventListener("input", renderTree);
+  for (const b of document.querySelectorAll(".ide-btabs button")) b.addEventListener("click", () => showBottom(b.dataset.b));
+  $("ide-text").addEventListener("scroll", syncScroll);
+  $("ide-text").addEventListener("input", () => {
+    const tab = currentTab(); if (!tab) return;
+    if (tab.kind === "plan") { planEdits[tab.name] = $("ide-text").value; previewStudioSoon(); }
+    else tab.text = $("ide-text").value;
+    paintCode(); renderTabs(); $("ide-save").disabled = !(tab.kind === "file" && tab.writable && tab.text !== tab.original);
+    $("ide-path-state").textContent = tab.kind === "plan" ? "new · edited by hand" : tab.text !== tab.original ? "modified · Ctrl+S saves" : "saved";
+  });
+  $("ide-text").addEventListener("keydown", (event) => {
+    if (event.key === "Tab" && !event.shiftKey && !$("ide-text").readOnly) { event.preventDefault(); document.execCommand("insertText", false, "    "); }
+    else if ((event.ctrlKey || event.metaKey) && event.key === "s") { event.preventDefault(); event.stopPropagation(); saveFile(); }
+    else if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); createStudio(); }
+    else if (event.key === "Escape") { $("ide-text").blur(); }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (view !== "studio") return;
+    if ((event.ctrlKey || event.metaKey) && event.key === "s") { event.preventDefault(); saveFile(); }
+  });
   for (const id of ["vu-source", "vu-status"]) $(id).addEventListener("change", loadVulns);
   for (const id of ["vu-min", "vu-q"]) $(id).addEventListener("input", () => { clearTimeout(vulnTimer); vulnTimer = setTimeout(loadVulns, 200); });
   $("vu-csv").addEventListener("click", exportVulns);
@@ -1792,6 +2070,7 @@ function wire() {
     else if (event.key === "?") { $("keys-dialog").showModal(); handled(); }
     else if (event.key === "b") { queue("build", {target: $("target").value}); handled(); }
     else if (event.key === "q") { openQueue(); handled(); }
+    else if (event.key === "n" && view === "studio") { $("ide-new-btn").click(); handled(); }
     else if (event.key === "t") { $("target").focus(); $("target").select(); openCombo(false); handled(); }
     else if (view === "builds") {
       const rows = state ? [...state.history.map((row) => row.id), ...consoleRows.map((row) => "console:" + row.path)] : [], index = rows.indexOf(selected);

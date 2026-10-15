@@ -352,6 +352,11 @@ class Dashboard:
     def studio_create(self, body):
         from .studio import create, register
         profile, result = self.studio_plan(body)
+        # Planned files edited by hand in the editor are created as edited.
+        edits = body.get("edits") or {}
+        if not isinstance(edits, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in edits.items()):
+            raise ValueError("edits must map planned file names to text")
+        result["files"].update({name: text for name, text in edits.items() if name in result["files"]})
         written = create(profile, result)
         self.metadata_cache.clear()            # the new layer and files show up in Recipes and the image list at once
         settings = self.settings()
@@ -362,6 +367,40 @@ class Dashboard:
             self.rpc({"op": "submit", "profile": asdict(job_profile), "title": title, "command": argv, "action_id": action})
         messages, target = register(settings, profile, result, body.get("use") is True, submit)
         return {"written": [str(p) for p in written], "messages": messages, "target": target}
+
+    def studio_layers(self, query):
+        from .studio import layer_list
+        profile = self.profile(query.get("profile", [""])[0])
+        return {"layers": layer_list(self.entries(profile), profile), "root": str(profile.root_path)}
+
+    def studio_files(self, query):
+        from .studio import layer_list, list_layer_files
+        profile = self.profile(query.get("profile", [""])[0])
+        wanted = query.get("layer", [""])[0]
+        layer = next((l for l in layer_list(self.entries(profile), profile) if l["path"] == wanted), None)
+        if layer is None:
+            raise LookupError("Unknown layer")
+        return {"files": list_layer_files(Path(layer["path"]))}
+
+    def studio_read(self, query):
+        from .studio import layer_list, read_text
+        profile = self.profile(query.get("profile", [""])[0])
+        return read_text(query.get("path", [""])[0], layer_list(self.entries(profile), profile))
+
+    def studio_save(self, body):
+        from .studio import layer_list, write_text
+        profile = self.profile(body.get("profile"))
+        if not isinstance(body.get("text"), str):
+            raise ValueError("text must be a string")
+        try:
+            status = self.rpc({"op": "status"})
+            if status.get("active") or any(j["status"] == "queued" for j in status.get("jobs", [])):
+                raise ValueError("A build is queued or running: save metadata when the queue is idle, so the build sees one version")
+        except OSError:
+            pass
+        saved = write_text(str(body.get("path", "")), body["text"], body.get("mtime", 0), layer_list(self.entries(profile), profile))
+        self.metadata_cache.clear()
+        return saved
 
     def projects(self):
         from .projects import IMAGES, MACHINES, RELEASES, Recent, project_rows
@@ -615,6 +654,14 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.studio_fields(query)
                 elif route == ("POST", "studio", "preview"):
                     payload = dashboard.studio_preview(self.body())
+                elif route == ("GET", "studio", "layers"):
+                    payload = dashboard.studio_layers(query)
+                elif route == ("GET", "studio", "files"):
+                    payload = dashboard.studio_files(query)
+                elif route == ("GET", "studio", "file"):
+                    payload = dashboard.studio_read(query)
+                elif route == ("POST", "studio", "file"):
+                    payload = dashboard.studio_save(self.body())
                 elif route == ("POST", "studio", "create"):
                     payload = dashboard.studio_create(self.body())
                 elif route == ("GET", "vulnerabilities"):

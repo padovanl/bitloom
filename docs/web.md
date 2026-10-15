@@ -34,7 +34,7 @@ ssh -L 8765:127.0.0.1:8765 build-server
 | `2` | Recipes | Every layer on the left with its file count (example and selftest layers last); on the right the folders of the selected layer (`recipes-core`, `classes-recipe`…) open on click, with recipe name, version, kind and path. Filter by kind (Recipes, Images, Appends, Classes, kas) and search as you type; **Use as target** puts a recipe in the build field. |
 | `3` | Task logs | `tmp/work/*/temp/log.*` files with search and an errors-only view. Only indexed task logs can be read. |
 | `4` | SBOM & CRA | Release support, SBOM quality gauges, VEX status, vulnerabilities from cve-check, sbom-cve-check and Grype, CRA readiness checks, the regulation timeline and every SBOM option with its explanation. See [SBOM, CRA and releases](compliance.md). |
-| `5` | Studio | Create a product layer, distribution, machine, image, recipe or append with a live preview. See [Studio](studio.md). |
+| `5` | Studio | An editor for your layers: Explorer, tabs with BitBake highlighting, save with Ctrl+S, and New ▸ layer, distribution, machine, image, recipe or append with a guided Inspector whose files open as new tabs. See [Studio](studio.md). |
 | `6` | Configuration | Projects (recent, new, clone), guided project setup, health checks, setup checks and literal `local.conf` values. See [Projects](projects.md). |
 
 ![Recipes: a layer, the Images filter, then a search](assets/web-clip-recipes.gif)

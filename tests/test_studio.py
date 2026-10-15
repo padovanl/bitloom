@@ -1,5 +1,6 @@
 """Studio: layers, distributions, machines, images, recipes and appends."""
 import pytest
+from pathlib import Path
 
 from bitloom.cli import make_demo
 from bitloom.models import Profile
@@ -116,3 +117,66 @@ def test_fields_explain_themselves_and_errors_name_the_field(tmp_path):
     image = plan("image", values("image", "wrynose", []), kas, "wrynose")
     assert image["main"] == "recipes-core/images/acme-image.bb"
     assert any("kas-studio-meta-acme.yml" in step and "builds acme-image" in step for step in explain(kas, image, use=False))
+
+
+def test_editor_reads_saves_and_creates_with_edits(tmp_path):
+    """The web Studio's editor: open any layer file, save only your own layers, refuse stale saves,
+    and create planned files as edited by hand."""
+    import json
+    import threading
+    import urllib.error
+    import urllib.request
+    from bitloom.daemon import rpc
+    from bitloom.web import Dashboard, create_server
+    config = make_demo(tmp_path / 'demo')
+    board = Dashboard(config, tmp_path / 'state', token='t')
+    server = create_server(board, '127.0.0.1', 0)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f'http://127.0.0.1:{server.server_address[1]}'
+
+    def call(path, body=None):
+        request = urllib.request.Request(base + path, json.dumps(body).encode() if body is not None else None, {'X-Bitloom-Token': 't', 'Content-Type': 'application/json'})
+        try:
+            return json.loads(urllib.request.urlopen(request).read())
+        except urllib.error.HTTPError as error:
+            return {'status': error.code, **json.loads(error.read())}
+    try:
+        layers = call('/api/studio/layers?profile=demo')['layers']
+        mine = next(l for l in layers if l['name'] == 'meta-demo')
+        assert mine['writable'] and 'conf/layer.conf' in call('/api/studio/files?profile=demo&layer=' + urllib.request.quote(mine['path']))['files']
+        opened = call('/api/studio/file?profile=demo&path=' + urllib.request.quote(mine['path'] + '/conf/layer.conf'))
+        assert opened['writable'] and 'BBFILE_COLLECTIONS' in opened['text']
+        saved = call('/api/studio/file', {'profile': 'demo', 'path': opened['path'], 'text': opened['text'] + '# edited\n', 'mtime': opened['mtime']})
+        assert saved['mtime'] and (Path(opened['path']).read_text().endswith('# edited\n'))
+        stale = call('/api/studio/file', {'profile': 'demo', 'path': opened['path'], 'text': 'x', 'mtime': opened['mtime'] - 100})
+        assert stale['status'] == 400 and 'changed on disk' in stale['error']
+        outside = call('/api/studio/file?profile=demo&path=' + urllib.request.quote('/etc/passwd'))
+        assert outside['status'] == 400 and 'layers only' in outside['error']
+        values = {f['id']: f['default'] for f in call('/api/studio/fields?profile=demo&kind=image')['fields']}
+        values['layer'] = mine['path']
+        plan = call('/api/studio/preview', {'profile': 'demo', 'kind': 'image', 'values': values})
+        edited = plan['files'][plan['main']] + 'IMAGE_LINGUAS = ""\n'
+        created = call('/api/studio/create', {'profile': 'demo', 'kind': 'image', 'values': values, 'edits': {plan['main']: edited, 'not-planned.bb': 'x'}})
+        path = next(p for p in created['written'] if p.endswith(plan['main']))
+        assert Path(path).read_text() == edited and not any(p.endswith('not-planned.bb') for p in created['written'])
+    finally:
+        server.shutdown()
+        try:
+            rpc(board.state, {'op': 'stop'})
+        except (OSError, ValueError):
+            pass
+
+
+def test_upstream_layers_are_read_only(tmp_path):
+    from bitloom.studio import read_text, write_text
+    upstream, mine = tmp_path / 'meta', tmp_path / 'meta-mine'
+    for layer in (upstream, mine):
+        (layer / 'conf').mkdir(parents=True)
+        (layer / 'conf/layer.conf').write_text('x\n')
+    layers = [{'name': 'meta', 'path': str(upstream), 'writable': False}, {'name': 'meta-mine', 'path': str(mine), 'writable': True}]
+    opened = read_text(str(upstream / 'conf/layer.conf'), layers)
+    assert not opened['writable']
+    with pytest.raises(ValueError, match='upstream layer'):
+        write_text(str(upstream / 'conf/layer.conf'), 'y', opened['mtime'], layers)
+    with pytest.raises(ValueError, match='layers only'):
+        read_text(str(tmp_path / '../outside'), layers)
