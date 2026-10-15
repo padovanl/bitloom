@@ -175,3 +175,23 @@ async def test_reconnecting_does_not_announce_old_job_ends(tmp_path):
         app.job_update(old, None)
         await pilot.pause(.2)
         assert not any('Old build' in n for n in notes)
+
+
+async def test_runner_splits_glued_messages_and_counts_noexec(tmp_path):
+    """BitBake prints 'Initialising tasks...WARNING: x' and ends with 'Running noexec task N of N'."""
+    import sys
+    from bitloom.models import Profile
+    from bitloom.runner import Runner
+    from bitloom.store import Store
+    script = tmp_path / 'out.py'
+    script.write_text('print("Initialising tasks...WARNING: tainted from a forced run")\n'
+                      'print("NOTE: Running task 1244 of 1250 (x.bb:do_compile)")\n'
+                      'print("NOTE: Running noexec task 1250 of 1250 (x.bb:do_build)")\n')
+    store = Store(tmp_path / 'state')
+    runner = Runner(store, lambda job, line: None)
+    job = runner.submit(Profile(name='p', root=str(tmp_path)), 'glued', [sys.executable, str(script)])
+    await runner.consumer
+    lines = job.log.read_text().splitlines()
+    assert 'Initialising tasks...' in lines and 'WARNING: tainted from a forced run' in lines
+    assert job.progress == (1250, 1250)
+    store.close()

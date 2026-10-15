@@ -15,9 +15,9 @@ from pathlib import Path
 
 from .models import Profile
 
-TASKS = re.compile(r"Running task (\d+) of (\d+)")
+TASKS = re.compile(r"Running (?:noexec )?task (\d+) of (\d+)")
 SETSCENE = re.compile(r"Running setscene task (\d+) of (\d+)")
-SSTATE = re.compile(r"Sstate summary: Wanted (\d+) Local (\d+) Mirrors (\d+) Missed (\d+)")
+SSTATE = re.compile(r"Sstate summary: Wanted (\d+) Local (\d+) Mirrors (\d+) Missed (\d+)(?: Current (\d+))?")
 SUMMARY = re.compile(r"Tasks Summary: Attempted (\d+) tasks of which (\d+) didn't need to be rerun")
 
 
@@ -99,8 +99,10 @@ def log_facts(path: Path) -> dict:
                     facts[key] = int(match[2])
             match = SSTATE.search(line)
             if match:
-                wanted, local, mirrors, missed = map(int, match.groups())
+                wanted, local, mirrors, missed = map(int, match.groups()[:4])
+                current = int(match[5] or 0)
                 facts["sstate"] = round(100 * (local + mirrors) / wanted, 1) if wanted else None
+                facts["reuse"] = round(100 * (local + mirrors + current) / (wanted + current), 1) if wanted + current else None
             match = SUMMARY.search(line)
             if match:
                 facts["attempted"], facts["reused"] = int(match[1]), int(match[2])
@@ -126,7 +128,8 @@ def compare(current: dict, previous: dict) -> str:
             ("Tasks in the run queue", a["tasks"], b["tasks"]),
             ("Tasks executed", executed(a), executed(b)),
             ("Setscene tasks (from sstate)", a["setscene"], b["setscene"]),
-            ("Sstate hit rate %", a["sstate"], b["sstate"]),
+            ("Reused (current or sstate) %", a.get("reuse"), b.get("reuse")),
+            ("Sstate hit rate of wanted tasks %", a["sstate"], b["sstate"]),
             ("Tasks reused (summary)", a["reused"], b["reused"]),
             ("Warnings", sum(a["warnings"].values()), sum(b["warnings"].values())),
             ("Errors", sum(a["errors"].values()), sum(b["errors"].values()))]

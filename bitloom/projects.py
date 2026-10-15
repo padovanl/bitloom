@@ -119,6 +119,23 @@ def default_destination(url: str, base: Path) -> str:
     return str(base / name)
 
 
+def project_rows(settings, recent) -> list[dict]:
+    """Recent folders plus every profile's root, once each. A root can hold several profiles
+    (YML=a.yml / YML=b.yml on one launcher): all are listed, and the active one is preferred."""
+    roots: dict[str, list[str]] = {}
+    for profile in settings.profiles:
+        roots.setdefault(str(profile.root_path), []).append(profile.name)
+    items, seen = [], set()
+    for item in recent.load() + [{"root": root, "how": "profile"} for root in roots]:
+        if item["root"] in seen:
+            continue
+        seen.add(item["root"])
+        names = roots.get(item["root"], [])
+        preferred = settings.active if settings.active in names else (names[0] if names else "")
+        items.append({**item, "profile": preferred, "profiles": names, "active": settings.active in names})
+    return items
+
+
 class Recent:
     """Recently opened, created or cloned projects in the state directory."""
 

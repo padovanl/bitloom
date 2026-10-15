@@ -137,3 +137,14 @@ def test_web_projects(tmp_path, monkeypatch):
             rpc(board.state, {'op': 'stop'})
         except (OSError, ValueError):
             pass
+
+
+def test_one_root_with_several_profiles(tmp_path):
+    """YML=a.yml / YML=b.yml on the same launcher: one project row naming both, active when either is."""
+    from bitloom.models import Profile, Settings
+    from bitloom.projects import Recent, project_rows
+    settings = Settings(tmp_path / 'profiles.json')
+    settings.profiles = [Profile(name=n, root=str(tmp_path), mode='wrapper', launcher=['./run_kas.sh']) for n in ('alpha', 'beta')]
+    settings.active = 'beta'
+    rows = project_rows(settings, Recent(tmp_path / 'state'))
+    assert len(rows) == 1 and rows[0]['profiles'] == ['alpha', 'beta'] and rows[0]['profile'] == 'beta' and rows[0]['active']
