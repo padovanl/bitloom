@@ -205,3 +205,10 @@ def test_web_saves_all_products(tmp_path):
         assert [p.name for p in saved.profiles] == ["alpha", "beta"] and saved.active == "alpha"
     finally:
         server.shutdown()
+
+
+def test_work_dir_default_with_nested_expansion(tmp_path):
+    from bitloom.setup import script_work_dir
+    script = tmp_path / 'run.sh'
+    script.write_text('#!/bin/bash\nexport KAS_WORK_DIR="${KAS_WORK_DIR:-$PWD/build-${YML%.yml}}"\nkas-container "$@" "$YML"\n')
+    assert script_work_dir(script, tmp_path, {'YML': 'kas/panel.yml'}) == str(tmp_path / 'build-kas/panel')

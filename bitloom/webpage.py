@@ -177,17 +177,31 @@ main { overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: c
 @media (min-width: 901px) { .panel > .head:has(#d-title) { flex-wrap: nowrap; } }
 
 /* Progress */
-.progress { position: relative; height: 8px; background: var(--line); overflow: hidden; }
-.progress > i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .7s var(--ease); }
-.progress.running > i { background-image: linear-gradient(45deg, rgba(255,255,255,.18) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.18) 50%, rgba(255,255,255,.18) 75%, transparent 75%), linear-gradient(90deg, var(--accent), var(--accent2)); background-size: 22px 22px, 100% 100%; animation: stripes .8s linear infinite; }
-.progress.running > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-100%); animation: shimmer 1.8s infinite; }
-.progress.indeterminate > i { width: 35% !important; animation: slide 1.4s var(--ease) infinite; }
-.progress.success > i { background: linear-gradient(90deg, var(--ok), var(--accent)); }
-.progress.failed > i { background: linear-gradient(90deg, var(--err), #f6b073); }
-@keyframes stripes { to { background-position: 22px 0, 0 0; } }
+.prog { padding: 12px 16px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.prog[hidden] { display: none; }
+.prog-top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.prog-text { color: var(--muted); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prog-text b { color: var(--fg); font: 600 13px var(--mono); font-variant-numeric: tabular-nums; }
+.prog-text .sep { margin: 0 6px; opacity: .5; }
+.prog-pct { margin-left: auto; font: 700 17px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg); letter-spacing: -.5px; transition: color .3s; }
+.prog.running .prog-pct { color: var(--accent); } .prog.success .prog-pct { color: var(--ok); } .prog.failed .prog-pct { color: var(--err); } .prog.cancelled .prog-pct, .prog.interrupted .prog-pct { color: var(--muted); }
+.progress { position: relative; height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--line) 80%, transparent); box-shadow: inset 0 1px 2px rgba(0,0,0,.25); }
+.progress > i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width .8s var(--ease), background .4s; overflow: hidden; }
+.progress.running > i { box-shadow: 0 0 14px var(--glow), 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent); }
+.progress.running > i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); transform: translateX(-100%); animation: shimmer 2.2s var(--ease) infinite; }
+/* The head of a running bar: where BitBake is now. */
+.progress > b { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 14px var(--accent); opacity: 0; transition: left .8s var(--ease), opacity .3s; left: 0; }
+.progress.running > b { opacity: 1; animation: head 1.6s ease-in-out infinite; }
+.progress.failed > b { opacity: 1; background: var(--err); box-shadow: 0 0 0 3px color-mix(in srgb, var(--err) 25%, transparent); }
+.progress.indeterminate { overflow: hidden; }
+.progress.indeterminate > i { width: 28% !important; animation: slide 1.6s var(--ease) infinite; }
+.progress.indeterminate > b { opacity: 0; }
+.progress.success > i { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 70%, var(--accent2)), var(--ok)); }
+.progress.failed > i { background: linear-gradient(90deg, color-mix(in srgb, var(--err) 55%, transparent), var(--err)); }
+.progress.cancelled > i, .progress.interrupted > i { background: color-mix(in srgb, var(--muted) 60%, transparent); }
 @keyframes shimmer { to { transform: translateX(100%); } }
-@keyframes slide { from { left: -35%; } to { left: 100%; } }
-.progress-label { display: flex; justify-content: space-between; padding: 6px 16px 0; color: var(--muted); font: 12px var(--mono); }
+@keyframes slide { from { left: -28%; } to { left: 100%; } }
+@keyframes head { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 12%, transparent), 0 0 20px var(--accent); } }
 
 /* Tabs */
 .tabs { position: relative; display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--line); overflow-x: auto; }
@@ -466,8 +480,8 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
           <button class="btn danger" id="stop-btn" title="Force stop (s)"><kbd>s</kbd>Stop</button>
           <button class="btn" id="retry-btn" title="Retry with the original profile (r)"><kbd>r</kbd>Retry</button>
         </div>
-        <div class="progress" id="d-progress"><i></i></div>
-        <div class="progress-label"><span id="d-progress-text"></span><span id="d-progress-pct"></span></div>
+        <div class="prog" id="d-prog" hidden><div class="prog-top"><span class="prog-text" id="d-progress-text"></span><span class="prog-pct" id="d-progress-pct"></span></div>
+          <div class="progress" id="d-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i></i><b></b></div></div>
         <div class="tabs" role="tablist" id="tabs">
           <button data-tab="output" class="active">Output</button>
           <button data-tab="summary">Summary</button>
@@ -977,17 +991,25 @@ async function loadConsole() {
 function consoleRow() { return selected && selected.startsWith("console:") ? consoleRows.find((row) => "console:" + row.path === selected) : null; }
 function current() { return state && state.history.find((row) => row.id === selected); }
 
-function setProgress(status, progress) {
-  const bar = $("d-progress"), known = progress && progress[1];
+function setProgress(status, progress, eta) {
+  const bar = $("d-progress"), box = $("d-prog"), known = progress && progress[1];
+  box.hidden = !status || (!known && !["running", "success", "queued"].includes(status));
+  box.className = "prog " + status;
   bar.className = "progress " + status + (status === "running" && !known ? " indeterminate" : "");
   // BitBake's "task N of M" counts tasks that need no rerun too: N reaches M when the last task *starts*.
   const lastRunning = status === "running" && known && progress[0] >= progress[1];
   // Only a successful job is complete: a failed or cancelled one stopped during its last started task.
   const fraction = status === "success" ? 1 : known ? Math.min(progress[0] / progress[1], 0.99) : 0;
-  bar.firstElementChild.style.width = (100 * fraction).toFixed(1) + "%";
-  $("d-progress-text").textContent = known ? (lastRunning ? `last task running · ${progress[0]} of ${progress[1]}` : `task ${progress[0]} of ${progress[1]}`)
-    : status === "running" ? "waiting for BitBake task counts…" : "";
-  $("d-progress-pct").textContent = known || status === "success" ? (100 * fraction).toFixed(1) + "%" : "";
+  const width = (100 * fraction).toFixed(1) + "%";
+  bar.firstElementChild.style.width = width; bar.lastElementChild.style.left = width;
+  bar.setAttribute("aria-valuenow", (100 * fraction).toFixed(0));
+  const text = $("d-progress-text"); text.textContent = "";
+  const sep = () => el("span", {class: "sep", text: "·"});
+  if (known) text.append(el("b", {text: progress[0].toLocaleString()}), ` / ${progress[1].toLocaleString()} tasks`, ...(lastRunning ? [sep(), "last task running"] : []));
+  else text.append(status === "running" ? "waiting for BitBake task counts…" : status === "queued" ? "queued" : status === "success" ? "done" : "");
+  if (eta) text.append(sep(), `ETA ~${eta.remaining}`);
+  if (eta && eta.basis) text.title = "ETA based on " + eta.basis;
+  $("d-progress-pct").textContent = known || status === "success" ? (100 * fraction).toFixed(fraction >= 0.995 || fraction === 0 ? 0 : 1) + "%" : "";
 }
 function renderDetail() {
   const outside = consoleRow();
@@ -1012,8 +1034,7 @@ function renderDetail() {
   set($("d-glyph"), row.status);
   $("d-title").textContent = row.title;
   $("d-meta").textContent = `${row.status} · ${elapsed(row)}${row.code !== null && row.code !== undefined ? " · exit " + row.code : ""} · ${row.profile}`;
-  setProgress(row.status, row.progress);
-  if (row.eta) $("d-progress-text").textContent += ` · ETA ~${row.eta.remaining} (${row.eta.basis})`;
+  setProgress(row.status, row.progress, row.eta);
 }
 
 function select_(id) {
@@ -1480,7 +1501,8 @@ function studioField(field, value) {
   const focus = () => { studioVar = field.var || ""; renderCode(true); };
   if (field.kind === "choice") {
     const select = el("select", {id});
-    for (const choice of field.choices) select.append(el("option", {value: choice, text: choice}));
+    // Layers by folder name; the full path is the tooltip and the preview header.
+    for (const choice of field.choices) select.append(el("option", {value: choice, text: field.id === "layer" && choice.startsWith("/") ? choice.split("/").pop() : choice, title: choice}));
     select.value = value;
     const explain = () => { const text = hintFor(field, select.value); why.textContent = text; why.hidden = !text; };
     select.addEventListener("change", () => { studioValues[field.id] = select.value; explain(); if (field.id === "layer") syncNewLayer(); previewStudio(); });
@@ -1506,11 +1528,16 @@ function studioField(field, value) {
     box.append(el("label", {class: "check"}, el("span", {class: "switch"}, input, el("span")), label));
   } else {
     const input = el("input", {type: "text", id, placeholder: field.placeholder || "", spellcheck: "false", autocomplete: "off"}); input.value = value;
-    input.addEventListener("input", () => { studioValues[field.id] = input.value; clearTimeout(typingTimer); typingTimer = setTimeout(previewStudio, 180); });
+    input.addEventListener("input", () => {
+      studioValues[field.id] = input.value; clearTimeout(typingTimer); typingTimer = setTimeout(previewStudio, 180);
+      // Help that quotes the default ("bitbake acme-image") follows what is typed.
+      if (help && field.default && field.info.includes(field.default)) help.textContent = field.info.split(field.default).join(input.value.trim() || field.default);
+    });
     input.addEventListener("focus", focus);
     box.append(input);
   }
-  if (field.info) box.append(el("div", {class: "help", text: field.info}));
+  const help = field.info ? el("div", {class: "help", text: field.kind === "text" && field.default && value ? field.info.split(field.default).join(value) : field.info}) : null;
+  if (help) box.append(help);
   return box;
 }
 function syncNewLayer() {

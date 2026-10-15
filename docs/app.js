@@ -37,3 +37,74 @@ document.querySelectorAll('[data-image]').forEach(button => button.addEventListe
 }));
 document.getElementById('lightbox-close').addEventListener('click', () => lightbox.close());
 lightbox.addEventListener('click', event => {if (event.target === lightbox) lightbox.close();});
+// Hero title: one sentence per thing Bitloom does, word by word. Reduced motion keeps the first one still.
+const PHRASES = [
+  ['Follow every build', 'from your browser.'],
+  ['Find the real cause,', 'not the first error.'],
+  ['Pick an image.', 'Watch it build.'],
+  ['Know your SBOM', 'before the CRA asks.'],
+  ['Your own distro,', 'explained line by line.'],
+  ['Close the laptop.', 'The build keeps going.'],
+  ['1,300 recipes,', 'sorted by layer.'],
+];
+const stage = document.querySelector('.rot-stage');
+if (stage) {
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DURATION = 4200;
+  let index = 0, timer = null;
+  const build = (pair) => {
+    const node = document.createElement('span');
+    node.className = 'rot-phrase';
+    pair.forEach((text, line) => {
+      const row = document.createElement('span');
+      row.className = 'rot-line';
+      text.split(' ').forEach((word, i, words) => {
+        const span = document.createElement('span');
+        span.className = 'rot-word';
+        span.textContent = word + (i < words.length - 1 ? ' ' : '');
+        span.style.transitionDelay = `${(line * words.length + i) * 70}ms`;
+        row.append(span);
+      });
+      node.append(row);
+    });
+    return node;
+  };
+  // Reserve the height of the tallest sentence, so the page below never jumps.
+  const fit = () => {
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;visibility:hidden;left:0;right:0';
+    stage.append(probe);
+    let tallest = 0;
+    for (const pair of PHRASES) { probe.replaceChildren(build(pair)); tallest = Math.max(tallest, probe.offsetHeight); }
+    probe.remove();
+    stage.style.minHeight = tallest + 'px';
+  };
+  const bars = document.createElement('div');
+  bars.className = 'rot-progress';
+  bars.setAttribute('aria-hidden', 'true');
+  stage.parentElement.after(bars);
+  PHRASES.forEach((_, i) => { const b = document.createElement('button'); b.tabIndex = -1; b.addEventListener('click', () => show(i)); bars.append(b); });
+  bars.style.setProperty('--rot-ms', DURATION + 'ms');
+  const show = (next) => {
+    clearTimeout(timer);
+    index = next;
+    const old = stage.querySelector('.rot-phrase');
+    const fresh = build(PHRASES[index]);
+    fresh.style.position = 'absolute'; fresh.style.inset = '0';
+    if (old) { old.classList.remove('rot-in'); old.classList.add('rot-out'); setTimeout(() => old.remove(), 450); }
+    stage.append(fresh);
+    requestAnimationFrame(() => requestAnimationFrame(() => fresh.classList.add('rot-in')));
+    [...bars.children].forEach((b, i) => { b.classList.remove('active'); if (i === index) { void b.offsetWidth; b.classList.add('active'); } });
+    if (!still) timer = setTimeout(() => show((index + 1) % PHRASES.length), DURATION);
+  };
+  fit(); addEventListener('resize', fit);
+  show(0);
+}
+// Hero screenshots: the dashboard first, the terminal one click away.
+document.querySelectorAll('[data-screen]').forEach(button => {
+  if (button.tagName !== 'BUTTON') return;
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.screen-tabs button').forEach(b => b.setAttribute('aria-selected', String(b === button)));
+    document.querySelectorAll('.screens img').forEach(img => img.classList.toggle('shown', img.dataset.screen === button.dataset.screen));
+  });
+});

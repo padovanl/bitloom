@@ -15,10 +15,11 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, DataTable, Footer, Input, Label, Markdown, ProgressBar, RichLog, Select, Sparkline, Static, TabbedContent, TabPane, Tree
+from textual.widgets import Button, DataTable, Footer, Input, Label, Markdown, RichLog, Select, Sparkline, Static, TabbedContent, TabPane, Tree
 
 from . import __version__
 from .commands import invocation
+from .progress import TaskProgress
 from .inspectors import Entry, cache_candidates, cache_path, diagnostics, human_size, images, inventory, metadata, organize, prune_cache, search_log, task_logs
 from textual.suggester import SuggestFromList
 from .models import Profile, Settings, read_assignments
@@ -240,13 +241,7 @@ class BitloomApp(App):
     #task-monitor { height: 8; color: $success; padding: 0 1; }
     #stream-panel { width: 1fr; }
     #job-state { height: 1; color: $foreground-muted; }
-    #progress { height: 1; margin-bottom: 1; }
-    #progress Bar { width: 1fr; }
-    #progress Bar > .bar--bar { color: $accent; background: $surface; }
-    #progress Bar > .bar--complete { color: $success; background: $surface; }
-    #progress.failed Bar > .bar--bar { color: $error; }
-    #progress Bar > .bar--indeterminate { color: $accent; background: $surface; }
-    #progress PercentageStatus { color: $foreground-muted; }
+    #progress { height: 1; margin-bottom: 1; padding: 0 1 0 0; }
     #log { height: 1fr; }
     #scan-state { height: 1; margin-bottom: 1; color: $foreground-muted; }
     #cache-days { width: 9; }
@@ -483,7 +478,7 @@ class BitloomApp(App):
                                 yield Static("No observed active tasks", id="task-monitor", markup=False)
                             with Vertical(id="stream-panel"):
                                 yield Static("Select an operation to inspect its output", id="job-state", markup=False)
-                                yield ProgressBar(total=100, show_eta=False, id="progress")
+                                yield TaskProgress(id="progress")
                                 with ToolBar(classes="tools"):
                                     yield Input(placeholder="/ search output · ±3 context lines", id="log-search")
                                     yield Button("Errors only", id="errors")
@@ -1012,8 +1007,7 @@ class BitloomApp(App):
         glyph, color = self.status_style(entry.detail)
         self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {entry.detail}", f"bold {color}"), "  ", ("console build " + entry.name, "bold"),
                                                                    ("  ·  " + str(entry.path), "dim"), no_wrap=True, overflow="ellipsis"))
-        self.main_query("#progress", ProgressBar).set_class(entry.detail == "failed", "failed")
-        self.main_query("#progress", ProgressBar).update(total=100, progress=100 if entry.detail == "success" else 0)
+        self.main_query("#progress", TaskProgress).show(entry.detail)
         self.reload_log()
 
     def action_focus_filter(self):
@@ -1517,19 +1511,7 @@ class BitloomApp(App):
         if job.id != self.selected_job_id or shown == getattr(self, "_progress_shown", None):
             return  # most calls are output lines with nothing new for the bar
         self._progress_shown = shown
-        if job.id == self.selected_job_id:
-            self.main_query("#progress", ProgressBar).set_class(job.status == "failed", "failed")
-        if job.id == self.selected_job_id and job.status == "success":
-            self.main_query("#progress", ProgressBar).update(total=100, progress=100)
-        elif job.id == self.selected_job_id and job.progress[1]:
-            # "task N of M" reaches M when the last task starts: stay below 100% until the job ends.
-            self.main_query("#progress", ProgressBar).update(total=job.progress[1], progress=min(job.progress[0], int(job.progress[1] * .99)))
-        elif job.id == self.selected_job_id and job.status == "running":
-            # Animated indeterminate bar until BitBake reports task counts.
-            self.main_query("#progress", ProgressBar).update(total=None)
-        elif job.id == self.selected_job_id and job.status not in {"queued", "running", "cancelling"}:
-            # Ended before any task count: stop the indeterminate animation.
-            self.main_query("#progress", ProgressBar).update(total=100, progress=0)
+        self.main_query("#progress", TaskProgress).show(job.status, job.progress, self.eta_for(job))
 
     def style_line(self, line, query=""):
         theme = self.current_theme
@@ -1563,25 +1545,18 @@ class BitloomApp(App):
             self.live_lines.clear()
 
     def select_job(self, ident, path):
-        self.main_query("#progress", ProgressBar).display = True  # hidden until a job is selected
+        self.main_query("#progress", TaskProgress).display = True  # hidden until a job is selected
         self.selected_job_id = ident
         self.selected_log = Path(path)
         self.live_lines.clear()
         self.reload_log()
         row = self.history_rows.get(ident)
         if row:
-            self.main_query("#progress", ProgressBar).set_class(row["status"] == "failed", "failed")
             progress = json.loads(row["metadata"]).get("progress", [0, 0])
             live = next((j for j in self.runner.jobs if j.id == ident), None)
             if live:
                 progress = live.progress
-            if row["status"] == "success":
-                self.main_query("#progress", ProgressBar).update(total=100, progress=100)
-            elif progress[1]:
-                done = min(progress[0], int(progress[1] * .99))  # success is handled above; 99% so it never rounds to 100%
-                self.main_query("#progress", ProgressBar).update(total=progress[1], progress=done)
-            else:
-                self.main_query("#progress", ProgressBar).update(total=100, progress=0)
+            self.main_query("#progress", TaskProgress).show(live.status if live else row["status"], progress, self.eta_for(live))
             glyph, color = self.status_style(row["status"])
             self.main_query("#job-state", Static).update(Text.assemble((f"{glyph} {row['status']}", f"bold {color}"), "  ", (row["title"], "bold"), ("  ·  " + str(path), "dim"), no_wrap=True, overflow="ellipsis"))
 

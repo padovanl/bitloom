@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quickstart — Bitloom documentation</title>
+<meta name="description" content="Bitloom documentation: Quickstart">
+<link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<body>
+<header class="topbar">
+<button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
+<a class="brand" href="index.html"><img src="assets/bitloom-icon.svg" width="26" height="26" alt=""> Bitloom <small>docs</small></a>
+<div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
+<span class="spacer"></span>
+<a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
+</header>
+<div class="layout">
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html" aria-current="page">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<main class="content">
+<div class="breadcrumbs"><a href="index.html">Bitloom</a> › Get started</div>
+<article class="doc"><h1 id="quickstart">Quickstart</h1>
+<p>From nothing to a build you can follow in the browser, in five steps. Every step also works in the terminal UI; the two share one build service.</p>
+<h2 id="1-install">1. Install<a class="anchor" href="#1-install" aria-label="Link to this section">#</a></h2>
+<p>Download the version you want from <a href="https://github.com/padovanl/bitloom/releases">GitHub Releases</a> (replace <code>1.2.3</code>):</p>
+<pre><code class="language-bash">sudo apt install ./bitloom_1.2.3_all.deb            # Debian / Ubuntu: dependencies included
+</code></pre>
+<p>On other distributions and WSL2, install the source archive in a virtual environment:</p>
+<pre><code class="language-bash">tar -xzf bitloom-1.2.3.tar.gz &amp;&amp; cd bitloom-1.2.3
+python3 -m venv ~/.bitloom-venv &amp;&amp; ~/.bitloom-venv/bin/pip install .
+</code></pre>
+<p>Check the result with <code>bitloom --version</code>. Real builds also need what your project uses: kas or kas-container with Docker or Podman, or an initialised Poky checkout. See <a href="guide.html#install-from-a-github-release">installation</a> for checksums and the release SBOM.</p>
+<h2 id="2-look-around-on-the-samples">2. Look around on the samples<a class="anchor" href="#2-look-around-on-the-samples" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">bitloom --web --demo
+</code></pre>
+<p>Bitloom prints the dashboard URL, which carries its access token, and opens your browser. The demo has a Scarthgap and a Wrynose sample workspace: switch between them with the profile menu. Press <code>?</code> for the keys, <code>Ctrl+K</code> for the palette, <code>1</code> to <code>6</code> for the sections. Nothing here runs a real build.</p>
+<h2 id="3-connect-your-project">3. Connect your project<a class="anchor" href="#3-connect-your-project" aria-label="Link to this section">#</a></h2>
+<p>Start Bitloom from your project folder:</p>
+<pre><code class="language-bash">cd ~/src/my-product
+bitloom --web
+</code></pre>
+<p>With no profile yet, the dashboard opens <strong>Configuration → Set up a project</strong> on that folder and proposes how it builds, with the evidence it found:</p>
+<table>
+<thead>
+<tr>
+<th>Your project has</th>
+<th>Bitloom proposes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kas files (<code>kas/*.yml</code>)</td>
+<td>a <code>kas-container</code> profile per configuration, with a work directory on a Linux filesystem</td>
+</tr>
+<tr>
+<td>a launcher script that runs kas, used as <code>YML=kas/board.yml ./run_kas.sh build</code></td>
+<td>a <code>wrapper</code> profile per product; BitBake commands run as <code>./run_kas.sh shell -c '…'</code>, and the build folder comes from the script's <code>KAS_WORK_DIR</code></td>
+</tr>
+<tr>
+<td>a Poky or OE-Core checkout</td>
+<td>a <code>host</code> profile that sources <code>oe-init-build-env</code></td>
+</tr>
+</tbody>
+</table>
+<details class="shot"><summary><span>Animation</span> Guided setup on a launcher project with two products</summary><div class="shot-body"><img src="assets/web-clip-setup.gif" alt="Guided setup on a launcher project with two products" loading="lazy" decoding="async"></div></details>
+<p>Pick a proposal, check the fields (each is explained and checked as you type) and press <strong>Save</strong>. When one launcher builds several products, <strong>Save all products</strong> creates one profile each. Details: <a href="projects.html">Projects and guided setup</a>.</p>
+<h2 id="4-build-and-follow">4. Build and follow<a class="anchor" href="#4-build-and-follow" aria-label="Link to this section">#</a></h2>
+<ol>
+<li>In <strong>Builds</strong> (<code>1</code>), click the target field or press <code>t</code>: it lists the image recipes found in your layers, the kas target and the images already built first. Any recipe works too.</li>
+<li>Press <code>b</code> (or <strong>Build</strong>). The job appears at the top of the history, with live output, progress and an ETA.</li>
+<li>When it ends, <strong>Summary</strong> (<code>u</code>) groups errors, warnings and failed tasks; <strong>Compare</strong> (<code>d</code>) shows what changed since the previous run. A failed build's summary starts with a diagnosis of the real cause: the failed task, its log, the lines that matter and the next step.</li>
+<li><strong>Operations</strong> (<code>q</code>) queues any of the 74 operations: one recipe's compile, a clean, a dry run, an SDK, an SBOM or CVE check.</li>
+</ol>
+<details class="shot"><summary><span>Animation</span> A real force compile of busybox followed live, then its summary</summary><div class="shot-body"><img src="assets/web-clip-build.gif" alt="A real force compile of busybox followed live, then its summary" loading="lazy" decoding="async"></div></details>
+<p>Close the browser whenever you like: the build service keeps the queue and the history, and <code>bitloom --web</code> reconnects. Optional notifications tell you when a build ends (<a href="guide.html#daily-helpers">Daily helpers</a>).</p>
+<h2 id="5-the-same-in-the-terminal">5. The same, in the terminal<a class="anchor" href="#5-the-same-in-the-terminal" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">bitloom
+</code></pre>
+<p>Opens the terminal UI on the same service, profiles and history: useful over SSH. Numbers open sections, letters act, <code>/</code> searches, <code>?</code> lists every key, <code>P</code> switches profile. See the <a href="keyboard.html">keyboard reference</a>.</p>
+<h2 id="where-next">Where next<a class="anchor" href="#where-next" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><a href="web.html">Web dashboard</a>: every section, notifications, the API.</li>
+<li><a href="compliance.md">SBOM, CRA and releases</a>: SBOM quality, vulnerabilities and their exports, CRA readiness.</li>
+<li><a href="studio.html">Studio</a>: your own layer, distribution, machine, image or recipe, explained field by field.</li>
+<li><a href="guide.md">User guide</a>: profiles and runtimes, caches, analysis, troubleshooting.</li>
+<li><a href="teams.html">Teams and CI/CD</a>: headless <code>--ci</code> runs, team profiles, launcher scripts in depth.</li>
+</ul>
+</article>
+<nav class="pager" aria-label="Previous and next page"><a class="next" href="guide.html"><small>Next</small>User guide</a></nav>
+<div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/quickstart.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+</main>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#1-install">1. Install</a><a href="#2-look-around-on-the-samples">2. Look around on the samples</a><a href="#3-connect-your-project">3. Connect your project</a><a href="#4-build-and-follow">4. Build and follow</a><a href="#5-the-same-in-the-terminal">5. The same, in the terminal</a><a href="#where-next">Where next</a></aside>
+</div>
+<script src="docs.js"></script>
+</body></html>

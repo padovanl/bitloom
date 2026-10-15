@@ -132,7 +132,7 @@ def test_tools_next_to_bitloom_are_found_without_an_activated_virtualenv(tmp_pat
 
 async def test_failed_start_stops_progress_and_explains(tmp_path):
     """A command that never started left the progress bar animating and only said 'exit -1'."""
-    from textual.widgets import ProgressBar
+    from bitloom.progress import TaskProgress
     from bitloom.cli import prepare_demo
     app = BitloomApp(prepare_demo(tmp_path / 'state'), tmp_path / 'state')
     notes = []
@@ -144,8 +144,8 @@ async def test_failed_start_stops_progress_and_explains(tmp_path):
         app.select_job(job.id, job.log)
         await app.runner.consumer
         await pilot.pause(.5)
-        bar = app.query_one('#progress', ProgressBar)
-        assert bar.total == 100 and bar.progress == 0          # no indeterminate animation after the end
+        bar = app.query_one('#progress', TaskProgress)
+        assert bar.status == 'failed' and bar.fraction() is None and not bar.timer._active.is_set()   # no animation after the end
         assert any('definitely-not-a-command-xyz not found' in n for n in notes)
         # Jobs carry their target; rows of other profiles name their profile.
         await pilot.press('P'); await pilot.pause(.3); await pilot.press('down', 'enter'); await pilot.pause(1)
@@ -195,3 +195,22 @@ async def test_runner_splits_glued_messages_and_counts_noexec(tmp_path):
     assert 'Initialising tasks...' in lines and 'WARNING: tainted from a forced run' in lines
     assert job.progress == (1250, 1250)
     store.close()
+
+
+def test_console_builds_leave_out_bitloom_jobs(tmp_path):
+    """Builds Bitloom started appeared again under 'console builds · started outside Bitloom'."""
+    from datetime import datetime, timedelta, timezone
+    from bitloom.inspectors import console_logs
+    from bitloom.models import Profile
+    profile = Profile(name='p', root=str(tmp_path))
+    cooker = profile.build_path / 'tmp/log/cooker/qemux86-64'
+    cooker.mkdir(parents=True)
+    start = datetime(2026, 10, 18, 1, 35, 10, tzinfo=timezone.utc)
+    ours_utc = cooker / (start + timedelta(seconds=7)).strftime('%Y%m%d%H%M%S.log')                       # container clock in UTC
+    ours_local = cooker / (start + timedelta(seconds=9)).astimezone().strftime('%Y%m%d%H%M%S.log')        # host clock
+    outside = cooker / (start - timedelta(hours=3)).strftime('%Y%m%d%H%M%S.log')
+    for path in (ours_utc, ours_local, outside):
+        path.write_text('NOTE: Tasks Summary: Attempted 1 tasks of which 0 didn\'t need to be rerun and all succeeded.\n')
+    jobs = [(start.isoformat(), (start + timedelta(seconds=40)).isoformat())]
+    assert [e.path for e in console_logs(profile, jobs=jobs)] == [outside]
+    assert len(console_logs(profile)) == 3

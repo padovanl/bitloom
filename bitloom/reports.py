@@ -97,7 +97,7 @@ def build_summary(path: Path) -> str:
                 task = line
     def section(title, lines):
         return ['', title, *(lines[-100:] or ['  none'])]
-    head = [f'Build report: {path}', f'Errors: {len(errors)} · Warnings: {len(warnings)}']
+    head = [f'Build report: {path.name}', f'Errors: {len(errors)} · Warnings: {len(warnings)}']
     if sstate or task:
         head += ['', *sstate, *([task] if task else [])]
     return '\n'.join(head + section('Failed tasks', failed) + section('Errors', errors) + section('Warnings', warnings))

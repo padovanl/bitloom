@@ -23,6 +23,8 @@ On the very first start, when no profiles file exists, the guided setup opens au
 
 ![Guided setup proposing a launcher script and a kas configuration](assets/setup-wizard.png)
 
+![The web dashboard's guided setup on a launcher project with two products](assets/web-clip-setup.gif)
+
 ### Project launcher scripts
 
 When the folder has a script that runs kas, the proposal uses the `wrapper` runtime: kas operations call `./script <subcommand>` and BitBake commands call `./script shell -c '<command>'`, with the environment variables from the profile (for example `YML=boards/board.yml`). For BitBake commands and runtime probes the script must forward `shell -c` and keep standard input open. See [Teams, CI/CD and setup](teams.md#project-launcher-scripts) for the details and a minimal example script.

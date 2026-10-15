@@ -106,6 +106,9 @@ BITBAKE_CHATTER = re.compile(
     r'NOTE: Started PRServer.*|Summary: There (?:was|were) \d+ WARNING messages?\.?)$')
 
 
+PROGRESS_NOTE = re.compile(r'^NOTE: (Running (setscene |noexec )?task \d+ of \d+|recipe \S+: task \S+: (Started|Succeeded))')
+
+
 def diagnose(text):
     """Point at the root cause, not the first line that mentions failure."""
     lines = [line for line in text.splitlines() if not BITBAKE_CHATTER.match(line.strip())]
@@ -119,7 +122,8 @@ def diagnose(text):
         anchor = next((i for i, line in enumerate(lines) if not line.startswith('$ ') and re.search(r'\b(ERROR:|FAILED|fatal:)', line)), None)
     # The first make "***" line follows its cause; show the lines leading up to it.
     before = 10 if anchor is not None and '***' in lines[anchor] else 3
-    evidence = [line for line in lines[max(0, anchor - before):anchor + 6] if 'WARNING:' not in line] if anchor is not None else []
+    # Task progress lines say where BitBake was, not what went wrong: leave them out of the context.
+    evidence = [line for line in lines[max(0, anchor - before):anchor + 6] if 'WARNING:' not in line and not PROGRESS_NOTE.match(line)] if anchor is not None else []
     paths = list(dict.fromkeys(re.findall(r'Logfile of failure stored in:\s*(\S+)', text)))
     failed = sorted(set(re.findall(r'Task \(?([^)\s]+)\)? failed', text)))
     recipes = sorted({re.sub(r'_[^_/]*\.bb$', '', Path(task.split(':')[0]).name).removesuffix('.bb') for task in failed}) or \
