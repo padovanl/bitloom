@@ -67,6 +67,14 @@ Alternatively, install the release wheel with `.venv/bin/python -m pip install /
 
 Download `SHA256SUMS` alongside the packages, then run `sha256sum --check --ignore-missing SHA256SUMS` in the same directory. Check that the package you downloaded reports `OK`.
 
+`bitloom --version` prints the installed version. Every release also carries `bitloom-1.2.3.spdx.json`, an SPDX 2.3 SBOM of what the packages contain: Bitloom and each bundled Python package (Textual, Rich and their dependencies) with its version, SPDX licence identifier and package URL. The Debian package installs the same file as `/usr/share/doc/bitloom/sbom.spdx.json`, for the software inventory of the machines you install it on.
+
+### How releases are made
+
+Releases are cut with **Actions → Release Bitloom → Run workflow** and a version such as `1.2.3`. The workflow refuses versions that already have a tag, and stable releases from any branch other than `main` (tick *pre-release* to publish from another branch). It runs the test suite, builds the source archive, wheel, Debian package, SBOM and `SHA256SUMS`, installs the `.deb` on a clean runner and checks `bitloom --version`, the bundled SBOM and a smoke run, keeps the assets with the workflow run, then commits the version into `pyproject.toml` and `bitloom/__init__.py` on a release commit, tags it `v1.2.3` and publishes the GitHub release from that tag with generated notes. The release commit is reachable only from its tag: `main` keeps the development version.
+
+Build the same assets locally with `python tools/build_release.py 1.2.3 --output dist/release` (needs `build`, `wheel` and `dpkg-deb`).
+
 ## Fresh checkout demo
 
 Run `./setup-demo.sh` from the cloned checkout to create or reuse `.venv`, install dependencies and launch the sample TUI. Requires Bash, Python 3.10+ with venv support on Linux or WSL2, and internet access for installation. No Docker, kas or Yocto installation is needed for the sample data.
