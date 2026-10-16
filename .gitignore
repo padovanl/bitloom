@@ -11,3 +11,6 @@ dist/
 .manual-testbook/
 .developer-validation/
 .claude/settings.local.json
+
+# Personal notes, not part of the project
+GUIDA.md
