@@ -359,6 +359,10 @@ details.rule .mark { font: 700 13px var(--mono); text-align: center; }
 .pr-form .err { color: var(--err); font-size: 13px; min-height: 1.2em; }
 .pr-form-actions { display: flex; gap: 8px; }
 #img-mode { margin-right: 10px; } #img-mode button { padding: 3px 10px; }
+.svc.selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.dts-bar { display: flex; gap: 10px; align-items: center; } .dts-bar input { flex: 1; }
+.dts { font: 12.5px/1.55 var(--mono); padding: 8px 0 14px; max-height: 70vh; overflow: auto; white-space: pre; tab-size: 4; }
+.dts > div { padding: 0 14px; } .dts > div.hit { background: color-mix(in srgb, var(--warn) 14%, transparent); } .dts > div.hit-now { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 .svc-init { display: flex; gap: 10px; align-items: baseline; padding: 10px 12px; border-bottom: 1px solid var(--line); } .svc-init b { font-size: 15px; }
 .svc-group > summary { display: flex; gap: 8px; align-items: baseline; padding: 9px 12px; cursor: pointer; list-style: none; border-bottom: 1px solid var(--line); }
 .svc-group > summary::-webkit-details-marker { display: none; } .svc-group > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; } .svc-group[open] > summary::before { transform: rotate(90deg); }
@@ -759,10 +763,11 @@ details.folder > summary { padding: 8px 14px; }
       </div>
       <div class="split img-split">
         <div class="panel">
-          <div class="head"><div class="seg" id="img-mode" role="radiogroup" aria-label="Show"><button role="radio" aria-checked="true" data-mode="files">Files</button><button role="radio" aria-checked="false" data-mode="services" title="What starts on the device: init, systemd units or SysV scripts, udev rules, D-Bus">Services</button></div>
+          <div class="head"><div class="seg" id="img-mode" role="radiogroup" aria-label="Show"><button role="radio" aria-checked="true" data-mode="files">Files</button><button role="radio" aria-checked="false" data-mode="services" title="What starts on the device: init, systemd units or SysV scripts, udev rules, D-Bus">Services</button><button role="radio" aria-checked="false" data-mode="devicetree" title="The device trees the build deployed, decompiled">Device tree</button></div>
             <div class="img-crumbs" id="img-crumbs" role="navigation" aria-label="Folder"></div><span style="flex:1"></span><span class="meta" id="img-dir-size"></span></div>
           <div class="list" id="img-list" role="listbox" aria-label="Folder content"></div>
           <div class="list" id="img-services" aria-label="Services" hidden></div>
+          <div class="list" id="img-dt" aria-label="Device trees" hidden></div>
         </div>
         <div class="panel img-detail" id="img-detail"><div class="empty">Select a file to see which package and recipe put it in the image, and how to change it.</div></div>
       </div>
@@ -2082,9 +2087,67 @@ async function chooseImage(img, dir = "/") {
 function setImgMode(mode) {
   imgMode = mode;
   for (const b of document.querySelectorAll("#img-mode button")) b.setAttribute("aria-checked", String(b.dataset.mode === mode));
-  $("img-list").hidden = mode !== "files"; $("img-crumbs").hidden = mode !== "files"; $("img-services").hidden = mode !== "services";
+  $("img-list").hidden = mode !== "files"; $("img-crumbs").hidden = mode !== "files"; $("img-services").hidden = mode !== "services"; $("img-dt").hidden = mode !== "devicetree";
   $("img-dir-size").textContent = mode === "files" && imgLast ? human(imgLast.size) : "";
   if (mode === "services") loadServices();
+  if (mode === "devicetree") loadDeviceTrees();
+}
+let dtFiles = [], dtCurrent = null;
+async function loadDeviceTrees() {
+  const box = $("img-dt"); box.textContent = ""; skeletonIn(box);
+  try { dtFiles = (await api(`/api/devicetree?profile=${prof()}`)).files; } catch (error) { box.textContent = ""; box.append(el("div", {class: "empty", text: error.message})); return; }
+  box.textContent = "";
+  if (!dtFiles.length) {
+    box.append(el("div", {class: "empty", text: "No device tree deployed. ARM, RISC-V and most board machines deploy .dtb files with the kernel (KERNEL_DEVICETREE); x86 and most QEMU machines have none."}));
+    return;
+  }
+  const machine = imgCurrent ? imgCurrent.machine : "";
+  const ordered = [...dtFiles].sort((a, b) => (b.machine === machine) - (a.machine === machine));
+  const files = el("div", {class: "svc-rows"});
+  box.append(el("details", {class: "svc-group", open: ""}, el("summary", {}, el("b", {text: "Deployed device trees"}), el("span", {class: "count", text: String(dtFiles.length)}), el("span", {class: "meta", text: "tmp/deploy/images"})), files));
+  for (const f of ordered) files.append(el("div", {class: "svc " + (f.overlay ? "off" : "on") + (dtCurrent && dtCurrent.name === f.name && dtCurrent.machine === f.machine ? " selected" : ""), tabindex: "0", role: "button", title: f.path,
+    onclick: () => openDeviceTree(f), onkeydown: (e) => { if (e.key === "Enter") openDeviceTree(f); }},
+    el("span", {class: "dot", "aria-hidden": "true"}), el("span", {class: "n"}, f.name, el("small", {text: f.overlay ? "overlay" : "base device tree"})), el("span", {class: "p", text: `${f.machine} · ${human(f.size)}`})));
+  box.append(el("div", {id: "dt-devices"}));
+  if (!dtCurrent) openDeviceTree(ordered[0]);
+}
+async function openDeviceTree(file) {
+  const detail = $("img-detail"); detail.textContent = ""; skeletonIn(detail);
+  let data;
+  try { data = await api(`/api/devicetree?profile=${prof()}&name=${encodeURIComponent(file.name)}&machine=${encodeURIComponent(file.machine)}`); }
+  catch (error) { detail.textContent = ""; detail.append(el("div", {class: "empty", text: error.message})); return; }
+  dtCurrent = data;
+  for (const row of document.querySelectorAll("#img-dt .svc")) row.classList.toggle("selected", row.title === file.path);
+  detail.textContent = "";
+  const facts = [["Model", data.model], ["Compatible", data.compatible.join(", ")], ["Boot arguments", data.bootargs], ["Console", data.stdout], ["Memory", data.memory.join(", ")],
+                 ["Devices", `${data.enabled.length} enabled · ${data.disabled.length} disabled`]].filter(([, v]) => v);
+  detail.append(el("div", {class: "sec"}, el("h3", {text: data.name}), el("dl", {}, ...facts.flatMap(([k, v]) => [el("dt", {text: k}), el("dd", {text: v})])),
+    el("div", {class: "advice", text: data.overlay ? "An overlay: the bootloader applies it on top of a base device tree." :
+      "To change it, add a .dts or .dtsi to your BSP layer and list it in KERNEL_DEVICETREE, or ship an overlay; never edit the kernel's own tree."})));
+  const find = el("input", {type: "search", placeholder: "Search the device tree… (node, compatible, property)", "aria-label": "Search the device tree"});
+  const lines = el("div", {class: "dts", role: "document"});
+  const rows = data.dts.split("\n");
+  rows.forEach((line, i) => lines.append(el("div", {"data-line": String(i), text: line || "\u00a0"})));
+  const status = el("span", {class: "meta"});
+  let hits = [], at = -1;
+  const jump = (index) => { const target = lines.children[index]; if (!target) return; for (const n of lines.querySelectorAll(".hit-now")) n.classList.remove("hit-now"); target.classList.add("hit-now"); target.scrollIntoView({block: "center"}); };
+  find.addEventListener("input", () => {
+    const q = find.value.trim().toLowerCase(); hits = []; at = -1;
+    for (const [i, node] of [...lines.children].entries()) { const hit = q && rows[i].toLowerCase().includes(q); node.classList.toggle("hit", !!hit); if (hit) hits.push(i); }
+    status.textContent = q ? `${hits.length} lines` : "";
+  });
+  find.addEventListener("keydown", (e) => { if (e.key === "Enter" && hits.length) { at = (at + (e.shiftKey ? -1 + hits.length : 1)) % hits.length; jump(hits[at]); status.textContent = `${at + 1} of ${hits.length}`; } });
+  detail.append(el("div", {class: "sec dts-bar"}, find, status), lines);
+  const nodeLine = (path) => { const name = path.split("/").pop(); return rows.findIndex((l) => new RegExp("^\\s*(\\w+: )?" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + " \\{$").test(l)); };
+  const devices = $("dt-devices"); if (!devices) return; devices.textContent = "";
+  for (const [title, hint, list, state] of [["Enabled devices", "status okay", data.enabled, "on"], ["Disabled devices", "status disabled: present, not used", data.disabled, "off"]]) {
+    if (!list.length) continue;
+    const body = el("div", {class: "svc-rows"});
+    devices.append(el("details", {class: "svc-group", open: ""}, el("summary", {}, el("b", {text: title}), el("span", {class: "count", text: String(list.length)}), el("span", {class: "meta", text: hint})), body));
+    for (const d of list.slice(0, 400)) body.append(el("div", {class: "svc " + state, tabindex: "0", role: "button", title: d.path,
+      onclick: () => jump(nodeLine(d.path)), onkeydown: (e) => { if (e.key === "Enter") jump(nodeLine(d.path)); }},
+      el("span", {class: "dot", "aria-hidden": "true"}), el("span", {class: "n"}, d.path.split("/").pop(), el("small", {text: d.path})), el("span", {class: "p", text: d.compatible[0]})));
+  }
 }
 async function revealPath(path) {
   // Open the folder of a file and show it, as if it had been clicked in Files.

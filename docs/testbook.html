@@ -451,6 +451,11 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <td><em>sysvinit · 20 started at boot</em>; init scripts in boot order (<code>banner.sh S02</code>, <code>sysfs.sh S02</code>, <code>mountall.sh S03</code>, <code>udev S04</code>…), then shutdown (<code>halt</code>, <code>reboot</code>) and helpers; udev rules from eudev with <code>80-net-name-slot.rules</code> <em>disabled in /etc</em>. <code>syslog</code> opens <code>/etc/init.d/syslog</code> (owner root, <code>busybox-syslog · busybox</code>). The CLI prints the same list.</td>
 </tr>
 <tr>
+<td>8b.4c</td>
+<td>Demo (<code>bitloom --web --demo</code>), profile <code>demo-wrynose</code>: Image → <em>Device tree</em>; select <code>spi@50000</code>; search <code>serial</code>, <code>Enter</code>. Then <code>bitloom --demo --devicetree demo-board.dtb --format dts</code>. On <code>kas-wrynose</code> (qemux86-64): <em>Device tree</em>.</td>
+<td>The demo board: model <em>Demo sample board</em>, 11 enabled and 3 disabled devices; <code>spi@50000</code> scrolls the DTS to its node; <em>1 of 4</em> matches. The CLI prints DTS starting with <code>/dts-v1/;</code>. On qemux86-64: <em>No device tree deployed</em> with the reason (x86 machines have none).</td>
+</tr>
+<tr>
 <td>8b.5</td>
 <td>TUI: <code>7</code>, choose <em>Which recipe installs…</em>, type <code>/etc/inittab</code>, <code>a</code>. Then in a shell: <code>bitloom --config .validation/profiles.json --state .validation --who-installs /etc/inittab</code>.</td>
 <td>Both answer <code>sysvinit-inittab</code>, its recipe file, layer, image, and <em>add recipes-core/sysvinit-inittab/sysvinit-inittab_%.bbappend to your layer</em>.</td>
