@@ -204,7 +204,7 @@ class ActionScreen(ModalScreen):
 
     def option_label(self, action):
         from .commands import availability
-        ok, _ = availability(action, getattr(self.app, 'release', None))
+        ok, _ = availability(action, getattr(self.app, 'release', None), getattr(self, 'profile', None) or getattr(self.app, 'profile', None))
         return f"{action.group} / {action.title}" + ("  (not in this release)" if ok is False else "")
 
     def selected(self) -> Action:
@@ -233,11 +233,11 @@ class ActionScreen(ModalScreen):
             from .commands import availability
             from .versions import describe
             release = getattr(self.app, 'release', None)
-            ok, reason = availability(a, release)
+            ok, reason = availability(a, release, getattr(self, 'profile', None) or getattr(self.app, 'profile', None))
             if ok is False:
                 submit.disabled = True
                 text += '\n✖ Not available: ' + reason
-            elif a.since or a.until:
+            elif a.needs:
                 text += '\n✔ Available in ' + describe(release) if ok else '\n? ' + reason
             cap = getattr(self.app, 'capability_cache', {}).get((self.profile.name, self.values().get('target', '')))
             import time
@@ -905,7 +905,7 @@ class SbomSettingsScreen(ModalScreen):
 
     def state(self, option):
         from .sbom_settings import availability
-        ok, _ = availability(option, self.release)
+        ok, _ = availability(option, self.release, self.profile)
         value = self.values.get(option.id)
         if ok is False:
             return "n/a" + (" (set!)" if value or option.id in self.elsewhere else "")
@@ -923,17 +923,16 @@ class SbomSettingsScreen(ModalScreen):
 
     def refresh_rows(self):
         from rich.text import Text
-        from .sbom_settings import OPTIONS, availability
+        from .sbom_settings import OPTIONS, availability, requirement
         table = self.query_one("#sbom-options")
         row = table.cursor_row
         table.clear()
         theme = self.app.current_theme
         for option in OPTIONS:
-            ok, _ = availability(option, self.release)
+            ok, _ = availability(option, self.release, self.profile)
             state = self.state(option)
             color = theme.error if ok is False else theme.success if state not in {"off"} else theme.foreground
-            span = (option.since or "any") + ("…" + option.until if option.until else "+")
-            table.add_row(Text(state, style=color), option.title, Text(span + ("" if option.verified else " ?"), style="dim"), key=option.id)
+            table.add_row(Text(state, style=color), option.title, Text(requirement(option) + ("" if option.verified else " ?"), style="dim"), key=option.id)
         table.move_cursor(row=min(row, len(OPTIONS) - 1))
         self.show_info()
 
@@ -944,7 +943,7 @@ class SbomSettingsScreen(ModalScreen):
     def show_info(self):
         from .sbom_settings import info_markdown, preview
         option = self.selected()
-        self.query_one("#sbom-info", Markdown).update(info_markdown(option, self.release, self.state(option)))
+        self.query_one("#sbom-info", Markdown).update(info_markdown(option, self.release, self.state(option), self.profile))
         self.query_one("#sbom-preview", Static).update(preview(self.profile, self.values))
 
     def on_data_table_row_highlighted(self, event):
@@ -960,7 +959,7 @@ class SbomSettingsScreen(ModalScreen):
     def action_toggle(self):
         from .sbom_settings import availability
         option = self.selected()
-        ok, reason = availability(option, self.release)
+        ok, reason = availability(option, self.release, self.profile)
         if ok is False and not self.values.get(option.id):
             self.notify(f"{option.title}: {reason}", severity="warning", timeout=10)
             return
@@ -1018,7 +1017,7 @@ class SbomSettingsScreen(ModalScreen):
         if app.runner.active or any(j.status == "queued" for j in app.runner.jobs) or getattr(app, "developer_busy", False):
             self.notify("Wait for the build queue before changing build configuration", severity="warning")
             return
-        blocked = [BY_ID[k].title for k, v in self.values.items() if v and availability(BY_ID[k], self.release)[0] is False and self.initial.get(k) != v]
+        blocked = [BY_ID[k].title for k, v in self.values.items() if v and availability(BY_ID[k], self.release, self.profile)[0] is False and self.initial.get(k) != v]
         if blocked:
             self.notify("Not available in this release: " + ", ".join(blocked), severity="error", timeout=10)
             return

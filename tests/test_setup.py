@@ -1,6 +1,7 @@
 """Guided project setup: detection, checks, saving and live reload in TUI and web."""
 import json
 import os
+import pytest
 
 from bitloom.models import Profile, Settings
 from bitloom.setup import check, detect, save
@@ -212,3 +213,37 @@ def test_work_dir_default_with_nested_expansion(tmp_path):
     script = tmp_path / 'run.sh'
     script.write_text('#!/bin/bash\nexport KAS_WORK_DIR="${KAS_WORK_DIR:-$PWD/build-${YML%.yml}}"\nkas-container "$@" "$YML"\n')
     assert script_work_dir(script, tmp_path, {'YML': 'kas/panel.yml'}) == str(tmp_path / 'build-kas/panel')
+
+
+def test_bitbake_setup_workspaces_and_availability(tmp_path):
+    """bitbake-setup: workspaces are proposed as host profiles; its operations exist only when the project's
+    BitBake ships the tool, and fragments only with bitbake-config-build."""
+    from bitloom.commands import BY_ID, arguments, availability, invocation
+    from bitloom.models import Profile
+    top = tmp_path / "bitbake-builds"
+    setup_dir = top / "poky-master-poky-distro_poky-machine_qemux86-64"
+    (setup_dir / "build/conf").mkdir(parents=True)
+    (setup_dir / "config").mkdir()
+    (setup_dir / "layers/bitbake/bin").mkdir(parents=True)
+    (top / "site.conf").write_text("")
+    (setup_dir / "build/init-build-env").write_text("# generated\n")
+    (setup_dir / "build/conf/toolcfg.conf").write_text('OE_FRAGMENTS += "core/yocto/sstate-mirror-cdn distro/poky machine/qemux86-64"\n')
+    for tool in ("bitbake", "bitbake-config-build"):
+        (setup_dir / "layers/bitbake/bin" / tool).write_text("#!/bin/sh\n")
+    [candidate] = [c for c in detect(top) if c.title.startswith("bitbake-setup")]
+    profile = Profile.from_dict(candidate.profile)
+    assert (profile.mode, profile.init_script, profile.machine, profile.distro) == ("host", "build/init-build-env", "qemux86-64", "poky")
+    assert "source build/init-build-env >/dev/null" in invocation(profile, ["bitbake", "busybox"]).argv[-1]
+    ok, reason = availability(BY_ID["setup-status"], "wrynose", profile)
+    assert ok is False and "bitbake-setup is not in this project's BitBake" in reason      # this BitBake lacks it
+    (setup_dir / "layers/bitbake/bin/bitbake-setup").write_text("#!/bin/sh\n")
+    assert availability(BY_ID["setup-status"], "wrynose", profile) == (True, "")
+    assert availability(BY_ID["fragment-enable"], "wrynose", profile)[0] is True
+    assert arguments(BY_ID["fragment-enable"], {"fragment": "core/yocto/sstate-mirror-cdn"})[-1] == "core/yocto/sstate-mirror-cdn"
+    with pytest.raises(ValueError):
+        arguments(BY_ID["fragment-enable"], {"fragment": "rm -rf"})
+    poky = Profile(name="old", root=str(tmp_path / "poky-checkout"), mode="host")
+    (tmp_path / "poky-checkout/bitbake/bin").mkdir(parents=True)
+    (tmp_path / "poky-checkout/bitbake/bin/bitbake").write_text("")
+    ok, reason = availability(BY_ID["fragments"], "scarthgap", poky)
+    assert ok is False and "bitbake-config-build is not in this project's BitBake" in reason and "scarthgap" in reason

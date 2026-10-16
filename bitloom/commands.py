@@ -23,8 +23,7 @@ class Action:
     help: str = ""
     interactive: bool = False
     task: str = ""      # optional runtime task probed before queueing (class/config dependent)
-    since: str = ""     # first Yocto series providing it
-    until: str = ""     # last Yocto series providing it
+    needs: tuple[str, ...] = ()   # capabilities (bitloom/capabilities.py) the project's release must have
     instead: str = ""   # action id to suggest when this release lacks it
 
 
@@ -99,28 +98,39 @@ ACTIONS.extend([
     Action("kernel-diff", "Kernel", "Export kernel config changes", "bitbake", ("-c", "diffconfig"), ("target",), task="do_diffconfig"),
     Action("kernel-fragments", "Kernel", "Validate kernel config fragments", "bitbake", ("-c", "kernel_configcheck"), ("target",), task="do_kernel_configcheck"),
     Action("cve", "Security", "Run recipe CVE check (cve-check)", "bitbake", ("-c", "cve_check"), ("target",), help="Requires the cve-check class and CVE database. Removed in 6.0 Wrynose: use sbom-cve-check.",
-           task="do_cve_check", until="whinlatter", instead="sbom-cve-recipe"),
+           task="do_cve_check", needs=("cve-check",), instead="sbom-cve-recipe"),
     Action("kas-lock", "Kas", "Generate kas lock file", "kas", ("lock",)),
     Action("sbom-cve-recipe", "Security", "Recipe CVE analysis from its SBOM (sbom-cve-check)", "bitbake", ("-c", "sbom_cve_check_recipe"), ("target",),
            help="Analyses the recipe SBOM without building the software. The recipe must inherit sbom-cve-check-recipe; reports go to DEPLOY_DIR_IMAGE.",
-           task="do_sbom_cve_check_recipe", since="wrynose", instead="cve"),
+           task="do_sbom_cve_check_recipe", needs=("sbom-cve-check-recipe",), instead="cve"),
     Action("recipe-sbom", "Security", "Create recipe SBOM (SPDX 3)", "bitbake", ("-c", "create_recipe_sbom"), ("target",),
-           help="Recipe-level SBOM used by sbom-cve-check-recipe.", task="do_create_recipe_sbom", since="wrynose", instead="license"),
+           help="Recipe-level SBOM used by sbom-cve-check-recipe.", task="do_create_recipe_sbom", needs=("recipe-sbom",), instead="license"),
     Action("vex", "Security", "Generate VEX metadata", "bitbake", ("-c", "generate_vex"), ("target",),
-           help='Requires INHERIT += "vex". Produces per-recipe and image VEX reports in DEPLOY_DIR_IMAGE.', task="do_generate_vex"),
+           help='Requires INHERIT += "vex". Produces per-recipe and image VEX reports in DEPLOY_DIR_IMAGE.', task="do_generate_vex", needs=("vex",)),
     Action("sbom-cve-enable", "Security", "Enable sbom-cve-check for image builds", "bitbake-config-build", ("enable-fragment", "core/yocto/sbom-cve-check"),
-           help="Every image build then analyses its SPDX 3 SBOM for CVEs. Reports go to DEPLOY_DIR_IMAGE.", since="wrynose", instead="cve"),
-    Action("sbom-cve-disable", "Security", "Disable sbom-cve-check fragment", "bitbake-config-build", ("disable-fragment", "core/yocto/sbom-cve-check"), since="wrynose"),
+           help="Every image build then analyses its SPDX 3 SBOM for CVEs. Reports go to DEPLOY_DIR_IMAGE.", needs=("sbom-cve-check", "fragments"), instead="cve"),
+    Action("sbom-cve-disable", "Security", "Disable sbom-cve-check fragment", "bitbake-config-build", ("disable-fragment", "core/yocto/sbom-cve-check"), needs=("sbom-cve-check", "fragments")),
+    # Configuration fragments and bitbake-setup: offered only when the project's BitBake ships the tool.
+    Action("fragments", "Setup", "List configuration fragments", "bitbake-config-build", ("list-fragments",), needs=("fragments",),
+           help="Fragments are named pieces of configuration (machine/…, distro/…, core/yocto/…) enabled in conf/toolcfg.conf."),
+    Action("fragment-enable", "Setup", "Enable a configuration fragment", "bitbake-config-build", ("enable-fragment",), ("fragment",), needs=("fragments",),
+           help="Appends the fragment to OE_FRAGMENTS in build/conf/toolcfg.conf, for example core/yocto/sstate-mirror-cdn."),
+    Action("fragment-disable", "Setup", "Disable a configuration fragment", "bitbake-config-build", ("disable-fragment",), ("fragment",), needs=("fragments",)),
+    Action("setup-status", "Setup", "bitbake-setup: compare with upstream", "bitbake-setup", ("status",), needs=("bitbake-setup",),
+           help="Shows how this bitbake-setup workspace differs from its configuration template and upstream layers."),
+    Action("setup-update", "Setup", "bitbake-setup: update layers and configuration", "bitbake-setup", ("update",), interactive=True, needs=("bitbake-setup",),
+           help="Brings the workspace to its template: updates layer checkouts and, after asking, the build configuration."),
 ])
 BY_ID = {a.id: a for a in ACTIONS}
 
 
-def availability(action: Action, series: str | None) -> tuple[bool | None, str]:
-    """Release check with a pointer to the alternative this release offers."""
-    from .versions import support
-    ok, reason = support(series, action.since, action.until)
+def availability(action: Action, series: str | None, profile=None) -> tuple[bool | None, str]:
+    """Whether the project's release has what the operation needs (bitloom/capabilities.py), with a pointer
+    to the operation this release offers instead."""
+    from .capabilities import check_all
+    ok, reason = check_all(action.needs, series, profile)
     if ok is False and action.instead in BY_ID:
-        reason += f"; use “{BY_ID[action.instead].title}” instead"
+        reason += f"; the operation for this release is “{BY_ID[action.instead].title}”"
     return ok, reason
 
 
@@ -151,6 +161,8 @@ def arguments(action: Action, values: dict[str, str]) -> list[str]:
             if not TASK.fullmatch(value):
                 raise ValueError(f"Not a task name: {value!r} (for example compile or do_compile)")
             argv += ["-c", value]
+        elif key == "fragment" and not FRAGMENT.fullmatch(value):
+            raise ValueError(f"Not a fragment name: {value!r} (for example core/yocto/sstate-mirror-cdn or machine/qemuarm64)")
         elif key == "variable" and not VARIABLE.fullmatch(value):
             raise ValueError(f"Not a variable name: {value!r} (for example IMAGE_INSTALL or SRC_URI:pn-busybox)")
         else:
@@ -165,6 +177,7 @@ def subject(action: Action, values: dict[str, str]) -> str:
 
 TARGET = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+:@/-]*")
 TASK = re.compile(r"[A-Za-z0-9_]+")
+FRAGMENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]*(/[A-Za-z0-9][A-Za-z0-9_.+-]*)+")
 VARIABLE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_:.+/@${}\[\]-]*")
 
 
@@ -267,5 +280,7 @@ def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Inv
 
 
 def shell_command(argv: list[str], script: str, build: str, root: str) -> str:
-    setup = f"source {shlex.quote(script)} {shlex.quote(build)} >/dev/null && " if script else f"cd {shlex.quote(build)} && "
+    # oe-init-build-env takes the build directory; bitbake-setup's build/init-build-env already knows it.
+    target = "" if Path(script or "").name == "init-build-env" else " " + shlex.quote(build)
+    setup = f"source {shlex.quote(script)}{target} >/dev/null && " if script else f"cd {shlex.quote(build)} && "
     return f"cd {shlex.quote(root)} && {setup}exec {shlex.join(argv)}"

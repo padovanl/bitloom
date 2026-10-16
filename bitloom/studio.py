@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .models import Profile
-from .versions import ORDER
+from .capabilities import has
 
 UPSTREAM = {"meta", "meta-poky", "meta-yocto-bsp", "meta-selftest", "meta-skeleton", "meta-yocto"}
 NAME = re.compile(r"[a-z][a-z0-9-]*")
@@ -85,10 +85,6 @@ FSTYPE_HINTS = {"ext4": "disk image for one partition", "tar.bz2": "compressed a
                 "cpio.gz": "initramfs archive"}
 
 
-def newer(series, than):
-    return series in ORDER and ORDER[series] >= ORDER[than]
-
-
 def product_layers(entries, profile: Profile) -> list[Path]:
     """Writable product layers: everything except upstream layers and fetched repositories."""
     result = []
@@ -126,7 +122,7 @@ def fields(kind: str, series: str | None, layers: list[Path]) -> list[Field]:
                              ("openembedded-layer", "meta-oe from meta-openembedded"), ("networking-layer", "meta-networking"))),
                 Field("license", "License of the metadata", "choice", "MIT", ("MIT", "Apache-2.0", "proprietary"), "Covers your recipes and configuration, not the software they build.", section="policy")]
     if kind == "distro":
-        modern = newer(series, "wrynose")
+        modern = has("systemd-default", series)
         return [target, new_layer,
                 Field("name", "Id", "text", "acme", info="Lowercase. Selecting it later means DISTRO = \"acme\".", required=True, section="identity", var="DISTRO", placeholder="acme"),
                 Field("title", "Product name", "text", "Acme Linux", info="Shown in /etc/os-release and login banners.", required=True, section="identity", var="DISTRO_NAME"),
@@ -147,7 +143,7 @@ def fields(kind: str, series: str | None, layers: list[Path]) -> list[Field]:
                              ("package_deb", "Debian packages (apt on the device)"))),
                 Field("hardening", "Compiler hardening", "bool", "1", info="Stack protector, FORTIFY_SOURCE and PIE for every package (security_flags.inc).", section="policy"),
                 Field("sbom", "Software bill of materials", "bool", "1", info="An SPDX SBOM for every image, as the EU Cyber Resilience Act expects.", section="policy", var="create-spdx"),
-                Field("supplier", "SBOM supplier", "text", "Acme Corp", info="The organisation named as supplier in the SBOM.", section="policy", var="SPDX_PACKAGE_SUPPLIER" if newer(series, "styhead") else "SPDX_SUPPLIER")]
+                Field("supplier", "SBOM supplier", "text", "Acme Corp", info="The organisation named as supplier in the SBOM.", section="policy", var="SPDX_PACKAGE_SUPPLIER" if has("spdx-supplier-3", series) else "SPDX_SUPPLIER")]
     if kind == "machine":
         return [target, new_layer,
                 Field("name", "Id", "text", "acme-board", info="Lowercase. Selecting it later means MACHINE = \"acme-board\".", required=True, section="identity", var="MACHINE", placeholder="acme-board"),
@@ -160,7 +156,7 @@ def fields(kind: str, series: str | None, layers: list[Path]) -> list[Field]:
                 Field("kernel", "Kernel", "choice", "linux-yocto", ("linux-yocto", "linux-yocto-rt", "linux-yocto-tiny"), section="contents", var="PREFERRED_PROVIDER_virtual/kernel",
                       hints=(("linux-yocto", "the standard Yocto kernel"), ("linux-yocto-rt", "with PREEMPT_RT real-time patches"), ("linux-yocto-tiny", "minimal configuration for small systems")))]
     if kind == "image":
-        access = ("allow-empty-password", "empty-root-password", "allow-root-login") if newer(series, "styhead") else ("debug-tweaks",)
+        access = ("allow-empty-password", "empty-root-password", "allow-root-login") if has("image-access-split", series) else ("debug-tweaks",)
         features = ("ssh-server-dropbear", "ssh-server-openssh", "package-management", "tools-debug", "tools-profile", "dev-pkgs", "read-only-rootfs", "splash", "hwcodecs") + access
         fstypes = ("ext4", "tar.bz2", "tar.zst", "wic", "wic.zst", "squashfs", "cpio.gz")
         return [target, new_layer,
@@ -171,7 +167,7 @@ def fields(kind: str, series: str | None, layers: list[Path]) -> list[Field]:
                              ("core-image-base", "console image with hardware support for the machine, plus what you add"))),
                 Field("packages", "Extra packages", "text", "htop", info="Space separated recipes or packagegroups, e.g. htop nano packagegroup-core-ssh-openssh.", section="contents", var="IMAGE_INSTALL"),
                 Field("features", "Image features", "multi", "ssh-server-dropbear", features,
-                      "Development access features were renamed in 5.1 (debug-tweaks became three separate ones)." if newer(series, "styhead") else "",
+                      "Development access features were renamed in 5.1 (debug-tweaks became three separate ones)." if has("image-access-split", series) else "",
                       section="contents", var="IMAGE_FEATURES", hints=_hints(IMAGE_HINTS, features)),
                 Field("fstypes", "Output formats", "multi", "ext4 tar.bz2", fstypes, "Files written to tmp/deploy/images.", section="contents", var="IMAGE_FSTYPES",
                       hints=_hints(FSTYPE_HINTS, fstypes)),
@@ -263,7 +259,7 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
         if values.get("sbom") in {"1", True, "true"}:
             lines += ["", "# SBOM policy (EU CRA): machine-readable SPDX for every image", 'INHERIT += "create-spdx"']
             supplier = (values.get("supplier") or "").replace('"', "'")
-            if supplier and newer(series, "styhead"):
+            if supplier and has("spdx-supplier-3", series, profile):
                 lines += [f'SPDX_PACKAGE_SUPPLIER_name = "{supplier}"', 'SPDX_PACKAGE_SUPPLIER_type = "organization"',
                           f'SPDX_IMAGE_SUPPLIER_name = "{supplier}"', 'SPDX_IMAGE_SUPPLIER_type = "organization"']
             elif supplier:
@@ -292,7 +288,7 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
         lines = [f'SUMMARY = "{values.get("summary") or values["name"]}"', 'LICENSE = "MIT"', ""]
         lines += ["inherit core-image"] if base == "core-image" else [f"require recipes-core/images/{base}.bb"]
         features = values.get("features", "")
-        if "debug-tweaks" in features.split() and newer(series, "styhead"):
+        if "debug-tweaks" in features.split() and not has("debug-tweaks", series, profile) and has("image-access-split", series, profile):
             raise FieldError("features", "debug-tweaks was removed in 5.1 Styhead; use allow-empty-password, empty-root-password and allow-root-login")
         if features:
             lines.append(f'IMAGE_FEATURES += "{features}"')
@@ -324,7 +320,7 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
             if not re.fullmatch(r"[A-Za-z0-9._-]+", name):
                 raise FieldError("file", "File name may contain letters, digits, dots, underscores and hyphens")
             lines += [f'SRC_URI += "file://{name}"', "", "do_install:append() {", "    install -d ${D}${sysconfdir}",
-                      f"    install -m 0644 ${{UNPACKDIR}}/{name} ${{D}}${{sysconfdir}}/{name}" if newer(series, "styhead") else
+                      f"    install -m 0644 ${{UNPACKDIR}}/{name} ${{D}}${{sysconfdir}}/{name}" if has("unpackdir", series) else
                       f"    install -m 0644 ${{WORKDIR}}/{name} ${{D}}${{sysconfdir}}/{name}", "}"]
             # From the Image explorer the file starts as it is on the device today, ready to change.
             content = values.get("file_content")

@@ -283,6 +283,11 @@ def diagnostics(profile: Profile) -> list[tuple[str, str, str]]:
     for kind in ("downloads", "sstate"):
         p = cache_path(profile, kind)
         check(p.is_dir(), kind, str(p))
+    # What this release can do, from the project's layers and BitBake (bitloom/capabilities.py).
+    from .capabilities import matrix
+    from .versions import detect_release
+    for row in matrix(detect_release(profile), profile):
+        results.append(("INFO", "Release · " + row["title"].split(" (")[0], "available" if row["available"] else ("unknown: " if row["available"] is None else "not in this release: ") + row["reason"]))
     conf = read_assignments(profile.build_path / "conf/local.conf")
     results += [("INFO", k, conf.get(k, "not explicitly set; inspect bitbake -e")) for k in ("MACHINE", "DISTRO", "BB_NUMBER_THREADS", "PARALLEL_MAKE", "INHERIT", "SSTATE_MIRRORS", "PREMIRRORS", "BB_HASHSERVE", "PRSERV_HOST", "BB_NO_NETWORK", "TMPDIR")]
     from .infra import filesystem_checks, host_checks

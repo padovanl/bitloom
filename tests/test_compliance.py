@@ -136,7 +136,7 @@ def test_settings_render_apply_and_parse(tmp_path):
     assert kas_files_with_overlay(kas) == 'kas.yml:bitloom-sbom.yml'
     unverified = [o.id for o in OPTIONS if not o.verified]
     assert availability(next(o for o in OPTIONS if o.id == 'supplier'), 'wrynose')[0] is True
-    assert 'verify' in availability(next(o for o in OPTIONS if o.id == 'supplier'), 'wrynose')[1] and unverified
+    assert 'verify' in availability(next(o for o in OPTIONS if o.id == 'include-vex'), 'wrynose')[1] and unverified
 
 
 async def test_settings_screen_keyboard_flow(tmp_path):

@@ -322,6 +322,12 @@ details.folder .flayer { margin-left: auto; color: var(--muted); font-size: 12px
 .who-result { display: grid; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 @media (max-width: 1000px) { .img-charts, .img-split { grid-template-columns: 1fr; } .ent { grid-template-columns: 20px minmax(0, 1fr) 76px; } .ent .w, .ent .p { display: none; } }
 
+.caps { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 1px; background: var(--line); }
+.cap { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 9px 14px; background: var(--surface); align-items: start; }
+.cap .mark { font: 700 13px var(--mono); text-align: center; line-height: 1.5; } .cap.ok .mark { color: var(--ok); } .cap.no .mark { color: var(--muted); } .cap.unknown .mark { color: var(--warn); }
+.cap .t { display: grid; gap: 2px; min-width: 0; } .cap b { font-weight: 600; font-size: 13px; } .cap small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.cap.no b { color: var(--muted); }
+
 /* Compliance */
 .hero { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 18px; }
 .hero .big { font: 750 26px var(--sans); }
@@ -509,6 +515,53 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
   #palette-btn, #keys-btn, header .context { display: none; }
   header { gap: 8px; padding: 8px 12px; } #target-combo { flex: 1 1 160px; min-width: 150px; }
 }
+
+/* Refined proportions: lighter weights, tighter spacing, flat surfaces; shadows only on what floats. */
+html, body { font-size: 13.5px; }
+header { padding: 8px 18px; gap: 10px; }
+.brand { font: 650 15px var(--mono); } .brand svg.logo { width: 26px; height: 26px; filter: none; }
+select, input[type=text], input[type=search] { padding: 5px 10px; border-radius: 7px; }
+.btn { padding: 5px 11px; border-radius: 7px; font-size: 13px; }
+.btn:hover:not(:disabled) { transform: none; background: color-mix(in srgb, var(--raised) 80%, var(--glow)); }
+.btn.primary { font-weight: 600; box-shadow: 0 1px 8px var(--glow); }
+.btn.primary:hover:not(:disabled) { background: linear-gradient(135deg, var(--accent), var(--accent2)); filter: brightness(1.06); }
+kbd { font-size: 10.5px; border-bottom-width: 1px; border-radius: 4px; padding: 0 4px; }
+.chip { padding: 1px 8px; font-size: 11.5px; }
+nav { padding: 12px 8px; }
+nav .group { padding: 14px 10px 4px; font-size: 10px; font-weight: 650; letter-spacing: .14em; }
+nav button { padding: 6px 10px; font-size: 13.5px; }
+nav button.active { font-weight: 550; }
+main { padding: 16px 20px 32px; gap: 14px; }
+.view { gap: 14px; }
+.cards { gap: 12px; }
+.card { border-radius: 10px; padding: 11px 14px; box-shadow: none; background: var(--surface); }
+.card:hover { transform: none; border-color: var(--line2); }
+.card h3 { font-size: 10px; font-weight: 650; margin-bottom: 4px; }
+.card .value { font: 600 17px var(--mono); letter-spacing: -.01em; }
+.ring { width: 44px; height: 44px; } .ring circle { stroke-width: 5; } .ring text { font-weight: 600; font-size: 12px; }
+.spark { height: 28px; }
+.panel { border-radius: 10px; box-shadow: none; background: var(--surface); }
+.panel > .head { padding: 9px 14px; }
+.panel > .head h2 { font-size: 10.5px; font-weight: 650; letter-spacing: .14em; }
+.split { gap: 14px; }
+.row { padding: 8px 14px; }
+.group-label { padding: 12px 14px 5px; font-size: 10px; font-weight: 650; }
+.tabs button { padding: 8px 12px; }
+.tools { padding: 8px 14px; }
+th { padding: 8px 14px; font-size: 10px; font-weight: 650; } td { padding: 7px 14px; }
+.badge { font-weight: 600; font-size: 11px; padding: 0 7px; }
+.sg-kind, .sg-next button { border-radius: 10px; }
+.sg-kind { padding: 16px; } .sg-kind b { font-size: 15px; }
+.fld { padding: 8px 10px; }
+.fld label.f { font-weight: 600; }
+.toggle { padding: 2px 9px; font-size: 12px; }
+.prog-pct { font-weight: 650; font-size: 16px; }
+.layer-item .n { font-weight: 600; }
+details.folder > summary { padding: 8px 14px; }
+.recipe { padding: 6px 14px 6px 31px; }
+.hero { padding: 14px 18px; gap: 16px; } .hero .big { font: 650 21px var(--sans); letter-spacing: -.01em; }
+.gauge .ring { width: 62px; height: 62px; } .gauges { padding: 12px 16px; }
+.hero .ring { width: 64px; height: 64px; }
 </style>
 </head>
 <body>
@@ -775,6 +828,10 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
             <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn primary" id="sp-save">Save and use</button></div>
           </div>
         </div>
+      </div>
+      <div class="panel">
+        <div class="head"><h2>What this release can do</h2><span class="meta" id="cap-release"></span><span style="flex:1"></span><span class="hint">Checked in this project's layers and BitBake; features it lacks are not offered.</span></div>
+        <div class="caps" id="cap-rows"></div>
       </div>
       <div class="panel">
       <div class="head"><h2>Health, setup and configuration</h2><span style="flex:1"></span><span class="hint">Literal local.conf values; run bitbake -e for evaluated ones.</span>
@@ -1132,8 +1189,10 @@ function setProgress(status, progress, eta) {
   bar.setAttribute("aria-valuenow", (100 * fraction).toFixed(0));
   const text = $("d-progress-text"); text.textContent = "";
   const sep = () => el("span", {class: "sep", text: "·"});
-  if (known) text.append(el("b", {text: progress[0].toLocaleString()}), ` / ${progress[1].toLocaleString()} tasks`, ...(lastRunning ? [sep(), "last task running"] : []));
-  else text.append(status === "running" ? "waiting for BitBake task counts…" : status === "queued" ? "queued" : status === "success" ? "done" : "");
+  // A finished build is done whatever the last "task N of M" line said.
+  if (status === "success") text.append(el("b", {text: "done"}), ...(known ? [sep(), `${progress[1].toLocaleString()} tasks`] : []));
+  else if (known) text.append(el("b", {text: progress[0].toLocaleString()}), ` / ${progress[1].toLocaleString()} tasks`, ...(lastRunning ? [sep(), "last task running"] : []));
+  else if (status !== "success") text.append(status === "running" ? "waiting for BitBake task counts…" : status === "queued" ? "queued" : "");
   if (eta) text.append(sep(), `ETA ~${eta.remaining}`);
   if (eta && eta.basis) text.title = "ETA based on " + eta.basis;
   $("d-progress-pct").textContent = known || status === "success" ? (100 * fraction).toFixed(fraction >= 0.995 || fraction === 0 ? 0 : 1) + "%" : "";
@@ -1338,6 +1397,13 @@ async function loadHealth() {
   const data = await api(`/api/health?profile=${prof()}`);
   body.textContent = "";
   data.checks.forEach((check, i) => { const tr = el("tr", {}, el("td", {}, el("span", {class: "badge " + (STATUS_BADGE[check.status] || "muted"), text: check.status})), el("td", {text: check.name}), el("td", {class: "mono", text: check.detail})); tr.style.animationDelay = i * 15 + "ms"; body.append(tr); });
+  $("cap-release").textContent = data.release;
+  const caps = $("cap-rows"); caps.textContent = "";
+  for (const cap of data.capabilities || []) {
+    const state = cap.available === true ? ["✔", "ok"] : cap.available === false ? ["✖", "no"] : ["?", "unknown"];
+    caps.append(el("div", {class: "cap " + state[1], title: cap.reason || cap.note || ""}, el("span", {class: "mark", text: state[0]}),
+      el("span", {class: "t"}, el("b", {text: cap.title}), el("small", {text: cap.available === true ? (cap.note || "available") : cap.reason}))));
+  }
 }
 
 /* Service notifications */
@@ -1523,7 +1589,7 @@ async function loadCompliance() {
   const options = $("sb-options"); options.textContent = "";
   for (const option of data.options) {
     const badge = option.available === false ? el("span", {class: "badge err", text: "n/a in this release"}) : option.value ? el("span", {class: "badge ok", text: option.value === "1" ? "on" : option.value}) : el("span", {class: "badge muted", text: "off"});
-    const span = el("span", {class: "meta", text: (option.since || "any") + (option.until ? "…" + option.until : "+") + (option.verified ? "" : " · verify")});
+    const span = el("span", {class: "meta", text: option.requires + (option.verified ? "" : " · verify")});
     options.append(el("details", {class: "opt"}, el("summary", {}, el("span", {}, el("b", {text: option.title}), el("span", {class: "meta", text: "  " + option.name})), span, badge),
       el("div", {class: "body"}, el("p", {text: option.info}), option.cra ? el("p", {}, el("b", {text: "CRA: "}), option.cra) : null, option.reason ? el("p", {class: "s-queued", text: option.reason}) : null)));
   }
@@ -1724,8 +1790,10 @@ const STEP_HELP = {
   review: "Check your choices and exactly what Create will do. Nothing has been written yet.",
 };
 
+let studioRequest = 0;
 async function loadStudio() {
-  const data = await api(`/api/studio/fields?profile=${prof()}&kind=${studioKind}`);
+  const ticket = ++studioRequest, kind = studioKind;
+  const data = await api(`/api/studio/fields?profile=${prof()}&kind=${kind}`);
   studioSections = data.sections || {}; studioMode = data.mode; studioKinds = data.kinds;
   const box = $("sg-kinds"); box.textContent = "";
   studioKinds.forEach((kind, i) => box.append(el("button", {class: "sg-kind", onclick: () => startForm(kind.id)},
@@ -1733,12 +1801,15 @@ async function loadStudio() {
     el("p", {text: kind.description}),
     el("div", {class: "gets", title: "You get", text: (GUIDE[kind.id] || {}).gets || ""}),
     el("div", {class: "when"}, el("b", {text: "Use it for "}), (GUIDE[kind.id] || {}).when || ""))));
+  // A form opened meanwhile (Change it, What next) wins over this load.
+  if (ticket !== studioRequest || kind !== studioKind) return;
   showScreen(studioActive ? "flow" : "start");
   if (studioActive) await openForm(studioKind, data);
 }
 function showScreen(name) { $("sg-start").hidden = name !== "start"; $("sg-flow").hidden = name !== "flow"; $("sg-done").hidden = name !== "done"; }
 
 async function startForm(kind, preset = {}) {
+  studioRequest++;
   studioKind = kind; studioValues = {layer: studioValues.layer, new_layer: studioValues.new_layer, ...preset};
   planEdits = {}; studioVar = ""; studioActive = true; sgStep = 0; sgVisited = new Set(); $("sg-edit").checked = false;
   showScreen("flow");
@@ -1746,6 +1817,7 @@ async function startForm(kind, preset = {}) {
 }
 async function openForm(kind, data = null) {
   data = data && data.fields ? data : await api(`/api/studio/fields?profile=${prof()}&kind=${kind}`);
+  if (kind !== studioKind) return;
   const info = studioKinds.find((k) => k.id === kind) || {title: kind, description: ""};
   $("st-title").textContent = info.title; $("st-desc").textContent = info.description; $("sg-kind-ico").textContent = ICONS[kind] || "✦";
   studioFields = data.fields;
