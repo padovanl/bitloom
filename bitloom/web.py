@@ -382,26 +382,6 @@ class Dashboard:
             raise LookupError("Unknown layer")
         return {"files": list_layer_files(Path(layer["path"]))}
 
-    def studio_read(self, query):
-        from .studio import layer_list, read_text
-        profile = self.profile(query.get("profile", [""])[0])
-        return read_text(query.get("path", [""])[0], layer_list(self.entries(profile), profile))
-
-    def studio_save(self, body):
-        from .studio import layer_list, write_text
-        profile = self.profile(body.get("profile"))
-        if not isinstance(body.get("text"), str):
-            raise ValueError("text must be a string")
-        try:
-            status = self.rpc({"op": "status"})
-            if status.get("active") or any(j["status"] == "queued" for j in status.get("jobs", [])):
-                raise ValueError("A build is queued or running: save metadata when the queue is idle, so the build sees one version")
-        except OSError:
-            pass
-        saved = write_text(str(body.get("path", "")), body["text"], body.get("mtime", 0), layer_list(self.entries(profile), profile))
-        self.metadata_cache.clear()
-        return saved
-
     def projects(self):
         from .projects import IMAGES, MACHINES, RELEASES, Recent, project_rows
         items = project_rows(self.settings(), Recent(self.state))
@@ -658,10 +638,6 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.studio_layers(query)
                 elif route == ("GET", "studio", "files"):
                     payload = dashboard.studio_files(query)
-                elif route == ("GET", "studio", "file"):
-                    payload = dashboard.studio_read(query)
-                elif route == ("POST", "studio", "file"):
-                    payload = dashboard.studio_save(self.body())
                 elif route == ("POST", "studio", "create"):
                     payload = dashboard.studio_create(self.body())
                 elif route == ("GET", "vulnerabilities"):

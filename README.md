@@ -26,7 +26,7 @@ bitloom --web              # prints the URL (with its access token) and opens yo
 * **Target picker**: the build field lists the image recipes found in your layers, kas target and images already built first.
 * **Recipes**: every layer with its counts, folders (`recipes-core`, `classes-recipe`…) that open on demand, filters for recipes, images, appends, classes and kas files, *Use as target*.
 * **SBOM & CRA**: release support, SBOM quality gauges, vulnerabilities from sbom-cve-check, cve-check and Grype, exports to Markdown, HTML, CSV, JSON and SARIF, CRA readiness.
-* **Studio**: an editor for your layers (Explorer, tabs, BitBake highlighting, Ctrl+S) with *New ▸* layer, distribution, machine, image, recipe or append: a guided Inspector explains every option, the files it will write open as tabs you can still edit, and the exact steps Create will take are listed first.
+* **Studio**: create a layer, distribution, machine, image, recipe or append one step at a time: every option explained, where the files go and their content shown as you choose, a review of exactly what Create will do, then the next step (build it, use it, add an image to the new layer).
 * **Projects**: guided setup from a folder (kas files, Poky checkouts, `YML=… ./run_kas.sh build` launcher scripts, one profile per product), new projects pinned to Scarthgap or Wrynose, clone from Git.
 * `Ctrl+K` palette, `?` keys, toasts and browser notifications, light and dark themes, phone and tablet layouts. → [Web dashboard](docs/web.md)
 
@@ -36,7 +36,7 @@ bitloom --web              # prints the URL (with its access token) and opens yo
 
 | ![Typing in the target field filters the project's images](docs/assets/web-clip-target.gif) | ![A failed build: the summary opens on the diagnosis](docs/assets/web-clip-failure.gif) |
 | --- | --- |
-| ![Recipes: a layer, the Images filter, a search](docs/assets/web-clip-recipes.gif) | ![Studio: editing a field highlights the lines it writes](docs/assets/web-clip-studio.gif) |
+| ![Recipes: a layer, the Images filter, a search](docs/assets/web-clip-recipes.gif) | ![Studio: choosing an image, walking its steps, the review](docs/assets/web-clip-studio.gif) |
 
 Over SSH keep the default loopback address and tunnel it: `ssh -L 8765:127.0.0.1:8765 build-server`.
 

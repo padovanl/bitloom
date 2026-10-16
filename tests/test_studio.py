@@ -119,9 +119,9 @@ def test_fields_explain_themselves_and_errors_name_the_field(tmp_path):
     assert any("kas-studio-meta-acme.yml" in step and "builds acme-image" in step for step in explain(kas, image, use=False))
 
 
-def test_editor_reads_saves_and_creates_with_edits(tmp_path):
-    """The web Studio's editor: open any layer file, save only your own layers, refuse stale saves,
-    and create planned files as edited by hand."""
+def test_web_studio_lists_layers_and_creates_with_edits(tmp_path):
+    """The web Studio shows where files go (your layers and their files) and creates planned files
+    as edited by hand before Create."""
     import json
     import threading
     import urllib.error
@@ -144,14 +144,6 @@ def test_editor_reads_saves_and_creates_with_edits(tmp_path):
         layers = call('/api/studio/layers?profile=demo')['layers']
         mine = next(l for l in layers if l['name'] == 'meta-demo')
         assert mine['writable'] and 'conf/layer.conf' in call('/api/studio/files?profile=demo&layer=' + urllib.request.quote(mine['path']))['files']
-        opened = call('/api/studio/file?profile=demo&path=' + urllib.request.quote(mine['path'] + '/conf/layer.conf'))
-        assert opened['writable'] and 'BBFILE_COLLECTIONS' in opened['text']
-        saved = call('/api/studio/file', {'profile': 'demo', 'path': opened['path'], 'text': opened['text'] + '# edited\n', 'mtime': opened['mtime']})
-        assert saved['mtime'] and (Path(opened['path']).read_text().endswith('# edited\n'))
-        stale = call('/api/studio/file', {'profile': 'demo', 'path': opened['path'], 'text': 'x', 'mtime': opened['mtime'] - 100})
-        assert stale['status'] == 400 and 'changed on disk' in stale['error']
-        outside = call('/api/studio/file?profile=demo&path=' + urllib.request.quote('/etc/passwd'))
-        assert outside['status'] == 400 and 'layers only' in outside['error']
         values = {f['id']: f['default'] for f in call('/api/studio/fields?profile=demo&kind=image')['fields']}
         values['layer'] = mine['path']
         plan = call('/api/studio/preview', {'profile': 'demo', 'kind': 'image', 'values': values})
@@ -165,18 +157,3 @@ def test_editor_reads_saves_and_creates_with_edits(tmp_path):
             rpc(board.state, {'op': 'stop'})
         except (OSError, ValueError):
             pass
-
-
-def test_upstream_layers_are_read_only(tmp_path):
-    from bitloom.studio import read_text, write_text
-    upstream, mine = tmp_path / 'meta', tmp_path / 'meta-mine'
-    for layer in (upstream, mine):
-        (layer / 'conf').mkdir(parents=True)
-        (layer / 'conf/layer.conf').write_text('x\n')
-    layers = [{'name': 'meta', 'path': str(upstream), 'writable': False}, {'name': 'meta-mine', 'path': str(mine), 'writable': True}]
-    opened = read_text(str(upstream / 'conf/layer.conf'), layers)
-    assert not opened['writable']
-    with pytest.raises(ValueError, match='upstream layer'):
-        write_text(str(upstream / 'conf/layer.conf'), 'y', opened['mtime'], layers)
-    with pytest.raises(ValueError, match='layers only'):
-        read_text(str(tmp_path / '../outside'), layers)
