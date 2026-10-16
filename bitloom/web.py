@@ -540,6 +540,8 @@ class Dashboard:
             return rootfs.summary(profile, image, machine)
         if what == "dir":
             return rootfs.listing(profile, image, machine, query.get("dir", ["/"])[0])
+        if what == "services":
+            return rootfs.services(profile, image, machine)
         return rootfs.read(profile, image, machine, query.get("path", [""])[0])
 
     def practices(self, query):
@@ -674,7 +676,7 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.health(query)
                 elif route == ("GET", "metadata"):
                     payload = dashboard.metadata(query)
-                elif route[:2] == ("GET", "image") and len(route) == 3 and route[2] in {"list", "summary", "dir", "file"}:
+                elif route[:2] == ("GET", "image") and len(route) == 3 and route[2] in {"list", "summary", "dir", "file", "services"}:
                     payload = dashboard.image_view(query, route[2])
                 elif route == ("GET", "practices"):
                     payload = dashboard.practices(query)

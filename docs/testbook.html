@@ -446,6 +446,11 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <td><code>libc6</code> is the renamed <code>glibc</code> package, pulled in by busybox, eudev, kmod…; <code>/etc/passwd</code> is in no package, with the explanation (useradd, <code>EXTRA_USERS_PARAMS</code>).</td>
 </tr>
 <tr>
+<td>8b.4b</td>
+<td>Image: <em>Services</em>. Select <code>syslog</code>. Then <code>bitloom --config .validation/profiles.json --state .validation --services</code>.</td>
+<td><em>sysvinit · 20 started at boot</em>; init scripts in boot order (<code>banner.sh S02</code>, <code>sysfs.sh S02</code>, <code>mountall.sh S03</code>, <code>udev S04</code>…), then shutdown (<code>halt</code>, <code>reboot</code>) and helpers; udev rules from eudev with <code>80-net-name-slot.rules</code> <em>disabled in /etc</em>. <code>syslog</code> opens <code>/etc/init.d/syslog</code> (owner root, <code>busybox-syslog · busybox</code>). The CLI prints the same list.</td>
+</tr>
+<tr>
 <td>8b.5</td>
 <td>TUI: <code>7</code>, choose <em>Which recipe installs…</em>, type <code>/etc/inittab</code>, <code>a</code>. Then in a shell: <code>bitloom --config .validation/profiles.json --state .validation --who-installs /etc/inittab</code>.</td>
 <td>Both answer <code>sysvinit-inittab</code>, its recipe file, layer, image, and <em>add recipes-core/sysvinit-inittab/sysvinit-inittab_%.bbappend to your layer</em>.</td>

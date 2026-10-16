@@ -132,6 +132,7 @@ def main():
     parser.add_argument("--work-usage", action="store_true", help="Print disk usage per recipe in tmp/work with rm_work advice")
     parser.add_argument("--practices", action="store_true", help="Review the project against Yocto best practices and bitloom-practices.json; exits 2 on errors (or warnings with --fail-on warning)")
     parser.add_argument("--fail-on", choices=["error", "warning", "never"], default="error", help="--practices: what makes the exit status 2")
+    parser.add_argument("--services", nargs="?", const="", metavar="IMAGE[:MACHINE]", help="What starts on the device: init system, systemd units or SysV scripts, udev rules and D-Bus services of a built image (newest when omitted)")
     parser.add_argument("--who-installs", metavar="FILE_OR_PACKAGE", help="Which recipe puts a file (/etc/motd) or package (libc6) in the built images, and how to change it")
     parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
     parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
@@ -190,6 +191,17 @@ def _commands(parser, args) -> None:
             print(text)
         failing = data["errors"] + (data["warnings"] if args.fail_on == "warning" else 0)
         raise SystemExit(2 if args.fail_on != "never" and failing else 0)
+    if args.services is not None:
+        from . import rootfs
+        from .models import Settings
+        profile = Settings(args.config).profile
+        built = rootfs.built_images(profile)
+        image = next((i for i in built if args.services in ("", i["image"], f"{i['image']}:{i['machine']}")), None)
+        if image is None:
+            print("No built image to inspect" + (f" called {args.services}" if args.services else "") + ". Built: " + (", ".join(f"{i['image']}:{i['machine']}" for i in built) or "none"))
+            raise SystemExit(1)
+        print(rootfs.services_report(rootfs.services(profile, image["image"], image["machine"])))
+        return
     if args.who_installs:
         from .inspectors import metadata
         from .models import Settings

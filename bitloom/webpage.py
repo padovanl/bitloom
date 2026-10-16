@@ -358,6 +358,18 @@ details.rule .mark { font: 700 13px var(--mono); text-align: center; }
 .pr-grid input, .pr-grid select { width: 100%; color: var(--fg); }
 .pr-form .err { color: var(--err); font-size: 13px; min-height: 1.2em; }
 .pr-form-actions { display: flex; gap: 8px; }
+#img-mode { margin-right: 10px; } #img-mode button { padding: 3px 10px; }
+.svc-init { display: flex; gap: 10px; align-items: baseline; padding: 10px 12px; border-bottom: 1px solid var(--line); } .svc-init b { font-size: 15px; }
+.svc-group > summary { display: flex; gap: 8px; align-items: baseline; padding: 9px 12px; cursor: pointer; list-style: none; border-bottom: 1px solid var(--line); }
+.svc-group > summary::-webkit-details-marker { display: none; } .svc-group > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; } .svc-group[open] > summary::before { transform: rotate(90deg); }
+.svc-group .count { font: 11px var(--mono); padding: 0 6px; border-radius: 999px; background: var(--raised); color: var(--muted); } .svc-group summary .meta { margin-left: auto; font-size: 12px; }
+.svc { display: grid; grid-template-columns: 14px minmax(0, 1fr) minmax(0, 220px); gap: 10px; align-items: center; padding: 6px 12px 6px 24px; cursor: pointer; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.svc:hover, .svc:focus-visible { background: var(--raised); outline: none; }
+.svc .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); } .svc.on .dot { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent); } .svc.mask .dot { background: var(--err); }
+.svc .n { font: 13px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .svc .n small { display: block; font: 12px var(--sans, inherit); color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.svc .p { font-size: 12px; color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#img-services .advice { margin: 10px 12px; }
+@media (max-width: 700px) { .svc { grid-template-columns: 14px minmax(0, 1fr); } .svc .p { display: none; } }
 .prw-head { display: flex; align-items: center; } .prw-head .btn.ghost { border: 0; background: none; color: var(--muted); }
 .prw-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
 .prw-steps button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 4px 12px 4px 4px; font: inherit; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 7px; }
@@ -747,8 +759,10 @@ details.folder > summary { padding: 8px 14px; }
       </div>
       <div class="split img-split">
         <div class="panel">
-          <div class="head"><div class="img-crumbs" id="img-crumbs" role="navigation" aria-label="Folder"></div><span style="flex:1"></span><span class="meta" id="img-dir-size"></span></div>
+          <div class="head"><div class="seg" id="img-mode" role="radiogroup" aria-label="Show"><button role="radio" aria-checked="true" data-mode="files">Files</button><button role="radio" aria-checked="false" data-mode="services" title="What starts on the device: init, systemd units or SysV scripts, udev rules, D-Bus">Services</button></div>
+            <div class="img-crumbs" id="img-crumbs" role="navigation" aria-label="Folder"></div><span style="flex:1"></span><span class="meta" id="img-dir-size"></span></div>
           <div class="list" id="img-list" role="listbox" aria-label="Folder content"></div>
+          <div class="list" id="img-services" aria-label="Services" hidden></div>
         </div>
         <div class="panel img-detail" id="img-detail"><div class="empty">Select a file to see which package and recipe put it in the image, and how to change it.</div></div>
       </div>
@@ -2030,7 +2044,7 @@ async function deleteRule() {
 }
 
 /* Image explorer: the built root filesystem, file by file, with the package and recipe behind each */
-let imgList = [], imgCurrent = null, imgDir = "/", imgSelected = null;
+let imgList = [], imgCurrent = null, imgDir = "/", imgSelected = null, imgLast = null, imgMode = "files";
 function human(bytes) { return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MiB" : bytes >= 1024 ? (bytes / 1024).toFixed(1) + " KiB" : bytes + " B"; }
 const imgQuery = () => `profile=${prof()}&image=${encodeURIComponent(imgCurrent.image)}&machine=${encodeURIComponent(imgCurrent.machine)}`;
 async function loadImage() {
@@ -2063,18 +2077,67 @@ async function chooseImage(img, dir = "/") {
     bars($("img-folders"), sum.folders, (r) => r.path, (r) => openDir(r.path));
   } catch (error) { stats.textContent = ""; stats.append(el("div", {class: "empty", text: error.message})); }
   await openDir(dir);
+  if (imgMode === "services") loadServices();
+}
+function setImgMode(mode) {
+  imgMode = mode;
+  for (const b of document.querySelectorAll("#img-mode button")) b.setAttribute("aria-checked", String(b.dataset.mode === mode));
+  $("img-list").hidden = mode !== "files"; $("img-crumbs").hidden = mode !== "files"; $("img-services").hidden = mode !== "services";
+  $("img-dir-size").textContent = mode === "files" && imgLast ? human(imgLast.size) : "";
+  if (mode === "services") loadServices();
+}
+async function revealPath(path) {
+  // Open the folder of a file and show it, as if it had been clicked in Files.
+  await openDir(path.split("/").slice(0, -1).join("/") || "/");
+  const child = imgLast && imgLast.children.find((c) => c.path === path);
+  if (child) showFile(child);
+}
+async function loadServices() {
+  const box = $("img-services"); box.textContent = ""; skeletonIn(box);
+  if (!imgCurrent) { box.textContent = ""; return; }
+  let data;
+  try { data = await api(`/api/image/services?${imgQuery()}`); }
+  catch (error) { box.textContent = ""; box.append(el("div", {class: "empty", text: error.message})); return; }
+  box.textContent = "";
+  box.append(el("div", {class: "svc-init"}, el("b", {text: data.init}), el("span", {class: "meta", text: data.init === "unknown" ? "init system not recognised" :
+    `init system${data.default_target ? " · boots to " + data.default_target : ""} · ${data.starts.length} started at boot`})));
+  const owner = (row) => row.package ? row.package + (row.recipe && row.recipe !== row.package ? " · " + row.recipe : "") : "not from a package";
+  const group = (title, hint, rows, render) => {
+    if (!rows.length) return;
+    const body = el("div", {class: "svc-rows"});
+    box.append(el("details", {class: "svc-group", open: ""}, el("summary", {}, el("b", {text: title}), el("span", {class: "count", text: String(rows.length)}), el("span", {class: "meta", text: hint})), body));
+    for (const row of rows) body.append(render(row));
+  };
+  const item = (state, name, sub, side, path, title = "") => el("div", {class: "svc " + state, tabindex: "0", role: "button", title: title || path,
+    onclick: () => revealPath(path), onkeydown: (e) => { if (e.key === "Enter") revealPath(path); }},
+    el("span", {class: "dot", "aria-hidden": "true"}), el("span", {class: "n"}, name, ...(sub ? [el("small", {text: sub})] : [])), el("span", {class: "p", text: side}));
+  const units = data.units.filter((u) => u.kind !== "target");
+  group("Starts at boot", "enabled systemd units", units.filter((u) => u.enabled.length && !u.masked), (u) =>
+    item("on", u.name, u.description || u.exec, `${u.enabled.join(", ")} · ${owner(u)}`, u.path, u.exec));
+  group("Installed, not enabled", "started on demand (sockets, D-Bus, other units) or not at all", units.filter((u) => !u.enabled.length && !u.masked), (u) =>
+    item("off", u.name, u.description || u.exec, owner(u), u.path, u.exec));
+  group("Masked", "linked to /dev/null: never starts", data.units.filter((u) => u.masked), (u) => item("mask", u.name, "", owner(u), u.path));
+  const sysv = (s) => item(s.runlevels.length ? "on" : "off", s.name, s.runlevels.length ? `runlevel ${s.runlevels.join("")} · S${s.order}` : "not linked in any runlevel", owner(s), s.path);
+  group("Init scripts at boot", "SysV, in start order: rcS.d first, then the runlevel (S links in /etc/rc?.d)", data.sysv.filter((s) => s.boot), sysv);
+  group("At shutdown and reboot", "runlevels 0 and 6", data.sysv.filter((s) => !s.boot && s.runlevels.length), sysv);
+  group("Init scripts not linked", "helpers and scripts started by others", data.sysv.filter((s) => !s.runlevels.length), sysv);
+  group("udev rules", "applied in name order; a file in /etc replaces the one in /lib", data.udev, (r) =>
+    item(r.masked ? "mask" : r.overridden ? "off" : "on", r.name, r.masked ? "disabled by a /dev/null link in /etc" : r.overridden ? "replaced by the file in /etc" : `${r.rules} rules${r.comment ? " · " + r.comment : ""}`, owner(r), r.path));
+  group("D-Bus", "services started on request and bus policies", data.dbus, (d) =>
+    item(d.kind === "activation" ? "on" : "off", d.name, d.kind === "activation" ? `${d.bus} bus · ${d.unit || d.exec}` : `${d.bus} bus policy`, owner(d), d.path));
+  box.append(el("div", {class: "advice", text: "To change what starts: an append to the recipe (SYSTEMD_AUTO_ENABLE, SYSTEMD_SERVICE, INITSCRIPT_PARAMS), or remove its package from the image. Select an entry for its recipe and Change it with an append."}));
 }
 async function openDir(dir) {
   const list = $("img-list"); list.textContent = ""; skeletonIn(list);
   let data;
   try { data = await api(`/api/image/dir?${imgQuery()}&dir=${encodeURIComponent(dir)}`); }
   catch (error) { list.textContent = ""; list.append(el("div", {class: "empty", text: error.message})); return; }
-  imgDir = data.dir; list.textContent = "";
+  imgDir = data.dir; imgLast = data; list.textContent = "";
   const crumbs = $("img-crumbs"); crumbs.textContent = "";
   const parts = imgDir.split("/").filter(Boolean);
   crumbs.append(el("button", {text: "/", onclick: () => openDir("/")}));
   parts.forEach((part, i) => { crumbs.append(el("span", {class: "meta", text: "›"}), el("button", {text: part, onclick: () => openDir("/" + parts.slice(0, i + 1).join("/"))})); });
-  $("img-dir-size").textContent = human(data.size);
+  $("img-dir-size").textContent = imgMode === "files" ? human(data.size) : "";
   const biggest = Math.max(1, ...data.children.map((c) => c.size));
   if (imgDir !== "/") list.append(entRow({name: "..", type: "up", size: 0}, biggest, () => openDir(imgDir.split("/").slice(0, -1).join("/") || "/")));
   for (const child of data.children) list.append(entRow(child, biggest, () => child.type === "dir" ? openDir(child.path) : showFile(child)));
@@ -2096,6 +2159,7 @@ async function showFile(child) {
   const box = $("img-detail"); box.textContent = "";
   box.append(el("div", {class: "sec"}, el("h3", {text: child.path}), el("dl", {},
     el("dt", {text: "Size"}), el("dd", {text: human(child.size)}), el("dt", {text: "Mode"}), el("dd", {text: (child.mode & 0o7777).toString(8).padStart(4, "0")}),
+    ...(child.owner ? [el("dt", {text: "Owner"}), el("dd", {text: child.owner.replace(":", " · group ")})] : []),
     ...(child.target ? [el("dt", {text: "Link to"}), el("dd", {text: child.target})] : []))));
   const who = el("div", {class: "sec"}, el("div", {class: "skeleton"})); box.append(who);
   const content = el("div"); box.append(content);
@@ -2605,6 +2669,7 @@ function wire() {
   $("retry-btn").addEventListener("click", () => control("retry"));
   $("pr-recheck").addEventListener("click", () => loadPractices());
   $("pr-export").addEventListener("click", exportPractices);
+  for (const b of document.querySelectorAll("#img-mode button")) b.addEventListener("click", () => setImgMode(b.dataset.mode));
   $("pr-add").addEventListener("click", () => openRuleDialog());
   $("pr-form").addEventListener("submit", saveRule);
   $("pr-form").addEventListener("input", syncRuleForm); $("pr-form").addEventListener("change", syncRuleForm);
