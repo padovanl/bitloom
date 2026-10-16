@@ -106,6 +106,7 @@ nav button:focus-visible { outline: 2px solid var(--accent); }
 nav .num { font: 11px var(--mono); color: var(--muted); width: 12px; }
 nav .icon { width: 18px; text-align: center; }
 nav .foot { margin-top: auto; padding: 12px 10px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+nav .foot .about { display: block; margin-top: 6px; font-size: 11px; opacity: .8; } nav .foot .about a { color: inherit; }
 main { overflow: auto; padding: 18px 22px 40px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .view { display: flex; flex-direction: column; gap: 16px; animation: enter .35s var(--ease); }
 .combo { position: relative; display: flex; align-items: center; }
@@ -661,7 +662,7 @@ details.folder > summary { padding: 8px 14px; }
     <div class="group">WORKSPACE</div>
     <button data-view="practices"><span class="num">7</span><span class="icon">✓</span>Practices</button>
     <button data-view="health"><span class="num">8</span><span class="icon">⚙</span>Configuration</button>
-    <div class="foot">Same service and history as the TUI.<br><kbd>?</kbd> keys · <kbd>Ctrl</kbd><kbd>K</kbd> search</div>
+    <div class="foot">Same service and history as the TUI.<br><kbd>?</kbd> keys · <kbd>Ctrl</kbd><kbd>K</kbd> search<br><span class="about">Bitloom, originally created by Luca Padovan · <a href="https://github.com/padovanl/bitloom" target="_blank" rel="noopener">AGPL-3.0 · source</a></span></div>
   </nav>
   <main>
     <section class="cards" aria-label="Status">

@@ -36,7 +36,7 @@ def set_version(source: Path, version: str) -> None:
 CLASSIFIER_SPDX = {'MIT License': 'MIT', 'Apache Software License': 'Apache-2.0', 'Python Software Foundation License': 'PSF-2.0',
                    'ISC License (ISCL)': 'ISC', 'Mozilla Public License 2.0 (MPL 2.0)': 'MPL-2.0', 'The Unlicense (Unlicense)': 'Unlicense'}
 SPDX_IDS = {'MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'ISC', 'PSF-2.0', 'MPL-2.0', 'LGPL-2.1-or-later', 'GPL-2.0-only'}
-PROJECT_LICENCE = 'MIT' if (ROOT / 'LICENSE').read_text(errors='replace').lstrip().startswith('MIT License') else 'NOASSERTION'
+PROJECT_LICENCE = 'AGPL-3.0-or-later' if 'GNU AFFERO GENERAL PUBLIC LICENSE' in (ROOT / 'LICENSE').read_text(errors='replace')[:200] else 'NOASSERTION'
 
 
 def bundled_sbom(version: str, library: Path, created: str) -> dict:
@@ -85,7 +85,7 @@ def build(version: str, output: Path) -> None:
         source = workspace / 'source'
         source.mkdir()
         # Copy project sources only: never include local state, caches or virtualenvs.
-        for name in ('LICENSE', 'README.md', 'README.testbook.md', 'pyproject.toml', 'MANIFEST.in', 'setup-demo.sh',
+        for name in ('LICENSE', 'NOTICE', 'README.md', 'README.testbook.md', 'pyproject.toml', 'MANIFEST.in', 'setup-demo.sh',
                      'bitloom', 'docs', 'tools', 'tests', 'examples', '.github'):
             origin, target = ROOT / name, source / name
             if origin.is_dir():
@@ -127,7 +127,7 @@ def build(version: str, output: Path) -> None:
         documentation = package / 'usr/share/doc/bitloom'
         documentation.mkdir(parents=True)
         shutil.copy2(source / 'README.md', documentation / 'README.md')
-        shutil.copy2(source / 'LICENSE', documentation / 'copyright')
+        (documentation / 'copyright').write_text((source / 'NOTICE').read_text() + '\n\n' + (source / 'LICENSE').read_text())
         shutil.copy2(assets / names[3], documentation / 'sbom.spdx.json')    # what the package bundles, for CRA reviews
         run('dpkg-deb', '--root-owner-group', '--build', str(package), str(assets / names[2]))
         for name in names[:-1]:

@@ -66,7 +66,7 @@ jobs:
           sudo dpkg -i "dist/release/bitloom_${RELEASE_VERSION}_all.deb"
           cd /tmp
           /usr/bin/bitloom --help
-          test "$(/usr/bin/bitloom --version)" = "bitloom ${RELEASE_VERSION}"
+          test "$(/usr/bin/bitloom --version | head -n 1)" = "bitloom ${RELEASE_VERSION}"
           python3 -c 'import json, sys; d = json.load(open("/usr/share/doc/bitloom/sbom.spdx.json")); assert {p["name"] for p in d["packages"]} >= {"bitloom", "textual", "rich"}' 
           /usr/bin/python3 -c 'import os, sys; sys.path.insert(0, "/opt/bitloom/lib"); import bitloom; assert bitloom.__version__ == os.environ["RELEASE_VERSION"]'
       - name: Smoke test the installed package

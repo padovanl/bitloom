@@ -2,7 +2,7 @@
 
 # Bitloom
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/padovanl/bitloom)](https://github.com/padovanl/bitloom/releases/latest)
 [![CI and tests](https://github.com/padovanl/bitloom/actions/workflows/tests.yml/badge.svg)](https://github.com/padovanl/bitloom/actions/workflows/tests.yml)
 [![Release CI](https://github.com/padovanl/bitloom/actions/workflows/release.yml/badge.svg)](https://github.com/padovanl/bitloom/actions/workflows/release.yml)
@@ -118,4 +118,10 @@ Bitloom is inspired by the idea behind [yoctui](https://github.com/0xbadcaffe/yo
 
 ## License
 
-Bitloom is released under the [MIT License](LICENSE). Bundled Python dependencies retain their own licenses.
+Bitloom is free software, released under the [GNU Affero General Public License v3.0 or later](LICENSE) with the additional terms in [NOTICE](NOTICE).
+
+* **Use it freely**, at home or at work, in any company, for any project, including commercial products built with Yocto. Running it, internally or for your team, costs nothing and asks nothing of you.
+* **Change it and share it** under the same licence: whoever distributes a modified Bitloom, or offers it to others over a network (the web dashboard), must publish the full source of that version under the AGPL.
+* **Keep the credits**: copies and modified versions keep the `NOTICE` file and the attribution to the original author, are marked as modified, and do not use the Bitloom name for themselves.
+
+Bundled Python dependencies retain their own licenses. Releases up to v0.0.2 were published under the MIT License and remain available under it.

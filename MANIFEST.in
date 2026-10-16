@@ -1,4 +1,4 @@
-include LICENSE README.md README.testbook.md pyproject.toml setup-demo.sh
+include LICENSE NOTICE README.md README.testbook.md pyproject.toml setup-demo.sh
 recursive-include docs *.md *.html *.css *.js *.json *.svg *.png *.gif
 recursive-include examples *.json *.snippets
 recursive-include tools *.py
