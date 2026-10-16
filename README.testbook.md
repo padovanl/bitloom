@@ -161,15 +161,26 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 8b.3 | *Change it with an append*. `Esc` at the end without creating. | Studio opens a *Recipe append* already filled in: `base-files`, `recipes-core`, file `motd`; the planned `files/motd` holds the current device text (toast *Starting from the device's file*). |
 | 8b.4 | Type `libc6` in *Which recipe installs…*, Enter; then select `/etc/passwd`. | `libc6` is the renamed `glibc` package, pulled in by busybox, eudev, kmod…; `/etc/passwd` is in no package, with the explanation (useradd, `EXTRA_USERS_PARAMS`). |
 | 8b.5 | TUI: `7`, choose *Which recipe installs…*, type `/etc/inittab`, `a`. Then in a shell: `bitloom --config .validation/profiles.json --state .validation --who-installs /etc/inittab`. | Both answer `sysvinit-inittab`, its recipe file, layer, image, and *add recipes-core/sysvinit-inittab/sysvinit-inittab_%.bbappend to your layer*. |
-| 8b.6 | Web `7`: *What this release can do*, on `kas-wrynose` then `kas-scarthgap`. | Wrynose: ✔ SPDX 3.0, sbom-cve-check, VEX, configuration fragments; ✖ cve-check (*use sbom-cve-check*), bitbake-setup (*not set up with bitbake-setup*). Scarthgap: ✔ SPDX 2.2, cve-check, debug-tweaks; ✖ VEX (*vex.bbclass is not in this project's layers*), fragments (*bitbake-config-build is not in this project's BitBake*). |
+| 8b.6 | Web `8`: *What this release can do*, on `kas-wrynose` then `kas-scarthgap`. | Wrynose: ✔ SPDX 3.0, sbom-cve-check, VEX, configuration fragments; ✖ cve-check (*use sbom-cve-check*), bitbake-setup (*not set up with bitbake-setup*). Scarthgap: ✔ SPDX 2.2, cve-check, debug-tweaks; ✖ VEX (*vex.bbclass is not in this project's layers*), fragments (*bitbake-config-build is not in this project's BitBake*). |
 | 8b.7 | On `kas-scarthgap`: `q`, *Generate VEX metadata*, target `busybox`. | Refused before queueing, with the same reason; nothing enters the history. |
+
+### Stage 8c — Best practices (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8c.1 | Web on `kas-wrynose`: `7` (Practices). | A score around 80 %, *Needs attention* grouped by area; *LAYERSERIES_COMPAT includes the release you build* fails on `meta-acme/conf/layer.conf` (*scarthgap*, the project builds wrynose) if the Studio test layer is still there; upstream layers are not judged. |
+| 8c.2 | *All rules*: switch off *Each layer has a SECURITY.md*, set *rm_work keeps tmp/work small* to *error*. | The rule moves to *Switched off*, the score changes; `bitloom-practices.json` at the project root holds `"disabled": ["layer-security-policy"]` and the severity. |
+| 8c.3 | *Add a company rule*. *Next* without choosing; then the example *Products build our distribution*; open the **?** of each field; *Try it on this project*. | The wizard refuses to go on without a kind of check. The example fills step 2; the plain-words line reads *An error unless DISTRO is exactly acme…*; *Try it* reports `DISTRO is “poky”, expected “acme”` (the `acme.conf` in meta-acme does not count: the build selects poky). Nothing is saved yet. |
+| 8c.3b | Step 3: the id follows the title; *Save rule*. Then add a rule with id `layer-name`, and one with pattern `(`. | The rule appears under *Company*. The others are refused (*already used*, *not a valid regular expression*). |
+| 8c.4 | *Export* → Markdown. In a shell: `bitloom --config .validation/profiles.json --practices --profile kas-wrynose; echo "exit $?"`, then with `--fail-on never`. | The report downloads; the CLI prints the same review and exits 2 with errors, 0 with `--fail-on never`. |
+| 8c.5 | Delete the rule and the file (`rm bitloom-practices.json`). | The defaults are back. |
 
 ### Stage 9 — Projects, setup and notifications (no builds)
 
 | # | Do | You should see |
 | --- | --- | --- |
 | 9.1 | `9`, `w` (projects). | Recent projects; the active one marked *active*. |
-| 9.2 | `o`, Enter on the project folder (the Bitloom checkout). Then `o` again with `~/bitloom-kas-wrynose`. | The checkout: kas proposals for `kas-minimal.yml` and `kas-wrynose.yml` with evidence. The work directory: only a host proposal, marked as the kas work directory of `kas-wrynose` with a warning to switch with `P` instead. `Esc` without saving. Web: `7` → *Set up a project* shows the same. |
+| 9.2 | `o`, Enter on the project folder (the Bitloom checkout). Then `o` again with `~/bitloom-kas-wrynose`. | The checkout: kas proposals for `kas-minimal.yml` and `kas-wrynose.yml` with evidence. The work directory: only a host proposal, marked as the kas work directory of `kas-wrynose` with a warning to switch with `P` instead. `Esc` without saving. Web: `8` → *Set up a project* shows the same. |
 | 9.3 | `n` (new project). | Release, MACHINE, image and runtime fields with a live preview; `Esc` without creating. |
 | 9.4 | `9`, `o`, `^T`. | A test notification arrives. |
 
@@ -871,11 +882,11 @@ Add a profile with `"mode": "wrapper"`, `"launcher": ["/tmp/launcher.sh"]`, `"en
 
 ### J01 — Guided setup of an existing project
 
-Create a folder with a kas file and a launcher script (the T05 script works), or use one of your projects. **Configuration → `w` → `o`**, type the folder, Enter. Expected: proposals with evidence (launcher script reading `$YML`, kas file with MACHINE, Poky checkout if present); ↑/↓ fills the form; checks show ✔/▲/✖ live and block saving on ✖ (for example an empty `KAS_WORK_DIR` for kas-container); `^O` makes the profile active and the top bar, Recipes and Configuration reload. Opening the same folder again switches to its profile. Start Bitloom in an empty directory with a new `--config`: the guided setup opens by itself. Repeat in the web dashboard (`7` → *Set up a project*).
+Create a folder with a kas file and a launcher script (the T05 script works), or use one of your projects. **Configuration → `w` → `o`**, type the folder, Enter. Expected: proposals with evidence (launcher script reading `$YML`, kas file with MACHINE, Poky checkout if present); ↑/↓ fills the form; checks show ✔/▲/✖ live and block saving on ✖ (for example an empty `KAS_WORK_DIR` for kas-container); `^O` makes the profile active and the top bar, Recipes and Configuration reload. Opening the same folder again switches to its profile. Start Bitloom in an empty directory with a new `--config`: the guided setup opens by itself. Repeat in the web dashboard (`8` → *Set up a project*).
 
 ### J02 — New project
 
-`w` → `n`. Choose Wrynose, `qemuarm64`, `core-image-base`, product layer on. Expected: the preview shows `kas.yml` with bitbake/openembedded-core/meta-yocto pinned to yocto-6.0.2 and `meta-<name>`; `^O` creates the folder with README, `.gitignore`, `.git` and the layer; the profile is active; `b` starts the first kas build. A non-empty folder or an invalid name is refused. In the web dashboard: `7` → *New project*, live preview, *Create project*, toast with *Build it*.
+`w` → `n`. Choose Wrynose, `qemuarm64`, `core-image-base`, product layer on. Expected: the preview shows `kas.yml` with bitbake/openembedded-core/meta-yocto pinned to yocto-6.0.2 and `meta-<name>`; `^O` creates the folder with README, `.gitignore`, `.git` and the layer; the profile is active; `b` starts the first kas build. A non-empty folder or an invalid name is refused. In the web dashboard: `8` → *New project*, live preview, *Create project*, toast with *Build it*.
 
 ### J03 — Clone from Git
 

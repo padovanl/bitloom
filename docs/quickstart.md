@@ -25,7 +25,7 @@ Check the result with `bitloom --version`. Real builds also need what your proje
 bitloom --web --demo
 ```
 
-Bitloom prints the dashboard URL, which carries its access token, and opens your browser. The demo has a Scarthgap and a Wrynose sample workspace: switch between them with the profile menu. Press `?` for the keys, `Ctrl+K` for the palette, `1` to `7` for the sections. Nothing here runs a real build.
+Bitloom prints the dashboard URL, which carries its access token, and opens your browser. The demo has a Scarthgap and a Wrynose sample workspace: switch between them with the profile menu. Press `?` for the keys, `Ctrl+K` for the palette, `1` to `8` for the sections. Nothing here runs a real build.
 
 ## 3. Connect your project
 

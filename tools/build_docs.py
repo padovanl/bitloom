@@ -17,7 +17,7 @@ REPOSITORY = 'https://github.com/padovanl/bitloom'
 NAV = [
     ('Get started', [('quickstart', 'Quickstart'), ('guide', 'User guide'), ('projects', 'Projects and setup'), ('keyboard', 'Keyboard')]),
     ('Features', [('web', 'Web dashboard'), ('image', 'Image explorer'), ('compliance', 'SBOM, CRA and releases'), ('studio', 'Studio'),
-                  ('teams', 'Teams and CI/CD'), ('developer', 'Developer workbench')]),
+                  ('practices', 'Best practices'),                   ('teams', 'Teams and CI/CD'), ('developer', 'Developer workbench')]),
     ('Reference', [('commands', 'Command reference'), ('validation', 'Validation'), ('testbook', 'Manual testbook'),
                    ('roadmap', 'Research map')]),
 ]

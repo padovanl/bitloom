@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Best practices — Bitloom documentation</title>
+<meta name="description" content="Bitloom documentation: Best practices">
+<link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<body>
+<header class="topbar">
+<button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
+<a class="brand" href="index.html"><img src="assets/bitloom-icon.svg" width="26" height="26" alt=""> Bitloom <small>docs</small></a>
+<div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
+<span class="spacer"></span>
+<a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
+</header>
+<div class="layout">
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="practices.html" aria-current="page">Best practices</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<main class="content">
+<div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
+<article class="doc"><h1 id="best-practices">Best practices</h1>
+<p>Does your project follow the way the Yocto Project recommends to work? <strong>Practices</strong> reviews your layers and build configuration against the advice of the Yocto documentation, shows what you already follow, what needs attention (with the file and line) and how to fix it. Your team decides which rules apply, how serious each one is, and can add its own.</p>
+<p>Open it with section <strong>7</strong> of the <a href="web.html">web dashboard</a> or <strong>Ctrl+K → Best practices</strong>. In CI, run <code>bitloom --practices</code> (see <a href="#in-ci">below</a>).</p>
+<details class="shot"><summary><span>Screenshot</span> Practices on a real Wrynose project: the score, what needs attention, every rule</summary><div class="shot-body"><img src="assets/web-practices.png" alt="Practices on a real Wrynose project: the score, what needs attention, every rule" loading="lazy" decoding="async"></div></details>
+<h2 id="what-is-checked">What is checked<a class="anchor" href="#what-is-checked" aria-label="Link to this section">#</a></h2>
+<p>Only <strong>your</strong> layers are judged: the ones of your product, not Poky, OE-Core, meta-openembedded or other upstream layers. Upstream layers are only checked for local changes (they should have none). Each rule links to the page of the Yocto documentation it comes from.</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Rules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Layers</td>
+<td>named <code>meta-&lt;name&gt;</code>; <code>layer.conf</code> declares collection, pattern, priority and <code>LAYERSERIES_COMPAT</code>; the compatible series includes the release you build; <code>LAYERDEPENDS</code> names layers the project has; a README, a <code>SECURITY.md</code> and a licence in each layer; <code>layer.conf</code> sets only layer variables; BSP, distribution and software in separate layers; layers under Git</td>
+</tr>
+<tr>
+<td>Upstream</td>
+<td>Poky, OE-Core and the other upstream checkouts are not modified</td>
+</tr>
+<tr>
+<td>Appends</td>
+<td>upstream recipes are extended with a <code>.bbappend</code>, not copied; every append has its recipe; <code>FILESEXTRAPATHS:prepend := &quot;${THISDIR}/files:&quot;</code>; the colon override syntax (<code>:append</code>, not <code>_append</code>); product images are your own recipes, not appends to <code>core-image-*</code></td>
+</tr>
+<tr>
+<td>Recipes</td>
+<td><code>name_version.bb</code> in lowercase; <code>LICENSE</code> and <code>LIC_FILES_CHKSUM</code>; <code>sha256sum</code> for downloads; Git sources pinned with <code>SRCREV</code> (no <code>AUTOREV</code>); patches with <code>Upstream-Status</code></td>
+</tr>
+<tr>
+<td>Security</td>
+<td>no development access in the product (<code>debug-tweaks</code>, <code>allow-empty-password</code>, <code>allow-root-login</code>, <code>empty-root-password</code>)</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td><code>DL_DIR</code> and <code>SSTATE_DIR</code> shared outside the build directory; a distribution of your own instead of <code>poky</code>; product settings in layers rather than <code>local.conf</code>; <code>buildhistory</code>; <code>rm_work</code></td>
+</tr>
+</tbody>
+</table>
+<p>Each rule is an <strong>error</strong>, a <strong>warning</strong> or a <strong>suggestion</strong>. The score is the share of the rules that apply to your project (switched on, with something to check) that it follows.</p>
+<h2 id="tune-it-for-your-project">Tune it for your project<a class="anchor" href="#tune-it-for-your-project" aria-label="Link to this section">#</a></h2>
+<p>Every rule has a switch and a severity:</p>
+<ul>
+<li>switch a rule <strong>off</strong> when it does not apply (a project that deliberately ships <code>poky</code>, a BSP-only repository). It moves to <em>Switched off</em> and no longer counts;</li>
+<li>change its <strong>severity</strong>: make <code>rm-work</code> an error on the shared build server, or <code>layer-security-policy</code> a suggestion for an internal layer.</li>
+</ul>
+<p>The choices are saved in <strong><code>bitloom-practices.json</code></strong> at the project root. Commit it: everyone who opens the project, and CI, applies the same rules.</p>
+<h2 id="company-rules">Company rules<a class="anchor" href="#company-rules" aria-label="Link to this section">#</a></h2>
+<p><strong>Add a company rule</strong> opens a short wizard. Nothing to learn first: every field has a <strong>?</strong> that explains it, examples you can click, and a sentence at the top that says the rule in plain words as you build it (<em>An error unless <code>DISTRO</code> is exactly <code>acme</code> in your configuration</em>).</p>
+<ol>
+<li><strong>What to check.</strong> Start from an example (every recipe names a maintainer, every recipe has a <code>SUMMARY</code>, no internal host names, each layer has <code>CODEOWNERS</code>, products build our distribution, a distro feature is required) or pick one of the four kinds of check.</li>
+<li><strong>Details.</strong> The files and the text to look for, the file each layer must have, or the variable and its value. <strong>Try it on this project</strong> runs the check at once, without saving: <em>your project follows it</em>, or the places that do not, with file and line.</li>
+<li><strong>Name and explain.</strong> A title (the id is made from it), how serious it is (an <em>error</em> fails CI), and one sentence each for <em>why it matters</em> and <em>how to fix it</em>: they are shown to whoever breaks the rule.</li>
+</ol>
+<details class="shot"><summary><span>Screenshot</span> Step 1: start from an example or choose the kind of check</summary><div class="shot-body"><img src="assets/web-practices-wizard.png" alt="Step 1: start from an example or choose the kind of check" loading="lazy" decoding="async"></div></details>
+<details class="shot"><summary><span>Screenshot</span> Step 2: an example filled in, the help of a field open, and Try it on the project</summary><div class="shot-body"><img src="assets/web-practices-rule.png" alt="Step 2: an example filled in, the help of a field open, and Try it on the project" loading="lazy" decoding="async"></div></details>
+<p>The four kinds of check:</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Passes when</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>files-must-match</code></td>
+<td>every file matching <code>files</code> in your layers contains <code>pattern</code> (a regular expression, line by line)</td>
+<td>every recipe sets <code>MAINTAINER</code></td>
+</tr>
+<tr>
+<td><code>files-must-not-match</code></td>
+<td>no file matching <code>files</code> contains <code>pattern</code></td>
+<td>no <code>x11</code> in configuration files, no internal host names</td>
+</tr>
+<tr>
+<td><code>layer-file-exists</code></td>
+<td>each of your layers has the file or folder at <code>path</code></td>
+<td>a <code>CODEOWNERS</code>, a <code>docs/</code> folder</td>
+</tr>
+<tr>
+<td><code>variable</code></td>
+<td>the configuration value of <code>name</code> is <code>set</code>, <code>unset</code>, <code>equals</code>, <code>contains</code> or <code>not-contains</code> the <code>value</code></td>
+<td><code>DISTRO</code> equals <code>acme</code>, <code>DISTRO_FEATURES</code> contains <code>seccomp</code></td>
+</tr>
+</tbody>
+</table>
+<p>The same rules can be written directly in the file:</p>
+<pre><code class="language-json">{
+  &quot;disabled&quot;: [&quot;layer-security-policy&quot;],
+  &quot;severity&quot;: {&quot;rm-work&quot;: &quot;error&quot;},
+  &quot;rules&quot;: [
+    {
+      &quot;id&quot;: &quot;acme-maintainer&quot;,
+      &quot;title&quot;: &quot;Recipes name a maintainer&quot;,
+      &quot;severity&quot;: &quot;warning&quot;,
+      &quot;why&quot;: &quot;Our release process needs an owner per component.&quot;,
+      &quot;fix&quot;: &quot;Add MAINTAINER = \&quot;Team &lt;team@acme.example&gt;\&quot; to the recipe.&quot;,
+      &quot;check&quot;: {&quot;type&quot;: &quot;files-must-match&quot;, &quot;files&quot;: &quot;*.bb&quot;, &quot;pattern&quot;: &quot;^MAINTAINER\\s*=&quot;}
+    },
+    {
+      &quot;id&quot;: &quot;acme-distro&quot;,
+      &quot;title&quot;: &quot;Products build the ACME distribution&quot;,
+      &quot;severity&quot;: &quot;error&quot;,
+      &quot;check&quot;: {&quot;type&quot;: &quot;variable&quot;, &quot;name&quot;: &quot;DISTRO&quot;, &quot;op&quot;: &quot;equals&quot;, &quot;value&quot;: &quot;acme&quot;}
+    }
+  ]
+}
+</code></pre>
+<p>Rules are checked before they are saved: ids are lowercase with hyphens and cannot reuse a built-in id, patterns must be valid regular expressions, paths must stay inside the layer. A company rule never runs commands.</p>
+<p>Variables are read from <code>local.conf</code>, <code>auto.conf</code>, your distribution files and your image recipes, following <code>=</code>, <code>?=</code>, <code>+=</code>, <code>.=</code>, <code>:append</code>, <code>:prepend</code> and <code>:remove</code>. <code>DISTRO</code> and <code>MACHINE</code> are what the build selects (the profile, the kas file, <code>local.conf</code>), not the distribution file that names itself. They are the literal values written there, not what BitBake computes: a value set by a class or an include of a layer outside your project is not seen.</p>
+<h2 id="export-and-ci">Export and CI<a class="anchor" href="#export-and-ci" aria-label="Link to this section">#</a></h2>
+<p><strong>Export</strong> downloads the review as Markdown (for a merge request or a wiki), JSON (for tools) or text.</p>
+<h3 id="in-ci">In CI<a class="anchor" href="#in-ci" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-console">$ bitloom --practices
+Yocto best practices · 81% followed
+
+0 errors · 1 warning · 4 suggestions · your layers: meta-acme
+
+APPENDS
+
+✔ Upstream recipes are extended, not copied
+✔ Overrides use the colon syntax
+…
+CONFIGURATION
+
+✖ Product configuration lives in layers, not local.conf  [warning]
+    local.conf:4: IMAGE_FSTYPES: product configuration belongs in your distro, machine or image
+    why: local.conf is per developer and not versioned with the product.
+    fix: Move image contents to your image recipe and policies to your distro. (https://docs.yoctoproject.org/what-i-wish-id-known.html)
+…
+$ echo $?
+0
+</code></pre>
+<p>With <code>--fail-on warning</code> the same review exits 2.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--practices</code></td>
+<td>review the active profile (or <code>--profile NAME</code>) with the project's <code>bitloom-practices.json</code></td>
+</tr>
+<tr>
+<td><code>--format text|md|json</code></td>
+<td>the report format</td>
+</tr>
+<tr>
+<td><code>-o FILE</code></td>
+<td>write the report to a file</td>
+</tr>
+<tr>
+<td><code>--fail-on error</code></td>
+<td>exit status 2 when an active rule at <em>error</em> fails (the default)</td>
+</tr>
+<tr>
+<td><code>--fail-on warning</code></td>
+<td>also fail on warnings</td>
+</tr>
+<tr>
+<td><code>--fail-on never</code></td>
+<td>always exit 0: report only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="practical-limits">Practical limits<a class="anchor" href="#practical-limits" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>The review reads files; it does not run BitBake. Values computed at parse time are outside its view (see <em>Variables</em> above).</li>
+<li>Your layers are the layers inside the project folder that are not known upstream layers; a layer kept elsewhere is treated as upstream.</li>
+<li>Practices are in the web dashboard and on the command line, not in the TUI.</li>
+</ul>
+</article>
+<nav class="pager" aria-label="Previous and next page"><a class="prev" href="studio.html"><small>Previous</small>Studio</a><a class="next" href="teams.html"><small>Next</small>Teams and CI/CD</a></nav>
+<div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/practices.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+</main>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-is-checked">What is checked</a><a href="#tune-it-for-your-project">Tune it for your project</a><a href="#company-rules">Company rules</a><a href="#export-and-ci">Export and CI</a><a href="#in-ci" class="sub">In CI</a><a href="#practical-limits">Practical limits</a></aside>
+</div>
+<script src="docs.js"></script>
+</body></html>

@@ -328,6 +328,66 @@ details.folder .flayer { margin-left: auto; color: var(--muted); font-size: 12px
 .cap .t { display: grid; gap: 2px; min-width: 0; } .cap b { font-weight: 600; font-size: 13px; } .cap small { color: var(--muted); font-size: 12px; line-height: 1.4; }
 .cap.no b { color: var(--muted); }
 
+/* Best practices */
+.pr-hero { display: flex; align-items: center; gap: 16px; padding: 14px 18px; flex-wrap: wrap; }
+.big-ring { width: 64px; height: 64px; } .big-ring text { font: 600 13px var(--mono); fill: var(--fg); }
+.pr-sum .big { font: 650 20px var(--sans); } .pr-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } #pr-format { width: auto; }
+.pr-filter { display: flex; gap: 12px; align-items: center; padding: 0 18px 12px; flex-wrap: wrap; }
+.pr-groups { display: grid; gap: 12px; }
+.pr-group > .head h2 .n { color: var(--muted); font-weight: 500; margin-left: 6px; letter-spacing: 0; }
+details.rule { border-top: 1px solid var(--line); }
+details.rule > summary { list-style: none; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto auto; gap: 12px; align-items: center; padding: 9px 14px; cursor: pointer; }
+details.rule > summary::-webkit-details-marker { display: none; }
+details.rule > summary:hover { background: color-mix(in srgb, var(--raised) 70%, var(--glow)); }
+details.rule .mark { font: 700 13px var(--mono); text-align: center; }
+.rule.pass .mark { color: var(--ok); } .rule.fail.error .mark { color: var(--err); } .rule.fail.warning .mark { color: var(--warn); } .rule.fail.info .mark { color: var(--info); } .rule.na .mark, .rule.off .mark { color: var(--muted); }
+.rule.off .t, .rule.na .t { color: var(--muted); }
+.rule .t { min-width: 0; } .rule .t small { color: var(--muted); margin-left: 8px; font-size: 12px; }
+.rule .count { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
+.rule select.sev { width: auto; padding: 2px 26px 2px 8px; font-size: 12px; }
+.rule .body { padding: 2px 14px 14px 48px; display: grid; gap: 8px; font-size: 13px; line-height: 1.5; }
+.rule .body .why { color: var(--muted); } .rule .body .fix b { color: var(--accent); font-weight: 600; }
+.rule .findings { margin: 0; padding: 8px 12px; list-style: none; background: var(--code); border-radius: 8px; font: 12px/1.6 var(--mono); max-height: 260px; overflow: auto; }
+.rule .findings span { color: var(--muted); }
+.rule .body .row-actions { display: flex; gap: 8px; }
+#pr-dialog { width: min(720px, 94vw); border: 1px solid var(--line2); border-radius: 12px; background: var(--surface); color: var(--fg); padding: 0; box-shadow: var(--shadow); }
+#pr-dialog::backdrop { background: rgba(0, 0, 0, .55); }
+.pr-form { padding: 18px 20px; display: grid; gap: 10px; } .pr-form h3 { margin: 0; }
+.pr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; } .pr-grid label { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); } .pr-grid .wide { grid-column: 1 / -1; }
+.pr-grid input, .pr-grid select { width: 100%; color: var(--fg); }
+.pr-form .err { color: var(--err); font-size: 13px; min-height: 1.2em; }
+.pr-form-actions { display: flex; gap: 8px; }
+.prw-head { display: flex; align-items: center; } .prw-head .btn.ghost { border: 0; background: none; color: var(--muted); }
+.prw-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
+.prw-steps button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 4px 12px 4px 4px; font: inherit; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+.prw-steps b { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--line); color: var(--fg); font-size: 11px; }
+.prw-steps button[aria-current="step"] { color: var(--fg); border-color: var(--accent); } .prw-steps button[aria-current="step"] b { background: var(--accent); color: var(--ink); }
+.prw-steps button.done b { background: color-mix(in srgb, var(--ok) 70%, transparent); }
+.prw-plain { margin: 0; padding: 9px 12px; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 0 8px 8px 0; font-size: 13.5px; }
+.prw-plain:empty { display: none; } .prw-plain code { font-size: 12.5px; }
+.prw-label { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.prw-templates { display: flex; flex-wrap: wrap; gap: 6px; }
+.prw-templates button { border: 1px dashed var(--line2); background: none; color: var(--fg); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.prw-templates button:hover, .prw-templates button:focus-visible { border-style: solid; border-color: var(--accent); }
+.prw-kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.prw-kind { display: grid; gap: 3px; padding: 10px 12px 10px 34px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; position: relative; font-size: 12.5px; }
+.prw-kind input { position: absolute; left: 11px; top: 12px; margin: 0; } .prw-kind b { font-size: 13.5px; } .prw-kind span { color: var(--muted); }
+.prw-kind:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.prw-field { display: grid; gap: 4px; align-content: start; } .prw-field > label { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.prw-field input, .prw-field select { width: 100%; color: var(--fg); } .prw-field.wide { grid-column: 1 / -1; }
+.q { width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1px solid var(--line2); background: none; color: var(--muted); font: 600 11px/1 inherit; cursor: pointer; }
+.q[aria-expanded="true"], .q:hover { color: var(--ink); background: var(--accent); border-color: var(--accent); }
+.help { margin: 0; font-size: 12.5px; color: var(--muted); padding: 7px 10px; border-radius: 8px; background: var(--raised); }
+.ex { display: flex; flex-wrap: wrap; gap: 5px; } .ex::before { content: "e.g."; font-size: 11.5px; color: var(--muted); align-self: center; }
+.ex button { border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 6px; padding: 1px 7px; font: 12px var(--mono, monospace); cursor: pointer; }
+.ex button:hover { border-color: var(--accent); }
+.prw-try { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+.prw-results { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; max-height: 170px; overflow: auto; font-size: 12.5px; }
+.prw-results li { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.prw-results li code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .prw-results li span { color: var(--muted); overflow-wrap: anywhere; }
+.prw-try .pass { color: var(--ok); } .prw-try .fail { color: var(--warn); }
+@media (max-width: 700px) { .pr-grid, .prw-kinds { grid-template-columns: 1fr; } .prw-steps button { padding-right: 8px; } details.rule > summary { grid-template-columns: 22px minmax(0, 1fr) auto; } details.rule .sev, details.rule .switch { display: none; } }
+
 /* Compliance */
 .hero { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 18px; }
 .hero .big { font: 750 26px var(--sans); }
@@ -599,7 +659,8 @@ details.folder > summary { padding: 8px 14px; }
     <button data-view="compliance"><span class="num">5</span><span class="icon">⚖</span>SBOM &amp; CRA</button>
     <button data-view="studio"><span class="num">6</span><span class="icon">✦</span>Studio</button>
     <div class="group">WORKSPACE</div>
-    <button data-view="health"><span class="num">7</span><span class="icon">⚙</span>Configuration</button>
+    <button data-view="practices"><span class="num">7</span><span class="icon">✓</span>Practices</button>
+    <button data-view="health"><span class="num">8</span><span class="icon">⚙</span>Configuration</button>
     <div class="foot">Same service and history as the TUI.<br><kbd>?</kbd> keys · <kbd>Ctrl</kbd><kbd>K</kbd> search</div>
   </nav>
   <main>
@@ -690,6 +751,123 @@ details.folder > summary { padding: 8px 14px; }
         </div>
         <div class="panel img-detail" id="img-detail"><div class="empty">Select a file to see which package and recipe put it in the image, and how to change it.</div></div>
       </div>
+    </section>
+
+    <section id="view-practices" class="view" hidden>
+      <div class="panel pr-top">
+        <div class="pr-hero">
+          <svg class="ring big-ring" viewBox="0 0 60 60" aria-hidden="true"><circle class="track" cx="30" cy="30" r="24"/><circle class="bar" id="pr-ring" cx="30" cy="30" r="24" stroke-dasharray="150.8" stroke-dashoffset="150.8"/><text x="30" y="34" text-anchor="middle" id="pr-score">—</text></svg>
+          <div class="pr-sum"><div class="hint">Yocto best practices</div><div class="big" id="pr-title">Checking…</div><div class="meta" id="pr-sub"></div></div>
+          <span style="flex:1"></span>
+          <div class="pr-actions"><button class="btn" id="pr-recheck">↻ Check again</button><select id="pr-format" aria-label="Report format"><option value="md">Markdown</option><option value="json">JSON</option><option value="text">Text</option></select><button class="btn" id="pr-export">Export</button><button class="btn primary" id="pr-add">✦ Add a company rule</button></div>
+        </div>
+        <div class="pr-filter"><div class="seg" id="pr-show" role="radiogroup" aria-label="Show"></div><span class="hint" id="pr-config"></span></div>
+      </div>
+      <div id="pr-groups" class="pr-groups"></div>
+      <dialog id="pr-dialog" aria-labelledby="pr-dialog-title">
+        <form method="dialog" class="pr-form" id="pr-form" novalidate>
+          <div class="prw-head"><h3 id="pr-dialog-title">New company rule</h3><span style="flex:1"></span><button class="btn ghost" value="cancel" formnovalidate aria-label="Close">✕</button></div>
+          <ol class="prw-steps" id="prw-steps">
+            <li><button type="button" data-step="1"><b>1</b> What to check</button></li>
+            <li><button type="button" data-step="2"><b>2</b> Details</button></li>
+            <li><button type="button" data-step="3"><b>3</b> Name and explain</button></li>
+          </ol>
+          <p class="prw-plain" id="prw-plain" aria-live="polite"></p>
+
+          <div class="prw-page" data-page="1">
+            <div class="prw-label">Start from an example <span class="hint">(you can change everything afterwards)</span></div>
+            <div class="prw-templates" id="prw-templates"></div>
+            <div class="prw-label">…or choose the kind of check</div>
+            <div class="prw-kinds" role="radiogroup" aria-label="Kind of check">
+              <label class="prw-kind"><input type="radio" name="prf-type" value="files-must-match"><b>Every file must contain…</b><span>Files in your layers that must all have a line, e.g. every recipe sets <code>MAINTAINER</code>.</span></label>
+              <label class="prw-kind"><input type="radio" name="prf-type" value="files-must-not-match"><b>No file may contain…</b><span>Text that must never appear, e.g. internal host names or <code>AUTOREV</code>.</span></label>
+              <label class="prw-kind"><input type="radio" name="prf-type" value="layer-file-exists"><b>Every layer has a file</b><span>A file each of your layers must ship, e.g. <code>CODEOWNERS</code>.</span></label>
+              <label class="prw-kind"><input type="radio" name="prf-type" value="variable"><b>A variable has a value</b><span>A setting in your configuration, e.g. <code>DISTRO</code> is <code>acme</code>.</span></label>
+            </div>
+          </div>
+
+          <div class="prw-page" data-page="2" hidden>
+            <div class="pr-grid">
+              <div class="prw-field wide" data-for="files-must-match files-must-not-match">
+                <label for="prf-files">Which files <button type="button" class="q" aria-expanded="false" aria-controls="prh-files" title="What is this?">?</button></label>
+                <input type="text" id="prf-files" placeholder="*.bb" autocomplete="off">
+                <p class="help" id="prh-files" hidden>A file name pattern: <code>*</code> stands for any text. It is matched against the file name in <b>your</b> layers only (upstream layers are never checked). Several kinds need several rules.</p>
+                <div class="ex" data-into="prf-files"><button type="button">*.bb</button><button type="button">*.bbappend</button><button type="button">*.conf</button><button type="button">*.patch</button><button type="button">*.bbclass</button><button type="button">README*</button></div>
+              </div>
+              <div class="prw-field wide" data-for="files-must-match files-must-not-match">
+                <label for="prf-pattern"><span id="prf-pattern-label">Text to look for</span> <button type="button" class="q" aria-expanded="false" aria-controls="prh-pattern" title="What is this?">?</button></label>
+                <input type="text" id="prf-pattern" placeholder="^MAINTAINER\s*=" autocomplete="off" spellcheck="false">
+                <p class="help" id="prh-pattern" hidden>A regular expression, checked line by line. Plain words work as they are. <code>^</code> means “at the start of the line”, <code>\s*</code> “any spaces”, <code>.*</code> “anything”, <code>\.</code> a literal dot, <code>a|b</code> “a or b”. Use <b>Try it</b> below to see what it finds before saving.</p>
+                <div class="ex" data-into="prf-pattern"><button type="button" title="A line that sets MAINTAINER">^MAINTAINER\s*=</button><button type="button" title="A line that sets SUMMARY">^SUMMARY\s*=</button><button type="button" title="AUTOREV anywhere">AUTOREV</button><button type="button" title="An internal host name">\.acme\.internal</button><button type="button" title="A patch header">^Signed-off-by:</button></div>
+              </div>
+              <div class="prw-field wide" data-for="layer-file-exists">
+                <label for="prf-path">File or folder each layer must have <button type="button" class="q" aria-expanded="false" aria-controls="prh-path" title="What is this?">?</button></label>
+                <input type="text" id="prf-path" placeholder="CODEOWNERS" autocomplete="off">
+                <p class="help" id="prh-path" hidden>A path relative to the top of each of your layers (the folder with <code>conf/layer.conf</code>). A folder counts too: <code>docs</code>, <code>conf/machine</code>.</p>
+                <div class="ex" data-into="prf-path"><button type="button">CODEOWNERS</button><button type="button">SECURITY.md</button><button type="button">CHANGELOG.md</button><button type="button">docs</button></div>
+              </div>
+              <div class="prw-field" data-for="variable">
+                <label for="prf-name">Variable <button type="button" class="q" aria-expanded="false" aria-controls="prh-name" title="What is this?">?</button></label>
+                <input type="text" id="prf-name" placeholder="DISTRO" autocomplete="off" spellcheck="false">
+                <p class="help" id="prh-name" hidden>The name as written in the configuration, in capitals. Bitloom reads <code>local.conf</code>, <code>auto.conf</code>, your distribution files and your image recipes, following <code>=</code>, <code>?=</code>, <code>+=</code>, <code>:append</code>…: what is written there, not what BitBake computes from classes.</p>
+                <div class="ex" data-into="prf-name"><button type="button">DISTRO</button><button type="button">DISTRO_FEATURES</button><button type="button">INHERIT</button><button type="button">IMAGE_FEATURES</button><button type="button">MACHINE</button></div>
+              </div>
+              <div class="prw-field" data-for="variable">
+                <label for="prf-op">Must be <button type="button" class="q" aria-expanded="false" aria-controls="prh-op" title="What is this?">?</button></label>
+                <select id="prf-op"><option value="set">set (any value)</option><option value="unset">not set at all</option><option value="equals">exactly</option><option value="contains">containing the word</option><option value="not-contains">not containing the word</option></select>
+                <p class="help" id="prh-op" hidden><b>exactly</b> compares the whole value. <b>containing the word</b> looks for one word of a list such as <code>DISTRO_FEATURES = "systemd seccomp"</code>.</p>
+              </div>
+              <div class="prw-field wide" data-for="variable" id="prf-value-field">
+                <label for="prf-value">Value</label>
+                <input type="text" id="prf-value" placeholder="acme" autocomplete="off">
+              </div>
+            </div>
+            <div class="prw-try">
+              <button class="btn" type="button" id="prf-try">▶ Try it on this project</button><span class="hint" id="prf-try-sum">Runs the check now, without saving.</span>
+              <ul class="prw-results" id="prf-try-list"></ul>
+            </div>
+          </div>
+
+          <div class="prw-page" data-page="3" hidden>
+            <div class="pr-grid">
+              <div class="prw-field wide">
+                <label for="prf-title">Title <button type="button" class="q" aria-expanded="false" aria-controls="prh-title" title="What is this?">?</button></label>
+                <input type="text" id="prf-title" placeholder="Recipes name a maintainer">
+                <p class="help" id="prh-title" hidden>Say what a good project <b>does</b>, as a statement: “Recipes name a maintainer”, not “Missing maintainer”. It is the line everyone sees in the list.</p>
+              </div>
+              <div class="prw-field">
+                <label for="prf-id">Id <button type="button" class="q" aria-expanded="false" aria-controls="prh-id" title="What is this?">?</button></label>
+                <input type="text" id="prf-id" placeholder="acme-maintainer" autocomplete="off" spellcheck="false">
+                <p class="help" id="prh-id" hidden>Made from the title; change it if you like. Lowercase letters, digits and hyphens. It is how the rule is switched off or re-weighted in <code>bitloom-practices.json</code>, so it does not change once saved.</p>
+              </div>
+              <div class="prw-field">
+                <label for="prf-severity">How serious <button type="button" class="q" aria-expanded="false" aria-controls="prh-severity" title="What is this?">?</button></label>
+                <select id="prf-severity"><option value="error">error: must be fixed</option><option value="warning">warning: should be fixed</option><option value="info">suggestion</option></select>
+                <p class="help" id="prh-severity" hidden><b>error</b> fails CI (<code>bitloom --practices</code> exits 2). <b>warning</b> fails it only with <code>--fail-on warning</code>. A <b>suggestion</b> never fails anything.</p>
+              </div>
+              <div class="prw-field">
+                <label for="prf-category">Group</label>
+                <input type="text" id="prf-category" placeholder="Company" list="prf-categories">
+                <datalist id="prf-categories"><option>Company</option><option>Layers</option><option>Recipes</option><option>Appends</option><option>Security</option><option>Configuration</option></datalist>
+              </div>
+              <div class="prw-field wide">
+                <label for="prf-why">Why it matters <button type="button" class="q" aria-expanded="false" aria-controls="prh-why" title="What is this?">?</button></label>
+                <input type="text" id="prf-why" placeholder="Our release process needs an owner per component.">
+                <p class="help" id="prh-why" hidden>One sentence for whoever breaks the rule. People follow a rule they understand.</p>
+              </div>
+              <div class="prw-field wide">
+                <label for="prf-fix">How to fix it</label>
+                <input type="text" id="prf-fix" placeholder='Add MAINTAINER = "Team <team@acme.example>" to the recipe.'>
+              </div>
+            </div>
+            <p class="hint">Saved in <code>bitloom-practices.json</code> at the project root: commit it, and the whole team and CI get the same rules. A rule only reads files: nothing runs.</p>
+          </div>
+
+          <div class="err" id="prf-error" role="alert"></div>
+          <div class="pr-form-actions"><button class="btn danger" type="button" id="prf-delete" hidden>Delete rule</button><span style="flex:1"></span>
+            <button class="btn" type="button" id="prf-back">← Back</button><button class="btn primary" type="button" id="prf-next">Next →</button><button class="btn primary" type="submit" id="prf-save" hidden>Save rule</button></div>
+        </form>
+      </dialog>
     </section>
 
     <section id="view-compliance" class="view" hidden>
@@ -873,7 +1051,7 @@ const $ = (id) => document.getElementById(id);
 const token = (new URLSearchParams(location.hash.slice(1))).get("token") || sessionStorage.getItem("bitloom-token") || "";
 if (token) { sessionStorage.setItem("bitloom-token", token); history.replaceState(null, "", location.pathname); }
 const GLYPH = {success: "✔", failed: "✖", running: "●", queued: "◌", cancelling: "◐", cancelled: "■", interrupted: "⚠", unknown: "·", skipped: "↷"};
-const VIEWS = ["builds", "recipes", "tasklogs", "image", "compliance", "studio", "health"];
+const VIEWS = ["builds", "recipes", "tasklogs", "image", "compliance", "studio", "practices", "health"];
 const KEYS = [["1 – 6", "Switch section"], ["Ctrl+K", "Command palette: sections, operations, profiles, builds"], ["/", "Search in the current section"],
   ["Esc", "Leave a field / close a dialog"], ["j / k", "Next / previous operation"], ["b", "Build the target"], ["q", "Queue any operation"],
   ["t", "Edit the build target"], ["s", "Force stop the selected operation"], ["g", "Graceful stop (BitBake client SIGINT)"],
@@ -1273,7 +1451,7 @@ function setView(name) {
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
   if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); loadNotifications(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
-  if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio(); if (name === "image") loadImage();
+  if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio(); if (name === "image") loadImage(); if (name === "practices") loadPractices();
   if (name === "builds") requestAnimationFrame(moveInk);
 }
 function moveInk() {
@@ -1642,9 +1820,212 @@ async function exportVulns() {
     toast("Exported", name, "success");
   } catch (error) { toast("Export failed", error.message, "error"); }
 }
+async function exportPractices() {
+  try {
+    const response = await fetch(`/api/practices/export?profile=${prof()}&format=${$("pr-format").value}`, {headers: {"X-Bitloom-Token": token}});
+    if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || response.statusText); }
+    const name = (/filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") || "") || [])[1] || "practices";
+    const link = el("a", {href: URL.createObjectURL(await response.blob()), download: name});
+    document.body.append(link); link.click(); link.remove();
+    toast("Exported", name, "success");
+  } catch (error) { toast("Export failed", error.message, "error"); }
+}
 async function scanGrype() {
   try { const job = await api("/api/vulnerabilities/scan", {method: "POST", body: JSON.stringify({profile: $("profile").value})}); toast("Grype scan queued", "Follow it in Builds; results appear here when it finishes.", "info"); pendingScan = job.id; }
   catch (error) { toast("Grype", error.message, "error"); }
+}
+
+/* Best practices: built-in rules plus the company's, tuned in bitloom-practices.json */
+let practices = null, prShow = "attention", prEditing = null;
+async function loadPractices(data = null) {
+  const groups = $("pr-groups");
+  if (!data) { if (!practices) { groups.textContent = ""; skeletonIn(groups); } try { data = await api(`/api/practices?profile=${prof()}`); } catch (error) { groups.textContent = ""; groups.append(el("div", {class: "panel empty", text: error.message})); return; } }
+  practices = data;
+  ring($("pr-ring").closest("svg"), (data.score ?? 0) / 100, data.score === null ? "—" : data.score + "%");
+  $("pr-title").textContent = data.score === null ? "Nothing to check yet" : `${data.score}% followed`;
+  const n = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+  $("pr-sub").textContent = `${n(data.errors, "error", "errors")} · ${n(data.warnings, "warning", "warnings")} · ${n(data.infos, "suggestion", "suggestions")} · your layers: ${data.layers.join(", ") || "none yet"}`;
+  $("pr-config").textContent = (data.config_exists ? "Company rules and settings: " : "No company rules yet; they will be saved in ") + data.config.split("/").slice(-2).join("/");
+  const seg = $("pr-show");
+  if (!seg.children.length) for (const [id, label] of [["attention", "Needs attention"], ["all", "All rules"], ["off", "Switched off"]])
+    seg.append(el("button", {role: "radio", "aria-checked": String(id === prShow), "data-id": id, text: label, onclick: () => { prShow = id; [...seg.children].forEach((b) => b.setAttribute("aria-checked", String(b.dataset.id === id))); renderPractices(); }}));
+  renderPractices();
+}
+function renderPractices() {
+  const groups = $("pr-groups"); groups.textContent = "";
+  const order = {fail: 0, pass: 1, "n/a": 2, off: 3}, sev = {error: 0, warning: 1, info: 2};
+  const visible = practices.rules.filter((r) => prShow === "all" || (prShow === "off" ? r.status === "off" : r.status === "fail"));
+  if (!visible.length) { groups.append(el("div", {class: "panel empty", text: prShow === "attention" ? "Every rule that applies is followed. ✔" : "Nothing here."})); return; }
+  const byCategory = new Map();
+  for (const rule of visible.sort((a, b) => order[a.status] - order[b.status] || sev[a.severity] - sev[b.severity])) { if (!byCategory.has(rule.category)) byCategory.set(rule.category, []); byCategory.get(rule.category).push(rule); }
+  for (const [category, rules] of byCategory) {
+    const panel = el("div", {class: "panel pr-group"}, el("div", {class: "head"}, el("h2", {}, category, el("span", {class: "n", text: String(rules.length)}))));
+    for (const rule of rules) panel.append(ruleRow(rule));
+    groups.append(panel);
+  }
+}
+function ruleRow(rule) {
+  const status = rule.status === "n/a" ? "na" : rule.status;
+  const mark = {pass: "✔", fail: "✖", na: "–", off: "○"}[status];
+  const severity = el("select", {class: "sev", title: "Severity", "aria-label": "Severity of " + rule.title, onclick: (e) => e.stopPropagation(), onchange: (e) => savePractices({severity: {...currentConfig().severity, [rule.id]: e.target.value}})});
+  for (const level of ["error", "warning", "info"]) severity.append(el("option", {value: level, text: level}));
+  severity.value = rule.severity;
+  const toggle = el("input", {type: "checkbox", "aria-label": (rule.enabled ? "Switch off " : "Switch on ") + rule.title});
+  toggle.checked = rule.enabled;
+  toggle.addEventListener("click", (e) => e.stopPropagation());
+  toggle.addEventListener("change", () => { const off = new Set(currentConfig().disabled); toggle.checked ? off.delete(rule.id) : off.add(rule.id); savePractices({disabled: [...off]}); });
+  const count = rule.status === "fail" ? `${rule.findings.length} ${rule.findings.length === 1 ? "place" : "places"}` : rule.status === "n/a" ? "does not apply" : rule.status === "off" ? "off" : "followed";
+  const body = el("div", {class: "body"}, el("div", {class: "why", text: rule.why}), el("div", {class: "fix"}, el("b", {text: "Fix: "}), rule.fix));
+  if (rule.findings.length) { const list = el("ul", {class: "findings"}); for (const f of rule.findings) list.append(el("li", {}, f.where, f.detail ? el("span", {text: " · " + f.detail}) : "")); body.append(list); }
+  const actions = el("div", {class: "row-actions"});
+  if (rule.source) actions.append(el("a", {class: "btn", href: rule.source, target: "_blank", rel: "noopener", text: "Yocto documentation ↗"}));
+  if (rule.custom) actions.append(el("button", {class: "btn", text: "Edit rule", onclick: () => openRuleDialog(rule)}));
+  if (actions.children.length) body.append(actions);
+  return el("details", {class: `rule ${status} ${rule.severity}`, ...(rule.status === "fail" && prShow === "attention" && practices.rules.filter((r) => r.status === "fail").length <= 3 ? {open: ""} : {})},
+    el("summary", {}, el("span", {class: "mark", text: mark}), el("span", {class: "t"}, rule.title, rule.custom ? el("small", {text: "company"}) : ""), el("span", {class: "count", text: count}), severity,
+      el("label", {class: "switch", title: rule.enabled ? "On: click to switch off for this project" : "Off: click to switch on"}, toggle, el("span"))), body);
+}
+function currentConfig() {
+  return {disabled: practices.rules.filter((r) => !r.enabled).map((r) => r.id),
+          severity: Object.fromEntries(practices.rules.filter((r) => !r.custom).map((r) => [r.id, r.severity])),
+          rules: practices.rules.filter((r) => r.custom).map((r) => ({id: r.id, title: r.title, category: r.category, severity: r.severity, why: r.why, fix: r.fix, source: r.source, check: r.check}))};
+}
+async function savePractices(changes) {
+  try { loadPractices(await api("/api/practices", {method: "POST", body: JSON.stringify({profile: prof(), ...changes})})); toast("Practices saved", "bitloom-practices.json updated", "success"); }
+  catch (error) { toast("Not saved", error.message, "error"); loadPractices(); }
+}
+const RULE_TEMPLATES = [
+  {label: "Every recipe names a maintainer", title: "Recipes name a maintainer", id: "maintainer", severity: "warning",
+   why: "Each component needs an owner for reviews and security fixes.", fix: 'Add MAINTAINER = "Team <team@company.example>" to the recipe.',
+   check: {type: "files-must-match", files: "*.bb", pattern: "^MAINTAINER\\s*="}},
+  {label: "Every recipe has a SUMMARY", title: "Recipes describe themselves", id: "recipe-summary", severity: "info",
+   why: "The summary appears in package lists, SBOMs and the image explorer.", fix: 'Add SUMMARY = "…" to the recipe.',
+   check: {type: "files-must-match", files: "*.bb", pattern: "^SUMMARY\\s*="}},
+  {label: "No internal host names", title: "No internal host names in the metadata", id: "no-internal-hosts", severity: "error",
+   why: "Layers are shared with customers and suppliers.", fix: "Use a variable set in site.conf or a mirror instead.",
+   check: {type: "files-must-not-match", files: "*.bb", pattern: "\\.internal\\b"}},
+  {label: "Each layer has CODEOWNERS", title: "Layers name their owners", id: "codeowners", severity: "info",
+   why: "Reviews go to the right people.", fix: "Add a CODEOWNERS file at the top of the layer.",
+   check: {type: "layer-file-exists", path: "CODEOWNERS"}},
+  {label: "Products build our distribution", title: "Products build the company distribution", id: "company-distro", severity: "error",
+   why: "Our distribution carries the security and licence policies.", fix: 'Set DISTRO = "acme" in the kas file or auto.conf.',
+   check: {type: "variable", name: "DISTRO", op: "equals", value: "acme"}},
+  {label: "A distro feature is required", title: "seccomp is enabled", id: "seccomp", severity: "warning",
+   why: "Our security baseline requires it.", fix: 'Add DISTRO_FEATURES:append = " seccomp" to the distribution.',
+   check: {type: "variable", name: "DISTRO_FEATURES", op: "contains", value: "seccomp"}},
+];
+let prStep = 1, prIdTouched = false;
+const ruleType = () => (document.querySelector('#pr-form input[name="prf-type"]:checked') || {}).value || "";
+const slug = (text) => text.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").slice(0, 40).replace(/^-+|-+$/g, "");
+let prTemplate = null;
+function ruleFromForm() {
+  const type = ruleType(), check = {type};
+  for (const key of {"files-must-match": ["files", "pattern"], "files-must-not-match": ["files", "pattern"], "layer-file-exists": ["path"], variable: ["name", "op", "value"]}[type] || []) check[key] = $("prf-" + key).value.trim();
+  return {id: $("prf-id").value.trim(), title: $("prf-title").value.trim(), category: $("prf-category").value.trim() || "Company", severity: $("prf-severity").value,
+          why: $("prf-why").value.trim(), fix: $("prf-fix").value.trim(), check};
+}
+function plainRule() {
+  const r = ruleFromForm(), c = r.check, out = $("prw-plain"); out.textContent = "";
+  if (!c.type) return;
+  const sev = {error: "An error", warning: "A warning", info: "A suggestion"}[r.severity];
+  const code = (text, fallback) => text ? el("code", {text}) : el("em", {text: fallback});
+  const parts = c.type === "files-must-match" ? [sev, " for every ", code(c.files, "file"), " file in your layers without a line matching ", code(c.pattern, "…"), "."]
+    : c.type === "files-must-not-match" ? [sev, " for every line matching ", code(c.pattern, "…"), " in ", code(c.files, "files"), " of your layers."]
+    : c.type === "layer-file-exists" ? [sev, " for each of your layers without ", code(c.path, "the file"), "."]
+    : [sev, " unless ", code(c.name, "the variable"), {set: " is set", unset: " is not set at all", equals: " is exactly ", contains: " contains the word ", "not-contains": " does not contain the word "}[c.op],
+       ...(["set", "unset"].includes(c.op) ? [] : [code(c.value, "…")]), " in your configuration."];
+  out.append(...parts);
+}
+function syncRuleForm() {
+  const type = ruleType();
+  for (const node of document.querySelectorAll("#pr-form [data-for]")) node.hidden = !node.dataset.for.split(" ").includes(type);
+  $("prf-value-field").hidden = type !== "variable" || ["set", "unset"].includes($("prf-op").value);
+  $("prf-pattern-label").textContent = type === "files-must-not-match" ? "Text that must not appear" : "Text each file must contain";
+  plainRule();
+}
+function ruleStep(step) {
+  prStep = step;
+  for (const page of document.querySelectorAll("#pr-form .prw-page")) page.hidden = Number(page.dataset.page) !== step;
+  for (const button of document.querySelectorAll("#prw-steps button")) {
+    const n = Number(button.dataset.step);
+    if (n === step) button.setAttribute("aria-current", "step"); else button.removeAttribute("aria-current");
+    button.classList.toggle("done", n < step);
+  }
+  $("prf-back").hidden = step === 1; $("prf-next").hidden = step === 3; $("prf-save").hidden = step !== 3; $("prf-error").textContent = "";
+  syncRuleForm();
+  const first = document.querySelector(`#pr-form .prw-page[data-page="${step}"] :is(input:not([type=radio]):not([hidden]), select)`);
+  if (step === 1) (document.querySelector('#pr-form input[name="prf-type"]:checked') || document.querySelector("#prw-templates button")).focus();
+  else if (first && !first.closest("[hidden]")) first.focus();
+}
+function ruleStepError(step) {
+  const r = ruleFromForm(), c = r.check;
+  if (step >= 1 && !c.type) return "Choose an example or a kind of check.";
+  if (step >= 2) {
+    if (c.type.startsWith("files") && !c.files) return "Say which files to look at (for example *.bb).";
+    if (c.type.startsWith("files") && !c.pattern) return "Say what text to look for.";
+    if (c.type === "layer-file-exists" && !c.path) return "Name the file each layer must have.";
+    if (c.type === "variable" && !c.name) return "Name the variable.";
+    if (c.type === "variable" && !["set", "unset"].includes(c.op) && !c.value) return "Give the value to compare with.";
+  }
+  if (step >= 3 && !r.title) return "Give the rule a title.";
+  if (step >= 3 && !/^[a-z0-9][a-z0-9-]{1,40}$/.test(r.id)) return "The id uses lowercase letters, digits and hyphens (at least two characters).";
+  return "";
+}
+function ruleGo(step) {
+  const error = step > prStep ? ruleStepError(Math.min(step - 1, 2)) : "";
+  if (error) { $("prf-error").textContent = "✖ " + error; return; }
+  ruleStep(step);
+}
+function fillRule(rule) {
+  const check = rule.check || {};
+  for (const radio of document.querySelectorAll('#pr-form input[name="prf-type"]')) radio.checked = radio.value === check.type;
+  for (const key of ["files", "pattern", "path", "name", "value"]) $("prf-" + key).value = check[key] || "";
+  $("prf-op").value = check.op || "set";
+  $("prf-title").value = rule.title || ""; $("prf-id").value = rule.id || ""; $("prf-category").value = rule.category || "Company";
+  $("prf-severity").value = rule.severity || "warning"; $("prf-why").value = rule.why || ""; $("prf-fix").value = rule.fix || "";
+  $("prf-try-list").textContent = ""; $("prf-try-sum").textContent = "Runs the check now, without saving.";
+}
+function openRuleDialog(rule = null) {
+  prEditing = rule; prIdTouched = !!rule;
+  fillRule(rule || {category: "Company", severity: "warning"});
+  $("pr-dialog-title").textContent = rule ? "Edit company rule" : "New company rule";
+  $("prf-id").readOnly = !!rule; $("prf-delete").hidden = !rule;
+  const host = $("prw-templates"); host.textContent = "";
+  for (const t of RULE_TEMPLATES) host.append(el("button", {type: "button", text: t.label, onclick: () => { fillRule({...t, category: "Company"}); prTemplate = t; prIdTouched = false; ruleStep(2); }}));
+  prTemplate = null;
+  $("pr-dialog").showModal(); ruleStep(rule ? 2 : 1);
+}
+async function tryRule() {
+  const error = ruleStepError(2), list = $("prf-try-list"), sum = $("prf-try-sum");
+  if (error) { $("prf-error").textContent = "✖ " + error; return; }
+  const rule = ruleFromForm();
+  sum.className = "hint"; sum.textContent = "Checking…"; list.textContent = ""; $("prf-error").textContent = "";
+  try {
+    const result = await api("/api/practices/try", {method: "POST", body: JSON.stringify({profile: prof(), rule: {...rule, id: rule.id || "draft-rule", title: rule.title || "Draft"}})});
+    const layers = result.layers.join(", ") || "none";
+    if (result.status === "pass") { sum.className = "pass"; sum.textContent = `✔ Your project follows it (checked in ${layers}).`; }
+    else if (result.status === "n/a") { sum.className = "hint"; sum.textContent = `– Nothing to check: no matching files in your layers (${layers}). Check the file pattern.`; }
+    else {
+      sum.className = "fail"; sum.textContent = `▲ ${result.total} ${result.total === 1 ? "place does" : "places do"} not follow it${result.total > result.findings.length ? ` (first ${result.findings.length})` : ""}:`;
+      for (const f of result.findings) list.append(el("li", {}, el("code", {text: f.where, title: f.where}), el("span", {text: f.detail})));
+    }
+  } catch (err) { sum.className = "fail"; sum.textContent = "✖ " + err.message; }
+}
+async function saveRule(event) {
+  event.preventDefault();
+  if (event.submitter && event.submitter.value === "cancel") { $("pr-dialog").close(); return; }
+  const error = ruleStepError(3);
+  if (error) { $("prf-error").textContent = "✖ " + error; return; }
+  const rule = ruleFromForm();
+  const config = currentConfig();
+  config.rules = [...config.rules.filter((r) => r.id !== (prEditing ? prEditing.id : rule.id)), rule];
+  try { loadPractices(await api("/api/practices", {method: "POST", body: JSON.stringify({profile: prof(), rules: config.rules})})); $("pr-dialog").close(); toast("Rule saved", rule.title, "success"); }
+  catch (err) { $("prf-error").textContent = "✖ " + err.message; }
+}
+async function deleteRule() {
+  if (!prEditing || !confirm(`Delete the rule “${prEditing.title}”?`)) return;
+  const config = currentConfig(); config.rules = config.rules.filter((r) => r.id !== prEditing.id);
+  await savePractices({rules: config.rules}); $("pr-dialog").close();
 }
 
 /* Image explorer: the built root filesystem, file by file, with the package and recipe behind each */
@@ -2159,6 +2540,8 @@ function paletteEntries() {
   entries.push({label: "Build target", hint: "b", run: () => queue("build", {target: $("target").value})});
   entries.push({label: "Which recipe installs… (a file on the device or a package)", hint: "4", run: () => { setView("image"); setTimeout(() => $("img-find").focus(), 100); }});
   entries.push({label: "Explore the built image", hint: "4", run: () => setView("image")});
+  entries.push({label: "Best practices", hint: "7", run: () => setView("practices")});
+  entries.push({label: "Add a company rule (best practices)", hint: "7", run: () => { setView("practices"); openRuleDialog(); }});
   for (const profile of (state ? state.profiles : [])) {
     if (profile.name === $("profile").value) continue;
     entries.push({label: `Switch profile: ${profile.name}`, hint: profile.release || profile.mode || "", run: () => {
@@ -2219,6 +2602,29 @@ function wire() {
   $("stop-btn").addEventListener("click", () => control("stop"));
   $("graceful-btn").addEventListener("click", () => control("graceful"));
   $("retry-btn").addEventListener("click", () => control("retry"));
+  $("pr-recheck").addEventListener("click", () => loadPractices());
+  $("pr-export").addEventListener("click", exportPractices);
+  $("pr-add").addEventListener("click", () => openRuleDialog());
+  $("pr-form").addEventListener("submit", saveRule);
+  $("pr-form").addEventListener("input", syncRuleForm); $("pr-form").addEventListener("change", syncRuleForm);
+  for (const radio of document.querySelectorAll('#pr-form input[name="prf-type"]')) radio.addEventListener("change", () => {
+    // A different kind of check: the example's texts no longer describe it.
+    if (prTemplate && radio.value !== prTemplate.check.type) {
+      for (const [key, field] of [["title", "prf-title"], ["why", "prf-why"], ["fix", "prf-fix"], ["id", "prf-id"]]) if ($(field).value === prTemplate[key]) $(field).value = "";
+      for (const key of ["files", "pattern", "path", "name", "value"]) if ($("prf-" + key).value === (prTemplate.check[key] || "")) $("prf-" + key).value = "";
+      prTemplate = null; prIdTouched = false;
+    }
+  });
+  $("prf-title").addEventListener("input", () => { if (!prIdTouched && !prEditing) $("prf-id").value = slug($("prf-title").value); });
+  $("prf-id").addEventListener("input", () => { prIdTouched = true; });
+  $("prf-next").addEventListener("click", () => ruleGo(prStep + 1)); $("prf-back").addEventListener("click", () => ruleStep(prStep - 1));
+  for (const button of document.querySelectorAll("#prw-steps button")) button.addEventListener("click", () => ruleGo(Number(button.dataset.step)));
+  $("prf-try").addEventListener("click", tryRule);
+  for (const q of document.querySelectorAll("#pr-form .q")) q.addEventListener("click", () => { const help = $(q.getAttribute("aria-controls")); help.hidden = !help.hidden; q.setAttribute("aria-expanded", String(!help.hidden)); });
+  for (const box of document.querySelectorAll("#pr-form .ex")) for (const b of box.querySelectorAll("button")) b.addEventListener("click", () => { const input = $(box.dataset.into); input.value = b.textContent; input.focus(); syncRuleForm(); });
+  $("pr-form").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "radio") { e.preventDefault(); if (prStep < 3) ruleGo(prStep + 1); else $("pr-form").requestSubmit(); } });
+  $("prf-delete").addEventListener("click", deleteRule);
+  $("prf-title").addEventListener("input", () => { if (!prEditing) $("prf-id").value = $("prf-title").value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40); });
   $("img-pick").addEventListener("change", () => { imgSelected = null; chooseImage(imgList[Number($("img-pick").value)]); });
   $("img-find-btn").addEventListener("click", () => whoInstalls());
   $("img-find").addEventListener("keydown", (event) => { if (event.key === "Enter") whoInstalls(); });
@@ -2301,7 +2707,7 @@ function wire() {
     if (typing || document.querySelector("dialog[open]") || event.ctrlKey || event.metaKey || event.altKey) return;
     const tabs = {o: "output", u: "summary", w: "warnings", m: "timings", d: "compare"};
     const handled = () => event.preventDefault();
-    if (/^[1-7]$/.test(event.key)) { setView(VIEWS[Number(event.key) - 1]); handled(); }
+    if (/^[1-8]$/.test(event.key)) { setView(VIEWS[Number(event.key) - 1]); handled(); }
     else if (event.key === "/") { const input = document.querySelector(`#view-${view} input[type=search]`); if (input) { input.focus(); handled(); } }
     else if (event.key === "?") { $("keys-dialog").showModal(); handled(); }
     else if (event.key === "b") { queue("build", {target: $("target").value}); handled(); }
