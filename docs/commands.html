@@ -14,12 +14,12 @@
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
-<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html" aria-current="page">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html" aria-current="page">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Reference</div>
 <article class="doc"><h1 id="command-reference">Command reference</h1>
 <p>All actions use the selected profile/runtime. Required inputs appear in the command dialog.
-Commands may require classes or options supplied by your selected Yocto release. The Release column shows the Yocto series window; outside it the TUI, web dashboard and <code>--ci</code> explain what is missing and suggest the alternative.</p>
+Some operations need a capability of the project's Yocto release (see <a href="#release-capabilities">Release capabilities</a>). Bitloom checks it in the project itself (the class in its layers, the tool in its BitBake) and falls back to the release number; where it is missing the TUI, the web dashboard and <code>--ci</code> refuse the operation, say why and name the one to use instead.</p>
 <table>
 <thead>
 <tr>
@@ -28,7 +28,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <th>Operation</th>
 <th>Required input</th>
 <th>Tool / arguments</th>
-<th>Release</th>
+<th>Needs</th>
 </tr>
 </thead>
 <tbody>
@@ -38,7 +38,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build target</td>
 <td>target</td>
 <td><code>bitbake</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dry-run</code></td>
@@ -46,7 +46,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Dry run</td>
 <td>target</td>
 <td><code>bitbake -n</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>parse</code></td>
@@ -54,7 +54,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Parse metadata</td>
 <td>—</td>
 <td><code>bitbake -p</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>fetch</code></td>
@@ -62,7 +62,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Fetch recipe sources</td>
 <td>target</td>
 <td><code>bitbake -c fetch</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>fetch-all</code></td>
@@ -70,7 +70,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Fetch all target dependencies</td>
 <td>target</td>
 <td><code>bitbake --runall=fetch</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>unpack</code></td>
@@ -78,7 +78,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Unpack recipe</td>
 <td>target</td>
 <td><code>bitbake -c unpack</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>patch</code></td>
@@ -86,7 +86,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Apply recipe patches</td>
 <td>target</td>
 <td><code>bitbake -c patch</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>configure</code></td>
@@ -94,7 +94,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Configure recipe</td>
 <td>target</td>
 <td><code>bitbake -c configure</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>compile</code></td>
@@ -102,7 +102,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Compile recipe</td>
 <td>target</td>
 <td><code>bitbake -c compile</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>force-compile</code></td>
@@ -110,7 +110,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Force compile</td>
 <td>target</td>
 <td><code>bitbake -f -c compile</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>install</code></td>
@@ -118,7 +118,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Install recipe</td>
 <td>target</td>
 <td><code>bitbake -c install</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>package</code></td>
@@ -126,7 +126,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Package recipe</td>
 <td>target</td>
 <td><code>bitbake -c package</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>rootfs</code></td>
@@ -134,7 +134,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build root filesystem</td>
 <td>target</td>
 <td><code>bitbake -c rootfs</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>sdk</code></td>
@@ -142,7 +142,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build SDK</td>
 <td>target</td>
 <td><code>bitbake -c populate_sdk</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>esdk</code></td>
@@ -150,7 +150,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build extensible SDK</td>
 <td>target</td>
 <td><code>bitbake -c populate_sdk_ext</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>task</code></td>
@@ -158,7 +158,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Run custom task</td>
 <td>target, task</td>
 <td><code>bitbake</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>clean</code></td>
@@ -166,7 +166,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Clean recipe work directory</td>
 <td>target</td>
 <td><code>bitbake -c clean</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>cleansstate</code></td>
@@ -174,7 +174,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Clean recipe + sstate</td>
 <td>target</td>
 <td><code>bitbake -c cleansstate</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>cleanall</code></td>
@@ -182,7 +182,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Clean recipe + sstate + downloads</td>
 <td>target</td>
 <td><code>bitbake -c cleanall</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>environment</code></td>
@@ -190,7 +190,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Resolve recipe environment</td>
 <td>target</td>
 <td><code>bitbake -e</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>tasks</code></td>
@@ -198,7 +198,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>List recipe tasks</td>
 <td>target</td>
 <td><code>bitbake -c listtasks</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>graph</code></td>
@@ -206,7 +206,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Generate dependency graph</td>
 <td>target</td>
 <td><code>bitbake -g</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>signatures</code></td>
@@ -214,7 +214,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Dump signatures</td>
 <td>target</td>
 <td><code>bitbake -S none</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>sig-diff</code></td>
@@ -222,7 +222,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Explain sstate differences</td>
 <td>target</td>
 <td><code>bitbake -S printdiff</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>layers</code></td>
@@ -230,7 +230,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Show layers and priorities</td>
 <td>—</td>
 <td><code>bitbake-layers show-layers</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>recipes</code></td>
@@ -238,7 +238,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Show recipes</td>
 <td>—</td>
 <td><code>bitbake-layers show-recipes</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>appends</code></td>
@@ -246,7 +246,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Show recipe appends</td>
 <td>—</td>
 <td><code>bitbake-layers show-appends</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>overlay</code></td>
@@ -254,7 +254,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Show overlaid recipes</td>
 <td>—</td>
 <td><code>bitbake-layers show-overlayed</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>layer-add</code></td>
@@ -262,7 +262,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Add layer</td>
 <td>path</td>
 <td><code>bitbake-layers add-layer</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>layer-remove</code></td>
@@ -270,7 +270,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Remove layer</td>
 <td>path</td>
 <td><code>bitbake-layers remove-layer</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>layer-create</code></td>
@@ -278,7 +278,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Create layer</td>
 <td>path</td>
 <td><code>bitbake-layers create-layer</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>layer-depends</code></td>
@@ -286,7 +286,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Show cross-layer dependencies</td>
 <td>—</td>
 <td><code>bitbake-layers show-cross-depends</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-status</code></td>
@@ -294,7 +294,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Workspace status</td>
 <td>—</td>
 <td><code>devtool status</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-modify</code></td>
@@ -302,7 +302,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Modify recipe</td>
 <td>target</td>
 <td><code>devtool modify</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-add</code></td>
@@ -310,7 +310,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Add source as recipe</td>
 <td>target, path</td>
 <td><code>devtool add</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-build</code></td>
@@ -318,7 +318,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build workspace recipe</td>
 <td>target</td>
 <td><code>devtool build</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-image</code></td>
@@ -326,7 +326,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build image with workspace recipes</td>
 <td>target</td>
 <td><code>devtool build-image</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-reset</code></td>
@@ -334,7 +334,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Reset workspace recipe</td>
 <td>target</td>
 <td><code>devtool reset</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-finish</code></td>
@@ -342,7 +342,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Finish recipe into layer</td>
 <td>target, path</td>
 <td><code>devtool finish</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-update</code></td>
@@ -350,7 +350,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Update recipe from source</td>
 <td>target</td>
 <td><code>devtool update-recipe</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-upgrade</code></td>
@@ -358,7 +358,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Upgrade recipe</td>
 <td>target</td>
 <td><code>devtool upgrade</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-latest</code></td>
@@ -366,7 +366,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Check upstream version</td>
 <td>target</td>
 <td><code>devtool latest-version</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-deploy</code></td>
@@ -374,7 +374,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Deploy to device</td>
 <td>target, device</td>
 <td><code>devtool deploy-target</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-undeploy</code></td>
@@ -382,7 +382,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Undeploy from device</td>
 <td>target, device</td>
 <td><code>devtool undeploy-target</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-config</code></td>
@@ -390,7 +390,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Configure help</td>
 <td>target</td>
 <td><code>devtool configure-help</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dev-upgrade-status</code></td>
@@ -398,7 +398,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Check recipe upgrade status</td>
 <td>target</td>
 <td><code>devtool check-upgrade-status</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>recipe-create</code></td>
@@ -406,7 +406,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Create recipe from URL/source</td>
 <td>source</td>
 <td><code>recipetool create</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>packages</code></td>
@@ -414,7 +414,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>List built packages</td>
 <td>—</td>
 <td><code>oe-pkgdata-util list-pkgs</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>package-files</code></td>
@@ -422,7 +422,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>List package files</td>
 <td>target</td>
 <td><code>oe-pkgdata-util list-pkg-files</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>find-path</code></td>
@@ -430,7 +430,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Find package owning a path</td>
 <td>path</td>
 <td><code>oe-pkgdata-util find-path</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>package-recipe</code></td>
@@ -438,7 +438,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Find recipe for package</td>
 <td>target</td>
 <td><code>oe-pkgdata-util lookup-recipe</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>license</code></td>
@@ -446,7 +446,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Generate SPDX SBOM</td>
 <td>target</td>
 <td><code>bitbake -c create_spdx</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>testimage</code></td>
@@ -454,7 +454,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Run image tests</td>
 <td>target</td>
 <td><code>bitbake -c testimage</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>ptest</code></td>
@@ -462,7 +462,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build ptest packages</td>
 <td>target</td>
 <td><code>bitbake -c compile_ptest_base</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>devshell</code></td>
@@ -470,7 +470,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Open recipe development shell</td>
 <td>target</td>
 <td><code>bitbake -c devshell</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>menuconfig</code></td>
@@ -478,7 +478,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Kernel menuconfig</td>
 <td>target</td>
 <td><code>bitbake -c menuconfig</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>qemu</code></td>
@@ -486,7 +486,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Boot image with QEMU</td>
 <td>target</td>
 <td><code>runqemu</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>kas-build</code></td>
@@ -494,7 +494,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Build kas configuration</td>
 <td>—</td>
 <td><code>kas build</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>kas-checkout</code></td>
@@ -502,7 +502,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Checkout kas repositories</td>
 <td>—</td>
 <td><code>kas checkout</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>kas-dump</code></td>
@@ -510,7 +510,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Dump resolved kas configuration</td>
 <td>—</td>
 <td><code>kas dump</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>kas-shell</code></td>
@@ -518,7 +518,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Open kas shell</td>
 <td>—</td>
 <td><code>kas shell</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>custom</code></td>
@@ -526,7 +526,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Custom command (argument list)</td>
 <td>command</td>
 <td><code>custom argv</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>getvar</code></td>
@@ -534,7 +534,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Resolve one BitBake variable</td>
 <td>variable</td>
 <td><code>bitbake-getvar</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>dumpsig</code></td>
@@ -542,7 +542,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Read signature file</td>
 <td>path</td>
 <td><code>bitbake-dumpsig</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>diffsigs</code></td>
@@ -550,7 +550,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Compare signature files</td>
 <td>path, path2</td>
 <td><code>bitbake-diffsigs</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>kernel-diff</code></td>
@@ -558,7 +558,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Export kernel config changes</td>
 <td>target</td>
 <td><code>bitbake -c diffconfig</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>kernel-fragments</code></td>
@@ -566,7 +566,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Validate kernel config fragments</td>
 <td>target</td>
 <td><code>bitbake -c kernel_configcheck</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>cve</code></td>
@@ -574,7 +574,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Run recipe CVE check (cve-check)</td>
 <td>target</td>
 <td><code>bitbake -c cve_check</code></td>
-<td>…whinlatter</td>
+<td><a href="#release-capabilities">cve-check</a></td>
 </tr>
 <tr>
 <td><code>kas-lock</code></td>
@@ -582,7 +582,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Generate kas lock file</td>
 <td>—</td>
 <td><code>kas lock</code></td>
-<td>any</td>
+<td>any release</td>
 </tr>
 <tr>
 <td><code>sbom-cve-recipe</code></td>
@@ -590,7 +590,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Recipe CVE analysis from its SBOM (sbom-cve-check)</td>
 <td>target</td>
 <td><code>bitbake -c sbom_cve_check_recipe</code></td>
-<td>wrynose+</td>
+<td><a href="#release-capabilities">sbom-cve-check-recipe</a></td>
 </tr>
 <tr>
 <td><code>recipe-sbom</code></td>
@@ -598,7 +598,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Create recipe SBOM (SPDX 3)</td>
 <td>target</td>
 <td><code>bitbake -c create_recipe_sbom</code></td>
-<td>wrynose+</td>
+<td><a href="#release-capabilities">recipe-sbom</a></td>
 </tr>
 <tr>
 <td><code>vex</code></td>
@@ -606,7 +606,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Generate VEX metadata</td>
 <td>target</td>
 <td><code>bitbake -c generate_vex</code></td>
-<td>any</td>
+<td><a href="#release-capabilities">vex</a></td>
 </tr>
 <tr>
 <td><code>sbom-cve-enable</code></td>
@@ -614,7 +614,7 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Enable sbom-cve-check for image builds</td>
 <td>—</td>
 <td><code>bitbake-config-build enable-fragment core/yocto/sbom-cve-check</code></td>
-<td>wrynose+</td>
+<td><a href="#release-capabilities">sbom-cve-check</a>, <a href="#release-capabilities">fragments</a></td>
 </tr>
 <tr>
 <td><code>sbom-cve-disable</code></td>
@@ -622,7 +622,47 @@ Commands may require classes or options supplied by your selected Yocto release.
 <td>Disable sbom-cve-check fragment</td>
 <td>—</td>
 <td><code>bitbake-config-build disable-fragment core/yocto/sbom-cve-check</code></td>
-<td>wrynose+</td>
+<td><a href="#release-capabilities">sbom-cve-check</a>, <a href="#release-capabilities">fragments</a></td>
+</tr>
+<tr>
+<td><code>fragments</code></td>
+<td>Setup</td>
+<td>List configuration fragments</td>
+<td>—</td>
+<td><code>bitbake-config-build list-fragments</code></td>
+<td><a href="#release-capabilities">fragments</a></td>
+</tr>
+<tr>
+<td><code>fragment-enable</code></td>
+<td>Setup</td>
+<td>Enable a configuration fragment</td>
+<td>fragment</td>
+<td><code>bitbake-config-build enable-fragment</code></td>
+<td><a href="#release-capabilities">fragments</a></td>
+</tr>
+<tr>
+<td><code>fragment-disable</code></td>
+<td>Setup</td>
+<td>Disable a configuration fragment</td>
+<td>fragment</td>
+<td><code>bitbake-config-build disable-fragment</code></td>
+<td><a href="#release-capabilities">fragments</a></td>
+</tr>
+<tr>
+<td><code>setup-status</code></td>
+<td>Setup</td>
+<td>bitbake-setup: compare with upstream</td>
+<td>—</td>
+<td><code>bitbake-setup status</code></td>
+<td><a href="#release-capabilities">bitbake-setup</a></td>
+</tr>
+<tr>
+<td><code>setup-update</code></td>
+<td>Setup</td>
+<td>bitbake-setup: update layers and configuration</td>
+<td>—</td>
+<td><code>bitbake-setup update</code></td>
+<td><a href="#release-capabilities">bitbake-setup</a></td>
 </tr>
 </tbody>
 </table>
@@ -641,12 +681,129 @@ Custom task adds <code>-c TASK</code> after the target. kas commands append the 
 <li><strong>Create recipe SBOM (SPDX 3):</strong> Recipe-level SBOM used by sbom-cve-check-recipe.</li>
 <li><strong>Generate VEX metadata:</strong> Requires INHERIT += &quot;vex&quot;. Produces per-recipe and image VEX reports in DEPLOY_DIR_IMAGE.</li>
 <li><strong>Enable sbom-cve-check for image builds:</strong> Every image build then analyses its SPDX 3 SBOM for CVEs. Reports go to DEPLOY_DIR_IMAGE.</li>
+<li><strong>List configuration fragments:</strong> Fragments are named pieces of configuration (machine/…, distro/…, core/yocto/…) enabled in conf/toolcfg.conf.</li>
+<li><strong>Enable a configuration fragment:</strong> Appends the fragment to OE_FRAGMENTS in build/conf/toolcfg.conf, for example core/yocto/sstate-mirror-cdn.</li>
+<li><strong>bitbake-setup: compare with upstream:</strong> Shows how this bitbake-setup workspace differs from its configuration template and upstream layers.</li>
+<li><strong>bitbake-setup: update layers and configuration:</strong> Brings the workspace to its template: updates layer checkouts and, after asking, the build configuration.</li>
 </ul>
+<h2 id="release-capabilities">Release capabilities<a class="anchor" href="#release-capabilities" aria-label="Link to this section">#</a></h2>
+<p>One registry (<code>bitloom/capabilities.py</code>) decides what the project's Yocto release can do. Operations, SBOM and CRA settings, the CRA checks and Studio all ask it. <strong>Evidence</strong> is looked for in the project first; the release window is used only when the layers or BitBake are not visible from Bitloom. Configuration shows the answer for the active project (web: <em>What this release can do</em>).</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>What it is</th>
+<th>Releases</th>
+<th>Evidence in the project</th>
+<th>Otherwise use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spdx2</code></td>
+<td>SPDX 2.2 SBOMs (create-spdx-2.2)</td>
+<td>up to whinlatter 5.3</td>
+<td><code>create-spdx-2.2.bbclass</code> in its layers</td>
+<td><code>spdx3</code></td>
+</tr>
+<tr>
+<td><code>spdx3</code></td>
+<td>SPDX 3.0 SBOMs (create-spdx-3.0)</td>
+<td>styhead 5.1+</td>
+<td><code>create-spdx-3.0.bbclass</code> in its layers</td>
+<td><code>spdx2</code></td>
+</tr>
+<tr>
+<td><code>spdx-supplier-3</code></td>
+<td>SBOM supplier variables SPDX_PACKAGE_SUPPLIER / SPDX_IMAGE_SUPPLIER</td>
+<td>styhead 5.1+</td>
+<td><code>create-spdx-3.0.bbclass</code> in its layers</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>cve-check</code></td>
+<td>cve-check class</td>
+<td>up to whinlatter 5.3</td>
+<td><code>cve-check.bbclass</code> in its layers</td>
+<td><code>sbom-cve-check</code></td>
+</tr>
+<tr>
+<td><code>sbom-cve-check</code></td>
+<td>sbom-cve-check on image SBOMs</td>
+<td>wrynose 6.0+</td>
+<td><code>sbom-cve-check.bbclass</code> in its layers</td>
+<td><code>cve-check</code></td>
+</tr>
+<tr>
+<td><code>sbom-cve-check-recipe</code></td>
+<td>sbom-cve-check for one recipe</td>
+<td>wrynose 6.0+</td>
+<td><code>sbom-cve-check-recipe.bbclass</code> in its layers</td>
+<td><code>cve-check</code></td>
+</tr>
+<tr>
+<td><code>recipe-sbom</code></td>
+<td>Recipe SBOM task (do_create_recipe_sbom)</td>
+<td>wrynose 6.0+</td>
+<td><code>sbom-cve-check-recipe.bbclass</code> in its layers</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>vex</code></td>
+<td>VEX metadata class</td>
+<td>styhead 5.1+</td>
+<td><code>vex.bbclass</code> in its layers</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>fragments</code></td>
+<td>Configuration fragments (bitbake-config-build)</td>
+<td>walnascar 5.2+</td>
+<td><code>bitbake-config-build</code> in its BitBake</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>bitbake-setup</code></td>
+<td>bitbake-setup workspaces</td>
+<td>where the tool exists</td>
+<td><code>bitbake-setup</code> in its BitBake; a bitbake-setup workspace</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>unpackdir</code></td>
+<td>Sources unpacked in UNPACKDIR (before 5.1 recipes read files from WORKDIR)</td>
+<td>styhead 5.1+</td>
+<td>release only</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>image-access-split</code></td>
+<td>allow-empty-password, empty-root-password, allow-root-login (before 5.1 a single debug-tweaks feature)</td>
+<td>styhead 5.1+</td>
+<td>release only</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>debug-tweaks</code></td>
+<td>debug-tweaks image feature</td>
+<td>up to scarthgap 5.0</td>
+<td>release only</td>
+<td><code>image-access-split</code></td>
+</tr>
+<tr>
+<td><code>systemd-default</code></td>
+<td>systemd as the default init manager</td>
+<td>wrynose 6.0+</td>
+<td>release only</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
 </article>
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="developer.html"><small>Previous</small>Developer workbench</a><a class="next" href="validation.html"><small>Next</small>Validation</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/commands.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#action-specific-requirements">Action-specific requirements</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#action-specific-requirements">Action-specific requirements</a><a href="#release-capabilities">Release capabilities</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

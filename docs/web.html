@@ -14,7 +14,7 @@
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
-<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html" aria-current="page">Web dashboard</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html" aria-current="page">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
 <article class="doc"><h1 id="web-dashboard">Web dashboard</h1>
@@ -59,18 +59,23 @@ bitloom --web --config .bitloom/profiles.json --state .bitloom
 </tr>
 <tr>
 <td><code>4</code></td>
-<td>SBOM &amp; CRA</td>
-<td>Release support, SBOM quality gauges, VEX status, vulnerabilities from cve-check, sbom-cve-check and Grype, CRA readiness checks, the regulation timeline and every SBOM option with its explanation. See <a href="compliance.html">SBOM, CRA and releases</a>.</td>
+<td>Image</td>
+<td>The built root filesystem, folder by folder, with sizes and the package and recipe behind every file; the biggest packages and folders; <em>Which recipe installs…</em> for any file or package, with <em>Change it with an append</em>. See <a href="image.html">Image explorer</a>.</td>
 </tr>
 <tr>
 <td><code>5</code></td>
-<td>Studio</td>
-<td>Create a product layer, distribution, machine, image, recipe or append one step at a time: every option explained, where the files go and their content shown live, a review before anything is written, and what to do next. See <a href="studio.md">Studio</a>.</td>
+<td>SBOM &amp; CRA</td>
+<td>Release support, SBOM quality gauges, VEX status, vulnerabilities from cve-check, sbom-cve-check and Grype, CRA readiness checks, the regulation timeline and every SBOM option with its explanation. See <a href="compliance.md">SBOM, CRA and releases</a>.</td>
 </tr>
 <tr>
 <td><code>6</code></td>
+<td>Studio</td>
+<td>Create a product layer, distribution, machine, image, recipe or append one step at a time: every option explained, where the files go and their content shown live, a review before anything is written, and what to do next. See <a href="studio.html">Studio</a>.</td>
+</tr>
+<tr>
+<td><code>7</code></td>
 <td>Configuration</td>
-<td>Projects (recent, new, clone), guided project setup, health checks, setup checks and literal <code>local.conf</code> values. See <a href="projects.html">Projects</a>.</td>
+<td>Projects (recent, new, clone), guided project setup, <em>What this release can do</em> (every release-dependent feature, ✔ or ✖ with the reason, checked in the project), health checks, setup checks and literal <code>local.conf</code> values. See <a href="projects.md">Projects</a>.</td>
 </tr>
 </tbody>
 </table>
@@ -221,7 +226,7 @@ bitloom --web --config .bitloom/profiles.json --state .bitloom
 </table>
 <details class="shot"><summary><span>Animation</span> Animated tour of the web dashboard</summary><div class="shot-body"><img src="assets/web-tour.gif" alt="Animated tour of the web dashboard" loading="lazy" decoding="async"></div></details>
 </article>
-<nav class="pager" aria-label="Previous and next page"><a class="prev" href="keyboard.html"><small>Previous</small>Keyboard</a><a class="next" href="compliance.html"><small>Next</small>SBOM, CRA and releases</a></nav>
+<nav class="pager" aria-label="Previous and next page"><a class="prev" href="keyboard.html"><small>Previous</small>Keyboard</a><a class="next" href="image.html"><small>Next</small>Image explorer</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/web.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
 <aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#start-it">Start it</a><a href="#remote-access" class="sub">Remote access</a><a href="#sections">Sections</a><a href="#build-target">Build target</a><a href="#notifications-and-animations">Notifications and animations</a><a href="#keyboard">Keyboard</a><a href="#phone-and-narrow-windows">Phone and narrow windows</a><a href="#api">API</a></aside>

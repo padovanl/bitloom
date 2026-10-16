@@ -83,7 +83,7 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 2.4 | `5` Caches, `s` (scan), then `w` (tmp/work). | Downloads: about 1000 files and 14 GiB, `.done` markers hidden and counted. tmp/work: about 60 GiB per recipe, largest first, with rm_work advice (≈7 s). |
 | 2.5 | `6` Artifacts, then `m`, `s`, `i`. | Image matrix per MACHINE; SBOM quality (SPDX 3.0.1, 37 installed packages, PURL/licence 100%); rootfs inventory of the newest image. |
 | 2.6 | `1` Builds, `c` (console builds). | Every BitBake run of this build directory, also those started outside Bitloom, each marked success, failed or interrupted. Enter opens one in Builds. |
-| 2.7 | Web: `2` Recipes, `3` Task logs, `4` SBOM & CRA. | The same data in the browser; the SBOM gauges animate. |
+| 2.7 | Web: `2` Recipes, `3` Task logs, `4` Image, `5` SBOM & CRA. | The same data in the browser; the SBOM gauges animate. |
 
 ### Stage 3 — First real jobs, followed in both interfaces (≈1 minute of builds)
 
@@ -137,7 +137,7 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 7.1 | `2`, `c` (Studio), choose *Application recipe*. Layer *new layer…* `meta-tour`, name `tour-hello`, build system `make`. | The preview lists every file: layer.conf, licence, Makefile, `tour-hello_1.0.bb`. |
 | 7.2 | `^O` (create, use for this profile). | Files written; `kas-studio-meta-tour.yml` appended to the profile's kas files; target set to `tour-hello`. |
 | 7.3 | `b`. | ≈45 s on Wrynose (≈75 s on Scarthgap): the recipe builds; the new layer appears in Recipes. |
-| 7.4 | Web: `5` Studio, *Distribution*. | Live preview of `conf/distro/acme.conf`; nothing is written until *Create files*. |
+| 7.4 | Web: `6` Studio, *Distribution*. | Live preview of `conf/distro/acme.conf`; nothing is written until *Create files*. |
 | 7.5 | Clean up when done: `F4`, remove `:kas-studio-meta-tour.yml` from `kas_file`, `^O`; delete `meta-tour/` and the overlay. | The profile builds the plain image again. |
 
 ### Stage 8 — SBOM, CVE and CRA (no builds)
@@ -150,14 +150,26 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 8.4 | `9`, `c` (CRA readiness). | Every check from real evidence; *Unpatched vulnerabilities* warns; dispositions now count your review. |
 | 8.5 | `9`, `s` (SBOM settings). Move through the options; `Esc` (do not apply). | Each option explains itself; *Generate SPDX SBOMs* shows *on (default)* on Wrynose; on `kas-scarthgap` the Wrynose-only options show *n/a*. |
 | 8.6 | `P` → `kas-scarthgap`, `F2`, type `sbom-cve`. | *(not in this release)* with the Scarthgap alternative (cve-check). |
-| 8.7 | Web: `4`, Export menu → *Markdown report*. | The same report downloads. |
+| 8.7 | Web: `5`, Export menu → *Markdown report*. | The same report downloads. |
+
+### Stage 8b — The image, file by file, and what each release can do (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8b.1 | Web on `kas-wrynose`: `4` (Image). | *core-image-minimal · qemux86-64* from its `tar.bz2`: ≈29 MiB on the device, ≈370 files, ≈34 packages; biggest package the kernel image (≈13 MiB), then `libcrypto3 · openssl`, `libc6 · glibc`; biggest folders `/boot`, `/usr`, `/lib`. |
+| 8b.2 | Open `etc`, select `motd`. | `base-files 3.0.14`, layer *meta · upstream*, in *core-image-minimal (pulled in by packagegroup-core-boot)*, the existing appends in meta-poky and meta-selftest, the text of the file, and the advice to add a `base-files_%.bbappend` to your layer. |
+| 8b.3 | *Change it with an append*. `Esc` at the end without creating. | Studio opens a *Recipe append* already filled in: `base-files`, `recipes-core`, file `motd`; the planned `files/motd` holds the current device text (toast *Starting from the device's file*). |
+| 8b.4 | Type `libc6` in *Which recipe installs…*, Enter; then select `/etc/passwd`. | `libc6` is the renamed `glibc` package, pulled in by busybox, eudev, kmod…; `/etc/passwd` is in no package, with the explanation (useradd, `EXTRA_USERS_PARAMS`). |
+| 8b.5 | TUI: `7`, choose *Which recipe installs…*, type `/etc/inittab`, `a`. Then in a shell: `bitloom --config .validation/profiles.json --state .validation --who-installs /etc/inittab`. | Both answer `sysvinit-inittab`, its recipe file, layer, image, and *add recipes-core/sysvinit-inittab/sysvinit-inittab_%.bbappend to your layer*. |
+| 8b.6 | Web `7`: *What this release can do*, on `kas-wrynose` then `kas-scarthgap`. | Wrynose: ✔ SPDX 3.0, sbom-cve-check, VEX, configuration fragments; ✖ cve-check (*use sbom-cve-check*), bitbake-setup (*not set up with bitbake-setup*). Scarthgap: ✔ SPDX 2.2, cve-check, debug-tweaks; ✖ VEX (*vex.bbclass is not in this project's layers*), fragments (*bitbake-config-build is not in this project's BitBake*). |
+| 8b.7 | On `kas-scarthgap`: `q`, *Generate VEX metadata*, target `busybox`. | Refused before queueing, with the same reason; nothing enters the history. |
 
 ### Stage 9 — Projects, setup and notifications (no builds)
 
 | # | Do | You should see |
 | --- | --- | --- |
 | 9.1 | `9`, `w` (projects). | Recent projects; the active one marked *active*. |
-| 9.2 | `o`, Enter on the project folder (the Bitloom checkout). Then `o` again with `~/bitloom-kas-wrynose`. | The checkout: kas proposals for `kas-minimal.yml` and `kas-wrynose.yml` with evidence. The work directory: only a host proposal, marked as the kas work directory of `kas-wrynose` with a warning to switch with `P` instead. `Esc` without saving. Web: `6` → *Set up a project* shows the same. |
+| 9.2 | `o`, Enter on the project folder (the Bitloom checkout). Then `o` again with `~/bitloom-kas-wrynose`. | The checkout: kas proposals for `kas-minimal.yml` and `kas-wrynose.yml` with evidence. The work directory: only a host proposal, marked as the kas work directory of `kas-wrynose` with a warning to switch with `P` instead. `Esc` without saving. Web: `7` → *Set up a project* shows the same. |
 | 9.3 | `n` (new project). | Release, MACHINE, image and runtime fields with a live preview; `Esc` without creating. |
 | 9.4 | `9`, `o`, `^T`. | A test notification arrives. |
 
@@ -634,6 +646,11 @@ The following ledger is generated from the current ACTIONS list. Match each titl
 | CMD072 / `vex` | Generate VEX metadata | target=busybox | V03 (vex class enabled) | do_generate_vex runs when the class is inherited; otherwise the probe explains it is unavailable. | TODO |
 | CMD073 / `sbom-cve-enable` | Enable sbom-cve-check for image builds | none | V03 on kas-wrynose | bitbake-config-build enables the fragment; the next image build writes sbom-cve-check reports. | TODO |
 | CMD074 / `sbom-cve-disable` | Disable sbom-cve-check fragment | none | after CMD073 | The fragment is disabled again. | TODO |
+| CMD075 / `fragments` | List configuration fragments | none | kas-wrynose | bitbake-config-build lists the fragments and the enabled ones. On kas-scarthgap: refused, "bitbake-config-build is not in this project's BitBake". | TODO |
+| CMD076 / `fragment-enable` | Enable a configuration fragment | fragment=core/yocto/sstate-mirror-cdn | kas-wrynose | OE_FRAGMENTS in build/conf/toolcfg.conf gains the fragment; `rm -rf` as fragment is refused before queueing. | TODO |
+| CMD077 / `fragment-disable` | Disable a configuration fragment | fragment=core/yocto/sstate-mirror-cdn | after CMD076 | The fragment is removed from OE_FRAGMENTS. | TODO |
+| CMD078 / `setup-status` | bitbake-setup: compare with upstream | none | a bitbake-setup workspace (see the guided setup case) | Shows the differences with the template; on a kas profile refused with "not set up with bitbake-setup"; on Scarthgap refused because its BitBake has no bitbake-setup. | TODO |
+| CMD079 / `setup-update` | bitbake-setup: update layers and configuration | none | a bitbake-setup workspace | Interactive: updates the layer checkouts and asks before changing the build configuration. | TODO |
 
 Rows are not a single destructive execution sequence. Recreate the relevant workspace state before devtool finish/reset/update/upgrade, and choose actual signature/artifact paths where requested. Mark direct hardware and unsupported runtime tests N/A with prerequisites recorded.
 
@@ -805,7 +822,7 @@ On `demo-scarthgap` (or `kas-scarthgap`): `F2`, type `sbom`, `↓` to *Recipe CV
 
 ### V04 — CRA readiness
 
-`9`, `c` and `bitloom --cra --config … --state …`. Expected: the release support line, SBOM/identifier/licence/VEX/analysis/traceability/disposition/reproducibility checks, the 2026-09-11 and 2027-12-11 milestones and the EN 40000-1-3 note; `--cra` exits 2 when any check warns. The web SBOM & CRA section (`4`) shows the same checks with gauges.
+`9`, `c` and `bitloom --cra --config … --state …`. Expected: the release support line, SBOM/identifier/licence/VEX/analysis/traceability/disposition/reproducibility checks, the 2026-09-11 and 2027-12-11 milestones and the EN 40000-1-3 note; `--cra` exits 2 when any check warns. The web SBOM & CRA section (`5`) shows the same checks with gauges.
 
 ### N01 — Studio: your own distribution
 
@@ -813,7 +830,7 @@ On `demo-scarthgap` (or `kas-scarthgap`): `F2`, type `sbom`, `↓` to *Recipe CV
 
 ### N02 — Studio on a kas profile and in the browser
 
-On `kas-scarthgap`, create a *Product layer* `meta-acme`, then an *Image recipe* in it. Expected: `kas-studio-meta-acme.yml` appended to `kas_file` with the layer as a repository and `target: acme-image`; `b` builds it after a kas build registers the layer. In the web Studio (`5`) the same forms preview live; *Create files* raises a toast with a *Build* button.
+On `kas-scarthgap`, create a *Product layer* `meta-acme`, then an *Image recipe* in it. Expected: `kas-studio-meta-acme.yml` appended to `kas_file` with the layer as a repository and `target: acme-image`; `b` builds it after a kas build registers the layer. In the web Studio (`6`) the same forms preview live; *Create files* raises a toast with a *Build* button.
 
 ### T01 — Headless CI matrix
 
@@ -854,11 +871,11 @@ Add a profile with `"mode": "wrapper"`, `"launcher": ["/tmp/launcher.sh"]`, `"en
 
 ### J01 — Guided setup of an existing project
 
-Create a folder with a kas file and a launcher script (the T05 script works), or use one of your projects. **Configuration → `w` → `o`**, type the folder, Enter. Expected: proposals with evidence (launcher script reading `$YML`, kas file with MACHINE, Poky checkout if present); ↑/↓ fills the form; checks show ✔/▲/✖ live and block saving on ✖ (for example an empty `KAS_WORK_DIR` for kas-container); `^O` makes the profile active and the top bar, Recipes and Configuration reload. Opening the same folder again switches to its profile. Start Bitloom in an empty directory with a new `--config`: the guided setup opens by itself. Repeat in the web dashboard (`6` → *Set up a project*).
+Create a folder with a kas file and a launcher script (the T05 script works), or use one of your projects. **Configuration → `w` → `o`**, type the folder, Enter. Expected: proposals with evidence (launcher script reading `$YML`, kas file with MACHINE, Poky checkout if present); ↑/↓ fills the form; checks show ✔/▲/✖ live and block saving on ✖ (for example an empty `KAS_WORK_DIR` for kas-container); `^O` makes the profile active and the top bar, Recipes and Configuration reload. Opening the same folder again switches to its profile. Start Bitloom in an empty directory with a new `--config`: the guided setup opens by itself. Repeat in the web dashboard (`7` → *Set up a project*).
 
 ### J02 — New project
 
-`w` → `n`. Choose Wrynose, `qemuarm64`, `core-image-base`, product layer on. Expected: the preview shows `kas.yml` with bitbake/openembedded-core/meta-yocto pinned to yocto-6.0.2 and `meta-<name>`; `^O` creates the folder with README, `.gitignore`, `.git` and the layer; the profile is active; `b` starts the first kas build. A non-empty folder or an invalid name is refused. In the web dashboard: `6` → *New project*, live preview, *Create project*, toast with *Build it*.
+`w` → `n`. Choose Wrynose, `qemuarm64`, `core-image-base`, product layer on. Expected: the preview shows `kas.yml` with bitbake/openembedded-core/meta-yocto pinned to yocto-6.0.2 and `meta-<name>`; `^O` creates the folder with README, `.gitignore`, `.git` and the layer; the profile is active; `b` starts the first kas build. A non-empty folder or an invalid name is refused. In the web dashboard: `7` → *New project*, live preview, *Create project*, toast with *Build it*.
 
 ### J03 — Clone from Git
 
@@ -866,7 +883,7 @@ Create a folder with a kas file and a launcher script (the T05 script works), or
 
 ### V05 — Vulnerabilities
 
-On `demo-wrynose`: `6`, `v`. Expected: 3 unpatched findings ordered critical (CVE-0000-0002, 9.8), high, medium; `/openssh` filters; the detail shows source, detail and summary; `r` opens the review dialog and, after saving, the Review column shows owner and expiry; `x` opens the export menu: each format (Markdown, HTML, CSV, JSON, SARIF) writes `<state>/exports/vulnerabilities-<profile>-<time>.<ext>` with the findings shown; the Markdown and HTML reports link every CVE to NVD, CVE.org and OSV and end with the Yocto remediation steps; `g` scans the newest SPDX SBOM with Grype when installed (otherwise it explains). `bitloom --vulns --min-cvss 9 --fail-on-unpatched` exits 2; with `--min-cvss 9.9` it exits 0. On a real Wrynose build with the sbom-cve-check fragment enabled, the report from `tmp/deploy/images` appears as source. `bitloom --vulns --format md -o report.md` (also `html`, `csv`, `json`, `sarif`, `--all-statuses`) writes the same reports. Web: `4` → *Vulnerabilities* with chips, filters and the *Export* menu (download in the chosen format); CRA readiness shows *Unpatched vulnerabilities*.
+On `demo-wrynose`: `6`, `v`. Expected: 3 unpatched findings ordered critical (CVE-0000-0002, 9.8), high, medium; `/openssh` filters; the detail shows source, detail and summary; `r` opens the review dialog and, after saving, the Review column shows owner and expiry; `x` opens the export menu: each format (Markdown, HTML, CSV, JSON, SARIF) writes `<state>/exports/vulnerabilities-<profile>-<time>.<ext>` with the findings shown; the Markdown and HTML reports link every CVE to NVD, CVE.org and OSV and end with the Yocto remediation steps; `g` scans the newest SPDX SBOM with Grype when installed (otherwise it explains). `bitloom --vulns --min-cvss 9 --fail-on-unpatched` exits 2; with `--min-cvss 9.9` it exits 0. On a real Wrynose build with the sbom-cve-check fragment enabled, the report from `tmp/deploy/images` appears as source. `bitloom --vulns --format md -o report.md` (also `html`, `csv`, `json`, `sarif`, `--all-statuses`) writes the same reports. Web: `5` → *Vulnerabilities* with chips, filters and the *Export* menu (download in the chosen format); CRA readiness shows *Unpatched vulnerabilities*.
 
 ### H01 — Build notifications
 

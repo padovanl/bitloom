@@ -2,7 +2,7 @@
 
 Bitloom works with many projects at once: every project is a profile, and switching project is switching profile (`P`). The **Projects** hub opens existing folders, creates new Yocto projects and clones projects from GitHub or any Git server. The **guided setup** reads how a folder builds and proposes a ready-to-use profile.
 
-Open the hub with **Configuration → `w`**, **Ctrl+P → Projects**, or the *Projects* panel in the web dashboard's Configuration section (`6`).
+Open the hub with **Configuration → `w`**, **Ctrl+P → Projects**, or the *Projects* panel in the web dashboard's Configuration section (`7`).
 
 ![Projects hub with recent projects](assets/projects.png)
 
@@ -12,6 +12,7 @@ Open the hub with **Configuration → `w`**, **Ctrl+P → Projects**, or the *Pr
 2. Bitloom scans the folder (two levels deep, read-only) and proposes profiles, each with the evidence it found:
    * **Launcher scripts**: executable scripts that call `kas`/`kas-container`, for example a project's `run_build.sh`. Each product configuration becomes its own `wrapper` proposal, titled the way you run it (`YML=kas/board-a.yml ./run_build.sh build`): the variable the script reads (such as `YML`) is set to that file, and machine and targets come from it, following `includes`. Files that other kas files include, or that name no machine, are fragments and are not offered as products. The build folder is read from the script's `KAS_WORK_DIR` (defaults such as `${KAS_WORK_DIR:-$HOME/build}`, `$PWD`, the script's own folder, helper variables like `TOP=$(cd $(dirname $0) && pwd)` and per-product forms like `build-${YML%.yml}` or `$(basename $YML .yml)` are expanded); when the script computes it at run time, set `KAS_WORK_DIR` in the profile.
    * **kas configurations**: YAML files with a kas `header`; MACHINE and target are read from the file. kas-container is proposed when available (or when kas is missing), with a separate work directory under `~/bitloom-work`.
+   * **bitbake-setup workspaces** (the official setup tool of recent BitBake): a setup folder (`build/init-build-env`, `config/`, `layers/`) or the top folder holding several (`bitbake-builds/` with `site.conf`). Each becomes a host profile that sources `build/init-build-env`, with MACHINE and DISTRO read from the fragments in `build/conf/toolcfg.conf`. *bitbake-setup status* and *update*, and listing, enabling or disabling fragments, are in Operations, offered only when the project's BitBake ships `bitbake-setup` and `bitbake-config-build`.
    * **Poky / OE-Core checkouts**: `oe-init-build-env` (also under `poky/`, `sources/`, `layers/`) with existing build directories and their MACHINE/DISTRO.
 3. Choose a proposal with **↑/↓**; the form on the right fills in. Every field is explained and checked as you type: project root, kas files, launcher executable, `KAS_WORK_DIR` (refused when missing, warned when on `/mnt/<drive>` under WSL), init script, profile validity. For launcher scripts it also warns when the script does not pass its arguments on (BitBake commands need `shell -c`) and when no build exists yet in the folder Bitloom will read.
 4. **^O** saves. The profile becomes active, and the selectors, metadata, task logs and health checks reload immediately: press **`b`** to build.

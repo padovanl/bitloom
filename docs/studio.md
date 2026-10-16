@@ -2,13 +2,13 @@
 
 Studio creates the metadata of your own product: a product layer, your distribution instead of Poky, machines, images, recipes and appends. Defaults follow the detected Yocto release, and you see every file, and everything Create will do, before anything is written.
 
-Open it with **Recipes → `c`** in the TUI, **Ctrl+P → Studio**, or section **5** of the [web dashboard](web.md).
+Open it with **Recipes → `c`** in the TUI, **Ctrl+P → Studio**, or section **6** of the [web dashboard](web.md).
 
 ![Studio creating a distribution on Wrynose](assets/studio.png)
 
 ## The web Studio: one step at a time
 
-In the web dashboard (section **5**) Studio is a guided path, not an editor:
+In the web dashboard (section **6**) Studio is a guided path, not an editor:
 
 1. **What do you want to create?** Six cards: product layer, distribution, machine, image, application recipe, recipe append. Each says what you get (for example `recipes-core/images/acme-image.bb`) and what it is for.
 2. **The steps** follow the form's sections: *Where the files go*, *Name and identity*, *What goes in*, *Policies*. One step is shown at a time; **Next** (or **Enter** in a text field) and **Back** move between them, and the step list on the left marks steps done (✓) or with a problem (!). Any step can be reopened from the list.

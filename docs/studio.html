@@ -14,15 +14,15 @@
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
-<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html" aria-current="page">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html" aria-current="page">Studio</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
 <article class="doc"><h1 id="studio">Studio</h1>
 <p>Studio creates the metadata of your own product: a product layer, your distribution instead of Poky, machines, images, recipes and appends. Defaults follow the detected Yocto release, and you see every file, and everything Create will do, before anything is written.</p>
-<p>Open it with <strong>Recipes → <code>c</code></strong> in the TUI, <strong>Ctrl+P → Studio</strong>, or section <strong>5</strong> of the <a href="web.html">web dashboard</a>.</p>
+<p>Open it with <strong>Recipes → <code>c</code></strong> in the TUI, <strong>Ctrl+P → Studio</strong>, or section <strong>6</strong> of the <a href="web.html">web dashboard</a>.</p>
 <details class="shot"><summary><span>Screenshot</span> Studio creating a distribution on Wrynose</summary><div class="shot-body"><img src="assets/studio.png" alt="Studio creating a distribution on Wrynose" loading="lazy" decoding="async"></div></details>
 <h2 id="the-web-studio-one-step-at-a-time">The web Studio: one step at a time<a class="anchor" href="#the-web-studio-one-step-at-a-time" aria-label="Link to this section">#</a></h2>
-<p>In the web dashboard (section <strong>5</strong>) Studio is a guided path, not an editor:</p>
+<p>In the web dashboard (section <strong>6</strong>) Studio is a guided path, not an editor:</p>
 <ol>
 <li><strong>What do you want to create?</strong> Six cards: product layer, distribution, machine, image, application recipe, recipe append. Each says what you get (for example <code>recipes-core/images/acme-image.bb</code>) and what it is for.</li>
 <li><strong>The steps</strong> follow the form's sections: <em>Where the files go</em>, <em>Name and identity</em>, <em>What goes in</em>, <em>Policies</em>. One step is shown at a time; <strong>Next</strong> (or <strong>Enter</strong> in a text field) and <strong>Back</strong> move between them, and the step list on the left marks steps done (✓) or with a problem (!). Any step can be reopened from the list.</li>
