@@ -218,7 +218,7 @@ def _check(name, label, field="name"):
 
 def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
     """Files to create, where, and how to activate them. Pure: nothing is written."""
-    values = {k: (v.strip() if isinstance(v, str) else v) for k, v in values.items()}
+    values = {k: (v.strip() if isinstance(v, str) and k != "file_content" else v) for k, v in values.items()}
     compat = series or values.get("series") or "scarthgap"
     notes, activate = [], {}
     if kind == "layer":
@@ -326,7 +326,9 @@ def plan(kind: str, values: dict, profile: Profile, series: str | None) -> dict:
             lines += [f'SRC_URI += "file://{name}"', "", "do_install:append() {", "    install -d ${D}${sysconfdir}",
                       f"    install -m 0644 ${{UNPACKDIR}}/{name} ${{D}}${{sysconfdir}}/{name}" if newer(series, "styhead") else
                       f"    install -m 0644 ${{WORKDIR}}/{name} ${{D}}${{sysconfdir}}/{name}", "}"]
-            files[f"{base}/files/{name}"] = f"Installed by {root.name} (Bitloom Studio)\n"
+            # From the Image explorer the file starts as it is on the device today, ready to change.
+            content = values.get("file_content")
+            files[f"{base}/files/{name}"] = content if isinstance(content, str) and content else f"Installed by {root.name} (Bitloom Studio)\n"
             notes.append("Files are read from UNPACKDIR on 5.1+ and WORKDIR before; the append uses the detected release.")
         if values.get("config"):
             lines += ["", values["config"]]

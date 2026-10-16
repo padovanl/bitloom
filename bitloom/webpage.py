@@ -284,6 +284,44 @@ details.folder .flayer { margin-left: auto; color: var(--muted); font-size: 12px
 .recipe .ra button:hover, .recipe .ra button:focus-visible { color: var(--fg); border-color: var(--accent); }
 @media (max-width: 760px) { #meta-search { min-width: 0; } .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; } .recipe { grid-template-columns: minmax(0, 1fr) auto; padding-left: 26px; } .recipe .rv, .recipe .rp { display: none; } .recipe .ra { opacity: 1; } .recipes .layers .list { max-height: 220px; } }
 
+/* Image explorer */
+.img-top .head .who { display: flex; gap: 8px; flex: 1 1 360px; max-width: 520px; }
+.img-top .head .who input { flex: 1; }
+#img-pick { width: auto; max-width: 360px; }
+.img-stats { display: flex; gap: 28px; padding: 14px 16px 4px; flex-wrap: wrap; }
+.img-stats div { display: grid; } .img-stats b { font: 700 20px var(--mono); } .img-stats span { color: var(--muted); font-size: 12px; }
+.img-charts { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; padding: 8px 16px 16px; }
+.img-charts h4 { margin: 6px 0 8px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.bars { display: grid; gap: 5px; }
+.bar-row { all: unset; display: grid; grid-template-columns: minmax(0, 220px) 1fr 74px; gap: 10px; align-items: center; font-size: 12.5px; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+.bar-row:hover, .bar-row:focus-visible { background: var(--raised); }
+.bar-row .n { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .bar-row .n small { color: var(--muted); margin-left: 6px; }
+.bar-row .b { height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--accent2), var(--accent)); min-width: 2px; transform-origin: left; animation: grow .6s var(--ease); }
+.bar-row .s { text-align: right; font: 12px var(--mono); color: var(--muted); }
+@keyframes grow { from { transform: scaleX(0); } }
+.img-split { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); height: calc(100vh - 120px); min-height: 460px; }
+.img-split > .panel { min-height: 0; } .img-split .list { overflow: auto; }
+.img-crumbs { display: flex; gap: 4px; align-items: center; font: 12.5px var(--mono); flex-wrap: wrap; }
+.img-crumbs button { all: unset; cursor: pointer; padding: 1px 4px; border-radius: 4px; color: var(--muted); } .img-crumbs button:hover, .img-crumbs button:focus-visible { color: var(--fg); background: var(--raised); }
+.img-crumbs button:last-child { color: var(--fg); font-weight: 650; }
+.ent { display: grid; grid-template-columns: 20px minmax(0, 1fr) 110px 76px minmax(0, 170px); gap: 10px; align-items: center; padding: 6px 16px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); cursor: pointer; font-size: 13px; }
+.ent:hover, .ent:focus-visible { background: color-mix(in srgb, var(--raised) 70%, var(--glow)); outline: none; }
+.ent.selected { background: linear-gradient(90deg, var(--glow), transparent 85%); box-shadow: inset 3px 0 var(--accent); }
+.ent .i { color: var(--muted); text-align: center; } .ent.dir .i { color: var(--accent); }
+.ent .n { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ent.dir .n { font-weight: 650; } .ent .n small { color: var(--muted); }
+.ent .w { height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 55%, transparent); justify-self: start; min-width: 1px; }
+.ent .s { text-align: right; font: 12px var(--mono); color: var(--muted); }
+.ent .p { font: 12px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.img-detail { overflow: auto; }
+.img-detail .sec { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.img-detail h3 { margin: 0; font: 650 15px var(--mono); word-break: break-all; }
+.img-detail dl { display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px; margin: 0; font-size: 13px; } .img-detail dt { color: var(--muted); } .img-detail dd { margin: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+.img-detail .advice { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-size: 13px; line-height: 1.5; }
+.img-detail .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.img-detail pre { margin: 0; max-height: 360px; overflow: auto; padding: 12px 16px; background: var(--code); font: 12px/1.55 var(--mono); white-space: pre; }
+.who-result { display: grid; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+@media (max-width: 1000px) { .img-charts, .img-split { grid-template-columns: 1fr; } .ent { grid-template-columns: 20px minmax(0, 1fr) 76px; } .ent .w, .ent .p { display: none; } }
+
 /* Compliance */
 .hero { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 18px; }
 .hero .big { font: 750 26px var(--sans); }
@@ -504,10 +542,11 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
     <button data-view="recipes"><span class="num">2</span><span class="icon">◇</span>Recipes</button>
     <button data-view="tasklogs"><span class="num">3</span><span class="icon">≋</span>Task logs</button>
     <div class="group">PRODUCT</div>
-    <button data-view="compliance"><span class="num">4</span><span class="icon">⚖</span>SBOM &amp; CRA</button>
-    <button data-view="studio"><span class="num">5</span><span class="icon">✦</span>Studio</button>
+    <button data-view="image"><span class="num">4</span><span class="icon">▦</span>Image</button>
+    <button data-view="compliance"><span class="num">5</span><span class="icon">⚖</span>SBOM &amp; CRA</button>
+    <button data-view="studio"><span class="num">6</span><span class="icon">✦</span>Studio</button>
     <div class="group">WORKSPACE</div>
-    <button data-view="health"><span class="num">6</span><span class="icon">⚙</span>Configuration</button>
+    <button data-view="health"><span class="num">7</span><span class="icon">⚙</span>Configuration</button>
     <div class="foot">Same service and history as the TUI.<br><kbd>?</kbd> keys · <kbd>Ctrl</kbd><kbd>K</kbd> search</div>
   </nav>
   <main>
@@ -581,6 +620,22 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
         <div class="head"><h2 id="task-title">Task log</h2></div>
         <div class="tools"><input type="search" id="task-log-search" placeholder="search this task log"><label class="check"><span class="switch"><input type="checkbox" id="task-errors"><span></span></span>errors only</label></div>
         <pre class="log" id="task-log" tabindex="0" data-empty="Select a task log on the left: the log.do_* and run.do_* files BitBake keeps for every recipe task."></pre>
+      </div>
+    </section>
+
+    <section id="view-image" class="view" hidden>
+      <div class="panel img-top">
+        <div class="head"><h2>Image</h2><select id="img-pick" aria-label="Built image"></select><span class="meta" id="img-source"></span><span style="flex:1"></span>
+          <div class="who"><input type="search" id="img-find" placeholder="Which recipe installs… /etc/motd, libc6, busybox" aria-label="Which recipe installs a file or package"><button class="btn" id="img-find-btn">Find</button></div></div>
+        <div class="img-stats" id="img-stats"></div>
+        <div class="img-charts"><div><h4>Biggest packages</h4><div id="img-packages" class="bars"></div></div><div><h4>Biggest folders</h4><div id="img-folders" class="bars"></div></div></div>
+      </div>
+      <div class="split img-split">
+        <div class="panel">
+          <div class="head"><div class="img-crumbs" id="img-crumbs" role="navigation" aria-label="Folder"></div><span style="flex:1"></span><span class="meta" id="img-dir-size"></span></div>
+          <div class="list" id="img-list" role="listbox" aria-label="Folder content"></div>
+        </div>
+        <div class="panel img-detail" id="img-detail"><div class="empty">Select a file to see which package and recipe put it in the image, and how to change it.</div></div>
       </div>
     </section>
 
@@ -761,7 +816,7 @@ const $ = (id) => document.getElementById(id);
 const token = (new URLSearchParams(location.hash.slice(1))).get("token") || sessionStorage.getItem("bitloom-token") || "";
 if (token) { sessionStorage.setItem("bitloom-token", token); history.replaceState(null, "", location.pathname); }
 const GLYPH = {success: "✔", failed: "✖", running: "●", queued: "◌", cancelling: "◐", cancelled: "■", interrupted: "⚠", unknown: "·", skipped: "↷"};
-const VIEWS = ["builds", "recipes", "tasklogs", "compliance", "studio", "health"];
+const VIEWS = ["builds", "recipes", "tasklogs", "image", "compliance", "studio", "health"];
 const KEYS = [["1 – 6", "Switch section"], ["Ctrl+K", "Command palette: sections, operations, profiles, builds"], ["/", "Search in the current section"],
   ["Esc", "Leave a field / close a dialog"], ["j / k", "Next / previous operation"], ["b", "Build the target"], ["q", "Queue any operation"],
   ["t", "Edit the build target"], ["s", "Force stop the selected operation"], ["g", "Graceful stop (BitBake client SIGINT)"],
@@ -1159,7 +1214,7 @@ function setView(name) {
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
   if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); loadNotifications(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
-  if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio();
+  if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio(); if (name === "image") loadImage();
   if (name === "builds") requestAnimationFrame(moveInk);
 }
 function moveInk() {
@@ -1524,6 +1579,128 @@ async function exportVulns() {
 async function scanGrype() {
   try { const job = await api("/api/vulnerabilities/scan", {method: "POST", body: JSON.stringify({profile: $("profile").value})}); toast("Grype scan queued", "Follow it in Builds; results appear here when it finishes.", "info"); pendingScan = job.id; }
   catch (error) { toast("Grype", error.message, "error"); }
+}
+
+/* Image explorer: the built root filesystem, file by file, with the package and recipe behind each */
+let imgList = [], imgCurrent = null, imgDir = "/", imgSelected = null;
+function human(bytes) { return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MiB" : bytes >= 1024 ? (bytes / 1024).toFixed(1) + " KiB" : bytes + " B"; }
+const imgQuery = () => `profile=${prof()}&image=${encodeURIComponent(imgCurrent.image)}&machine=${encodeURIComponent(imgCurrent.machine)}`;
+async function loadImage() {
+  const pick = $("img-pick");
+  try { imgList = (await api(`/api/image/list?profile=${prof()}`)).images; } catch (error) { imgList = []; }
+  pick.textContent = "";
+  for (const [i, img] of imgList.entries()) pick.append(el("option", {value: String(i), text: `${img.image} · ${img.machine}`}));
+  if (!imgList.length) {
+    pick.hidden = true; $("img-stats").textContent = ""; $("img-packages").textContent = ""; $("img-folders").textContent = ""; $("img-list").textContent = ""; $("img-crumbs").textContent = "";
+    $("img-stats").append(el("div", {class: "empty", style: "padding:6px 0", text: "No built image to explore yet. Build an image (b with an image recipe as target); its root filesystem archive (IMAGE_FSTYPES with tar.bz2, tar.gz, tar.xz or tar.zst) appears here."}));
+    return;
+  }
+  pick.hidden = false;
+  const keep = imgCurrent ? imgList.findIndex((i) => i.image === imgCurrent.image && i.machine === imgCurrent.machine) : -1;
+  pick.value = String(keep >= 0 ? keep : 0);
+  await chooseImage(imgList[Number(pick.value)], keep >= 0 ? imgDir : "/");
+}
+async function chooseImage(img, dir = "/") {
+  imgCurrent = img;
+  $("img-source").textContent = (img.kind === "archive" ? img.source.split("/").pop() : "rootfs folder") + " · built " + new Date(img.mtime * 1000).toLocaleString();
+  const stats = $("img-stats"); stats.textContent = ""; skeletonIn(stats);
+  try {
+    const sum = await api(`/api/image/summary?${imgQuery()}`);
+    stats.textContent = "";
+    for (const [value, label] of [[human(sum.total), "on the device"], [sum.files.toLocaleString(), "files"], [String(sum.package_count), "packages"]]) stats.append(el("div", {}, el("b", {text: value}), el("span", {text: label})));
+    const bars = (box, rows, label, run) => { box.textContent = ""; const top = rows[0] ? rows[0].size : 1;
+      for (const row of rows.slice(0, 10)) box.append(el("button", {class: "bar-row", title: label(row), onclick: () => run(row)},
+        el("span", {class: "n"}, ...label(row).split("\u0000").map((t, i) => i ? el("small", {text: t}) : t)), el("span", {class: "b", style: `width:${Math.max(1, 100 * row.size / top)}%`}), el("span", {class: "s", text: human(row.size)}))); };
+    bars($("img-packages"), sum.packages, (r) => r.package + (r.recipe && r.recipe !== r.package ? "\u0000" + r.recipe : ""), (r) => whoInstalls(r.package));
+    bars($("img-folders"), sum.folders, (r) => r.path, (r) => openDir(r.path));
+  } catch (error) { stats.textContent = ""; stats.append(el("div", {class: "empty", text: error.message})); }
+  await openDir(dir);
+}
+async function openDir(dir) {
+  const list = $("img-list"); list.textContent = ""; skeletonIn(list);
+  let data;
+  try { data = await api(`/api/image/dir?${imgQuery()}&dir=${encodeURIComponent(dir)}`); }
+  catch (error) { list.textContent = ""; list.append(el("div", {class: "empty", text: error.message})); return; }
+  imgDir = data.dir; list.textContent = "";
+  const crumbs = $("img-crumbs"); crumbs.textContent = "";
+  const parts = imgDir.split("/").filter(Boolean);
+  crumbs.append(el("button", {text: "/", onclick: () => openDir("/")}));
+  parts.forEach((part, i) => { crumbs.append(el("span", {class: "meta", text: "›"}), el("button", {text: part, onclick: () => openDir("/" + parts.slice(0, i + 1).join("/"))})); });
+  $("img-dir-size").textContent = human(data.size);
+  const biggest = Math.max(1, ...data.children.map((c) => c.size));
+  if (imgDir !== "/") list.append(entRow({name: "..", type: "up", size: 0}, biggest, () => openDir(imgDir.split("/").slice(0, -1).join("/") || "/")));
+  for (const child of data.children) list.append(entRow(child, biggest, () => child.type === "dir" ? openDir(child.path) : showFile(child)));
+  if (!data.children.length) list.append(el("div", {class: "empty", text: "Empty folder"}));
+}
+function entRow(child, biggest, open) {
+  const icon = {dir: "▸", file: "·", link: "↪", up: "↰"}[child.type];
+  const row = el("div", {class: "ent " + child.type + (imgSelected === child.path ? " selected" : ""), tabindex: "0", role: "option", title: child.path || "", onclick: open,
+    onkeydown: (event) => { if (event.key === "Enter") open(); else if (event.key === "Backspace" && imgDir !== "/") openDir(imgDir.split("/").slice(0, -1).join("/") || "/"); }},
+    el("span", {class: "i", text: icon}), el("span", {class: "n"}, child.name, ...(child.type === "link" ? [el("small", {text: " → " + child.target})] : [])),
+    el("span", {class: "w", style: `width:${child.type === "up" ? 0 : Math.max(child.size ? 2 : 0, 100 * child.size / biggest)}%`}),
+    el("span", {class: "s", text: child.type === "up" || child.type === "link" ? "" : human(child.size)}),
+    el("span", {class: "p", text: child.package ? child.package + (child.recipe && child.recipe !== child.package ? " · " + child.recipe : "") : ""}));
+  return row;
+}
+async function showFile(child) {
+  imgSelected = child.path;
+  for (const row of document.querySelectorAll("#img-list .ent")) row.classList.toggle("selected", row.title === child.path);
+  const box = $("img-detail"); box.textContent = "";
+  box.append(el("div", {class: "sec"}, el("h3", {text: child.path}), el("dl", {},
+    el("dt", {text: "Size"}), el("dd", {text: human(child.size)}), el("dt", {text: "Mode"}), el("dd", {text: (child.mode & 0o7777).toString(8).padStart(4, "0")}),
+    ...(child.target ? [el("dt", {text: "Link to"}), el("dd", {text: child.target})] : []))));
+  const who = el("div", {class: "sec"}, el("div", {class: "skeleton"})); box.append(who);
+  const content = el("div"); box.append(content);
+  whoInto(who, child.path);
+  if (child.type === "file" && child.size <= 262144) {
+    try {
+      const file = await api(`/api/image/file?${imgQuery()}&path=${encodeURIComponent(child.path)}`);
+      content.append(file.binary ? el("div", {class: "sec meta", text: "Binary file: not shown."}) : el("pre", {text: file.text || "(empty)"}));
+    } catch (error) { content.append(el("div", {class: "sec meta", text: error.message})); }
+  }
+}
+async function whoInto(box, query) {
+  let data;
+  try { data = await api(`/api/whois?profile=${prof()}&q=${encodeURIComponent(query)}`); }
+  catch (error) { box.textContent = ""; box.append(el("div", {class: "meta", text: error.message})); return; }
+  box.textContent = "";
+  if (!data.results.length) { box.append(el("div", {class: "advice", text: data.note || "No package installs it."})); return; }
+  for (const row of data.results.slice(0, 3)) {
+    const mine = row.appends.filter((a) => a.mine);
+    box.append(el("dl", {},
+      el("dt", {text: "Package"}), el("dd", {text: row.installed_as + (row.installed_as !== row.package ? ` (${row.package})` : "")}),
+      el("dt", {text: "Recipe"}), el("dd", {text: `${row.recipe} ${row.version}`}),
+      el("dt", {text: "Layer"}), el("dd", {text: row.layer ? row.layer + (row.mine ? " · yours" : " · upstream") : "unknown"}),
+      ...(row.images.length ? [el("dt", {text: "In"}), el("dd", {text: row.images.map((i) => i.image + (i.pulled_in_by.length ? " (pulled in by " + i.pulled_in_by.slice(0, 3).join(", ") + ")" : "")).join("; ")})] : []),
+      ...(row.appends.length ? [el("dt", {text: "Appends"}), el("dd", {text: row.appends.map((a) => a.path.split("/").slice(-4).join("/") + (a.mine ? " (yours)" : "")).join("\n")})] : [])));
+    const advice = mine.length ? `Your layer already appends ${row.recipe}: change ${mine[0].path.split("/").pop()}.` : row.mine ? `${row.recipe} is in your layer: edit ${row.recipe_file.split("/").pop()}.` :
+      `${row.recipe} comes from ${row.layer || "an upstream layer"}: never edit it there. Add a ${row.recipe}_%.bbappend to your layer; Studio creates it for you.`;
+    box.append(el("div", {class: "advice", text: advice}));
+    const actions = el("div", {class: "actions"});
+    if (!mine.length && !row.mine) {
+      const file = query.startsWith("/etc/") && query.split("/").length === 3 ? query.split("/").pop() : "";
+      actions.append(el("button", {class: "btn primary", text: "✦ Change it with an append", title: file ? `Studio: a ${row.recipe} append that installs your own /etc/${file}, starting from today's content` : `Studio: a ${row.recipe} append`,
+        onclick: async () => {
+          let content = "";
+          if (file && imgCurrent) { try { const data = await api(`/api/image/file?${imgQuery()}&path=${encodeURIComponent(query)}`); content = data.binary ? "" : data.text; } catch (error) { content = ""; } }
+          setView("studio"); await startForm("append", {recipe: row.recipe, category: row.group && row.group.startsWith("recipes-") ? row.group : "recipes-core", file, file_content: content});
+          if (content) toast("Starting from the device's file", `${row.recipe}_%.bbappend will install your /etc/${file}; edit it in the preview with "edit before creating"`, "info");
+        }}));
+    }
+    actions.append(el("button", {class: "btn", text: "Show the recipe", onclick: () => { setView("recipes"); $("meta-search").value = row.recipe; setTimeout(() => { renderLayers(); renderMeta(); }, 50); }}));
+    box.append(actions);
+  }
+  if (data.more) box.append(el("div", {class: "meta", text: `${data.more} more packages match`}));
+}
+async function whoInstalls(query) {
+  query = (query || $("img-find").value).trim(); if (!query) return;
+  $("img-find").value = query;
+  const box = $("img-detail"); box.textContent = "";
+  box.append(el("div", {class: "sec"}, el("h3", {text: "Which recipe installs " + query}), el("div", {class: "meta", text: "From the package data of your last builds; no BitBake run."})));
+  const who = el("div", {class: "sec"}); box.append(who);
+  await whoInto(who, query);
+  // A file path: open its folder and select it.
+  if (query.startsWith("/") && imgCurrent) { const dir = query.split("/").slice(0, -1).join("/") || "/"; imgSelected = query; await openDir(dir); }
 }
 
 /* Studio: a guided way to create Yocto metadata, one step at a time */
@@ -1908,6 +2085,8 @@ let paletteItems = [], paletteIndex = 0;
 function paletteEntries() {
   const entries = VIEWS.map((name, i) => ({label: "Go to " + document.querySelector(`nav button[data-view=${name}]`).lastChild.textContent.trim(), hint: String(i + 1), run: () => setView(name)}));
   entries.push({label: "Build target", hint: "b", run: () => queue("build", {target: $("target").value})});
+  entries.push({label: "Which recipe installs… (a file on the device or a package)", hint: "4", run: () => { setView("image"); setTimeout(() => $("img-find").focus(), 100); }});
+  entries.push({label: "Explore the built image", hint: "4", run: () => setView("image")});
   for (const profile of (state ? state.profiles : [])) {
     if (profile.name === $("profile").value) continue;
     entries.push({label: `Switch profile: ${profile.name}`, hint: profile.release || profile.mode || "", run: () => {
@@ -1968,6 +2147,9 @@ function wire() {
   $("stop-btn").addEventListener("click", () => control("stop"));
   $("graceful-btn").addEventListener("click", () => control("graceful"));
   $("retry-btn").addEventListener("click", () => control("retry"));
+  $("img-pick").addEventListener("change", () => { imgSelected = null; chooseImage(imgList[Number($("img-pick").value)]); });
+  $("img-find-btn").addEventListener("click", () => whoInstalls());
+  $("img-find").addEventListener("keydown", (event) => { if (event.key === "Enter") whoInstalls(); });
   $("st-create").addEventListener("click", createStudio);
   $("st-use").addEventListener("change", previewStudio);
   $("sg-next").addEventListener("click", () => showStep(sgStep + 1));
@@ -2047,7 +2229,7 @@ function wire() {
     if (typing || document.querySelector("dialog[open]") || event.ctrlKey || event.metaKey || event.altKey) return;
     const tabs = {o: "output", u: "summary", w: "warnings", m: "timings", d: "compare"};
     const handled = () => event.preventDefault();
-    if (/^[1-6]$/.test(event.key)) { setView(VIEWS[Number(event.key) - 1]); handled(); }
+    if (/^[1-7]$/.test(event.key)) { setView(VIEWS[Number(event.key) - 1]); handled(); }
     else if (event.key === "/") { const input = document.querySelector(`#view-${view} input[type=search]`); if (input) { input.focus(); handled(); } }
     else if (event.key === "?") { $("keys-dialog").showModal(); handled(); }
     else if (event.key === "b") { queue("build", {target: $("target").value}); handled(); }

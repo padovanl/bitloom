@@ -130,6 +130,7 @@ def main():
     parser.add_argument("-o", "--output", type=Path, help="With --vulns: write the report to this file instead of standard output")
     parser.add_argument("--all-statuses", action="store_true", help="With --vulns: include patched and ignored findings, not only unpatched")
     parser.add_argument("--work-usage", action="store_true", help="Print disk usage per recipe in tmp/work with rm_work advice")
+    parser.add_argument("--who-installs", metavar="FILE_OR_PACKAGE", help="Which recipe puts a file (/etc/motd) or package (libc6) in the built images, and how to change it")
     parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
     parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
     parser.add_argument("--list-actions", action="store_true", help="List all available operations")
@@ -170,6 +171,13 @@ def _commands(parser, args) -> None:
         return
     if args.demo:
         args.config = prepare_demo(args.state)
+    if args.who_installs:
+        from .inspectors import metadata
+        from .models import Settings
+        from .whois import lookup, report
+        profile = Settings(args.config).profile
+        print(report(lookup(profile, args.who_installs, metadata(profile))))
+        return
     if args.work_usage:
         from .insights import work_report
         from .models import Settings
