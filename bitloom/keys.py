@@ -82,8 +82,104 @@ SECTION_KEYS: dict[str, list[tuple[str, str, str, str]]] = {
         ("e", "press('environment')", "bitbake -e", "environment"), ("d", "press('dev-status')", "devtool", "dev-status"),
         ("v", "press('versions')", "Versions", "versions"), ("n", "press('network-check')", "Network", "network-check"),
     ],
-    "guide": [],
+    "guide": [("c", "customize_keys", "Customise keys", "")],
 }
+
+# --- your own keys ------------------------------------------------------------------------------------------
+# ~/.config/bitloom/keys.json: {"builds": {"Stop": "S", "Retry": "ctrl+r"}, "analysis": {"Analyze": "enter"}}
+# Section keys can be changed; the global ones below are reserved so every section keeps working.
+import json as _json
+import os as _os
+import re as _re
+from pathlib import Path as _Path
+
+DEFAULT_KEYS = {section: [row[0] for row in rows] for section, rows in SECTION_KEYS.items()}
+RESERVED = {*"0123456789", "j", "k", "P", "slash", "question_mark", "escape", "enter", "tab", "space", "left_square_bracket", "right_square_bracket",
+            "up", "down", "left", "right", "home", "end", "pageup", "pagedown",
+            *(f"f{n}" for n in range(1, 11)), *(f"ctrl+{c}" for c in "qxgwyvlpkoc"), *(f"alt+{n}" for n in "0123456789")}
+KEY_NAME = _re.compile(r"^(?:[a-zA-Z]|(?:ctrl|alt)\+[a-z]|f1[12])$")
+
+
+def keys_file() -> _Path:
+    custom = _os.environ.get("BITLOOM_KEYS", "")
+    if custom:
+        return _Path(custom)
+    return _Path(_os.environ.get("XDG_CONFIG_HOME", _Path.home() / ".config")) / "bitloom/keys.json"
+
+
+def check_key(section: str, label: str, key: str, keys: dict | None = None) -> str:
+    """Why this key cannot do that, or "" when it can."""
+    rows = SECTION_KEYS.get(section)
+    if rows is None:
+        return f"unknown section {section}"
+    if not any(row[2].lower() == label.lower() for row in rows):
+        return f"{SECTION_TITLES.get(section, section)} has no action “{label}” ({', '.join(row[2] for row in rows)})"
+    if key in RESERVED:
+        return f"“{key}” is reserved for a key that works everywhere"
+    if not KEY_NAME.match(key):
+        return f"“{key}”: use a letter (s, S for Shift+s), ctrl+<letter>, alt+<letter>, f11 or f12"
+    current = keys if keys is not None else {row[2].lower(): row[0] for row in rows}
+    clash = next((other for other, bound in current.items() if bound == key and other != label.lower()), None)
+    if clash:
+        return f"“{key}” already does “{next(row[2] for row in rows if row[2].lower() == clash)}” in {SECTION_TITLES.get(section, section)}"
+    return ""
+
+
+def load_overrides(path: _Path | None = None) -> tuple[dict, list[str]]:
+    path = path or keys_file()
+    if _os.environ.get("BITLOOM_KEYS") == "default" or not path.is_file():
+        return {}, []
+    try:
+        data = _json.loads(path.read_text())
+    except (OSError, ValueError) as exc:
+        return {}, [f"{path}: not valid JSON ({exc}); default keys used"]
+    if not isinstance(data, dict) or not all(isinstance(v, dict) for v in data.values()):
+        return {}, [f"{path}: expected {{\"section\": {{\"Action\": \"key\"}}}}; default keys used"]
+    return data, []
+
+
+def apply_overrides(data: dict) -> list[str]:
+    """Change the section keys in place (bindings, footer, buttons and ? follow); refuse what would break a key."""
+    errors = []
+    for section, changes in data.items():
+        rows = SECTION_KEYS.get(section)
+        if rows is None:
+            errors.append(f"unknown section “{section}” ({', '.join(SECTION_KEYS)})")
+            continue
+        keys = {row[2].lower(): row[0] for row in rows}
+        for label, key in changes.items():
+            reason = check_key(section, str(label), str(key), {**keys})
+            if reason:
+                errors.append(f"{section}: {label} → {key}: {reason}")
+                continue
+            keys[str(label).lower()] = str(key)
+        SECTION_KEYS[section] = [(keys[row[2].lower()], *row[1:]) for row in rows]
+    return errors
+
+
+def save_override(section: str, label: str, key: str | None, path: _Path | None = None) -> None:
+    """Set (or with None, reset) one key in the keys file."""
+    path = path or keys_file()
+    data, _ = load_overrides(path)
+    changes = data.setdefault(section, {})
+    canonical = next(row[2] for row in SECTION_KEYS[section] if row[2].lower() == label.lower())
+    changes.pop(canonical, None)
+    default = DEFAULT_KEYS[section][[row[2] for row in SECTION_KEYS[section]].index(canonical)]
+    if key and key != default:
+        changes[canonical] = key
+    if not changes:
+        data.pop(section)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_json.dumps(data, indent=2, sort_keys=True) + "\n")
+
+
+OVERRIDE_ERRORS = apply_overrides(load_overrides()[0]) + load_overrides()[1]
+
+
+def effective_table() -> list[tuple[str, str, str, str]]:
+    """(section, action, key, default key) for every section key, as Bitloom uses them now."""
+    return [(section, row[2], row[0], DEFAULT_KEYS[section][i]) for section, rows in SECTION_KEYS.items() for i, row in enumerate(rows)]
+
 
 # Keys available everywhere on the main screen.
 GLOBAL_KEYS = [
@@ -155,4 +251,14 @@ def reference_markdown() -> str:
         lines += [f"| `{key}` | {label} |" for key, _, label, _ in keys]
     lines += ["", "## Dialogs", "", "| Key | Action |", "| --- | --- |"]
     lines += [f"| `{key}` | {text} |" for key, text in DIALOG_KEYS]
+    lines += ["", "## Your own keys", "",
+              "Every key in the section tables above can be changed. In the TUI open **Help (`0`) → `c`** (or Ctrl+P → *Customise keys*), "
+              "select an action, press `Enter`, then the new key: a letter (Shift for capitals), Ctrl or Alt with a letter, F11 or F12. "
+              "`r` resets one, `R` resets all. Bitloom refuses a key that another action of the same section already uses, and the keys that "
+              "work everywhere (numbers, `j`/`k`, `/`, `?`, `[`/`]`, `P`, F1–F10, the nano Ctrl keys). The new keys apply from the next start "
+              "(Ctrl+Q detaches; builds keep running); buttons, the footer and `?` show them.", "",
+              "They are saved in `~/.config/bitloom/keys.json` (or the file named by `BITLOOM_KEYS`), which you can also edit or share:", "",
+              "```json", '{"builds": {"Stop": "S", "Retry": "ctrl+r"}, "analysis": {"Analyze": "A"}}', "```", "",
+              "`bitloom --keys` prints the keys in use and why any were refused (exit status 1 when one was); the TUI says it at start.", "",
+              "![Customise keys: Stop moved to S, a reserved key refused](assets/custom-keys.png)"]
     return "\n".join(lines) + "\n"

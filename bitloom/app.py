@@ -577,6 +577,9 @@ class BitloomApp(App):
         yield Footer(show_command_palette=False)  # the palette hint overlapped the last bindings; ^P is in the rail and help
 
     def on_mount(self):
+        from .keys import OVERRIDE_ERRORS, keys_file
+        if OVERRIDE_ERRORS:
+            self.notify("\n".join(OVERRIDE_ERRORS[:4]) + f"\n(default keys kept; fix {keys_file()} or Help → c)", title="Your keys", severity="warning", timeout=20)
         columns = {
             "history": ("Operation", "Status", "Elapsed"),
             "metadata-table": ("Name", "Type", "Path / details"),
@@ -1076,6 +1079,10 @@ class BitloomApp(App):
         if name and name != self.settings.active:
             self.main_query("#profile", Select).value = name
 
+    def action_customize_keys(self):
+        from .screens import CustomKeysScreen
+        self.push_screen(CustomKeysScreen(), lambda changed: changed and self.notify("Your keys apply from the next start: Ctrl+Q detaches (builds keep running), then bitloom.", timeout=10))
+
     def action_keys(self):
         from .screens import KeysScreen
         if not isinstance(self.screen, KeysScreen):
@@ -1102,6 +1109,7 @@ class BitloomApp(App):
         for ident, number, title, _, _ in SECTIONS:
             yield SystemCommand(f"Go to {title}", f"Open section {number}", lambda ident=ident: self.action_section(ident))
         yield SystemCommand("Keyboard reference", "Every key in every section (?)", self.action_keys)
+        yield SystemCommand("Customise keys", "Change the keys of section actions (Help → c)", self.action_customize_keys)
         yield SystemCommand("Switch profile", "Choose the active profile (P)", self.action_switch_profile)
         yield SystemCommand("Edit profiles", "JSON profile editor (F4)", self.action_profiles)
         yield SystemCommand("Vulnerabilities", "CVE findings from cve-check, sbom-cve-check and Grype", self.open_vulnerabilities)

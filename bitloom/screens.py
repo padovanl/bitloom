@@ -628,6 +628,123 @@ class NewFileScreen(NanoEditor, ModalScreen):
         self.dismiss(None)
 
 
+class CustomKeysScreen(ModalScreen):
+    """Your own section keys: select an action, press Enter, press the new key. Saved in ~/.config/bitloom/keys.json."""
+    DEFAULT_CSS = """
+    CustomKeysScreen { align: center middle; background: $background 60%; }
+    CustomKeysScreen > Vertical { width: 90; max-width: 96%; height: 90%; border: round $accent; border-title-color: $accent; border-title-style: bold; background: $surface; padding: 0 1; }
+    CustomKeysScreen #ck-hint { color: $text-muted; height: auto; margin-bottom: 1; }
+    CustomKeysScreen #ck-state { height: auto; margin-top: 1; }
+    CustomKeysScreen DataTable { height: 1fr; }
+    """
+    BINDINGS = [Binding("escape", "close", "Close"), Binding("ctrl+x", "close", "Close", priority=True),
+                Binding("enter", "capture", "Change", show=True), Binding("r", "reset", "Reset"), Binding("R", "reset_all", "Reset all")]
+
+    def __init__(self):
+        super().__init__()
+        self.capturing = None
+        self.changed = False
+
+    def compose(self):
+        from textual.widgets import DataTable
+        with Vertical():
+            yield Static("Enter on an action, then press its new key: a letter (Shift for capitals), Ctrl or Alt with a letter, F11 or F12. "
+                         "r resets one, R resets all. Keys that work everywhere (numbers, j/k, /, ?, F1–F10, P) stay as they are.", id="ck-hint")
+            yield DataTable(id="ck-table", cursor_type="row", zebra_stripes=True)
+            yield Static("", id="ck-state")
+
+    def on_mount(self):
+        from .keys import keys_file
+        self.query_one(Vertical).border_title = "Customise keys"
+        self.query_one(Vertical).border_subtitle = str(keys_file()).replace(str(Path.home()), "~")
+        table = self.query_one("#ck-table")
+        table.add_columns("Section", "Action", "Key", "Default")
+        self.fill()
+        table.focus()
+
+    def fill(self):
+        from .keys import SECTION_TITLES, effective_table
+        table = self.query_one("#ck-table")
+        row = table.cursor_row
+        table.clear()
+        for section, label, key, default in effective_table():
+            table.add_row(SECTION_TITLES.get(section, section), label, key + (" *" if key != default else ""), default, key=f"{section}|{label}")
+        if row is not None and row < table.row_count:
+            table.move_cursor(row=row)
+
+    def current(self):
+        table = self.query_one("#ck-table")
+        if table.row_count == 0:
+            return None
+        key = table.coordinate_to_cell_key((table.cursor_row, 0)).row_key.value
+        return tuple(key.split("|", 1))
+
+    def on_data_table_row_selected(self, event):
+        event.stop()
+        self.action_capture()
+
+    def action_capture(self):
+        self.capturing = self.current()
+        if self.capturing:
+            self.query_one("#ck-state", Static).update(f"Press the new key for “{self.capturing[1]}” (Esc cancels)…")
+
+    def on_key(self, event):
+        if not self.capturing:
+            return
+        event.stop()
+        event.prevent_default()
+        section, label = self.capturing
+        self.capturing = None
+        if event.key == "escape":
+            self.query_one("#ck-state", Static).update("Cancelled.")
+            return
+        self.apply(section, label, event.key)
+
+    def apply(self, section, label, key):
+        from .keys import SECTION_KEYS, check_key, save_override
+        reason = check_key(section, label, key) if key else ""
+        if reason:
+            self.query_one("#ck-state", Static).update(f"✖ {reason}")
+            return
+        try:
+            save_override(section, label, key)
+        except OSError as exc:
+            self.query_one("#ck-state", Static).update(f"✖ {exc}")
+            return
+        from .keys import DEFAULT_KEYS
+        rows = SECTION_KEYS[section]
+        index = next(i for i, row in enumerate(rows) if row[2] == label)
+        rows[index] = (key or DEFAULT_KEYS[section][index], *rows[index][1:])
+        self.changed = True
+        self.fill()
+        self.query_one("#ck-state", Static).update(f"✔ {label}: {rows[index][0]} · saved; it takes effect when Bitloom starts next (Ctrl+Q detaches, builds keep running)")
+
+    def action_reset(self):
+        item = self.current()
+        if item:
+            self.apply(item[0], item[1], None)
+
+    def action_reset_all(self):
+        from .keys import DEFAULT_KEYS, SECTION_KEYS, keys_file
+        try:
+            keys_file().unlink(missing_ok=True)
+        except OSError as exc:
+            self.query_one("#ck-state", Static).update(f"✖ {exc}")
+            return
+        for section, rows in SECTION_KEYS.items():
+            SECTION_KEYS[section] = [(DEFAULT_KEYS[section][i], *row[1:]) for i, row in enumerate(rows)]
+        self.changed = True
+        self.fill()
+        self.query_one("#ck-state", Static).update("✔ Every key is back to its default (from the next start)")
+
+    def action_close(self):
+        if self.capturing:
+            self.capturing = None
+            self.query_one("#ck-state", Static).update("Cancelled.")
+            return
+        self.dismiss(self.changed)
+
+
 class KeysScreen(ModalScreen):
     """Keyboard reference generated from the same map that defines the bindings."""
     DEFAULT_CSS = """
