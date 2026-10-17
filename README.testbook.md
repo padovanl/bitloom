@@ -213,6 +213,14 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 10.2 | Narrow the window to phone width (or the browser's device mode). | One column; the navigation becomes a scrolling bar; nothing scrolls sideways. |
 | 10.3 | Switch the operating system to light theme. | The dashboard follows it. |
 
+### Stage 10b — Themes (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 10b.1 | Web: the round button in the top bar; pick *Nord*, *Catppuccin Latte*, *High contrast*; reload the page. | The whole dashboard changes at once, menu and toasts included; after the reload the last choice is applied without a flash of the default. Image → *Insights* stays readable in each. |
+| 10b.2 | Ctrl+K, type `theme`, pick *Theme: System*. | Back to the operating system's light or dark. |
+| 10b.3 | TUI: `F7`, preview *Catppuccin Latte* and *Solarized Light*, `^O`. | Both light palettes apply live; saved for the next start. |
+
 ### Stage 11 — Command line and CI (≈30 seconds)
 
 ```bash

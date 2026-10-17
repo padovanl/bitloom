@@ -153,6 +153,9 @@ bitloom --web --config .bitloom/profiles.json --state .bitloom
 <h2 id="phone-and-narrow-windows">Phone and narrow windows<a class="anchor" href="#phone-and-narrow-windows" aria-label="Link to this section">#</a></h2>
 <p>The layout collapses to one column, the navigation becomes a scrolling bar and toasts move to the bottom.</p>
 <details class="shot"><summary><span>Screenshot</span> Dashboard on a phone, light theme</summary><div class="shot-body"><img src="assets/web-mobile.png" alt="Dashboard on a phone, light theme" loading="lazy" decoding="async"></div></details>
+<h2 id="themes">Themes<a class="anchor" href="#themes" aria-label="Link to this section">#</a></h2>
+<p>The round button in the top bar (or <strong>Ctrl+K → Theme: …</strong>) chooses how the dashboard looks: <strong>System</strong> (the default: light or dark as the operating system says), Bitloom dark and light, and the palettes the TUI also has: Nord, Dracula, Tokyo Night, Catppuccin Mocha and Latte, Gruvbox, Solarized Dark and Light, High contrast. The choice is remembered by this browser and applied before the page draws, so it never flashes the default first. Status colours (success, warning, error) and chart colours keep their meaning in every theme; the chart palette is checked for colour-blind separation against each theme's background.</p>
+<details class="shot"><summary><span>Screenshot</span> The theme menu with Tokyo Night applied</summary><div class="shot-body"><img src="assets/web-themes.png" alt="The theme menu with Tokyo Night applied" loading="lazy" decoding="async"></div></details>
 <h2 id="api">API<a class="anchor" href="#api" aria-label="Link to this section">#</a></h2>
 <p>The page uses a small JSON API that scripts can use too (all calls need the <code>X-Bitloom-Token</code> header):</p>
 <table>
@@ -234,7 +237,7 @@ bitloom --web --config .bitloom/profiles.json --state .bitloom
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="keyboard.html"><small>Previous</small>Keyboard</a><a class="next" href="image.html"><small>Next</small>Image explorer</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/web.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#start-it">Start it</a><a href="#remote-access" class="sub">Remote access</a><a href="#sections">Sections</a><a href="#build-target">Build target</a><a href="#notifications-and-animations">Notifications and animations</a><a href="#keyboard">Keyboard</a><a href="#phone-and-narrow-windows">Phone and narrow windows</a><a href="#api">API</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#start-it">Start it</a><a href="#remote-access" class="sub">Remote access</a><a href="#sections">Sections</a><a href="#build-target">Build target</a><a href="#notifications-and-animations">Notifications and animations</a><a href="#keyboard">Keyboard</a><a href="#phone-and-narrow-windows">Phone and narrow windows</a><a href="#themes">Themes</a><a href="#api">API</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>
