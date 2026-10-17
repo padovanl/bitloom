@@ -74,9 +74,11 @@ bitloom --web --config .bitloom/profiles.json --state .bitloom
 </tr>
 </tbody>
 </table>
+<details class="shot"><summary><span>Screenshot</span> Recipes grouped by layer and folder</summary><div class="shot-body"><img src="assets/web-recipes.png" alt="Recipes grouped by layer and folder" loading="lazy" decoding="async"></div></details>
 <h2 id="build-target">Build target<a class="anchor" href="#build-target" aria-label="Link to this section">#</a></h2>
 <p>The target field in the top bar is a combobox. Click it, press <code>t</code> or <code>↓</code> to list the image recipes found in the project's layers: the kas <code>target:</code> and images already built come first, example and test images last, each with its layer and <code>SUMMARY</code>. Type to filter, <code>↑</code>/<code>↓</code> to choose, <code>Enter</code> to pick, <code>Enter</code> again to build. Any other recipe or several space-separated targets can still be typed.</p>
 <p>An image recipe is a <code>.bb</code> that inherits <code>core-image</code> or <code>image</code>, or requires another image recipe. Only files with &quot;image&quot; in their path are read, so the list is ready in a few milliseconds.</p>
+<details class="shot"><summary><span>Screenshot</span> Target combobox listing the project's images</summary><div class="shot-body"><img src="assets/web-target.png" alt="Target combobox listing the project's images" loading="lazy" decoding="async"></div></details>
 <p>The build detail has Toaster-style tabs computed from the stored log: <strong>Summary</strong> (errors, warnings, failed tasks), <strong>Sstate reuse</strong>, grouped <strong>Warnings</strong>, observed task <strong>Timings</strong> and <strong>Compare</strong> with the previous run of the same command. A running build shows its ETA next to the task count.</p>
 <details class="shot"><summary><span>Screenshot</span> Build summary tab</summary><div class="shot-body"><img src="assets/web-summary.png" alt="Build summary tab" loading="lazy" decoding="async"></div></details>
 <h2 id="notifications-and-animations">Notifications and animations<a class="anchor" href="#notifications-and-animations" aria-label="Link to this section">#</a></h2>

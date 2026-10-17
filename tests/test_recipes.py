@@ -1,6 +1,7 @@
 """Image recipes for the target field, recipes organised by layer and folder, steady history."""
 import json
 import threading
+import urllib.error
 import urllib.request
 
 from bitloom.inspectors import images, is_image, metadata, organize, recipe_name
@@ -73,6 +74,19 @@ def test_web_images_and_organised_metadata(tmp_path):
         assert rows["core-image-sato.bb"]["image"] and rows["core-image-sato.bb"]["group"] == "recipes-sato"
         assert (rows["busybox_1.37.0.bb"]["recipe"], rows["busybox_1.37.0.bb"]["version"], rows["busybox_1.37.0.bb"]["layer"]) == ("busybox", "1.37.0", "meta")
         assert sorted(r["kind"] for r in get("/api/metadata?profile=p&q=meta-mine")["rows"]) == ["bbappend", "layer"]
+        # Studio: the preview lists what Create will do; a bad value names the field to fix.
+        def post(path, body):
+            request = urllib.request.Request(base + path, json.dumps(body).encode(), {"X-Bitloom-Token": "t", "Content-Type": "application/json"})
+            try:
+                return json.loads(urllib.request.urlopen(request).read())
+            except urllib.error.HTTPError as error:
+                return json.loads(error.read())
+        fields = get("/api/studio/fields?profile=p&kind=distro")
+        assert fields["sections"]["where"] and fields["fields"][0]["section"] == "where"
+        values = {f["id"]: f["default"] for f in fields["fields"]}
+        preview = post("/api/studio/preview", {"profile": "p", "kind": "distro", "values": values})
+        assert preview["main"].startswith("conf/distro/") and preview["steps"][0].startswith("Write ")
+        assert post("/api/studio/preview", {"profile": "p", "kind": "distro", "values": {**values, "name": "Bad"}})["field"] == "name"
     finally:
         server.shutdown()
         try:

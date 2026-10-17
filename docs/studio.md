@@ -1,10 +1,22 @@
 # Studio
 
-Studio creates the metadata of your own product: a product layer, your distribution instead of Poky, machines, images, recipes and appends. Every field explains itself, defaults follow the detected Yocto release, and you see every file before anything is written.
+Studio creates the metadata of your own product: a product layer, your distribution instead of Poky, machines, images, recipes and appends. Defaults follow the detected Yocto release, and you see every file, and everything Create will do, before anything is written.
 
 Open it with **Recipes → `c`** in the TUI, **Ctrl+P → Studio**, or section **5** of the [web dashboard](web.md).
 
 ![Studio creating a distribution on Wrynose](assets/studio.png)
+
+## How the form reads
+
+The form is split into numbered sections: **Where the files go**, **Name and identity**, **What goes in** and **Policies**. Each field has a plain label; the BitBake variable it sets is shown next to it (for example *Product name* · `DISTRO_NAME`), so the form is readable without knowing Yocto and still tells experts exactly what is written.
+
+* **Choices explain themselves.** Under a drop-down, a line says what the selected option means (*systemd: full service manager; default from Wrynose*). Feature chips show their meaning on hover or focus, and the line under them lists what is selected.
+* **The preview follows the field.** Focusing a field highlights the lines it writes and switches the preview to the file that contains them. The main file (the distribution, machine, image or recipe) is the first tab, marked ●; the layer files come after it.
+* **When you press Create** lists the steps in order: the files written and where, the kas overlay or `bitbake-layers add-layer`, whether the new `DISTRO`/`MACHINE` is selected and the build offered next. Nothing happens that is not on this list.
+* **Errors point at the field.** A value that cannot work (an id with capitals, a size that is not a number, `debug-tweaks` on 5.1+) is marked on the field itself with the reason, and Create is disabled until it is fixed.
+* **No layer of your own yet?** The Layer field says so: a new layer (default `meta-acme`) is created together with the files. The layer choice is kept when you switch between kinds.
+
+![Studio in the web dashboard: the focused field's line is highlighted in the preview](assets/web-studio.png)
 
 ## What you can create
 
@@ -40,4 +52,4 @@ Images and recipes set the build target, so `b` builds them next.
 
 ## Keyboard
 
-`↑`/`↓` choose the kind, `Tab` moves through the fields, `Space` toggles list entries, `^O` creates, `Esc` closes.
+`↑`/`↓` choose the kind, `Tab` moves through the fields (the preview follows), `Space` toggles list entries, `^O` creates, `Esc` closes. In the web dashboard the kinds are cards, chips toggle with `Enter`/`Space`, and file tabs switch the preview.

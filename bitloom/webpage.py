@@ -292,21 +292,63 @@ details.opt[open] summary { background: var(--glow); }
 details.opt .body { padding: 6px 16px 14px; color: var(--muted); animation: enter .3s var(--ease); }
 
 /* Studio */
-.kinds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-.kind { all: unset; cursor: pointer; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--raised), var(--surface)); transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; }
+.studio { display: flex; flex-direction: column; gap: 16px; }
+.kinds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.kind { all: unset; cursor: pointer; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--raised), var(--surface)); transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; align-content: start; min-height: 78px; }
 .kind:hover { transform: translateY(-2px); border-color: var(--line2); }
 .kind.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
 .kind:focus-visible { outline: 2px solid var(--accent); }
-.kind .ico { font-size: 20px; } .kind b { display: block; margin-top: 4px; } .kind small { color: var(--muted); display: block; margin-top: 4px; line-height: 1.35; }
-.form { padding: 6px 16px 16px; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
-.form label.f { font-weight: 650; margin-top: 12px; }
-.form .help { color: var(--muted); font-size: 12px; }
+.kind .ico { font-size: 17px; color: var(--accent); grid-row: span 2; line-height: 1.3; } .kind b { font-size: 14px; }
+.kind small { color: var(--muted); line-height: 1.35; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.studio-split { grid-template-columns: minmax(360px, 1fr) minmax(0, 1.15fr); min-height: 560px; }
+.st-intro { padding: 12px 16px 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.form { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
+.form.swap { animation: enter .3s var(--ease); }
+.st-sec { border: 0; margin: 14px 0 0; padding: 0; min-width: 0; }
+.st-sec legend { display: flex; align-items: center; gap: 9px; padding: 0; margin-bottom: 2px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.st-sec legend .n { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); font: 700 11px var(--mono); letter-spacing: 0; }
+.fld { padding: 10px 12px; margin: 6px 0 0; border-radius: 10px; border: 1px solid transparent; transition: border-color .2s, background .2s; }
+.fld:focus-within { border-color: var(--line2); background: color-mix(in srgb, var(--raised) 60%, transparent); }
+.fld.invalid { border-color: color-mix(in srgb, var(--err) 55%, transparent); }
+.fld .top { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.fld label.f { font-weight: 650; margin: 0; }
+.fld .req { color: var(--accent); }
+.var { margin-left: auto; font: 11px var(--mono); color: var(--muted); padding: 1px 6px; border-radius: 5px; background: var(--bg2); border: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.fld:focus-within .var { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.form .help { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.45; }
+.form .why { color: var(--fg); font-size: 12.5px; margin-top: 6px; min-height: 1.2em; }
+.form .why::before { content: "→ "; color: var(--accent); }
+.form .err { color: var(--err); font-size: 12.5px; margin-top: 6px; }
 .form input[type=text], .form select { width: 100%; }
 #nt-format { width: auto; flex: none; }
-.toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
 .toggle { all: unset; cursor: pointer; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); font-size: 12.5px; color: var(--muted); transition: all .2s var(--ease); }
+.toggle:hover { color: var(--fg); border-color: var(--accent); }
 .toggle.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--ink); border-color: transparent; }
-.toggle:focus-visible { outline: 2px solid var(--accent); }
+.toggle.on::before { content: "✓ "; }
+.toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.st-actions { border-top: 1px solid var(--line); border-bottom: 0; }
+.st-steps { margin: 0; padding: 12px 16px 12px 40px; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 1.5; counter-reset: step; list-style: none; }
+.st-steps li { position: relative; padding: 3px 0; }
+.st-steps li::before { counter-increment: step; content: counter(step); position: absolute; left: -26px; top: 4px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 700 10.5px var(--mono); background: var(--raised); border: 1px solid var(--line2); color: var(--muted); }
+.st-steps .cap { margin-left: -24px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; list-style: none; padding-bottom: 4px; }
+.st-steps .cap::before { display: none; }
+.st-steps.done li::before { content: "✓"; background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); border-color: transparent; }
+.file-tabs { display: flex; gap: 2px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; }
+.file-tabs button { all: unset; cursor: pointer; padding: 7px 11px; font: 12px var(--mono); color: var(--muted); border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: 0; white-space: nowrap; position: relative; top: 1px; }
+.file-tabs button:hover { color: var(--fg); }
+.file-tabs button.active { color: var(--fg); background: var(--code); border-color: var(--line); }
+.file-tabs button.main::after { content: " ●"; color: var(--accent); }
+.file-tabs button.has::before { content: ""; position: absolute; top: 5px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.file-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.st-path { padding: 7px 16px; font: 11.5px var(--mono); color: var(--muted); background: var(--code); border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+pre.st-code { margin: 0; flex: 1; overflow: auto; padding: 10px 0; background: var(--code); font: 12.5px/1.6 var(--mono); counter-reset: line; min-height: 200px; }
+pre.st-code span { display: block; padding: 0 16px 0 52px; position: relative; white-space: pre-wrap; word-break: break-word; transition: background .25s; }
+pre.st-code span::before { counter-increment: line; content: counter(line); position: absolute; left: 0; width: 36px; text-align: right; color: color-mix(in srgb, var(--muted) 60%, transparent); }
+pre.st-code span.c { color: var(--muted); }
+pre.st-code span.hl { background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: inset 3px 0 var(--accent); }
+@media (max-width: 1100px) { .kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); } .studio-split { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kind small { display: none; } .kind { min-height: 0; } }
 .files details { border-bottom: 1px solid var(--line); }
 .files summary { cursor: pointer; padding: 9px 16px; font: 12.5px var(--mono); color: var(--ok); }
 .files pre { margin: 0; padding: 10px 16px; background: color-mix(in srgb, var(--bg) 85%, black); font: 12px/1.5 var(--mono); white-space: pre-wrap; }
@@ -503,12 +545,23 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
       <div class="panel"><div class="head"><h2>SBOM, vulnerability and traceability options</h2><span style="flex:1"></span><span class="hint">Change them in the TUI: Configuration → <kbd>s</kbd> (writes a managed block with a backup)</span></div><div id="sb-options"></div></div>
     </section>
 
-    <section id="view-studio" class="view" hidden>
-      <div class="kinds" id="kinds"></div>
-      <div class="split">
-        <div class="panel"><div class="head"><h2 id="st-title">Distribution</h2></div><div class="hint" style="padding:10px 16px 0" id="st-desc"></div><div class="form" id="st-form"></div>
-          <div class="tools" style="border-top:1px solid var(--line); border-bottom:0"><label class="check" id="st-use-wrap"><span class="switch"><input type="checkbox" id="st-use" checked><span></span></span>use for this profile</label><span style="flex:1"></span><button class="btn primary" id="st-create">✦ Create files</button></div></div>
-        <div class="panel"><div class="head"><h2>Files to create</h2><span class="meta" id="st-layer"></span></div><div class="notice" id="st-notes" hidden></div><div class="files list" id="st-files"></div></div>
+    <section id="view-studio" class="view studio" hidden>
+      <div class="kinds" id="kinds" role="tablist" aria-label="What to create"></div>
+      <div class="split studio-split">
+        <div class="panel">
+          <div class="head"><h2 id="st-title">Distribution</h2></div>
+          <div class="st-intro" id="st-desc"></div>
+          <div class="form" id="st-form"></div>
+          <div class="tools st-actions"><label class="check" id="st-use-wrap"><span class="switch"><input type="checkbox" id="st-use" checked><span></span></span><span id="st-use-label">use for this profile</span></label><span style="flex:1"></span><span class="hint">nothing is overwritten</span><button class="btn primary" id="st-create">✦ Create files</button></div>
+        </div>
+        <div class="panel">
+          <div class="head"><h2>Preview</h2><span class="meta" id="st-layer"></span></div>
+          <ol class="st-steps" id="st-steps"></ol>
+          <div class="notice" id="st-notes" hidden></div>
+          <div class="file-tabs" id="st-tabs" role="tablist" aria-label="Files"></div>
+          <div class="st-path" id="st-path"></div>
+          <pre class="st-code" id="st-code" tabindex="0"></pre>
+        </div>
       </div>
     </section>
 
@@ -634,7 +687,7 @@ let lastStatus = {}, studioKind = "distro", studioFields = [], studioValues = {}
 async function api(path, options = {}) {
   const response = await fetch(path, {...options, headers: {"X-Bitloom-Token": token, "Content-Type": "application/json", ...(options.headers || {})}});
   const data = await response.json().catch(() => ({error: response.statusText}));
-  if (!response.ok) throw new Error(data.error || response.statusText);
+  if (!response.ok) throw Object.assign(new Error(data.error || response.statusText), {field: data.field});
   return data;
 }
 function el(tag, props = {}, ...children) {
@@ -1365,72 +1418,148 @@ async function scanGrype() {
 }
 
 /* Studio */
+let lastPlan = null, studioFile = "", studioVar = "", studioSections = {}, studioMode = "";
 async function loadStudio() {
   const data = await api(`/api/studio/fields?profile=${prof()}&kind=${studioKind}`);
+  studioSections = data.sections || {}; studioMode = data.mode;
   const kinds = $("kinds"); kinds.textContent = "";
   for (const kind of data.kinds) {
-    const card = el("button", {class: "kind" + (kind.id === studioKind ? " active" : "")}, el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title}), el("small", {text: kind.description}));
-    card.addEventListener("click", () => { studioKind = kind.id; studioValues = {}; loadStudio(); });
+    const card = el("button", {class: "kind" + (kind.id === studioKind ? " active" : ""), role: "tab", "aria-selected": String(kind.id === studioKind)},
+      el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title}), el("small", {text: kind.description}));
+    card.title = kind.description;
+    card.addEventListener("click", () => {
+      if (kind.id === studioKind) return;
+      // The layer choice is the same for every kind: keep it, start the rest from defaults.
+      studioKind = kind.id; studioValues = {layer: studioValues.layer, new_layer: studioValues.new_layer}; studioFile = ""; studioVar = ""; loadStudio();
+    });
     kinds.append(card);
     if (kind.id === studioKind) { $("st-title").textContent = kind.title; $("st-desc").textContent = kind.description; }
   }
   studioFields = data.fields;
-  $("st-use-wrap").hidden = !(["distro", "machine"].includes(studioKind) && ["host", "container"].includes(data.mode));
-  const form = $("st-form"); form.textContent = "";
-  const sync = () => { for (const node of form.querySelectorAll("[data-for=new_layer]")) node.hidden = !(studioValues.layer || "").startsWith("new layer"); };
+  const choosable = ["distro", "machine"].includes(studioKind) && ["host", "container"].includes(data.mode);
+  $("st-use-wrap").hidden = !choosable;
+  $("st-use-label").textContent = `use this ${studioKind === "distro" ? "DISTRO" : "MACHINE"} in profile ${prof()}`;
+  const form = $("st-form"); form.textContent = ""; form.classList.remove("swap"); void form.offsetWidth; form.classList.add("swap");
+  let section = null, number = 0;
   for (const field of studioFields) {
+    if (field.choices.length && !field.choices.includes(studioValues[field.id] ?? "") && field.kind === "choice") delete studioValues[field.id];
     const value = studioValues[field.id] ?? field.default;
     studioValues[field.id] = value;
-    const start = form.childElementCount;
-    form.append(el("label", {class: "f", for: "sf-" + field.id, text: field.label + (field.required ? " *" : "")}));
-    if (field.kind === "choice") {
-      const select = el("select", {id: "sf-" + field.id});
-      for (const choice of field.choices) select.append(el("option", {value: choice, text: choice}));
-      select.value = value; select.addEventListener("change", () => { studioValues[field.id] = select.value; previewStudio(); });
-      form.append(select);
-    } else if (field.kind === "multi") {
-      const chosen = new Set(value.split(" ").filter(Boolean)), box = el("div", {class: "toggles"});
-      for (const choice of field.choices) {
-        const chip = el("button", {class: "toggle" + (chosen.has(choice) ? " on" : ""), type: "button", text: choice});
-        chip.addEventListener("click", () => { chosen.has(choice) ? chosen.delete(choice) : chosen.add(choice); chip.classList.toggle("on"); studioValues[field.id] = [...chosen].join(" "); previewStudio(); });
-        box.append(chip);
-      }
-      form.append(box);
-    } else if (field.kind === "bool") {
-      const input = el("input", {type: "checkbox", id: "sf-" + field.id}); input.checked = value === "1";
-      input.addEventListener("change", () => { studioValues[field.id] = input.checked ? "1" : ""; previewStudio(); });
-      form.append(el("label", {class: "check"}, el("span", {class: "switch"}, input, el("span")), "enabled"));
-    } else {
-      const input = el("input", {type: "text", id: "sf-" + field.id}); input.value = value;
-      input.addEventListener("input", () => { studioValues[field.id] = input.value; clearTimeout(typingTimer); typingTimer = setTimeout(previewStudio, 180); });
-      form.append(input);
+    if (field.section !== section) {
+      section = field.section; number++;
+      form.append(el("fieldset", {class: "st-sec", "data-section": section}, el("legend", {}, el("span", {class: "n", text: String(number)}), studioSections[section] || section)));
     }
-    if (field.info) form.append(el("div", {class: "help", text: field.info}));
-    if (field.id === "new_layer") [...form.children].slice(start).forEach((node) => { node.dataset.for = "new_layer"; });
+    form.lastChild.append(studioField(field, value));
   }
-  form.addEventListener("change", sync); sync();
+  syncNewLayer();
   previewStudio();
 }
-let lastPlan = null;
-async function previewStudio() {
-  const files = $("st-files"), notes = $("st-notes");
-  try {
-    const plan = await api("/api/studio/preview", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues})});
-    lastPlan = plan; $("st-create").disabled = false;
-    $("st-layer").textContent = (plan.new_layer ? "new layer " : "into ") + plan.layer;
-    files.textContent = "";
-    Object.entries(plan.files).forEach(([name, text], i) => files.append(el("details", i === 0 || name.includes("/distro/") || name.includes("/machine/") || name.endsWith(".bb") ? {open: ""} : {}, el("summary", {text: "+ " + name}), el("pre", {text}))));
-    notes.hidden = !plan.notes.length; notes.textContent = plan.notes.map((n) => "⚠ " + n).join("  ");
-  } catch (error) {
-    lastPlan = null; $("st-create").disabled = true; files.textContent = ""; notes.hidden = false; notes.textContent = "✖ " + error.message;
+function hintFor(field, choice) { const pair = (field.hints || []).find(([c]) => c === choice); return pair ? pair[1] : ""; }
+function studioField(field, value) {
+  const box = el("div", {class: "fld", "data-field": field.id});
+  const id = "sf-" + field.id;
+  box.append(el("div", {class: "top"}, el("label", {class: "f", for: id, text: field.label}), ...(field.required ? [el("span", {class: "req", title: "required", text: "*"})] : []),
+    ...(field.var ? [el("code", {class: "var", title: "BitBake variable this sets", text: field.var})] : [])));
+  const why = el("div", {class: "why"});
+  const focus = () => { studioVar = field.var || ""; renderCode(true); };
+  if (field.kind === "choice") {
+    const select = el("select", {id});
+    for (const choice of field.choices) select.append(el("option", {value: choice, text: choice}));
+    select.value = value;
+    const explain = () => { const text = hintFor(field, select.value); why.textContent = text; why.hidden = !text; };
+    select.addEventListener("change", () => { studioValues[field.id] = select.value; explain(); if (field.id === "layer") syncNewLayer(); previewStudio(); });
+    select.addEventListener("focus", focus);
+    box.append(select, why); explain();
+  } else if (field.kind === "multi") {
+    const chosen = new Set(value.split(" ").filter(Boolean)), chips = el("div", {class: "toggles", role: "group", "aria-label": field.label});
+    const summary = () => { why.textContent = chosen.size ? [...chosen].map((c) => hintFor(field, c) ? `${c}: ${hintFor(field, c)}` : c).join(" · ") : "none selected"; };
+    for (const choice of field.choices) {
+      const chip = el("button", {class: "toggle" + (chosen.has(choice) ? " on" : ""), type: "button", text: choice, title: hintFor(field, choice), "aria-pressed": String(chosen.has(choice))});
+      chip.addEventListener("click", () => { chosen.has(choice) ? chosen.delete(choice) : chosen.add(choice); chip.classList.toggle("on"); chip.setAttribute("aria-pressed", String(chosen.has(choice))); studioValues[field.id] = [...chosen].join(" "); summary(); previewStudio(); });
+      chip.addEventListener("mouseenter", () => { why.textContent = `${choice}: ${hintFor(field, choice) || "no description"}`; });
+      chip.addEventListener("focus", () => { focus(); why.textContent = `${choice}: ${hintFor(field, choice) || "no description"}`; });
+      chip.addEventListener("mouseleave", summary); chip.addEventListener("blur", summary);
+      chips.append(chip);
+    }
+    box.append(chips, why); summary();
+  } else if (field.kind === "bool") {
+    const input = el("input", {type: "checkbox", id}); input.checked = value === "1";
+    const label = el("span", {text: input.checked ? "on" : "off"});
+    input.addEventListener("change", () => { studioValues[field.id] = input.checked ? "1" : ""; label.textContent = input.checked ? "on" : "off"; previewStudio(); });
+    input.addEventListener("focus", focus);
+    box.append(el("label", {class: "check"}, el("span", {class: "switch"}, input, el("span")), label));
+  } else {
+    const input = el("input", {type: "text", id, placeholder: field.placeholder || "", spellcheck: "false", autocomplete: "off"}); input.value = value;
+    input.addEventListener("input", () => { studioValues[field.id] = input.value; clearTimeout(typingTimer); typingTimer = setTimeout(previewStudio, 180); });
+    input.addEventListener("focus", focus);
+    box.append(input);
   }
+  if (field.info) box.append(el("div", {class: "help", text: field.info}));
+  return box;
+}
+function syncNewLayer() {
+  const node = document.querySelector('#st-form [data-field="new_layer"]');
+  if (node) node.hidden = !(studioValues.layer || "").startsWith("new layer");
+}
+async function previewStudio() {
+  const notes = $("st-notes"), steps = $("st-steps");
+  for (const node of document.querySelectorAll("#st-form .fld.invalid")) { node.classList.remove("invalid"); node.querySelector(".err")?.remove(); }
+  try {
+    const plan = await api("/api/studio/preview", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues, use: $("st-use").checked})});
+    lastPlan = plan;
+    const count = Object.keys(plan.files).length;
+    $("st-create").disabled = false; $("st-create").textContent = `✦ Create ${count} ${count === 1 ? "file" : "files"}`;
+    $("st-layer").textContent = (plan.new_layer ? "new layer · " : "into · ") + plan.layer;
+    steps.className = "st-steps"; steps.textContent = "";
+    steps.append(el("li", {class: "cap", text: "When you press Create"}), ...plan.steps.map((text) => el("li", {text})));
+    notes.hidden = !plan.notes.length; notes.textContent = plan.notes.map((n) => "⚠ " + n).join("  ");
+    if (!plan.files[studioFile]) studioFile = plan.main || Object.keys(plan.files)[0];
+    renderCode(false);
+  } catch (error) {
+    lastPlan = null; $("st-create").disabled = true; $("st-create").textContent = "✦ Create files";
+    // Point at the field to fix, as a form would, instead of only blanking the preview.
+    const field = error.field && document.querySelector(`#st-form [data-field="${error.field}"]`) || document.querySelector('#st-form [data-field="name"]');
+    if (field) { field.classList.add("invalid"); field.append(el("div", {class: "err", text: "✖ " + error.message})); }
+    steps.className = "st-steps"; steps.textContent = ""; steps.append(el("li", {class: "cap", text: "Fix the highlighted field to see the files"}));
+    notes.hidden = true; $("st-tabs").textContent = ""; $("st-code").textContent = ""; $("st-path").textContent = "";
+  }
+}
+function renderCode(follow) {
+  if (!lastPlan) return;
+  const files = Object.keys(lastPlan.files), tabs = $("st-tabs");
+  // Whole words only: DISTRO must not light up DISTRO_NAME.
+  const word = studioVar ? new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])") : null;
+  const hit = (line) => !!word && word.test(line);
+  const matches = (text) => text.split("\n").some(hit);
+  // Focusing a field shows the file it writes to, with its lines highlighted.
+  if (follow && word && !matches(lastPlan.files[studioFile])) { const other = files.find((name) => matches(lastPlan.files[name])); if (other) studioFile = other; }
+  const ordered = [lastPlan.main, ...files.filter((name) => name !== lastPlan.main)].filter((name) => name in lastPlan.files);
+  tabs.textContent = "";
+  for (const name of ordered) {
+    const button = el("button", {role: "tab", "aria-selected": String(name === studioFile), class: [name === studioFile ? "active" : "", name === lastPlan.main ? "main" : "", matches(lastPlan.files[name]) ? "has" : ""].join(" ").trim(),
+      title: name, text: name.split("/").pop(), onclick: () => { studioFile = name; renderCode(false); }});
+    tabs.append(button);
+  }
+  $("st-path").textContent = (lastPlan.layer + "/" + studioFile).replace(/\/+/g, "/");
+  const code = $("st-code"); code.textContent = "";
+  let first = null;
+  for (const line of lastPlan.files[studioFile].replace(/\n$/, "").split("\n")) {
+    const lit = hit(line);
+    const span = el("span", {class: (lit ? "hl " : "") + (/^\s*#/.test(line) && !lit ? "c" : ""), text: line || " "});
+    code.append(span); if (lit && !first) first = span;
+  }
+  if (first) first.scrollIntoView({block: "nearest"});
 }
 async function createStudio() {
   if (!lastPlan) return;
   try {
     const result = await api("/api/studio/create", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues, use: $("st-use").checked})});
     toast("Created " + result.written.length + " files", result.messages.join(" · "), "success", result.target ? {label: "Build " + result.target, run: () => { $("target").value = result.target; $("target").dataset.touched = "1"; queue("build", {target: result.target}); }} : null);
-    previewStudio();
+    const steps = $("st-steps"); steps.className = "st-steps done"; steps.textContent = "";
+    steps.append(el("li", {class: "cap", text: "Done"}), ...result.written.map((path) => el("li", {text: "created " + path})), ...result.messages.map((text) => el("li", {text})));
+    metaRows = []; imageRows = null;                 // Recipes and the image list pick the new files up
+    $("st-create").disabled = true; $("st-create").textContent = "✓ Created";
+    setTimeout(() => { loadStudio(); }, 2500);
   } catch (error) { toast("Studio", error.message, "error"); }
 }
 
@@ -1554,6 +1683,7 @@ function wire() {
   $("graceful-btn").addEventListener("click", () => control("graceful"));
   $("retry-btn").addEventListener("click", () => control("retry"));
   $("st-create").addEventListener("click", createStudio);
+  $("st-use").addEventListener("change", previewStudio);
   for (const id of ["vu-source", "vu-status"]) $(id).addEventListener("change", loadVulns);
   for (const id of ["vu-min", "vu-q"]) $(id).addEventListener("input", () => { clearTimeout(vulnTimer); vulnTimer = setTimeout(loadVulns, 200); });
   $("vu-csv").addEventListener("click", exportVulns);

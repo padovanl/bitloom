@@ -18,9 +18,19 @@
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
 <article class="doc"><h1 id="studio">Studio</h1>
-<p>Studio creates the metadata of your own product: a product layer, your distribution instead of Poky, machines, images, recipes and appends. Every field explains itself, defaults follow the detected Yocto release, and you see every file before anything is written.</p>
+<p>Studio creates the metadata of your own product: a product layer, your distribution instead of Poky, machines, images, recipes and appends. Defaults follow the detected Yocto release, and you see every file, and everything Create will do, before anything is written.</p>
 <p>Open it with <strong>Recipes → <code>c</code></strong> in the TUI, <strong>Ctrl+P → Studio</strong>, or section <strong>5</strong> of the <a href="web.html">web dashboard</a>.</p>
 <details class="shot"><summary><span>Screenshot</span> Studio creating a distribution on Wrynose</summary><div class="shot-body"><img src="assets/studio.png" alt="Studio creating a distribution on Wrynose" loading="lazy" decoding="async"></div></details>
+<h2 id="how-the-form-reads">How the form reads<a class="anchor" href="#how-the-form-reads" aria-label="Link to this section">#</a></h2>
+<p>The form is split into numbered sections: <strong>Where the files go</strong>, <strong>Name and identity</strong>, <strong>What goes in</strong> and <strong>Policies</strong>. Each field has a plain label; the BitBake variable it sets is shown next to it (for example <em>Product name</em> · <code>DISTRO_NAME</code>), so the form is readable without knowing Yocto and still tells experts exactly what is written.</p>
+<ul>
+<li><strong>Choices explain themselves.</strong> Under a drop-down, a line says what the selected option means (<em>systemd: full service manager; default from Wrynose</em>). Feature chips show their meaning on hover or focus, and the line under them lists what is selected.</li>
+<li><strong>The preview follows the field.</strong> Focusing a field highlights the lines it writes and switches the preview to the file that contains them. The main file (the distribution, machine, image or recipe) is the first tab, marked ●; the layer files come after it.</li>
+<li><strong>When you press Create</strong> lists the steps in order: the files written and where, the kas overlay or <code>bitbake-layers add-layer</code>, whether the new <code>DISTRO</code>/<code>MACHINE</code> is selected and the build offered next. Nothing happens that is not on this list.</li>
+<li><strong>Errors point at the field.</strong> A value that cannot work (an id with capitals, a size that is not a number, <code>debug-tweaks</code> on 5.1+) is marked on the field itself with the reason, and Create is disabled until it is fixed.</li>
+<li><strong>No layer of your own yet?</strong> The Layer field says so: a new layer (default <code>meta-acme</code>) is created together with the files. The layer choice is kept when you switch between kinds.</li>
+</ul>
+<details class="shot"><summary><span>Screenshot</span> Studio in the web dashboard: the focused field's line is highlighted in the preview</summary><div class="shot-body"><img src="assets/web-studio.png" alt="Studio in the web dashboard: the focused field's line is highlighted in the preview" loading="lazy" decoding="async"></div></details>
 <h2 id="what-you-can-create">What you can create<a class="anchor" href="#what-you-can-create" aria-label="Link to this section">#</a></h2>
 <table>
 <thead>
@@ -97,12 +107,12 @@
 </table>
 <p>Images and recipes set the build target, so <code>b</code> builds them next.</p>
 <h2 id="keyboard">Keyboard<a class="anchor" href="#keyboard" aria-label="Link to this section">#</a></h2>
-<p><code>↑</code>/<code>↓</code> choose the kind, <code>Tab</code> moves through the fields, <code>Space</code> toggles list entries, <code>^O</code> creates, <code>Esc</code> closes.</p>
+<p><code>↑</code>/<code>↓</code> choose the kind, <code>Tab</code> moves through the fields (the preview follows), <code>Space</code> toggles list entries, <code>^O</code> creates, <code>Esc</code> closes. In the web dashboard the kinds are cards, chips toggle with <code>Enter</code>/<code>Space</code>, and file tabs switch the preview.</p>
 </article>
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="compliance.html"><small>Previous</small>SBOM, CRA and releases</a><a class="next" href="teams.html"><small>Next</small>Teams and CI/CD</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/studio.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-you-can-create">What you can create</a><a href="#where-files-go">Where files go</a><a href="#registration">Registration</a><a href="#keyboard">Keyboard</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#how-the-form-reads">How the form reads</a><a href="#what-you-can-create">What you can create</a><a href="#where-files-go">Where files go</a><a href="#registration">Registration</a><a href="#keyboard">Keyboard</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

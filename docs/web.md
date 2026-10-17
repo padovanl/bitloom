@@ -37,11 +37,15 @@ ssh -L 8765:127.0.0.1:8765 build-server
 | `5` | Studio | Create a product layer, distribution, machine, image, recipe or append with a live preview. See [Studio](studio.md). |
 | `6` | Configuration | Projects (recent, new, clone), guided project setup, health checks, setup checks and literal `local.conf` values. See [Projects](projects.md). |
 
+![Recipes grouped by layer and folder](assets/web-recipes.png)
+
 ## Build target
 
 The target field in the top bar is a combobox. Click it, press `t` or `↓` to list the image recipes found in the project's layers: the kas `target:` and images already built come first, example and test images last, each with its layer and `SUMMARY`. Type to filter, `↑`/`↓` to choose, `Enter` to pick, `Enter` again to build. Any other recipe or several space-separated targets can still be typed.
 
 An image recipe is a `.bb` that inherits `core-image` or `image`, or requires another image recipe. Only files with "image" in their path are read, so the list is ready in a few milliseconds.
+
+![Target combobox listing the project's images](assets/web-target.png)
 
 The build detail has Toaster-style tabs computed from the stored log: **Summary** (errors, warnings, failed tasks), **Sstate reuse**, grouped **Warnings**, observed task **Timings** and **Compare** with the previous run of the same command. A running build shows its ETA next to the task count.
 
