@@ -19,6 +19,23 @@
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
 <article class="doc"><h1 id="teams-cicd-and-setup">Teams, CI/CD and setup</h1>
 <p>Features for organisations with many products, images, devices and build machines. Bitloom still runs one build at a time per build service: a serial queue avoids concurrent BitBake servers fighting over a build directory.</p>
+<h2 id="a-build-server-run-bitloom-as-a-service">A build server: run Bitloom as a service<a class="anchor" href="#a-build-server-run-bitloom-as-a-service" aria-label="Link to this section">#</a></h2>
+<p>On a shared build machine you want the build service, and usually the dashboard, running after a reboot and without a terminal open. Bitloom installs them as <strong>systemd user services</strong> (no root needed):</p>
+<pre><code class="language-console">$ bitloom --service-install --web --host 127.0.0.1 --port 8765
+wrote ~/.config/systemd/user/bitloom.service
+wrote ~/.config/systemd/user/bitloom-web.service
+enabled and started bitloom.service, bitloom-web.service
+dashboard: http://127.0.0.1:8765/#token=…
+to keep it running when you log out: loginctl enable-linger &lt;you&gt;
+</code></pre>
+<ul>
+<li><code>bitloom.service</code> runs the build service for the state folder (<code>--state</code>, default <code>.bitloom</code> in the current folder, resolved to an absolute path); <code>bitloom-web.service</code> runs the dashboard on top of it. Without <code>--web</code> only the build service is installed: the TUI and <code>bitloom --web</code> attach to it as usual.</li>
+<li>The dashboard keeps its token in <code>&lt;state&gt;/web.token</code> (mode 0600, <code>--persistent-token</code>), so the URL, and your bookmark, survives restarts. Keep the default loopback address and reach it with an SSH tunnel (<code>ssh -L 8765:127.0.0.1:8765 build-server</code>).</li>
+<li>A build service already started by Bitloom is stopped first (only when idle), so there is never more than one per state folder. The unit's <code>PATH</code> is your login <code>PATH</code> without WSL's Windows folders.</li>
+<li><code>bitloom --service-status</code> shows the units and the jobs; <code>bitloom --service-uninstall</code> stops and removes them. <code>--service-name</code> installs several (one per state folder).</li>
+<li><code>loginctl enable-linger</code> keeps user services running when you are not logged in: run it yourself once.</li>
+<li>Under WSL, systemd must be enabled in <code>/etc/wsl.conf</code> (<code>[boot] systemd=true</code>).</li>
+</ul>
 <h2 id="headless-ci-runs">Headless CI runs<a class="anchor" href="#headless-ci-runs" aria-label="Link to this section">#</a></h2>
 <p><code>bitloom --ci</code> runs operations without the TUI, with the same profiles, runtimes, serial queue and history:</p>
 <pre><code class="language-bash">bitloom --config ci/profiles.json --state .ci \
@@ -85,7 +102,7 @@
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="practices.html"><small>Previous</small>Best practices</a><a class="next" href="developer.html"><small>Next</small>Developer workbench</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/teams.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#headless-ci-runs">Headless CI runs</a><a href="#team-profiles">Team profiles</a><a href="#setup-and-infrastructure-checks">Setup and infrastructure checks</a><a href="#many-images-and-machines">Many images and machines</a><a href="#many-devices">Many devices</a><a href="#builds-started-elsewhere">Builds started elsewhere</a><a href="#project-launcher-scripts">Project launcher scripts</a><a href="#team-chat-notifications">Team chat notifications</a><a href="#profiles-from-other-versions">Profiles from other versions</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#a-build-server-run-bitloom-as-a-service">A build server: run Bitloom as a service</a><a href="#headless-ci-runs">Headless CI runs</a><a href="#team-profiles">Team profiles</a><a href="#setup-and-infrastructure-checks">Setup and infrastructure checks</a><a href="#many-images-and-machines">Many images and machines</a><a href="#many-devices">Many devices</a><a href="#builds-started-elsewhere">Builds started elsewhere</a><a href="#project-launcher-scripts">Project launcher scripts</a><a href="#team-chat-notifications">Team chat notifications</a><a href="#profiles-from-other-versions">Profiles from other versions</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>
