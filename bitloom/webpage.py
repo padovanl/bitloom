@@ -968,12 +968,14 @@ details.folder > summary { padding: 8px 14px; }
               <label class="f" for="pj-name">Project name</label><input type="text" id="pj-name" value="my-product">
               <label class="f" for="pj-dir">Folder</label><input type="text" id="pj-dir">
               <label class="f" for="pj-release">Yocto release</label><select id="pj-release"></select>
+              <label class="f" for="pj-tool">Set up with</label><select id="pj-tool"><option value="kas">kas: one kas.yml with pinned repositories (recommended)</option><option value="bitbake-setup">bitbake-setup: the Yocto Project's official templates</option></select>
+              <div class="help" id="pj-tool-help"></div>
               <div class="help">Both are LTS. Wrynose uses split repositories, SPDX 3 and sbom-cve-check.</div>
               <label class="f" for="pj-machine">MACHINE / DISTRO / image</label>
               <div style="display:flex;gap:8px"><select id="pj-machine"></select><input type="text" id="pj-distro" value="poky"><select id="pj-target"></select></div>
-              <label class="f" for="pj-runtime">Runtime</label><select id="pj-runtime"><option value="kas-container">kas-container (recommended)</option><option value="kas">kas on the host</option></select>
-              <label class="check" style="margin-top:12px"><span class="switch"><input type="checkbox" id="pj-layer" checked><span></span></span>create meta-&lt;name&gt; product layer</label>
-              <label class="f" for="pj-owner">Copyright owner</label><input type="text" id="pj-owner" placeholder="Your company">
+              <label class="f" for="pj-runtime">Runtime</label><select id="pj-runtime"></select>
+              <div data-kas><label class="check" style="margin-top:12px"><span class="switch"><input type="checkbox" id="pj-layer" checked><span></span></span>create meta-&lt;name&gt; product layer</label>
+              <label class="f" for="pj-owner">Copyright owner</label><input type="text" id="pj-owner" placeholder="Your company"></div>
               <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn primary" id="pj-create">✦ Create project</button></div>
             </div>
             <div class="files list" id="pj-files"></div>
@@ -1180,6 +1182,15 @@ function notifyTransitions(rows) {
     if (pendingScan && row.id === pendingScan && before && before !== row.status && row.status === "success") {
       pendingScan = null; toast("Grype scan finished", "Findings updated", "success", {label: "Show", run: () => { setView("compliance"); }});
       if (view === "compliance") loadVulns();
+    }
+    if (pendingSetup && row.id === pendingSetup.id && before && before !== row.status && ["success", "failed"].includes(row.status)) {
+      const done = pendingSetup; pendingSetup = null;
+      if (row.status === "success") {
+        api("/api/setup/save", {method: "POST", body: JSON.stringify({profile: done.profile})}).then(async (saved) => {
+          $("profile").textContent = ""; await refresh(); $("profile").value = saved.active; $("target").dataset.touched = ""; renderState(); loadProjects();
+          toast("Project ready", `${done.dest} · profile ${saved.active} is active`, "success", {label: "Build it", run: () => queue("build", {target: $("target").value})});
+        }).catch((error) => toast("Save the profile", error.message + " · set it up from Configuration", "error"));
+      }
     }
     if (pendingClone && row.id === pendingClone.id && before && before !== row.status && row.status === "success") {
       const destination = pendingClone.dest; pendingClone = null;
@@ -1642,10 +1653,27 @@ async function loadProjects() {
     for (const [value, label] of values) select.append(el("option", {value, text: label}));
   }
   if (!$("pj-dir").value) $("pj-dir").value = projectInfo.home + "/yocto/my-product";
+  syncProjectTool();
+}
+function syncProjectTool() {
+  // bitbake-setup exists only from BitBake 2.16 (Yocto 5.3): offered where the release has it, with its template's choices.
+  const template = (projectInfo.bbsetup || {})[$("pj-release").value];
+  const bbOption = $("pj-tool").querySelector('option[value="bitbake-setup"]');
+  bbOption.disabled = !template; bbOption.textContent = template ? "bitbake-setup: the Yocto Project's official templates" : "bitbake-setup: not available for this release (BitBake 2.16+)";
+  if (!template && $("pj-tool").value === "bitbake-setup") $("pj-tool").value = "kas";
+  const bb = $("pj-tool").value === "bitbake-setup";
+  const fill = (select, values, keep) => { const old = select.value; select.textContent = ""; for (const [v, l] of values) select.append(el("option", {value: v, text: l})); if (keep && values.some(([v]) => v === old)) select.value = old; };
+  fill($("pj-machine"), (bb ? template.machines : projectInfo.machines).map((m) => [m, m]), true);
+  fill($("pj-runtime"), bb ? [["container", "container: the kas build image, nothing to install (recommended)"], ["host", "host: needs the Yocto host packages"]]
+                           : [["kas-container", "kas-container (recommended)"], ["kas", "kas on the host"]], true);
+  for (const node of document.querySelectorAll("#pj-new [data-kas]")) node.hidden = bb;
+  $("pj-tool-help").textContent = bb ? `Runs bitbake-setup init with the ${template.config} template as a job: the layers are fetched, MACHINE and DISTRO become configuration fragments. DISTRO: ${template.distros.join(", ")}.`
+    : "A kas.yml pinned to the release's tags, with your own layer if you want one. Works for every release.";
+  previewProject();
 }
 function projectBody() {
   return {name: $("pj-name").value.trim(), dir: $("pj-dir").value.trim(), release: $("pj-release").value, machine: $("pj-machine").value, distro: $("pj-distro").value.trim(),
-          target: $("pj-target").value, runtime: $("pj-runtime").value, layer: $("pj-layer").checked, owner: $("pj-owner").value.trim()};
+          target: $("pj-target").value, runtime: $("pj-runtime").value, layer: $("pj-layer").checked, owner: $("pj-owner").value.trim(), tool: $("pj-tool").value};
 }
 let projectTimer;
 function previewProject() {
@@ -1655,13 +1683,24 @@ function previewProject() {
     try {
       const plan = await api("/api/projects/preview", {method: "POST", body: JSON.stringify(projectBody())});
       $("pj-create").disabled = false;
+      if (plan.tool === "bitbake-setup") {
+        files.append(el("details", {open: ""}, el("summary", {text: "Runs as a job"}), el("pre", {text: plan.display})),
+          el("div", {class: "help", style: "padding:8px 12px", text: `Creates ${plan.setup}: layers/ (bitbake, openembedded-core, meta-yocto), build/ with init-build-env, and the fragments for MACHINE and DISTRO. Bitloom saves the profile when the job succeeds. Add your own layer afterwards with Studio → Layer.`}));
+        return;
+      }
       Object.entries(plan.files).forEach(([name, text]) => files.append(el("details", name === "kas.yml" ? {open: ""} : {}, el("summary", {text: "+ " + name}), el("pre", {text}))));
     } catch (error) { $("pj-create").disabled = true; files.append(el("div", {class: "notice", text: "✖ " + error.message})); }
   }, 150);
 }
+let pendingSetup = null;
 async function createProject() {
   try {
     const result = await api("/api/projects/create", {method: "POST", body: JSON.stringify(projectBody())});
+    if (result.profile) {
+      // bitbake-setup runs as a job: follow it in Builds; its profile is saved when it succeeds.
+      pendingSetup = result; toast("bitbake-setup started", result.dest, "info"); selected = null; await refresh(); select_(result.id); setView("builds"); $("pj-new").hidden = true;
+      return;
+    }
     $("profile").textContent = ""; await refresh(); $("profile").value = result.active; $("target").dataset.touched = ""; renderState();
     toast("Project created", `${result.root} · profile ${result.active} is active`, "success", {label: "Build it", run: () => queue("build", {target: $("target").value})});
     $("pj-new").hidden = true; loadProjects();
@@ -2781,6 +2820,7 @@ function wire() {
   $("vu-csv").addEventListener("click", exportVulns);
   $("vu-grype").addEventListener("click", scanGrype);
   $("setup-scan").addEventListener("click", scanSetup);
+  $("pj-tool").addEventListener("change", syncProjectTool); $("pj-release").addEventListener("change", syncProjectTool);
   $("pj-show-new").addEventListener("click", () => { $("pj-new").hidden = !$("pj-new").hidden; $("pj-clone").hidden = true; previewProject(); });
   $("pj-show-clone").addEventListener("click", () => { $("pj-clone").hidden = !$("pj-clone").hidden; $("pj-new").hidden = true; });
   for (const id of ["pj-name", "pj-dir", "pj-release", "pj-machine", "pj-distro", "pj-target", "pj-runtime", "pj-layer", "pj-owner"]) $(id).addEventListener("input", previewProject);

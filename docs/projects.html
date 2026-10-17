@@ -80,6 +80,15 @@
 </table>
 <p>Bitloom writes <code>kas.yml</code> pinned to the release tags verified by its own real builds (yocto-5.0.8 and yocto-6.0.2, with the commits the tags point to), a README, a <code>.gitignore</code>, the optional layer, and runs <code>git init</code>. The profile becomes active; the first build downloads layers and sources. Update the pinned tags deliberately, and use <em>Generate kas lock file</em> to record exact revisions.</p>
 <details class="shot"><summary><span>Screenshot</span> New project form with the generated kas.yml</summary><div class="shot-body"><img src="assets/new-project.png" alt="New project form with the generated kas.yml" loading="lazy" decoding="async"></div></details>
+<h3 id="with-bitbake-setup">With bitbake-setup<a class="anchor" href="#with-bitbake-setup" aria-label="Link to this section">#</a></h3>
+<p>From Yocto 5.3 (BitBake 2.16) the Yocto Project ships its own setup tool, <code>bitbake-setup</code>, with official configuration templates. For a Wrynose project choose <strong>Set up with → bitbake-setup</strong>; for Scarthgap the option is shown as not available (its BitBake has no bitbake-setup), and kas is used.</p>
+<ul>
+<li><strong>MACHINE</strong> and <strong>DISTRO</strong> are the ones the official <code>poky-wrynose</code> template offers: <code>qemux86-64</code>, <code>qemuarm64</code>, <code>qemuriscv64</code>, <code>genericarm64</code>, <code>genericx86-64</code>; <code>poky</code>, <code>poky-altcfg</code> (systemd), <code>poky-tiny</code>. They become configuration fragments (<code>machine/…</code>, <code>distro/…</code> in <code>build/conf/toolcfg.conf</code>).</li>
+<li><strong>Runtime</strong>: <em>container</em> runs bitbake-setup, and later every build, in the kas build image (<code>ghcr.io/siemens/kas/kas</code>), with the project mounted at its own path because bitbake-setup writes absolute paths; nothing to install but Docker or Podman. <em>host</em> needs the Yocto host packages, and Bitloom checks the usual blockers first (the <code>en_US.UTF-8</code> locale, compilers, <code>chrpath</code>, <code>diffstat</code>, <code>lz4c</code>, <code>zstd</code>) and says what to install.</li>
+<li>The preview shows the exact command. <strong>Create</strong> runs it as a job you follow in Builds: <code>bitbake-setup --setting default top-dir-prefix … init --non-interactive --setup-dir-name &lt;name&gt; poky-wrynose poky machine/&lt;machine&gt; distro/&lt;distro&gt;</code>. When <code>bitbake-setup</code> is not on your <code>PATH</code>, BitBake is fetched once at the release tag (<code>yocto-6.0.2</code>) into <code>~/.cache/bitloom</code>.</li>
+<li>When the job succeeds the profile is saved and becomes active: <code>b</code> builds. Add your own layer with Studio → Layer, and enable more fragments with Operations → <em>Enable a configuration fragment</em>; <em>bitbake-setup: compare with upstream</em> and <em>update</em> keep the layers current.</li>
+</ul>
+<details class="shot"><summary><span>Screenshot</span> New project with bitbake-setup: the official template's choices and the command it runs</summary><div class="shot-body"><img src="assets/web-new-project-bbsetup.png" alt="New project with bitbake-setup: the official template's choices and the command it runs" loading="lazy" decoding="async"></div></details>
 <h2 id="clone-from-github-or-git">Clone from GitHub or Git<a class="anchor" href="#clone-from-github-or-git" aria-label="Link to this section">#</a></h2>
 <p>Press <strong><code>g</code></strong> in the hub (web: <strong>Clone from Git</strong>), enter an <code>https://</code>, <code>ssh://</code>, <code>git@</code> or <code>file://</code> URL, the destination (suggested from the URL until you edit it) and an optional branch or tag. Your Git credentials and SSH agent are used as in a terminal.</p>
 <p>The clone runs as a normal job, so you follow its progress in Builds. When it succeeds, the guided setup opens on the new folder.</p>
@@ -103,7 +112,7 @@
 </tr>
 <tr>
 <td><code>POST /api/projects/preview</code>, <code>/create</code></td>
-<td>Plan or create a new project <code>{name, dir, release, machine, distro, target, runtime, layer, owner}</code></td>
+<td>Plan or create a new project <code>{name, dir, release, machine, distro, target, runtime, layer, owner, tool}</code>; with <code>tool: &quot;bitbake-setup&quot;</code> (runtime <code>container</code> or <code>host</code>) create returns the job id and the profile to save when it succeeds</td>
 </tr>
 <tr>
 <td><code>POST /api/projects/clone</code></td>
@@ -123,7 +132,7 @@
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="guide.html"><small>Previous</small>User guide</a><a class="next" href="keyboard.html"><small>Next</small>Keyboard</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/projects.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#open-an-existing-project-guided-setup">Open an existing project: guided setup</a><a href="#project-launcher-scripts" class="sub">Project launcher scripts</a><a href="#create-a-new-project">Create a new project</a><a href="#clone-from-github-or-git">Clone from GitHub or Git</a><a href="#recent-projects">Recent projects</a><a href="#web-dashboard">Web dashboard</a><a href="#api">API</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#open-an-existing-project-guided-setup">Open an existing project: guided setup</a><a href="#project-launcher-scripts" class="sub">Project launcher scripts</a><a href="#create-a-new-project">Create a new project</a><a href="#with-bitbake-setup" class="sub">With bitbake-setup</a><a href="#clone-from-github-or-git">Clone from GitHub or Git</a><a href="#recent-projects">Recent projects</a><a href="#web-dashboard">Web dashboard</a><a href="#api">API</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

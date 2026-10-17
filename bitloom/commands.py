@@ -214,19 +214,31 @@ def which(name: str) -> str | None:
     return shutil.which(name, path=search_path())
 
 
+def fragment_selected(profile: Profile) -> set[str]:
+    """MACHINE and/or DISTRO when the build's configuration fragments choose them."""
+    from .models import read_assignments
+    try:
+        fragments = read_assignments(profile.build_path / "conf/toolcfg.conf").get("OE_FRAGMENTS", "").split()
+    except OSError:
+        return set()
+    return {key for key, prefix in (("MACHINE", "machine/"), ("DISTRO", "distro/")) if any(f.startswith(prefix) for f in fragments)}
+
+
 def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Invocation:
     profile.validate()
     env = os.environ.copy()
     env["PATH"] = search_path(env.get("PATH", ""))
     env.update(profile.environment)
     root = profile.root_path
-    # MACHINE/DISTRO are passed through BitBake's explicit allow-list.
-    for key, value in (("MACHINE", profile.machine), ("DISTRO", profile.distro)):
-        if value:
-            env[key] = value
+    # MACHINE/DISTRO are passed through BitBake's explicit allow-list, unless configuration fragments
+    # (machine/…, distro/… in toolcfg.conf, as bitbake-setup writes them) select them: BitBake refuses both.
+    owned = fragment_selected(profile)
+    chosen = [(k, v) for k, v in (("MACHINE", profile.machine), ("DISTRO", profile.distro)) if v and k not in owned]
+    for key, value in chosen:
+        env[key] = value
     passthrough = set(env.get("BB_ENV_PASSTHROUGH_ADDITIONS", "").split())
     passthrough.update(profile.environment)
-    passthrough.update(k for k, v in (("MACHINE", profile.machine), ("DISTRO", profile.distro)) if v)
+    passthrough.update(k for k, _ in chosen)
     env["BB_ENV_PASSTHROUGH_ADDITIONS"] = " ".join(sorted(passthrough))
     if profile.mode == "wrapper":
         # The project script owns the kas configuration (often via environment).

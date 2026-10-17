@@ -93,6 +93,8 @@ def main():
             page.keyboard.press('Escape'); page.wait_for_timeout(300)
             page.keyboard.press('8'); page.wait_for_timeout(1500); shot('web-projects')
             page.click('#pj-show-new'); page.wait_for_timeout(900); shot('web-new-project', tour=False)
+            page.select_option('#pj-release', 'wrynose'); page.select_option('#pj-tool', 'bitbake-setup'); page.select_option('#pj-machine', 'qemuarm64')
+            page.wait_for_timeout(900); page.locator('#pj-new').scroll_into_view_if_needed(); shot('web-new-project-bbsetup', tour=False)
             mobile = browser.new_page(viewport={'width': 390, 'height': 844}, color_scheme='light')
             mobile.goto(base + '/#token=docs'); mobile.wait_for_timeout(3000)
             mobile.screenshot(path=str(output / 'web-mobile.png'))

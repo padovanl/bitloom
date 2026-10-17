@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -75,6 +77,53 @@ def new_project_plan(directory: str, name: str, release: str, machine: str, dist
         from .studio import layer_files
         files.update({f"{layer}/{path}": text for path, text in layer_files(layer, name.replace("-", "_"), "7", "core", release, owner or name).items()})
     return {"root": str(root), "name": name, "release": release, "files": files, "layer": layer}
+
+
+def bbsetup_plan(directory: str, name: str, release: str, machine: str, distro: str, configuration: str = "poky") -> dict:
+    """A project made by bitbake-setup itself: the official template, the chosen machine and distro, run as a job."""
+    from .bbsetup import TEMPLATES
+    root = Path(directory).expanduser()
+    if not root.is_absolute():
+        raise ValueError("Choose an absolute directory for the new project")
+    if root.exists() and any(root.iterdir()):
+        raise ValueError(f"{root} exists and is not empty; choose a new folder")
+    if not NAME.fullmatch(name or ""):
+        raise ValueError("Project name: lowercase letters, digits and hyphens")
+    spec = TEMPLATES.get(release)
+    if spec is None:
+        raise ValueError(f"bitbake-setup is not available for {release}: it arrived with BitBake 2.16 (Yocto 5.3). Create {release} projects with kas.")
+    if machine not in spec["machines"]:
+        raise ValueError(f"The {spec['config']} template offers MACHINE {', '.join(spec['machines'])}; for another board use kas, or add its layer after the setup")
+    if distro not in spec["distros"]:
+        raise ValueError(f"The {spec['config']} template offers DISTRO {', '.join(spec['distros'])}")
+    if configuration not in spec["configurations"]:
+        raise ValueError(f"Configuration: {', '.join(spec['configurations'])}")
+    choices = [f"machine/{machine}", f"distro/{distro}"]
+    from .bbsetup import argv
+    shown = argv(root, spec["config"], name, configuration, choices, ["bitbake-setup"])
+    return {"root": str(root), "name": name, "release": release, "tool": "bitbake-setup", "files": {}, "layer": None,
+            "command": shown, "setup": str(root / name),
+            "display": " \\\n    ".join(shlex.join(part) for part in (shown[:5], shown[5:9], shown[9:14], shown[14:])),
+            "job": [sys.executable, "-m", "bitloom.bbsetup", "--top", str(root), "--release", release, "--name", name, "--configuration", configuration,
+                    *[x for c in choices for x in ("--choice", c)]]}
+
+
+def bbsetup_request(plan: dict, runtime: str, machine: str, distro: str, target: str) -> dict:
+    """The job that runs bitbake-setup, and the profile to save when it succeeds: in the kas build image
+    (container, the project mounted at its own path) or on the host."""
+    from .bbsetup import IMAGE
+    if runtime not in {"container", "host"}:
+        raise ValueError("runtime must be container or host")
+    engine = "docker" if shutil.which("docker") else "podman" if shutil.which("podman") else ""
+    if runtime == "container" and not engine:
+        raise ValueError("No docker or podman found: install one, or choose the host runtime")
+    setup = plan["setup"]
+    profile = Profile(name=plan["name"], root=setup, mode="container" if runtime == "container" else "host", init_script="build/init-build-env",
+                      build_dir="build", machine=machine, distro=distro, targets=[target or "core-image-minimal"])
+    if runtime == "container":
+        profile.engine, profile.image, profile.container_root = engine, IMAGE, setup
+    job = plan["job"] + (["--engine", engine, "--image", IMAGE] if runtime == "container" else [])
+    return {"top": plan["root"], "job": job, "profile": profile, "dest": setup}
 
 
 def create_project(plan: dict, runtime: str = "kas-container", work_base: Path | None = None) -> Profile:
