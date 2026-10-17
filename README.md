@@ -103,7 +103,7 @@ bitloom --web              # in your project: the guided setup proposes a profil
 | | |
 | --- | --- |
 | [User guide](docs/guide.md) | Profiles and runtimes, workflows, logs, caches, analysis, themes, troubleshooting |
-| [Manual testbook](README.testbook.md) | Step-by-step acceptance of every feature and all 79 operations |
+| [Manual testbook](README.testbook.md) | Step-by-step acceptance of every feature and all 82 operations |
 | [Command reference](docs/commands.md) · [Keyboard](docs/keyboard.md) | Generated from the code |
 | [Validation](docs/validation.md) | Real Scarthgap and Wrynose builds through kas-container and what was verified |
 | [Research map](docs/roadmap.md) | Sources, criticisms of earlier Yocto interfaces and how Bitloom answers them |

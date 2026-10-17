@@ -56,7 +56,7 @@
 </tr>
 <tr>
 <td>Development</td>
-<td>devtool modify/add/build/build-image/reset/finish/update/upgrade, upstream version checks, device deployment, devshell, kernel menuconfig and config checks</td>
+<td>devtool modify/add/build/build-image/reset/finish/update/upgrade, upstream version checks, device deployment, devshell, kernel menuconfig, savedefconfig and config checks, U-Boot menuconfig and diffconfig</td>
 </tr>
 <tr>
 <td>Errors and logs</td>
@@ -252,6 +252,7 @@ python3 -m venv .venv
 <p>Enter one target or recipe in the toolbar and press Build or F2. Filter the command list by group/name. Required inputs appear dynamically. Review the exact invocation and queue it. Builds and utilities share a serial queue to avoid two servers modifying one build directory.</p>
 <p>The Build pane persists operation, profile, status, timestamps, exit code and log path. Enter on a row loads its log. Retry uses original command and profile even if you have switched profiles. Live progress comes from standard <code>Running task N of M</code> messages. History timestamps are stored in UTC.</p>
 <p>Use recipe browsing to locate metadata, open files, build or start devtool modify. The metadata browser indexes local files, including inactive layers; <code>Show layers</code>, <code>Show recipes</code>, <code>Show appends</code> and <code>Show overlaid recipes</code> ask BitBake for evaluated state.</p>
+<p><strong>Kernel and bootloader configuration:</strong> <em>Kernel menuconfig</em> (any recipe with a Kconfig, such as <code>virtual/kernel</code> or <code>busybox</code>), <em>Export kernel config changes</em> (<code>diffconfig</code>, a fragment for your append) and <em>Save kernel defconfig</em> work on the kernel; <em>U-Boot menuconfig</em> and <em>Export U-Boot config changes</em> do the same for the machine's bootloader (<code>virtual/bootloader</code>). Keep the changes as <code>.cfg</code> fragments in an append in your layer, never in the work folder. Machines without a bootloader recipe (qemux86-64) refuse the U-Boot actions before running.</p>
 <p>Interactive actions suspend Textual and give the real terminal to devshell, menuconfig, QEMU or kas shell. They require a real terminal and cannot start while a queued/running job occupies the runner. Their output is not persisted as a queued build log.</p>
 <h2 id="terminal-layout">Terminal layout<a class="anchor" href="#terminal-layout" aria-label="Link to this section">#</a></h2>
 <p>Bitloom is fully usable without a mouse; the <a href="keyboard.html">keyboard reference</a> lists every key and <code>?</code> shows it inside the TUI.</p>

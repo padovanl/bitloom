@@ -20,7 +20,7 @@ More guides:
 | Runtimes | Initialized host environment; kas config composition; fresh Docker/Podman containers; existing containers; official kas-container wrapper |
 | Layers | Expandable layer tree, search local layers, priorities through BitBake, add/remove/create, overlays, appends, cross-layer dependencies, edit metadata with backups |
 | Recipes | Browse `.bb`, `.bbappend`, `.bbclass` and kas YAML, compile/patch/package individual recipes, list tasks, evaluate environment |
-| Development | devtool modify/add/build/build-image/reset/finish/update/upgrade, upstream version checks, device deployment, devshell, kernel menuconfig and config checks |
+| Development | devtool modify/add/build/build-image/reset/finish/update/upgrade, upstream version checks, device deployment, devshell, kernel menuconfig, savedefconfig and config checks, U-Boot menuconfig and diffconfig |
 | Errors and logs | Build and task log browsers, case-insensitive search with context, error-only view, pause/resume, failure notifications, exports, build summary and timestamped slow-task reports |
 | Downloads | Fetch a recipe or all target dependencies, size/age inventory, orphan marker and partial-download audit, concrete prune plans |
 | Shared state | Local inventory, age-based prune plans, recipe cleansstate, signature dumps/diffs, `-S printdiff` |
@@ -148,6 +148,8 @@ Enter one target or recipe in the toolbar and press Build or F2. Filter the comm
 The Build pane persists operation, profile, status, timestamps, exit code and log path. Enter on a row loads its log. Retry uses original command and profile even if you have switched profiles. Live progress comes from standard `Running task N of M` messages. History timestamps are stored in UTC.
 
 Use recipe browsing to locate metadata, open files, build or start devtool modify. The metadata browser indexes local files, including inactive layers; `Show layers`, `Show recipes`, `Show appends` and `Show overlaid recipes` ask BitBake for evaluated state.
+
+**Kernel and bootloader configuration:** *Kernel menuconfig* (any recipe with a Kconfig, such as `virtual/kernel` or `busybox`), *Export kernel config changes* (`diffconfig`, a fragment for your append) and *Save kernel defconfig* work on the kernel; *U-Boot menuconfig* and *Export U-Boot config changes* do the same for the machine's bootloader (`virtual/bootloader`). Keep the changes as `.cfg` fragments in an append in your layer, never in the work folder. Machines without a bootloader recipe (qemux86-64) refuse the U-Boot actions before running.
 
 Interactive actions suspend Textual and give the real terminal to devshell, menuconfig, QEMU or kas shell. They require a real terminal and cannot start while a queued/running job occupies the runner. Their output is not persisted as a queued build log.
 

@@ -72,6 +72,9 @@ Some operations need a capability of the project's Yocto release (see [Release c
 | `diffsigs` | Inspect | Compare signature files | path, path2 | `bitbake-diffsigs` | any release |
 | `kernel-diff` | Kernel | Export kernel config changes | target | `bitbake -c diffconfig` | any release |
 | `kernel-fragments` | Kernel | Validate kernel config fragments | target | `bitbake -c kernel_configcheck` | any release |
+| `kernel-savedefconfig` | Kernel | Save kernel defconfig | — | `bitbake -c savedefconfig virtual/kernel` | any release |
+| `uboot-menuconfig` | Bootloader | U-Boot menuconfig | — | `bitbake -c menuconfig virtual/bootloader` | any release |
+| `uboot-diffconfig` | Bootloader | Export U-Boot config changes | — | `bitbake -c diffconfig virtual/bootloader` | any release |
 | `cve` | Security | Run recipe CVE check (cve-check) | target | `bitbake -c cve_check` | [cve-check](#release-capabilities) |
 | `kas-lock` | Kas | Generate kas lock file | — | `kas lock` | any release |
 | `sbom-cve-recipe` | Security | Recipe CVE analysis from its SBOM (sbom-cve-check) | target | `bitbake -c sbom_cve_check_recipe` | [sbom-cve-check-recipe](#release-capabilities) |
@@ -96,6 +99,9 @@ Custom task adds `-c TASK` after the target. kas commands append the selected ka
 - **Run image tests:** Requires testimage configuration and suitable target runner.
 - **Build ptest packages:** Recipe must inherit ptest and ptest must be enabled.
 - **Custom command (argument list):** Parsed as argv. Shell operators are not interpreted.
+- **Save kernel defconfig:** Writes a minimal defconfig of the current kernel configuration to the kernel's build folder (${B}/defconfig): copy it to your layer as a starting point.
+- **U-Boot menuconfig:** Configures the machine's bootloader (PREFERRED_PROVIDER_virtual/bootloader, usually u-boot) in a terminal. Keep the result with U-Boot diffconfig.
+- **Export U-Boot config changes:** Writes the changes made with menuconfig as a fragment.cfg in the bootloader's work folder: add it to SRC_URI in a u-boot append in your layer.
 - **Run recipe CVE check (cve-check):** Requires the cve-check class and CVE database. Removed in 6.0 Wrynose: use sbom-cve-check.
 - **Recipe CVE analysis from its SBOM (sbom-cve-check):** Analyses the recipe SBOM without building the software. The recipe must inherit sbom-cve-check-recipe; reports go to DEPLOY_DIR_IMAGE.
 - **Create recipe SBOM (SPDX 3):** Recipe-level SBOM used by sbom-cve-check-recipe.
