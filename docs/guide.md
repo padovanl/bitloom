@@ -253,6 +253,9 @@ local.conf, bblayers.conf and metadata are editable. Save creates a timestamped 
 
 Example snippets cover buildhistory/buildstats, mirrors, shared caches, offline builds, mirror tarballs, thread limits and optional image/security classes.
 
+
+The editors (Recipes `o`, runtime files, *New file*) include the [BitBake assistant](assistant.md): **Ctrl+Space** completes from the project's layers, **Alt+D** describes the word under the cursor, and the line under the editor lists the problems as you type.
+
 ## Troubleshooting
 
 - **bitbake not found:** configure an init script or launch from a sourced environment.

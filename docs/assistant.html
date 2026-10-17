@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BitBake assistant — Bitloom documentation</title>
+<meta name="description" content="Bitloom documentation: BitBake assistant">
+<link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<body>
+<header class="topbar">
+<button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
+<a class="brand" href="index.html"><img src="assets/bitloom-icon.svg" width="26" height="26" alt=""> Bitloom <small>docs</small></a>
+<div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
+<span class="spacer"></span>
+<a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
+</header>
+<div class="layout">
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html" aria-current="page">BitBake assistant</a><a href="practices.html">Best practices</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<main class="content">
+<div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
+<article class="doc"><h1 id="bitbake-assistant">BitBake assistant</h1>
+<p>Writing a recipe, an append or a configuration file by hand is where most Yocto mistakes start: an override written the old way, <code>:append</code> without its leading space, a class or a variable with a typo. Bitloom's assistant knows the vocabulary of <strong>your</strong> project and helps where you write, in the web dashboard, in the terminal and in CI.</p>
+<p>Everything comes from the layers the project builds with, so it matches its release:</p>
+<ul>
+<li>variable and task documentation from OE-Core's <code>conf/documentation.conf</code>, plus every variable the project's classes and configuration files set;</li>
+<li>the classes, include files and recipes of the layers;</li>
+<li>machines (<code>conf/machine</code>) and distributions (<code>conf/distro</code>);</li>
+<li>licences (<code>files/common-licenses</code>), image features (<code>IMAGE_FEATURES[validitems]</code>, <code>FEATURE_PACKAGES_*</code>, <code>COMPLEMENTARY_GLOB</code>) and tasks.</li>
+</ul>
+<p>On Scarthgap <code>debug-tweaks</code> is an image feature; on Wrynose it is not, and the assistant knows it because it reads the project's own layers.</p>
+<h2 id="completion">Completion<a class="anchor" href="#completion" aria-label="Link to this section">#</a></h2>
+<p>Suggestions follow what you are writing:</p>
+<table>
+<thead>
+<tr>
+<th>You type</th>
+<th>You get</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a word at the start of a line</td>
+<td>variables (with their documentation) and keywords (<code>inherit</code>, <code>require</code>, <code>addtask</code>…)</td>
+</tr>
+<tr>
+<td><code>inherit </code></td>
+<td>the classes of the project</td>
+</tr>
+<tr>
+<td><code>require </code> / <code>include </code></td>
+<td>include files, with their path in the layer</td>
+</tr>
+<tr>
+<td><code>VAR:</code></td>
+<td><code>append</code>, <code>prepend</code>, <code>remove</code>, machines, distributions, <code>class-target</code>, <code>pn-…</code>, <code>task-…</code></td>
+</tr>
+<tr>
+<td><code>VAR[</code></td>
+<td>variable flags (<code>sha256sum</code>, <code>depends</code>, <code>noexec</code>, <code>vardeps</code>…)</td>
+</tr>
+<tr>
+<td><code>${</code></td>
+<td>variables</td>
+</tr>
+<tr>
+<td>a value of <code>DEPENDS</code>, <code>RDEPENDS</code>, <code>IMAGE_INSTALL</code></td>
+<td>recipes</td>
+</tr>
+<tr>
+<td>a value of <code>IMAGE_FEATURES</code>, <code>DISTRO_FEATURES</code>, <code>MACHINE_FEATURES</code></td>
+<td>the features of this release</td>
+</tr>
+<tr>
+<td>a value of <code>MACHINE</code>, <code>DISTRO</code>, <code>LICENSE</code></td>
+<td>machines, distributions, licences</td>
+</tr>
+<tr>
+<td><code>addtask x after </code></td>
+<td>tasks</td>
+</tr>
+</tbody>
+</table>
+<p>In the <strong>web dashboard</strong> (Studio, <em>edit before creating</em>) suggestions appear as you type and with <strong>Ctrl+Space</strong>: <code>↑</code>/<code>↓</code> choose, <code>Enter</code> or <code>Tab</code> insert, <code>Esc</code> closes. Each suggestion shows its kind (V variable, C class, R recipe, T task, M machine…), the letters you typed in bold, and the documentation of the selected one. Below the editor, the meaning of the word under the cursor.</p>
+<details class="shot"><summary><span>Screenshot</span> The assistant in Studio's editor on a real Wrynose project: suggestions with documentation, and the problems below</summary><div class="shot-body"><img src="assets/web-assistant.png" alt="The assistant in Studio's editor on a real Wrynose project: suggestions with documentation, and the problems below" loading="lazy" decoding="async"></div></details>
+<p>In the <strong>terminal</strong> editors (open a file in Recipes, edit a runtime file, new file): <strong>Ctrl+Space</strong> lists the suggestions (<code>Enter</code> inserts, <code>Esc</code> returns to the text), <strong>Alt+D</strong> describes the word under the cursor, and a line under the editor shows the problems as you type.</p>
+<h2 id="problems-as-you-write">Problems as you write<a class="anchor" href="#problems-as-you-write" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DEPENDS_append</code>, <code>RDEPENDS_${PN}</code></td>
+<td>the old override syntax: BitBake 2.x (Yocto 3.4 and later) stops parsing</td>
+</tr>
+<tr>
+<td><code>IMAGE_INSTALL:append = &quot;htop&quot;</code></td>
+<td><code>:append</code> adds no space: the word sticks to the previous one (<code>openssh-sshdhtop</code>)</td>
+</tr>
+<tr>
+<td><code>:append</code> together with <code>+=</code></td>
+<td>one of the two is enough</td>
+</tr>
+<tr>
+<td><code>FILESEXTRAPATHS:prepend</code> without <code>:=</code> or without the trailing <code>:</code></td>
+<td>your files are not found, or the search path breaks</td>
+</tr>
+<tr>
+<td>an unclosed quote, a value without quotes, a <code>{</code> never closed</td>
+<td>parse errors</td>
+</tr>
+<tr>
+<td>a class that is not in the layers</td>
+<td>“did you mean <code>systemd</code>?”</td>
+</tr>
+<tr>
+<td>a <code>require</code> that points nowhere</td>
+<td>parse error</td>
+</tr>
+<tr>
+<td><code>MACHINE</code>, <code>DISTRO</code> that the layers do not define; an image feature this release does not have</td>
+<td>the build fails late, or silently ignores it</td>
+</tr>
+<tr>
+<td>a variable one letter away from a known one (<code>IMAGE_INSTAL</code>, <code>DESCRIPTIOM</code>)</td>
+<td>a typo BitBake accepts silently: the value is simply lost</td>
+</tr>
+<tr>
+<td><code>SRC_URI[md5sum]</code></td>
+<td>deprecated: use <code>sha256sum</code></td>
+</tr>
+</tbody>
+</table>
+<p>Checked against the 1,037 recipes of OE-Core and meta-yocto on Wrynose, the assistant reports a handful of findings, all real: among them a typo in OE-Core itself (<code>DESCRIPTIOM</code> in <code>compiler-rt</code>) and an <code>:append</code> without its space in clang.</p>
+<h2 id="command-line-and-ci">Command line and CI<a class="anchor" href="#command-line-and-ci" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-console">$ bitloom --lint meta-acme                 # folders are searched for .bb, .bbappend, .bbclass, .inc and .conf
+meta-acme/recipes-app/hello/hello_1.0.bb:2: ✖ old override syntax “DEPENDS_append”: BitBake 2.x rejects it
+    → use DEPENDS:append
+12 files · 1 errors · 0 warnings · 0 notes
+$ echo $?
+2
+$ bitloom --explain IMAGE_FEATURES
+IMAGE_FEATURES · variable
+The primary list of features to include in an image. Configure this variable in an image recipe.
+</code></pre>
+<p><code>--lint</code> exits 2 on errors (<code>--fail-on warning</code> also on warnings, <code>--fail-on never</code> reports only) and <code>--format json</code> gives the findings to other tools. It runs in seconds, without BitBake, so it fits a merge-request check before the build.</p>
+<h2 id="what-it-does-not-do">What it does not do<a class="anchor" href="#what-it-does-not-do" aria-label="Link to this section">#</a></h2>
+<p>The assistant reads files; it does not run BitBake. Values computed at parse time, variables set by classes outside the project and Python code are not evaluated: for those, Bitloom's <em>Resolve one BitBake variable</em> and the Developer workbench's variable origins ask BitBake itself. Full editing stays in your editor; for VS Code, the Yocto Project's BitBake extension complements Bitloom.</p>
+</article>
+<nav class="pager" aria-label="Previous and next page"><a class="prev" href="studio.html"><small>Previous</small>Studio</a><a class="next" href="practices.html"><small>Next</small>Best practices</a></nav>
+<div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/assistant.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+</main>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#completion">Completion</a><a href="#problems-as-you-write">Problems as you write</a><a href="#command-line-and-ci">Command line and CI</a><a href="#what-it-does-not-do">What it does not do</a></aside>
+</div>
+<script src="docs.js"></script>
+</body></html>

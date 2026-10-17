@@ -50,6 +50,7 @@ const PHRASES = [
   ['Right tool for', 'your Yocto release.'],
   ['Best practices,', 'your company\'s rules.'],
   ['Where did', 'the 30 MiB go?'],
+  ['DEPENDS_append?', 'Not on our watch.'],
 ];
 const stage = document.querySelector('.rot-stage');
 if (stage) {

@@ -20,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', str(Path.home() / '.cache/ms-playwright'))  # browsers stay in the real home
-if '--only-real' not in sys.argv and '--image' not in sys.argv:
+if not {'--only-real', '--image', '--assistant'} & set(sys.argv):
     os.environ['HOME'] = '/home/developer'   # paths shown in demo clips must not reveal the author's account
 sys.path.insert(0, str(ROOT))
 from bitloom.cli import prepare_demo
@@ -312,6 +312,48 @@ def image_clip(browser, config, profile, state):
         server.shutdown()
 
 
+def assistant_shots(browser, config, profile, state):
+    """The BitBake language assistant in Studio's editor, on a real project: suggestions, then diagnostics."""
+    board, server, base, post = serve(Path(config), Path(state), 'clips')
+    try:
+        page = browser.new_page(viewport=VIEWPORT, color_scheme='dark')
+        page.goto(base + '/#token=clips')
+        page.wait_for_selector(f'#profile option[value="{profile}"]', state='attached', timeout=60000)
+        page.select_option('#profile', profile)
+        page.wait_for_timeout(1500)
+        # Typed text must reach the editor, never the dashboard's shortcuts (b builds): open Studio explicitly,
+        # wait for an editable editor that has the focus, and stop otherwise.
+        page.evaluate("document.activeElement && document.activeElement.blur()")
+        page.click('nav button[data-view="studio"]')
+        page.wait_for_selector('#view-studio:not([hidden]) .sg-kind', timeout=20000)
+        page.locator('.sg-kind b', has_text='Image').first.click()
+        page.wait_for_timeout(2500)
+        page.locator('#ide-path label.check').click()
+        page.wait_for_selector('#ide-text:not([readonly])', timeout=10000)
+        page.locator('#ide-text').click()
+        if page.evaluate("document.activeElement.id") != 'ide-text':
+            raise SystemExit('The editor does not have the focus: not typing (keys would reach the dashboard)')
+        def write(text, enter=True):
+            # Close the suggestions without Escape (Escape outside the menu leaves the field) and type only into the editor.
+            page.evaluate("langClose()")
+            if page.evaluate("document.activeElement.id") != 'ide-text':
+                raise SystemExit('The editor lost the focus: not typing (keys would reach the dashboard)')
+            if enter:
+                page.keyboard.press('Enter')
+            page.keyboard.type(text, delay=25)
+        page.keyboard.press('Control+End')
+        write('IMAGE_INSTALL:append = "htop"')
+        write('DEPENDS_append = " zlib"')
+        write('IMAGE_FEA')
+        page.wait_for_timeout(900)
+        page.keyboard.press('ArrowDown')
+        page.wait_for_timeout(1200)
+        page.screenshot(path=str(OUTPUT / 'web-assistant.png'))
+        print('web-assistant.png')
+    finally:
+        server.shutdown()
+
+
 def main():
     from playwright.sync_api import sync_playwright
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -319,13 +361,16 @@ def main():
     parser.add_argument('--state', default=None, help='state directory for --real (default: next to CONFIG)')
     parser.add_argument('--only-real', action='store_true')
     parser.add_argument('--image', nargs=2, metavar=('CONFIG', 'PROFILE'), help='record the Image explorer on a profile with a built image')
+    parser.add_argument('--assistant', nargs=2, metavar=('CONFIG', 'PROFILE'), help='capture the BitBake language assistant on a real project')
     args = parser.parse_args()
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
-        if not args.only_real and not args.image:
+        if not args.only_real and not args.image and not args.assistant:
             demo_clips(browser)
         if args.real:
             real_clip(browser, args.real[0], args.real[1], args.state or str(Path(args.real[0]).parent / 'state'))
+        if args.assistant:
+            assistant_shots(browser, args.assistant[0], args.assistant[1], args.state or str(Path(args.assistant[0]).parent / 'state'))
         if args.image:
             image_clip(browser, args.image[0], args.image[1], args.state or str(Path(args.image[0]).parent / 'state'))
         browser.close()
