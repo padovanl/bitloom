@@ -163,3 +163,56 @@ def test_services_in_the_image(tmp_path):
     text = rootfs.services_report(data)
     assert "● systemd-networkd.service" in text and "disabled in /etc" in text and "replaced by /etc" in text
     assert rootfs.listing(profile, "acme-image", "qemuarm64", "/lib/systemd/system")["children"][0]["owner"] == "root:root"
+
+
+def test_image_insights(tmp_path):
+    """Space by layer and kind, licences, dependency hubs, what listens and a security look, on a systemd image."""
+    from bitloom.image_insights import insights
+    profile = systemd_image(tmp_path)
+    root = profile.root_path
+    runtime = root / "build/tmp/pkgdata/qemuarm64/runtime"
+    (runtime / "openssh").write_text('PN: openssh\nPV: 9.9\nLICENSE: BSD-2-Clause\nPKG:openssh: openssh-sshd\nRDEPENDS:openssh: systemd\n'
+                                     'FILES_INFO:openssh: {"/lib/systemd/system/sshd.socket": 10, "/lib/systemd/system/sshd@.service": 10, "/usr/sbin/sshd": 10}\n')
+    (runtime / "systemd").write_text('PN: systemd\nPV: 257\nLICENSE: LGPL-2.1-or-later\nFILES_INFO:systemd: {"/lib/systemd/systemd": 1, "/lib/systemd/system/systemd-networkd.service": 1, "/lib/udev/rules.d/80-net-setup-link.rules": 1}\n')
+    images = root / "build/tmp/deploy/images/qemuarm64"
+    (images / "acme-image-qemuarm64.rootfs.manifest").write_text("openssh-sshd aarch64 9.9\nsystemd aarch64 257\n")
+    (root / "meta-acme/conf").mkdir(parents=True)
+    (root / "meta-acme/conf/layer.conf").write_text('BBFILE_COLLECTIONS += "acme"\n')
+    (root / "meta-acme/recipes-connectivity/openssh").mkdir(parents=True)
+    (root / "meta-acme/recipes-connectivity/openssh/openssh_9.9.bb").write_text("")
+    archive = images / "acme-image-qemuarm64.rootfs.tar.bz2"
+    raw = bz2.decompress(archive.read_bytes())
+    buffer = io.BytesIO(raw)
+    extra = {"./usr/sbin/sshd": (b"\0ELF" + b"x" * 5000, 0o755), "./etc/ssh/sshd_config": (b"Port 2222\nPermitRootLogin yes\n", 0o644),
+             "./etc/shadow": (b"root::19000:0:99999:7:::\n", 0o600), "./bin/su": (b"\0ELF", 0o4755),
+             "./usr/share/doc/openssh/README": (b"d" * 600000, 0o644), "./usr/include/ssh.h": (b"int x;\n", 0o644)}
+    out = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="r") as source, tarfile.open(fileobj=out, mode="w") as target:
+        for member in source:
+            target.addfile(member, source.extractfile(member) if member.isfile() else None)
+        for name, (data, mode) in extra.items():
+            info = tarfile.TarInfo(name)
+            info.size, info.mode = len(data), mode
+            target.addfile(info, io.BytesIO(data))
+        info = tarfile.TarInfo("./var/shared")
+        info.type, info.mode = tarfile.DIRTYPE, 0o777
+        target.addfile(info)
+    archive.write_bytes(bz2.compress(out.getvalue()))
+    from bitloom import rootfs
+    rootfs._cache.clear()
+    data = insights(profile, "acme-image", "qemuarm64", metadata(profile))
+    assert data["packages"] == 2 and data["files"] >= 10 and data["init"] == "systemd" and data["boot"] == 2
+    kinds = {k["name"]: k["size"] for k in data["kinds"]}
+    assert kinds["Documentation and locales"] == 600000 and kinds["Development files"] == 7 and kinds["Programs"] > 5000
+    layers = {l["name"]: l for l in data["layers"]}
+    assert layers["meta-acme"]["mine"] and layers["meta-acme"]["size"] >= 5004
+    assert {l["name"] for l in data["licences"]} == {"BSD-2-Clause", "LGPL-2.1-or-later"}
+    assert data["hubs"] == [{"package": "systemd", "dependants": 1, "examples": ["openssh-sshd"]}]
+    sshd = next(p for p in data["ports"] if p["port"] == 2222)
+    assert sshd["proto"] == "tcp" and sshd["how"] == "its configuration"
+    socket = next(p for p in data["ports"] if p["port"] == 22)
+    assert socket["proto"] == "tcp" and socket["how"] == "systemd socket (22)" and socket["boot"] and socket["service"] == "sshd.socket"
+    assert [s["path"] for s in data["setuid"]] == ["/bin/su"] and data["writable"] == ["/var/shared"]
+    texts = {f["text"] for f in data["findings"]}
+    assert data["root"]["empty"] and "root has no password" in texts and "SSH allows root login" in texts
+    assert any("documentation and locales" in t for t in texts) and any("headers, static libraries" in t for t in texts)

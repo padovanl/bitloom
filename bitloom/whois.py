@@ -38,13 +38,17 @@ def load(profile: Profile) -> dict:
             except OSError:
                 continue
             name = path.name
-            info = {"pn": "", "pv": "", "renamed": name, "files": [], "depends": []}
+            info = {"pn": "", "pv": "", "renamed": name, "files": [], "depends": [], "license": "", "section": ""}
             for line in text.splitlines():
                 head, _, value = line.partition(": ")
                 if head == "PN":
                     info["pn"] = value
                 elif head == "PV":
                     info["pv"] = value
+                elif head in ("LICENSE", f"LICENSE:{name}"):
+                    info["license"] = value if head != "LICENSE" or not info["license"] else info["license"]
+                elif head == "SECTION":
+                    info["section"] = value
                 elif head == f"PKG:{name}":
                     info["renamed"] = value
                 elif head in (f"RDEPENDS:{name}", f"RRECOMMENDS:{name}"):

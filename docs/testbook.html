@@ -456,6 +456,11 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <td>The demo board: model <em>Demo sample board</em>, 11 enabled and 3 disabled devices; <code>spi@50000</code> scrolls the DTS to its node; <em>1 of 4</em> matches. The CLI prints DTS starting with <code>/dts-v1/;</code>. On qemux86-64: <em>No device tree deployed</em> with the reason (x86 machines have none).</td>
 </tr>
 <tr>
+<td>8b.4d</td>
+<td>Image → <em>Insights</em> on <code>kas-wrynose</code>, both themes (OS setting). Hover <em>linux-yocto</em>; select <em>openssl</em>. Then <code>bitloom --config .validation/profiles.json --state .validation --insights --format json</code>.</td>
+<td>Tiles (≈29 MiB, ≈370 files, 37 packages, 20 started at boot, 0 ports, 3 setuid); one layer bar (<em>meta</em> 99%); kinds led by <em>Kernel and modules</em>; licences sorted by packages (GPL-2.0-only first); <em>update-alternatives-opkg</em> needed by 7; <em>Nothing listens on the network</em>; <em>root password: locked</em>; 3 setuid files (<code>busybox.suid</code>, <code>halt.sysvinit</code>, <code>shutdown.sysvinit</code>). The tooltip reads <em>linux-yocto · 13.7 MiB · 47% · 5 files</em>; <em>openssl</em> opens Files with its packages. The JSON has the same numbers.</td>
+</tr>
+<tr>
 <td>8b.5</td>
 <td>TUI: <code>7</code>, choose <em>Which recipe installs…</em>, type <code>/etc/inittab</code>, <code>a</code>. Then in a shell: <code>bitloom --config .validation/profiles.json --state .validation --who-installs /etc/inittab</code>.</td>
 <td>Both answer <code>sysvinit-inittab</code>, its recipe file, layer, image, and <em>add recipes-core/sysvinit-inittab/sysvinit-inittab_%.bbappend to your layer</em>.</td>

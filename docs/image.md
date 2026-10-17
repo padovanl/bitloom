@@ -44,6 +44,38 @@ SYSV INIT SCRIPTS
 …
 ```
 
+## Insights
+
+**Insights** turns the image into a few charts and the numbers behind them, computed from the root filesystem, pkgdata and the manifest:
+
+* **The headline**: size on the device, files, packages, services started at boot, ports listening, setuid/setgid files.
+* **Where the space goes, by layer**: one bar split by layer, your layers marked, so you see at once how much of the image is yours and how much an append could change.
+* **By kind of file**: kernel and modules, libraries, programs, Python, configuration, firmware, and what rarely belongs on a device: documentation and locales, development files (headers, static libraries, pkg-config), debug symbols.
+* **Biggest recipes**: select one for its packages, layer and *Change it with an append*.
+* **Licences**: packages per licence expression, with the space they take; the tail folds into *Other*.
+* **What everything depends on**: the installed packages most others need (from `RDEPENDS`), the ones an update affects most.
+* **What listens on the network**: systemd socket units (`ListenStream`, `ListenDatagram`), `inetd.conf` services, and server programs found in the image (OpenSSH and Dropbear with their configured port, web servers, DNS, MQTT, NTP, SNMP, Samba, telnet…), with whether they start at boot.
+* **Security at a glance**: the root password (none, locked or set), SSH allowing root login or empty passwords, a telnet server, setuid/setgid files, world-writable paths without the sticky bit, and how many bytes of development files and documentation could go, each with the setting that removes it.
+
+Hover a bar for the exact values; every value is also written next to its bar. The colours follow the dashboard theme (light and dark), and only the layer chart uses several colours.
+
+![Insights on a real Wrynose core-image-minimal](assets/web-image-insights.png)
+
+The same report for a terminal or a CI log, or as JSON:
+
+```console
+$ bitloom --insights core-image-minimal
+IMAGE INSIGHTS core-image-minimal (qemux86-64)
+
+27.6 MiB on the device · 370 files · 36 packages · 20 started at boot (sysvinit) · 0 ports listening · 3 setuid/setgid files
+
+BY KIND OF FILE
+  Kernel and modules             12.0 MiB  43.3%
+  Libraries                      11.0 MiB  39.8%
+…
+$ bitloom --insights --format json > image-insights.json
+```
+
 ## Device tree
 
 **Device tree** lists the `.dtb` and `.dtbo` files the build deployed in `tmp/deploy/images/<machine>` (the short names, not the versioned copies; the machine of the selected image first) and opens one decompiled, with no `dtc` needed: Bitloom reads the flattened device tree itself, and the DTS text matches what `dtc -I dtb -O dts` gives (verified by compiling it back with the build's own `dtc`).
