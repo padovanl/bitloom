@@ -126,13 +126,13 @@ def kas_local_conf_lines(path: Path) -> list[tuple[int, str]]:
 
 
 def machine_and_distro(profile) -> dict:
-    """MACHINE and DISTRO as the build sees them: the profile, then the kas files (later ones win, the file a
-    launcher's variable names included), then bitbake-setup's fragments, then auto.conf and local.conf.
-    Empty when nothing says it."""
-    found = {"MACHINE": profile.machine, "DISTRO": profile.distro}
+    """MACHINE and DISTRO as the build sees them: the kas files when they set them (later files and overlays win,
+    the file a launcher's variable names included; Bitloom does not export the profile's values over them), then
+    the profile, bitbake-setup's fragments, auto.conf and local.conf. Empty when nothing says it."""
     kas = {}
     for path in profile_kas_files(profile):
         kas.update({k: v for k, v in kas_values(path, profile.root_path).items() if v})
+    found = {"MACHINE": kas.get("machine") or profile.machine, "DISTRO": kas.get("distro") or profile.distro}
     fragments = read_assignments(profile.build_path / "conf/toolcfg.conf").get("OE_FRAGMENTS", "").split()
     conf = {**read_assignments(profile.build_path / "conf/local.conf"), **read_assignments(profile.build_path / "conf/auto.conf")}
     for key, kas_key, prefix in (("MACHINE", "machine", "machine/"), ("DISTRO", "distro", "distro/")):
