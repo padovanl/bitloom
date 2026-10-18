@@ -1338,7 +1338,9 @@ function renderState() {
   const p = profile();
   $("release-chip").textContent = p ? p.release : "release …";
   $("release-chip").className = "chip" + (p && p.release.includes("LTS") ? " lts" : "");
-  $("context").textContent = p ? `${p.mode} · MACHINE ${p.machine || "?"} · DISTRO ${p.distro || "?"} · ${p.build}` : "";
+  // Only what is known: a kas file without MACHINE (set by an include or the script) shows nothing rather than "?".
+  $("context").textContent = p ? [p.mode, p.machine && "MACHINE " + p.machine, p.distro && "DISTRO " + p.distro].filter(Boolean).join(" · ") : "";
+  $("context").title = p ? `${p.mode} · build folder ${p.build}` : "";
   if (!$("target").dataset.touched && p) $("target").value = (p.targets || [])[0] || "";
   const service = state.service;
   $("service-dot").className = "dot " + (service.error ? "err" : service.outdated ? "warn" : "ok");

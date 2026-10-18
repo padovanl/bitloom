@@ -827,11 +827,13 @@ class BitloomApp(App):
         theme = self.current_theme
         active = self.runner.active
         queue = sum(j.status == "queued" for j in self.runner.jobs)
-        machine = p.machine or self.config_hints.get('MACHINE', '?')
-        distro = p.distro or self.config_hints.get('DISTRO', '?')
-        self.brand_tail = Text.assemble("  ", (p.name, "bold"), ("  ·  ", "dim"), p.mode, ("  ·  ", "dim"), ("MACHINE ", "dim"), machine,
-                                        ("  ·  ", "dim"), ("DISTRO ", "dim"), distro, ("  ·  ", "dim"), (describe(self.release), "italic"),
-                                        no_wrap=True, overflow="ellipsis")
+        machine, distro = self.config_hints.get('MACHINE', ''), self.config_hints.get('DISTRO', '')
+        parts = [("  ", ""), (p.name, "bold"), ("  ·  ", "dim"), (p.mode, "")]
+        for label, value in (("MACHINE ", machine), ("DISTRO ", distro)):
+            if value:   # unknown is left out, not shown as "?"
+                parts += [("  ·  ", "dim"), (label, "dim"), (value, "")]
+        parts += [("  ·  ", "dim"), (describe(self.release), "italic")]
+        self.brand_tail = Text.assemble(*parts, no_wrap=True, overflow="ellipsis")
         if not self.runner.active:
             self.update_brand()
         recent = next((r for r in self.history_rows.values() if r["profile"] == p.name), None)
@@ -1285,7 +1287,8 @@ class BitloomApp(App):
             from .versions import detect_release
             # The release gates operations: read it first from layer.conf, before the slow walks.
             self.release = await asyncio.to_thread(detect_release, p)
-            self.config_hints = await asyncio.to_thread(read_assignments, p.build_path / "conf/local.conf")
+            from .setup import machine_and_distro
+            self.config_hints = await asyncio.to_thread(machine_and_distro, p)
             self.update_overview()
             entries, logs, health, artifacts = await asyncio.gather(
                 asyncio.to_thread(lambda: organize(metadata(p))), asyncio.to_thread(task_logs, p),
@@ -1698,10 +1701,16 @@ class BitloomApp(App):
             self.scan_cache()
         elif ident == "cache-prune":
             self.prune_plan()
-        elif ident == "local-conf":
-            self.open_file(self.profile.build_path / "conf/local.conf", True)
-        elif ident == "layers-conf":
-            self.open_file(self.profile.build_path / "conf/bblayers.conf", True)
+        elif ident in ("local-conf", "layers-conf"):
+            from .setup import profile_kas_files
+            kas = profile_kas_files(self.profile) if self.profile.mode in ("kas", "kas-container", "wrapper") else []
+            if kas:
+                # kas writes local.conf and bblayers.conf again on every run: edit what they are made from.
+                part = "local_conf_header" if ident == "local-conf" else "repos and their layers"
+                self.notify(f"kas regenerates build/conf on every build: change {part} in {kas[-1].name} instead (opened).", timeout=10)
+                self.open_file(kas[-1], True)
+            else:
+                self.open_file(self.profile.build_path / ("conf/local.conf" if ident == "local-conf" else "conf/bblayers.conf"), True)
         elif ident == "versions":
             self.version_report()
         elif ident == "inspect-load":

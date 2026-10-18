@@ -150,13 +150,14 @@ class Dashboard:
                 estimate = eta(rows, row["profile"], row["argv"], row["started"], row["progress"])
                 row["eta"] = {"remaining": human(estimate["remaining"]), "basis": estimate["basis"]} if estimate else None
         from .versions import describe, detect_release
-        hints = {p.name: read_assignments(p.build_path / "conf/local.conf") for p in settings.profiles}
+        from .setup import machine_and_distro
+        hints = {p.name: machine_and_distro(p) for p in settings.profiles}
         return {
             "active": settings.active,
             # No profiles file yet: the page opens the guided setup on the folder bitloom --web started in.
             "first_run": not settings.path.exists(), "cwd": str(Path.cwd()),
-            "profiles": [{"name": p.name, "mode": p.mode, "machine": p.machine or hints[p.name].get("MACHINE", ""),
-                          "distro": p.distro or hints[p.name].get("DISTRO", ""), "root": str(p.root_path),
+            "profiles": [{"name": p.name, "mode": p.mode, "machine": hints[p.name]["MACHINE"],
+                          "distro": hints[p.name]["DISTRO"], "root": str(p.root_path),
                           "build": str(p.build_path), "targets": p.targets, "release": describe(detect_release(p)),
                           "shared": p.name in settings.shared} for p in settings.profiles],
             "service": {k: v for k, v in service.items() if k != "jobs"},

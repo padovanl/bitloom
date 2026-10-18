@@ -215,13 +215,22 @@ def which(name: str) -> str | None:
 
 
 def fragment_selected(profile: Profile) -> set[str]:
-    """MACHINE and/or DISTRO when the build's configuration fragments choose them."""
+    """MACHINE and/or DISTRO when the build's own configuration chooses them: bitbake-setup fragments
+    (machine/…, distro/… in toolcfg.conf) or the kas files (machine:, distro:, overlays included). Exporting the
+    profile's values as well would override them: an overlay's distro, for example, would never apply."""
     from .models import read_assignments
+    owned = set()
     try:
         fragments = read_assignments(profile.build_path / "conf/toolcfg.conf").get("OE_FRAGMENTS", "").split()
+        owned |= {key for key, prefix in (("MACHINE", "machine/"), ("DISTRO", "distro/")) if any(f.startswith(prefix) for f in fragments)}
     except OSError:
-        return set()
-    return {key for key, prefix in (("MACHINE", "machine/"), ("DISTRO", "distro/")) if any(f.startswith(prefix) for f in fragments)}
+        pass
+    if profile.mode in ("kas", "kas-container", "wrapper"):
+        from .setup import kas_values, profile_kas_files
+        for path in profile_kas_files(profile):
+            values = kas_values(path, profile.root_path)
+            owned |= {key for key, kas_key in (("MACHINE", "machine"), ("DISTRO", "distro")) if values.get(kas_key)}
+    return owned
 
 
 def invocation(profile: Profile, argv: list[str], managed_name: str = "") -> Invocation:

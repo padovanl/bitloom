@@ -453,6 +453,9 @@ def register(settings, profile: Profile, result: dict, use: bool, submit) -> tup
                 messages.append(f"team profile: clone it and append {name} to kas_file")
             else:
                 profile.kas_file = ":".join([*profile.kas_file.split(":"), name])
+                # kas decides MACHINE and DISTRO now; the profile shows the same values.
+                profile.distro = result["activate"].get("distro", profile.distro)
+                profile.machine = result["activate"].get("machine", profile.machine)
                 settings.save()
                 messages.append(f"kas_file is now {profile.kas_file}")
     else:

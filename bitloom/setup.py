@@ -85,6 +85,63 @@ def kas_values(path: Path, root: Path, seen=None) -> dict:
     return values
 
 
+KAS_MODES = ("kas", "kas-container", "wrapper")
+
+
+def profile_kas_files(profile) -> list[Path]:
+    """The kas files a profile builds with: kas_file for kas and kas-container (overlays in order), the file a
+    launcher script's variable names (YML=…) for wrapper profiles. With kas, local.conf and bblayers.conf are
+    generated from these on every run: configuration is changed here, not in build/conf."""
+    names = [n for n in (profile.kas_file or "").split(":") if n] if profile.mode in ("kas", "kas-container") else []
+    if profile.mode == "wrapper" or not names:
+        names += [part for value in profile.environment.values() for part in value.split(":") if part.endswith((".yml", ".yaml"))]
+    files = []
+    for name in names:
+        path = (profile.root_path / name).resolve()
+        if path.suffix in (".yml", ".yaml") and path.is_file() and path not in files:
+            files.append(path)
+    return files
+
+
+def kas_local_conf_lines(path: Path) -> list[tuple[int, str]]:
+    """(line number in the .yml, configuration line) for every line of the local_conf_header blocks."""
+    lines = path.read_text(errors="replace").splitlines()
+    result, inside, block_indent = [], False, None
+    for number, line in enumerate(lines, 1):
+        if re.match(r"^local_conf_header:\s*$", line):
+            inside, block_indent = True, None
+            continue
+        if inside and line and not line[0].isspace():
+            inside = False
+        if not inside or not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        if re.match(r"^\s+[\w\-]+:\s*\|", line):
+            block_indent = None
+            continue
+        if block_indent is None:
+            block_indent = indent
+        result.append((number, line[block_indent:]))
+    return result
+
+
+def machine_and_distro(profile) -> dict:
+    """MACHINE and DISTRO as the build sees them: the profile, then the kas files (later ones win, the file a
+    launcher's variable names included), then bitbake-setup's fragments, then auto.conf and local.conf.
+    Empty when nothing says it."""
+    found = {"MACHINE": profile.machine, "DISTRO": profile.distro}
+    kas = {}
+    for path in profile_kas_files(profile):
+        kas.update({k: v for k, v in kas_values(path, profile.root_path).items() if v})
+    fragments = read_assignments(profile.build_path / "conf/toolcfg.conf").get("OE_FRAGMENTS", "").split()
+    conf = {**read_assignments(profile.build_path / "conf/local.conf"), **read_assignments(profile.build_path / "conf/auto.conf")}
+    for key, kas_key, prefix in (("MACHINE", "machine", "machine/"), ("DISTRO", "distro", "distro/")):
+        if not found[key]:
+            fragment = next((f.split("/", 1)[1] for f in fragments if f.startswith(prefix)), "")
+            found[key] = kas.get(kas_key) or fragment or conf.get(key, "")
+    return found
+
+
 def kas_files(root: Path) -> list[Path]:
     """kas configurations under root: the ones you build first (not included by another file, with a
     machine once includes are resolved), fragments meant for includes last."""
