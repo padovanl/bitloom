@@ -101,6 +101,22 @@ def kas_files(root: Path) -> list[Path]:
     return sorted(found, key=lambda p: (p.resolve() in included, "machine" not in kas_values(p.resolve(), root), len(p.parts), str(p)))
 
 
+def _default_value(text: str, name: str) -> str | None:
+    """The default in ${NAME:-default}, which may itself hold ${…} (balanced braces)."""
+    start = text.find("${" + name + ":-")
+    if start < 0:
+        return None
+    position, depth = start + len(name) + 4, 1
+    for index in range(position, len(text)):
+        if text.startswith("${", index):
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[position:index]
+    return None
+
+
 def _shell_value(raw: str) -> str:
     """One assignment's value as written: a trailing comment or command dropped, quotes removed
     ("$(dirname "$0")"/out → $(dirname $0)/out)."""
@@ -115,7 +131,8 @@ def script_work_dir(script: Path, root: Path, variables: dict | None = None) -> 
         text = script.read_text(errors="replace")
     except OSError:
         return ""
-    match = re.search(r"KAS_WORK_DIR=['\"]?\$\{KAS_WORK_DIR:-([^}]+)\}", text) or re.search(r"^\s*(?:export\s+)?KAS_WORK_DIR=(.+)$", text, re.M)
+    default = _default_value(text, "KAS_WORK_DIR")
+    match = [None, default] if default is not None else re.search(r"^\s*(?:export\s+)?KAS_WORK_DIR=(.+)$", text, re.M)
     if not match:
         return ""
     assigned = {name: _shell_value(raw) for name, raw in re.findall(r"^\s*(?:export\s+|readonly\s+|local\s+)?([A-Z_][A-Z0-9_]*)=(.+)$", text, re.M)

@@ -66,12 +66,19 @@ def host_metrics(root: Path) -> dict:
     return result
 
 
-def job_report(path: Path) -> dict:
-    """Toaster-style build detail from the stored log: summary, sstate reuse, warnings, timings."""
+def job_report(path: Path, failed: bool = False) -> dict:
+    """Toaster-style build detail from the stored log: summary, sstate reuse, warnings, timings. A failed
+    build's summary starts with the root-cause diagnosis the TUI's Analysis shows."""
     from .analysis import sstate_report, warning_report
     from .reports import build_summary, task_timings
-    return {name: function(path) for name, function in
-            (("summary", build_summary), ("sstate", sstate_report), ("warnings", warning_report), ("timings", task_timings))}
+    report = {name: function(path) for name, function in
+              (("summary", build_summary), ("sstate", sstate_report), ("warnings", warning_report), ("timings", task_timings))}
+    if failed and path.exists():
+        from .workflows import diagnose
+        with path.open(errors="replace") as stream:
+            text = stream.read(8 * 1024 * 1024)
+        report["summary"] = diagnose(text) + "\n\n" + report["summary"]
+    return report
 
 
 class Dashboard:
@@ -262,15 +269,16 @@ class Dashboard:
         return {"saved": True}
 
     def report(self, ident):
-        path = Path(self.job_row(ident)["log"])
+        row = self.job_row(ident)
+        path = Path(row["log"])
         if not path.exists():
             raise LookupError("Log not available yet")
-        return job_report(path)
+        return job_report(path, failed=row.get("status") == "failed")
 
     def console(self, query):
         profile = self.profile(query.get("profile", [""])[0])
         return {"rows": [{"name": e.name, "machine": e.kind, "status": e.detail, "size": e.size, "modified": e.modified, "path": str(e.path)}
-                         for e in console_logs(profile)]}
+                         for e in console_logs(profile, jobs=[(r["started"], r["finished"]) for r in history(self.state, 500) if r["profile"] == profile.name])]}
 
     def console_entry(self, query):
         profile = self.profile(query.get("profile", [""])[0])
@@ -287,7 +295,9 @@ class Dashboard:
         return {"text": search_log(path, text_query, errors), "filtered": bool(text_query or errors)}
 
     def console_report(self, query):
-        return job_report(self.console_entry(query))
+        from .inspectors import console_status
+        path = self.console_entry(query)
+        return job_report(path, failed=console_status(path) == "failed")
 
     def compliance(self, query):
         from .sbom import DEADLINES, analyse, cra_checks, sbom_files

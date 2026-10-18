@@ -37,7 +37,7 @@ ssh -L 8765:127.0.0.1:8765 build-server
 | `5` | Studio | Create a product layer, distribution, machine, image, recipe or append with a live preview. See [Studio](studio.md). |
 | `6` | Configuration | Projects (recent, new, clone), guided project setup, health checks, setup checks and literal `local.conf` values. See [Projects](projects.md). |
 
-![Recipes grouped by layer and folder](assets/web-recipes.png)
+![Recipes: a layer, the Images filter, then a search](assets/web-clip-recipes.gif)
 
 ## Build target
 
@@ -45,11 +45,17 @@ The target field in the top bar is a combobox. Click it, press `t` or `↓` to l
 
 An image recipe is a `.bb` that inherits `core-image` or `image`, or requires another image recipe. Only files with "image" in their path are read, so the list is ready in a few milliseconds.
 
-![Target combobox listing the project's images](assets/web-target.png)
+![Typing in the target field filters the image recipes; Enter picks one](assets/web-clip-target.gif)
+
+![A real force compile of busybox followed live, then its summary (about three times faster)](assets/web-clip-build.gif)
 
 The build detail has Toaster-style tabs computed from the stored log: **Summary** (errors, warnings, failed tasks), **Sstate reuse**, grouped **Warnings**, observed task **Timings** and **Compare** with the previous run of the same command. A running build shows its ETA next to the task count.
 
 ![Build summary tab](assets/web-summary.png)
+
+The progress line above the tabs shows the task count, the percentage and the ETA; a dot marks where BitBake is, and a failed build keeps a ✖ where it stopped. When a build fails, a toast offers its summary, which starts with the **failure diagnosis**: the category, the failed tasks, their logs, the lines that caused it and the next step.
+
+![A failed sample build: the toast, then the summary opening on the diagnosis](assets/web-clip-failure.gif)
 
 ## Notifications and animations
 

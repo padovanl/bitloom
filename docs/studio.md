@@ -16,7 +16,7 @@ The form is split into numbered sections: **Where the files go**, **Name and ide
 * **Errors point at the field.** A value that cannot work (an id with capitals, a size that is not a number, `debug-tweaks` on 5.1+) is marked on the field itself with the reason, and Create is disabled until it is fixed.
 * **No layer of your own yet?** The Layer field says so: a new layer (default `meta-acme`) is created together with the files. The layer choice is kept when you switch between kinds.
 
-![Studio in the web dashboard: the focused field's line is highlighted in the preview](assets/web-studio.png)
+![Studio in the web dashboard: editing a field highlights the lines it writes](assets/web-clip-studio.gif)
 
 ## What you can create
 

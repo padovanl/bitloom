@@ -30,9 +30,13 @@ bitloom --web              # prints the URL (with its access token) and opens yo
 * **Projects**: guided setup from a folder (kas files, Poky checkouts, `YML=… ./run_kas.sh build` launcher scripts, one profile per product), new projects pinned to Scarthgap or Wrynose, clone from Git.
 * `Ctrl+K` palette, `?` keys, toasts and browser notifications, light and dark themes, phone and tablet layouts. → [Web dashboard](docs/web.md)
 
-| ![Recipes by layer and folder](docs/assets/web-recipes.png) | ![Studio with the focused field highlighted](docs/assets/web-studio.png) |
+![A real force compile of busybox followed live in the dashboard, then its summary](docs/assets/web-clip-build.gif)
+
+*A real run, recorded as it happened (about three times faster): force compile of busybox through a `YML=… ./run_kas.sh` launcher profile on Wrynose.*
+
+| ![Typing in the target field filters the project's images](docs/assets/web-clip-target.gif) | ![A failed build: the summary opens on the diagnosis](docs/assets/web-clip-failure.gif) |
 | --- | --- |
-| ![SBOM and CRA](docs/assets/web-compliance.png) | ![Target combobox listing the project's images](docs/assets/web-target.png) |
+| ![Recipes: a layer, the Images filter, a search](docs/assets/web-clip-recipes.gif) | ![Studio: editing a field highlights the lines it writes](docs/assets/web-clip-studio.gif) |
 
 Over SSH keep the default loopback address and tunnel it: `ssh -L 8765:127.0.0.1:8765 build-server`.
 

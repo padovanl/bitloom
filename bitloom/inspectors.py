@@ -200,9 +200,32 @@ def task_logs(profile: Profile) -> list[Entry]:
     return sorted(items, key=lambda e: e.modified, reverse=True)[:3000]
 
 
-def console_logs(profile: Profile, limit: int = 200) -> list[Entry]:
-    """BitBake's own console log of every build (BB_CONSOLELOG), including builds
-    started outside Bitloom: terminal, scripts or CI using the same build directory."""
+def started_by(path: Path, jobs) -> bool:
+    """Whether a cooker log (named after BitBake's start time, YYYYmmddHHMMSS) belongs to one of the
+    given Bitloom jobs: it started while the job ran. BitBake in a container often uses UTC, so the
+    name is tried as local time and as UTC."""
+    from datetime import datetime, timedelta, timezone
+    try:
+        stamp = datetime.strptime(path.stem[:14], "%Y%m%d%H%M%S")
+    except ValueError:
+        return False
+    candidates = [stamp.astimezone(), stamp.replace(tzinfo=timezone.utc)]
+    now = datetime.now(timezone.utc)
+    for started, finished in jobs:
+        try:
+            begin = datetime.fromisoformat(started) - timedelta(seconds=5)
+            end = (datetime.fromisoformat(finished) if finished else now) + timedelta(seconds=5)
+        except (TypeError, ValueError):
+            continue
+        if any(begin <= moment <= end for moment in candidates):
+            return True
+    return False
+
+
+def console_logs(profile: Profile, limit: int = 200, jobs=()) -> list[Entry]:
+    """BitBake's own console log of every build (BB_CONSOLELOG) started outside Bitloom: terminal,
+    scripts or CI using the same build directory. `jobs` are (started, finished) of Bitloom's own
+    jobs on this profile; their cooker logs are left out, the history already lists them."""
     root = profile.build_path / "tmp/log/cooker"
     items = []
     if root.is_dir():
@@ -211,7 +234,7 @@ def console_logs(profile: Profile, limit: int = 200) -> list[Entry]:
                 continue
             for path in machine.glob("*.log"):
                 try:
-                    if path.is_symlink():
+                    if path.is_symlink() or (jobs and started_by(path, jobs)):
                         continue
                     s = path.stat()
                     items.append(Entry(path.name, machine.name, path, s.st_size, s.st_mtime, console_status(path)))

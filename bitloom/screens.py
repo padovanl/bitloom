@@ -812,7 +812,7 @@ class ConsoleBuildsScreen(ModalScreen):
 
     def compose(self):
         with Vertical():
-            yield Label("Every build of this build directory, also from a terminal, script or CI. Enter opens it in Builds.", id="console-hint")
+            yield Label("Builds of this build directory started outside Bitloom: a terminal, a script or CI. Enter opens it in Builds.", id="console-hint")
             yield OptionList(id="console-list")
 
     def on_mount(self):
@@ -825,7 +825,8 @@ class ConsoleBuildsScreen(ModalScreen):
         from datetime import datetime
         from rich.text import Text
         from .inspectors import console_logs, human_size
-        self.entries = await asyncio.to_thread(console_logs, self.profile)
+        jobs = [(row["started"], row["finished"]) for row in self.app.store.history() if row["profile"] == self.profile.name]
+        self.entries = await asyncio.to_thread(console_logs, self.profile, 200, jobs)
         picker = self.query_one("#console-list", OptionList)
         glyphs = {"success": ("✔", self.app.current_theme.success), "failed": ("✖", self.app.current_theme.error),
                   "interrupted": ("⚠", self.app.current_theme.warning)}
@@ -1163,7 +1164,7 @@ class StudioScreen(ModalScreen):
             if field.kind == "choice" and field.hints:
                 widgets.append(Static(self.why(field, value), id="why-" + field.id, classes="field-why" + group, markup=False))
             if field.info:
-                widgets.append(Static(field.info, classes="field-info" + group, markup=False))
+                widgets.append(Static(field.info, id="info-" + field.id, classes="field-info" + group, markup=False))
             widgets.append(Static("", id="err-" + field.id, classes="field-error" + group, markup=False))
         if self.kind in {"distro", "machine"} and self.profile.mode in {"host", "container"}:
             widgets += [Label("Use for this profile", classes="field-label"),
@@ -1201,6 +1202,11 @@ class StudioScreen(ModalScreen):
         return result
 
     def on_input_changed(self, event):
+        key = (event.input.id or "")[2:]
+        field = getattr(self, "fields", {}).get(key)
+        # Help that quotes the default ("bitbake acme-image") follows what is typed.
+        if field and field.default and field.default in field.info and len(self.query("#info-" + key)):
+            self.query_one("#info-" + key, Static).update(field.info.replace(field.default, event.value.strip() or field.default))
         self.refresh_preview()
 
     def on_select_changed(self, event):

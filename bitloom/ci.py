@@ -222,5 +222,5 @@ def main(args) -> int:
             output.write(f'SKIP  {row["profile"]}: {row["title"]}  {row["reason"]}')
             continue
         output.write(f'{"PASS" if row["status"] == "success" else "FAIL"}  {row["profile"]}: {row["title"]}  '
-                     f'{row["seconds"]:.0f}s  warnings {row["warnings"]}' + (f'  sstate reuse {100 * reuse:.0f}% ({state["missed"]} of {state["wanted"]} wanted tasks rebuilt)' if reuse is not None else ''))
+                     f'{row["seconds"]:.0f}s  warnings {row["warnings"]}' + (f'  sstate reuse {100 * reuse:.0f}% (' + (f'{state["missed"]} of {state["wanted"]} wanted tasks rebuilt' if state["wanted"] else 'everything up to date') + ')' if reuse is not None else ''))
     return 0 if summary['ok'] and any(r['status'] == 'success' for r in results) else 1

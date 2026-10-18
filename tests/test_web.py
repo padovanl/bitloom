@@ -144,3 +144,15 @@ def test_browser_opening_never_takes_over_the_terminal(monkeypatch):
     monkeypatch.setattr(webbrowser, 'get', lambda: text)
     monkeypatch.setattr(text, 'open', lambda url: launched.append(['lynx']) or True)
     assert web.open_in_browser('http://127.0.0.1:9000/') == '' and ['lynx'] not in launched
+
+
+def test_failed_build_summary_starts_with_the_diagnosis(tmp_path):
+    from bitloom.web import job_report
+    log = tmp_path / 'b.log'
+    log.write_text('$ kas build\nNOTE: Running task 5 of 9 (/w/meta/recipes-x/zlib/zlib_1.3.bb:do_compile)\n'
+                   'ERROR: zlib-1.3-r0 do_compile: oe_runmake failed\n'
+                   'ERROR: Logfile of failure stored in: /w/build/tmp/work/x/zlib/1.3/temp/log.do_compile.42\n'
+                   "ERROR: Task (/w/meta/recipes-x/zlib/zlib_1.3.bb:do_compile) failed with exit code '1'\n")
+    failed = job_report(log, failed=True)['summary']
+    assert failed.startswith('FAILURE DIAGNOSIS') and 'log.do_compile.42' in failed and 'Next step:' in failed
+    assert not job_report(log)['summary'].startswith('FAILURE DIAGNOSIS')
