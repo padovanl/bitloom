@@ -1,6 +1,6 @@
-# Teams, CI/CD and setup
+# CI and build servers
 
-Features for organisations with many products, images, devices and build machines. Bitloom still runs one build at a time per build service: a serial queue avoids concurrent BitBake servers fighting over a build directory.
+Bitloom on a shared build machine and in CI: headless runs with JUnit reports, the build service and dashboard as system services, profiles shared by a team, many images, machines and devices. One build service still runs one build at a time: a serial queue keeps BitBake servers from fighting over a build directory.
 
 ## A build server: run Bitloom as a service
 
@@ -91,24 +91,7 @@ BitBake writes the complete console of every build to `tmp/log/cooker/<MACHINE>/
 
 ## Project launcher scripts
 
-Many products wrap kas in a script that selects the configuration through an environment variable, for example `YML=board.yml ./scripts/kas-wrapper.sh build`. The `wrapper` runtime uses such a script:
-
-```json
-{
-  "name": "board",
-  "root": "/home/me/src/product",
-  "mode": "wrapper",
-  "launcher": ["./scripts/kas-wrapper.sh"],
-  "launcher_shell": ["shell", "-c", "{command}"],
-  "environment": { "YML": "boards/board.yml", "KAS_WORK_DIR": "/home/me/work/board" }
-}
-```
-
-* kas operations become launcher + subcommand: *Build kas configuration* runs `./scripts/kas-wrapper.sh build`.
-* Every other command runs through `launcher_shell`: `bitbake -e busybox` becomes `./scripts/kas-wrapper.sh shell -c 'bitbake -e busybox'`.
-* Profile environment variables (such as `YML`) reach the script; `KAS_WORK_DIR`/`KAS_BUILD_DIR` locate the build directory as for kas profiles.
-
-For the TUI to run BitBake commands, queries and runtime probes, the script must forward a shell command into the build environment (kas's `shell -c`, or whatever `launcher_shell` names) and keep standard input open (`docker run -i`) for Analysis and Developer probes. Health checks verify that the launcher exists and is executable.
+Products built with a script (`YML=board.yml ./run_build.sh build`) use the `wrapper` runtime; what the script must do, a ready example and the profile are in [Where your build runs](runtimes.md#launcher-scripts).
 
 ## Team chat notifications
 

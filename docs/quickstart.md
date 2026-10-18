@@ -4,6 +4,8 @@ From nothing to a build you can follow in the browser, in five steps. Every step
 
 ## 1. Install
 
+Whatever your build uses (BitBake on the machine, kas, kas-container, a Docker image, your own launcher script), Bitloom works with it: see [Where your build runs](runtimes.md).
+
 Download the version you want from [GitHub Releases](https://github.com/padovanl/bitloom/releases) (replace `1.2.3`):
 
 ```bash
@@ -74,4 +76,4 @@ Opens the terminal UI on the same service, profiles and history: useful over SSH
 * [SBOM, CRA and releases](compliance.md): SBOM quality, vulnerabilities and their exports, CRA readiness.
 * [Studio](studio.md): your own layer, distribution, machine, image or recipe, explained field by field.
 * [User guide](guide.md): profiles and runtimes, caches, analysis, troubleshooting.
-* [Teams and CI/CD](teams.md): headless `--ci` runs, team profiles, launcher scripts in depth.
+* [Teams and CI/CD](ci.md): headless `--ci` runs, team profiles, launcher scripts in depth.

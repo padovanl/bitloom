@@ -15,9 +15,10 @@ REPOSITORY = 'https://github.com/padovanl/bitloom'
 
 # Sidebar groups, in reading order (previous/next follow this order).
 NAV = [
-    ('Get started', [('quickstart', 'Quickstart'), ('guide', 'User guide'), ('projects', 'Projects and setup'), ('keyboard', 'Keyboard')]),
+    ('Get started', [('quickstart', 'Quickstart'), ('runtimes', 'Where your build runs'), ('guide', 'User guide'), ('projects', 'Projects and setup'), ('keyboard', 'Keyboard')]),
     ('Features', [('web', 'Web dashboard'), ('image', 'Image explorer'), ('compliance', 'SBOM, CRA and releases'), ('studio', 'Studio'), ('assistant', 'BitBake assistant'),
-                  ('practices', 'Best practices'), ('migration', 'Migrate to a newer release'),                   ('teams', 'Teams and CI/CD'), ('developer', 'Developer workbench')]),
+                  ('practices', 'Best practices'), ('migration', 'Migrate to a newer release'),
+                  ('ci', 'CI and build servers'), ('developer', 'Developer workbench')]),
     ('Reference', [('commands', 'Command reference'), ('validation', 'Validation'), ('testbook', 'Manual testbook'),
                    ('roadmap', 'Research map')]),
 ]
@@ -164,6 +165,10 @@ def build():
 '''
         (DOCS / f'{name}.html').write_text(page)
         print(f'Built {name}.html')
+    # Pages that moved keep their old address.
+    for old, new in {'teams': 'ci'}.items():
+        (DOCS / f'{old}.html').write_text(f'<!doctype html><meta charset="utf-8"><title>Moved</title><meta http-equiv="refresh" content="0; url={new}.html">'
+                                          f'<link rel="canonical" href="{new}.html"><p>This page moved to <a href="{new}.html">{new}.html</a>.</p>\n')
     (DOCS / 'search.json').write_text(json.dumps(index, ensure_ascii=False, separators=(',', ':')))
     print(f'Wrote search.json ({len(index)} sections)')
 
