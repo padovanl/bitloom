@@ -355,13 +355,20 @@ def check_access_features(ctx):
     return found
 
 
+def _where_config(ctx) -> str:
+    """Where a setting belongs for this profile: the kas file's local_conf_header (kas regenerates local.conf), or local.conf."""
+    from .setup import profile_kas_files
+    files = profile_kas_files(ctx.profile) if ctx.profile.mode in ("kas", "kas-container", "wrapper") else []
+    return f"{files[-1].name} (local_conf_header)" if files else "conf/local.conf"
+
+
 def check_shared_caches(ctx):
     conf = read_assignments(ctx.profile.build_path / "conf/local.conf")
     environment = ctx.profile.environment
     found = []
     for name in ("DL_DIR", "SSTATE_DIR"):
         if name not in conf and not environment.get(name) and not environment.get("KAS_DL_DIR" if name == "DL_DIR" else "SSTATE_DIR"):
-            found.append(Finding("conf/local.conf", f"{name} is inside the build directory: every new build directory downloads and rebuilds everything"))
+            found.append(Finding(_where_config(ctx), f"{name} is inside the build directory: every new build directory downloads and rebuilds everything"))
     return found
 
 
@@ -374,11 +381,23 @@ def check_own_distro(ctx):
 
 
 def check_product_config_in_local(ctx):
+    """Product settings in the per-build configuration: local.conf, or with kas the local_conf_header it is generated from."""
+    from .setup import kas_local_conf_lines, profile_kas_files
+    product_key = re.compile(r"^(IMAGE_INSTALL|DISTRO_FEATURES|PREFERRED_PROVIDER_virtual/kernel|PREFERRED_VERSION_\S+|IMAGE_FSTYPES|PACKAGE_CLASSES)\b")
+    if ctx.profile.mode in ("kas", "kas-container", "wrapper") and profile_kas_files(ctx.profile):
+        found = []
+        for path in profile_kas_files(ctx.profile):
+            text = "\n".join(line for _, line in kas_local_conf_lines(path))
+            numbers = [n for n, _ in kas_local_conf_lines(path)]
+            for index, key, _ in _assignment_lines(text):
+                if product_key.match(key):
+                    found.append(Finding(f"{path.name}:{numbers[index - 1]}", f"{key} in local_conf_header: product configuration belongs in your distro, machine or image"))
+        return found
     local = ctx.profile.build_path / "conf/local.conf"
     text = ctx.text(local)
     if not text:
         return None
-    product = [(n, k) for n, k, _ in _assignment_lines(text) if re.match(r"^(IMAGE_INSTALL|DISTRO_FEATURES|PREFERRED_PROVIDER_virtual/kernel|PREFERRED_VERSION_\S+|IMAGE_FSTYPES|PACKAGE_CLASSES)\b", k)]
+    product = [(n, k) for n, k, _ in _assignment_lines(text) if product_key.match(k)]
     return [Finding(f"local.conf:{n}", f"{k}: product configuration belongs in your distro, machine or image") for n, k in product]
 
 
@@ -386,14 +405,14 @@ def check_buildhistory(ctx):
     conf = read_assignments(ctx.profile.build_path / "conf/local.conf")
     if not conf:
         return None
-    return [] if "buildhistory" in conf.get("INHERIT", "") else [Finding("conf/local.conf", 'INHERIT += "buildhistory" is not set')]
+    return [] if "buildhistory" in conf.get("INHERIT", "") else [Finding(_where_config(ctx), 'INHERIT += "buildhistory" is not set')]
 
 
 def check_rm_work(ctx):
     conf = read_assignments(ctx.profile.build_path / "conf/local.conf")
     if not conf:
         return None
-    return [] if "rm_work" in conf.get("INHERIT", "") else [Finding("conf/local.conf", 'INHERIT += "rm_work" is not set: tmp/work keeps every source tree')]
+    return [] if "rm_work" in conf.get("INHERIT", "") else [Finding(_where_config(ctx), 'INHERIT += "rm_work" is not set: tmp/work keeps every source tree')]
 
 
 BUILTIN = [

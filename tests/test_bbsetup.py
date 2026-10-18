@@ -68,3 +68,17 @@ def test_helper_runs_bitbake_setup(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     assert "init --non-interactive --no-init-vscode --setup-dir-name acme poky-wrynose poky machine/qemuarm64 distro/poky" in result.stdout
     assert "setup ready in" in result.stdout
+
+
+def test_kas_files_own_machine_and_distro(tmp_path):
+    """An overlay's DISTRO applies: the profile's values are not exported over what the kas files say."""
+    root = tmp_path / "p"
+    root.mkdir()
+    (root / "kas.yml").write_text("header:\n  version: 14\nmachine: qemux86-64\ndistro: poky\n")
+    (root / "acme.yml").write_text("header:\n  version: 14\ndistro: acme\n")
+    profile = Profile(name="k", root=str(root), mode="kas", kas_file="kas.yml:acme.yml", machine="qemux86-64", distro="poky")
+    env = invocation(profile, ["bitbake", "x"]).env
+    assert fragment_selected(profile) == {"MACHINE", "DISTRO"}
+    assert "DISTRO" not in env.get("BB_ENV_PASSTHROUGH_ADDITIONS", "").split() and env.get("DISTRO") != "poky" or __import__("os").environ.get("DISTRO") == "poky"
+    bare = Profile(name="b", root=str(root), mode="kas", kas_file="none.yml", machine="board")
+    assert invocation(bare, ["bitbake", "x"]).env["MACHINE"] == "board"      # nothing in kas: the profile decides

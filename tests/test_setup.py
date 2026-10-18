@@ -247,3 +247,47 @@ def test_bitbake_setup_workspaces_and_availability(tmp_path):
     (tmp_path / "poky-checkout/bitbake/bin/bitbake").write_text("")
     ok, reason = availability(BY_ID["fragments"], "scarthgap", poky)
     assert ok is False and "bitbake-config-build is not in this project's BitBake" in reason and "scarthgap" in reason
+
+
+def test_machine_and_distro_where_the_build_has_them(tmp_path):
+    """The top bars show MACHINE and DISTRO from wherever the build takes them, and nothing when nothing says it."""
+    from bitloom.models import Profile
+    from bitloom.setup import machine_and_distro
+    root = tmp_path / "p"
+    (root / "kas").mkdir(parents=True)
+    (root / "kas/base.yml").write_text("header:\n  version: 14\nmachine: qemuarm64\ndistro: poky\n")
+    (root / "kas/product.yml").write_text("header:\n  version: 14\n  includes:\n    - kas/base.yml\ndistro: acme\n")
+    kas = Profile(name="k", root=str(root), mode="kas-container", kas_file="kas/product.yml")
+    assert machine_and_distro(kas) == {"MACHINE": "qemuarm64", "DISTRO": "acme"}
+    wrapper = Profile(name="w", root=str(root), mode="wrapper", launcher=["./run.sh"], environment={"YML": "kas/base.yml"})
+    assert machine_and_distro(wrapper) == {"MACHINE": "qemuarm64", "DISTRO": "poky"}
+    (root / "build/conf").mkdir(parents=True)
+    (root / "build/conf/toolcfg.conf").write_text('OE_FRAGMENTS += "machine/genericarm64 distro/poky-altcfg"\n')
+    host = Profile(name="h", root=str(root), mode="host")
+    assert machine_and_distro(host) == {"MACHINE": "genericarm64", "DISTRO": "poky-altcfg"}
+    (root / "build/conf/toolcfg.conf").unlink()
+    (root / "build/conf/local.conf").write_text('MACHINE ?= "qemux86-64"\n')
+    assert machine_and_distro(host) == {"MACHINE": "qemux86-64", "DISTRO": ""}
+    assert machine_and_distro(Profile(name="x", root=str(root), mode="host", machine="board", distro="mine")) == {"MACHINE": "board", "DISTRO": "mine"}
+
+
+def test_kas_owns_the_generated_configuration(tmp_path):
+    """With kas, local.conf is generated from local_conf_header: findings point there, the migration skips the copy."""
+    from bitloom.models import Profile
+    from bitloom.setup import kas_local_conf_lines, profile_kas_files
+    root = tmp_path / "p"
+    (root / "build/conf").mkdir(parents=True)
+    (root / "kas.yml").write_text('header:\n  version: 14\nmachine: qemux86-64\nlocal_conf_header:\n  base: |\n    IMAGE_FSTYPES = "tar.bz2"\n    INHERIT += "rm_work"\n'
+                                  '  extra: |\n    IMAGE_INSTALL:append = " htop"\nrepos:\n  x:\n    path: x\n')
+    (root / "build/conf/local.conf").write_text('IMAGE_FSTYPES = "tar.bz2"\nINHERIT += "rm_work"\nIMAGE_INSTALL:append = " htop"\nDEPENDS_append = " x"\n')
+    profile = Profile(name="k", root=str(root), mode="kas-container", kas_file="kas.yml")
+    assert profile_kas_files(profile) == [(root / "kas.yml").resolve()]
+    assert kas_local_conf_lines(root / "kas.yml") == [(6, 'IMAGE_FSTYPES = "tar.bz2"'), (7, 'INHERIT += "rm_work"'), (9, 'IMAGE_INSTALL:append = " htop"')]
+    from bitloom.practices import review
+    rows = {r["id"]: r for r in review(profile, [], "wrynose")["rules"]}
+    where = {f["where"] for f in rows["product-config-in-layers"]["findings"]}
+    assert where == {"kas.yml:6", "kas.yml:9"}
+    assert rows["buildhistory"]["findings"][0]["where"] == "kas.yml (local_conf_header)"
+    from bitloom.migration import Context
+    ctx = Context(profile, [], profile_kas_files(profile))
+    assert (root / "build/conf/local.conf") not in ctx.files and (root / "kas.yml").resolve() in ctx.files

@@ -78,7 +78,11 @@ class Context:
                 if path.suffix in SOURCE_SUFFIXES and path.is_file() and ".git" not in path.parts and path.stat().st_size < 1024 * 1024:
                     self.files[path] = path.read_text(errors="replace").splitlines()
         build = profile.build_path / "conf"
+        # With kas, local.conf and bblayers.conf are generated from the kas files (scanned below): only what kas leaves alone.
+        generated = ("local.conf", "bblayers.conf") if profile.mode in ("kas", "kas-container", "wrapper") and kas_files else ()
         for name in ("local.conf", "auto.conf", "site.conf", "bblayers.conf"):
+            if name in generated:
+                continue
             if (build / name).is_file():
                 self.files[build / name] = (build / name).read_text(errors="replace").splitlines()
         for path in kas_files:
@@ -681,17 +685,8 @@ def targets_for(source: str | None) -> list[str]:
 
 
 def _kas_files(profile: Profile) -> list[Path]:
-    """The kas files the profile builds with: kas_file for kas and kas-container, the variable a launcher script
-    reads (YML=…) for wrapper profiles."""
-    names = (profile.kas_file or "").split(":") if profile.mode in ("kas", "kas-container") else []
-    if profile.mode == "wrapper" or not names:
-        names += [v for v in profile.environment.values() for v in v.split(":") if v.endswith((".yml", ".yaml"))]
-    files = []
-    for name in names:
-        path = (profile.root_path / name).resolve() if name else None
-        if path and path.suffix in (".yml", ".yaml") and path.is_file() and path not in files:
-            files.append(path)
-    return files
+    from .setup import profile_kas_files
+    return profile_kas_files(profile)
 
 
 def scan(profile: Profile, target: str, entries=None, source: str | None = None) -> dict:
