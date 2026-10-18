@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import shutil
 import subprocess
@@ -149,6 +150,10 @@ def main():
     parser.add_argument("--practices", action="store_true", help="Review the project against Yocto best practices and bitloom-practices.json; exits 2 on errors (or warnings with --fail-on warning)")
     parser.add_argument("--fail-on", choices=["error", "warning", "never"], default="error", help="--practices and --lint: what makes the exit status 2")
     parser.add_argument("--services", nargs="?", const="", metavar="IMAGE[:MACHINE]", help="What starts on the device: init system, systemd units or SysV scripts, udev rules and D-Bus services of a built image (newest when omitted)")
+    parser.add_argument("--add-layer", metavar="NAME_OR_URL", help="Add a layer by its Layer Index name (meta-virtualization) or a Git URL, with its dependencies, on the project's release branch; prints the plan, --apply does it")
+    parser.add_argument("--subdir", default="", help="--add-layer with a URL: the layer's folder in the repository")
+    parser.add_argument("--branch", default="", help="--add-layer with a URL: the branch (default: the project's release)")
+    parser.add_argument("--mirror", default="", help="--add-layer: take every repository from <mirror>/<repository name>")
     parser.add_argument("--migrate", action="store_true", help="What changes to move the project to a newer Yocto release (--to), from the official migration guides; exit 2 when something breaks the build")
     parser.add_argument("--to", metavar="SERIES", help="--migrate: the target release (default: the newest Bitloom covers, for example wrynose)")
     parser.add_argument("--apply", action="store_true", help="--migrate: apply the safe fixes (originals kept in the state folder)")
@@ -240,6 +245,46 @@ def _commands(parser, args) -> None:
             print(text)
         failing = data["errors"] + (data["warnings"] if args.fail_on == "warning" else 0)
         raise SystemExit(2 if args.fail_on != "never" and failing else 0)
+    if args.add_layer:
+        from . import layerindex
+        from .inspectors import metadata
+        from .models import Settings
+        from .versions import detect_release
+        profile = Settings(args.config).profile
+        entries = metadata(profile)
+        series = detect_release(profile, entries) or "master"
+        try:
+            if re.match(r"^(https://|ssh://|git://|file://|git@)", args.add_layer):
+                layers = layerindex.from_url(args.add_layer, args.subdir, args.branch or series)
+            else:
+                layers = layerindex.resolve(args.add_layer, series, layerindex.project_collections(entries))
+            layerindex.mirror(layers, args.mirror)
+        except (OSError, LookupError, ValueError) as exc:
+            parser.exit(1, f"bitloom: {exc}\n")
+        print(f"Add {args.add_layer} to {profile.name} ({series})")
+        for layer in layers:
+            state = "already in the project" if layer.present else f"{layer.url}{' · ' + layer.subdir if layer.subdir else ''} · branch {layer.branch}"
+            if not layer.present:
+                ok = layerindex.branch_exists(layer.url, layer.branch)
+                state += "" if ok else " · ✖ branch not found" if ok is False else " · branch not checked"
+            print(f"  {'✓' if layer.present else '+'} {layer.name:24} {state}")
+        plan = layerindex.plan(profile, layers, entries)
+        print()
+        print(plan["diff"] if plan["kind"] == "kas" else "\n".join("$ " + " ".join(step["argv"]) for step in plan["steps"]))
+        if args.apply:
+            if plan["kind"] == "kas":
+                written = layerindex.apply_kas(profile, args.state, plan)
+                print(f"\n{plan['name']} updated; original kept in {written['backup'] or 'nothing changed'}. kas fetches the layers on the next build.")
+            else:
+                import subprocess as sp
+                from .commands import invocation
+                for step in plan["steps"]:
+                    print(f"\n$ {' '.join(step['argv'])}")
+                    command = step["argv"] if step["where"] == "host" else invocation(profile, step["argv"]).argv
+                    result = sp.run(command, cwd=None if step["where"] == "host" else invocation(profile, step["argv"]).cwd)
+                    if result.returncode:
+                        raise SystemExit(result.returncode)
+        return
     if args.migrate:
         from .inspectors import metadata
         from .migration import apply, report, scan, targets_for
