@@ -67,6 +67,7 @@ Over SSH keep the default loopback address and tunnel it: `ssh -L 8765:127.0.0.1
 * **Studio**: your own distribution, machines, images, recipes and layers, explained field by field. → [Studio](docs/studio.md)
 * **Developer workbench** (`F10` in the TUI): variable origins, rebuild signatures, failed-task investigation, devtool, SDK/IDE setup, image comparisons, devices. → [Developer](docs/developer.md)
 * **Daily helpers**: notifications when a build ends (desktop, ntfy, Slack/Teams), ETA, run comparison, tmp/work usage. → [Guide](docs/guide.md#daily-helpers)
+* **Build server**: `bitloom --service-install --web` runs the build service and the dashboard as systemd user services, with a dashboard URL that survives restarts. → [Teams](docs/teams.md#a-build-server-run-bitloom-as-a-service)
 * **Teams and CI/CD**: headless `--ci` matrix with JUnit and annotations, shared team profiles, infrastructure checks, device fleet, image matrix, builds started outside Bitloom. → [Teams](docs/teams.md)
 
 ## 📥 Install

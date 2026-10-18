@@ -2,6 +2,26 @@
 
 Features for organisations with many products, images, devices and build machines. Bitloom still runs one build at a time per build service: a serial queue avoids concurrent BitBake servers fighting over a build directory.
 
+## A build server: run Bitloom as a service
+
+On a shared build machine you want the build service, and usually the dashboard, running after a reboot and without a terminal open. Bitloom installs them as **systemd user services** (no root needed):
+
+```console
+$ bitloom --service-install --web --host 127.0.0.1 --port 8765
+wrote ~/.config/systemd/user/bitloom.service
+wrote ~/.config/systemd/user/bitloom-web.service
+enabled and started bitloom.service, bitloom-web.service
+dashboard: http://127.0.0.1:8765/#token=…
+to keep it running when you log out: loginctl enable-linger <you>
+```
+
+* `bitloom.service` runs the build service for the state folder (`--state`, default `.bitloom` in the current folder, resolved to an absolute path); `bitloom-web.service` runs the dashboard on top of it. Without `--web` only the build service is installed: the TUI and `bitloom --web` attach to it as usual.
+* The dashboard keeps its token in `<state>/web.token` (mode 0600, `--persistent-token`), so the URL, and your bookmark, survives restarts. Keep the default loopback address and reach it with an SSH tunnel (`ssh -L 8765:127.0.0.1:8765 build-server`).
+* A build service already started by Bitloom is stopped first (only when idle), so there is never more than one per state folder. The unit's `PATH` is your login `PATH` without WSL's Windows folders.
+* `bitloom --service-status` shows the units and the jobs; `bitloom --service-uninstall` stops and removes them. `--service-name` installs several (one per state folder).
+* `loginctl enable-linger` keeps user services running when you are not logged in: run it yourself once.
+* Under WSL, systemd must be enabled in `/etc/wsl.conf` (`[boot] systemd=true`).
+
 ## Headless CI runs
 
 `bitloom --ci` runs operations without the TUI, with the same profiles, runtimes, serial queue and history:

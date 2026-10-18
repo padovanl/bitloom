@@ -208,6 +208,14 @@ bitloom --config .validation/profiles.json --cra; bitloom --config .validation/p
 
 `--ci` runs its own serial queue on the state directory, so first close the web server (`Ctrl+C`) and the TUI (`Ctrl+Q`) and stop the idle service: `bitloom --state .validation --service-stop`. The other commands only read and work at any time.
 
+### Stage 11b — Build server (≈1 minute, systemd user session)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 11b.1 | Close the TUI and the web server. `bitloom --state /tmp/bl-svc --config /tmp/bl-svc.json --service-install --web --port 18765 --service-name bitloom-try` | Two units written and started, the dashboard URL with its token, the `loginctl enable-linger` hint when lingering is off. |
+| 11b.2 | Open the URL. `systemctl --user restart bitloom-try-web`, reload the page. `bitloom --state /tmp/bl-svc --service-status --service-name bitloom-try` | The dashboard works with the same URL after the restart; status shows both units *active · enabled* and the service JSON. |
+| 11b.3 | `bitloom --service-uninstall --service-name bitloom-try` | *stopped, disabled and removed …*; `~/.config/systemd/user` has no `bitloom-try` units. |
+
 ### Stage 12 — Finish
 
 If they are still open, close the web server with `Ctrl+C` and the TUI with `Ctrl+Q`, then `bitloom --state .validation --service-stop`. Builds already done stay in the work directories; nothing else needs cleaning except the Studio files of step 7.5.

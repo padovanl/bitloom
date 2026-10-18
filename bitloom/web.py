@@ -851,8 +851,25 @@ def create_server(dashboard: Dashboard, host="127.0.0.1", port=8765) -> Threadin
     return server
 
 
-def serve(config: Path, state: Path, host="127.0.0.1", port=8765, open_browser=True):
-    dashboard = Dashboard(config, state)
+def persistent_token(state: Path) -> str:
+    """A dashboard token kept in the state (mode 0600), so a service's URL stays the same across restarts."""
+    path = Path(state) / "web.token"
+    try:
+        token = path.read_text().strip()
+        if len(token) >= 24:
+            return token
+    except OSError:
+        pass
+    path.parent.mkdir(parents=True, exist_ok=True)
+    token = secrets.token_urlsafe(24)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w") as stream:
+        stream.write(token + "\n")
+    return token
+
+
+def serve(config: Path, state: Path, host="127.0.0.1", port=8765, open_browser=True, persistent=False):
+    dashboard = Dashboard(config, state, token=persistent_token(state) if persistent else None)
     dashboard.rpc({"op": "status"})  # Start or attach to the build service before announcing the URL.
     server = create_server(dashboard, host, port)
     shown = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
