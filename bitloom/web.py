@@ -526,6 +526,23 @@ class Dashboard:
                          "detail": e.detail, "layer": e.layer, "group": e.group, "image": is_image(e)})
         return {"total": len(rows), "rows": rows[:5000]}
 
+    def image_view(self, query, what):
+        from . import rootfs
+        profile = self.profile(query.get("profile", [""])[0])
+        if what == "list":
+            return {"images": rootfs.built_images(profile)}
+        image, machine = query.get("image", [""])[0], query.get("machine", [""])[0]
+        if what == "summary":
+            return rootfs.summary(profile, image, machine)
+        if what == "dir":
+            return rootfs.listing(profile, image, machine, query.get("dir", ["/"])[0])
+        return rootfs.read(profile, image, machine, query.get("path", [""])[0])
+
+    def whois(self, query):
+        from .whois import lookup
+        profile = self.profile(query.get("profile", [""])[0])
+        return lookup(profile, query.get("q", [""])[0], self.entries(profile))
+
     def images(self, query):
         profile = self.profile(query.get("profile", [""])[0])
         return {"rows": images(profile, self.entries(profile))}
@@ -622,6 +639,10 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.health(query)
                 elif route == ("GET", "metadata"):
                     payload = dashboard.metadata(query)
+                elif route[:2] == ("GET", "image") and len(route) == 3 and route[2] in {"list", "summary", "dir", "file"}:
+                    payload = dashboard.image_view(query, route[2])
+                elif route == ("GET", "whois"):
+                    payload = dashboard.whois(query)
                 elif route == ("GET", "images"):
                     payload = dashboard.images(query)
                 elif route == ("GET", "tasklogs"):
