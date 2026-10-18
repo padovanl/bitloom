@@ -3212,6 +3212,9 @@ function wire() {
 # set for the theme's surface; status colours keep their meaning in every theme.
 WEB_THEMES = {
     # id: (label, dark, bg, bg2, surface, raised, line, line2, fg, muted, accent, accent2, ok, warn, err, info, code)
+    "ubuntu": ("Ubuntu", True, "#300a24", "#2a0820", "#3a1230", "#45183a", "#552247", "#6a2d5a", "#eeeeec", "#c4a9bd", "#e95420", "#f08a5d", "#8ae234", "#fce94f", "#ff6b6b", "#729fcf", "#26071d"),
+    "monokai": ("Monokai", True, "#272822", "#23241f", "#2f3029", "#3a3b33", "#44453d", "#57584e", "#f8f8f2", "#a6a28c", "#a6e22e", "#66d9ef", "#a6e22e", "#e6db74", "#f92672", "#66d9ef", "#1e1f1a"),
+    "darcula": ("Darcula", True, "#2b2b2b", "#262626", "#313335", "#3c3f41", "#45494a", "#555a5c", "#bbc5cf", "#8c959e", "#cc7832", "#6897bb", "#8fb573", "#d6cf5a", "#ff6b68", "#6897bb", "#232323"),
     "nord": ("Nord", True, "#2e3440", "#2b303b", "#3b4252", "#434c5e", "#4c566a", "#5a657b", "#eceff4", "#a8b1c2", "#88c0d0", "#81a1c1", "#a3be8c", "#ebcb8b", "#e48b93", "#81a1c1", "#2a2f3a"),
     "dracula": ("Dracula", True, "#21222c", "#232530", "#282a36", "#343746", "#3a3d4d", "#4a4e62", "#f8f8f2", "#a4a9c7", "#bd93f9", "#8be9fd", "#50fa7b", "#f1fa8c", "#ff6e6e", "#8be9fd", "#1e1f29"),
     "tokyo-night": ("Tokyo Night", True, "#16161e", "#1a1b26", "#1f2335", "#24283b", "#2f3549", "#3b4261", "#c0caf5", "#8a93bd", "#7aa2f7", "#bb9af7", "#9ece6a", "#e0af68", "#f7768e", "#7dcfff", "#13131a"),

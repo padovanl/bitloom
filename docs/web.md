@@ -92,7 +92,7 @@ The layout collapses to one column, the navigation becomes a scrolling bar and t
 
 ## Themes
 
-The round button in the top bar (or **Ctrl+K → Theme: …**) chooses how the dashboard looks: **System** (the default: light or dark as the operating system says), Bitloom dark and light, and the palettes the TUI also has: Nord, Dracula, Tokyo Night, Catppuccin Mocha and Latte, Gruvbox, Solarized Dark and Light, High contrast. The choice is remembered by this browser and applied before the page draws, so it never flashes the default first. Status colours (success, warning, error) and chart colours keep their meaning in every theme; the chart palette is checked for colour-blind separation against each theme's background.
+The round button in the top bar (or **Ctrl+K → Theme: …**) chooses how the dashboard looks: **System** (the default: light or dark as the operating system says), Bitloom dark and light, and the palettes the TUI also has: Ubuntu, Darcula, Monokai, Nord, Dracula, Tokyo Night, Catppuccin Mocha and Latte, Gruvbox, Solarized Dark and Light, High contrast. The choice is remembered by this browser and applied before the page draws, so it never flashes the default first. Status colours (success, warning, error) and chart colours keep their meaning in every theme; the chart palette is checked for colour-blind separation against each theme's background.
 
 ![The theme menu with Tokyo Night applied](assets/web-themes.png)
 

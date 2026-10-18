@@ -348,6 +348,9 @@ Press **F7** or the toolbar's **Themes** button. Choose a palette to preview it 
 | Bitloom | Original dark terminal palette with mint and blue |
 | Soft Slate | Muted dark gray with gentle sage accents |
 | Linen | Warm light background with subdued colors |
+| Ubuntu | The Ubuntu terminal: aubergine with orange |
+| Monokai | The classic editor palette: olive-black with lime, cyan and pink |
+| Darcula | The JetBrains dark theme: graphite with orange and blue |
 | Nord | Cool slate and arctic cyan |
 | Dracula | Charcoal, violet and cyan |
 | Tokyo Night | Deep blue with lavender |
