@@ -79,7 +79,7 @@ def _entries(source: str) -> dict:
     cached = _cache.get(source)
     if cached and cached[0] == stamp:
         return cached[2]
-    entries = {"/": {"type": "dir", "size": 0, "mode": 0o755, "target": ""}}
+    entries = {"/": {"type": "dir", "size": 0, "mode": 0o755, "target": "", "owner": ""}}
     if path.is_dir():
         for item in path.rglob("*"):
             relative = "/" + str(item.relative_to(path))
@@ -88,8 +88,9 @@ def _entries(source: str) -> dict:
             except OSError:
                 continue
             kind = "link" if stat.S_ISLNK(info.st_mode) else "dir" if stat.S_ISDIR(info.st_mode) else "file"
+            # Owners in tmp/work are the builder's (pseudo keeps the real ones in its database): not shown.
             entries[relative] = {"type": kind, "size": info.st_size if kind == "file" else 0, "mode": stat.S_IMODE(info.st_mode),
-                                 "target": str(item.readlink()) if kind == "link" else ""}
+                                 "target": str(item.readlink()) if kind == "link" else "", "owner": ""}
     else:
         with _open(path) as archive:
             for member in archive:
@@ -97,12 +98,13 @@ def _entries(source: str) -> dict:
                 if name == "/":
                     continue
                 kind = "link" if member.issym() or member.islnk() else "dir" if member.isdir() else "file"
-                entries[name] = {"type": kind, "size": member.size if kind == "file" else 0, "mode": member.mode, "target": member.linkname or ""}
+                entries[name] = {"type": kind, "size": member.size if kind == "file" else 0, "mode": member.mode, "target": member.linkname or "",
+                                 "owner": f"{member.uname or ('root' if member.uid == 0 else member.uid)}:{member.gname or ('root' if member.gid == 0 else member.gid)}"}
     # Folders implied by paths, and their total size.
     for name in list(entries):
         parent = name.rsplit("/", 1)[0] or "/"
         while parent not in entries:
-            entries[parent] = {"type": "dir", "size": 0, "mode": 0o755, "target": ""}
+            entries[parent] = {"type": "dir", "size": 0, "mode": 0o755, "target": "", "owner": ""}
             parent = parent.rsplit("/", 1)[0] or "/"
     for name, info in list(entries.items()):
         if info["type"] == "file" and info["size"]:
@@ -171,6 +173,165 @@ def summary(profile: Profile, image: str, machine: str) -> dict:
     return {"image": image, "machine": machine, "source": found["source"], "kind": found["kind"], "built": found["mtime"],
             "total": total, "files": files, "packages": packages[:25], "package_count": len([p for p in by_package if not p.startswith("(")]),
             "folders": folders[:12]}
+
+
+def _contents(source: str, paths: set[str], limit: int = 64 * 1024) -> dict[str, str]:
+    """The text of several small files in one pass over the archive (unit files, rules, D-Bus descriptions)."""
+    found: dict[str, str] = {}
+    if not paths:
+        return found
+    root = Path(source)
+    if root.is_dir():
+        for path in paths:
+            try:
+                found[path] = (root / path.lstrip("/")).read_bytes()[:limit].decode(errors="replace")
+            except OSError:
+                pass
+        return found
+    with _open(root) as archive:
+        for member in archive:
+            name = "/" + member.name.lstrip("./").rstrip("/")
+            if name in paths and member.isfile():
+                stream = archive.extractfile(member)
+                if stream:
+                    found[name] = stream.read(limit).decode(errors="replace")
+                if len(found) == len(paths):
+                    break
+    return found
+
+
+def _resolve(entries: dict, path: str, depth: int = 0) -> str:
+    """Follow symbolic links inside the image (absolute or relative) to the real path."""
+    info = entries.get(path)
+    if not info or info["type"] != "link" or depth > 8 or not info["target"]:
+        return path
+    target = info["target"] if info["target"].startswith("/") else str(Path(path).parent / info["target"])
+    parts = []
+    for part in target.split("/"):
+        if part == "..":
+            parts = parts[:-1]
+        elif part and part != ".":
+            parts.append(part)
+    return _resolve(entries, "/" + "/".join(parts), depth + 1)
+
+
+def _ini(text: str) -> dict[str, str]:
+    values = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if "=" in line and not line.startswith(("#", ";", "[")):
+            key, _, value = line.partition("=")
+            values.setdefault(key.strip(), value.strip())
+    return values
+
+
+UNIT_DIRS = ("/lib/systemd/system", "/usr/lib/systemd/system", "/etc/systemd/system")
+UNIT_KINDS = (".service", ".socket", ".timer", ".mount", ".path", ".target")
+RULE_DIRS = ("/lib/udev/rules.d", "/usr/lib/udev/rules.d", "/etc/udev/rules.d")
+DBUS_DIRS = ("/usr/share/dbus-1/system-services", "/usr/share/dbus-1/system.d", "/etc/dbus-1/system.d", "/usr/share/dbus-1/services")
+
+
+def services(profile: Profile, image: str, machine: str) -> dict:
+    """What starts on the device and what reacts to it: the init system, systemd units (enabled or not) or SysV
+    scripts with their runlevels, udev rules and D-Bus services, each with the package and recipe that installs it."""
+    found = _find(profile, image, machine)
+    entries = _entries(found["source"])
+    owner = owners(profile)
+    who = lambda path: dict(zip(("package", "recipe"), owner.get(path) or owner.get(_resolve(entries, path)) or ("", "")))
+    exists = lambda path: path in entries
+    init = ("systemd" if exists("/lib/systemd/systemd") or exists("/usr/lib/systemd/systemd")
+            else "sysvinit" if exists("/etc/inittab") and exists("/etc/init.d") and any(n.startswith("/etc/rc") for n in entries)
+            else "busybox init" if exists("/etc/inittab") else "unknown")
+    units: dict[str, dict] = {}
+    for directory in UNIT_DIRS:
+        prefix = directory + "/"
+        for name, info in entries.items():
+            rest = name[len(prefix):] if name.startswith(prefix) else ""
+            if not rest or "/" in rest or not rest.endswith(UNIT_KINDS) or info["type"] == "dir":
+                continue
+            if info["type"] == "link" and info["target"] == "/dev/null":
+                units.setdefault(rest, {"name": rest, "path": name})["masked"] = True
+                continue
+            if rest not in units or directory == "/etc/systemd/system":
+                units.setdefault(rest, {"name": rest})["path"] = name
+    wanted: dict[str, list[str]] = {}
+    for name, info in entries.items():
+        folder, _, unit = name.rpartition("/")
+        if folder.startswith("/etc/systemd/system/") and folder.endswith((".wants", ".requires")) and info["type"] == "link":
+            wanted.setdefault(unit, []).append(folder.rsplit("/", 1)[1].rsplit(".", 1)[0])
+    unit_paths = {_resolve(entries, u["path"]) for u in units.values() if u.get("path")}
+    rule_files = [n for n in entries if n.rsplit("/", 1)[0] in RULE_DIRS and n.endswith(".rules")]
+    dbus_files = [n for n in entries if n.rsplit("/", 1)[0] in DBUS_DIRS and n.endswith((".service", ".conf"))]
+    text = _contents(found["source"], unit_paths | {_resolve(entries, n) for n in rule_files + dbus_files})
+    rows = []
+    for name, unit in sorted(units.items()):
+        values = _ini(text.get(_resolve(entries, unit.get("path", "")), ""))
+        alias_of = Path(_resolve(entries, unit["path"])).name if unit.get("path") else name
+        rows.append({"name": name, "path": unit.get("path", ""), "kind": name.rsplit(".", 1)[1], "description": values.get("Description", ""),
+                     "exec": values.get("ExecStart", "").lstrip("-@+!"), "enabled": sorted(set(wanted.get(name, []) + (wanted.get(alias_of, []) if alias_of != name else []))),
+                     "masked": bool(unit.get("masked")), **who(unit.get("path", ""))})
+    default = _resolve(entries, "/etc/systemd/system/default.target") if exists("/etc/systemd/system/default.target") else \
+        _resolve(entries, "/lib/systemd/system/default.target") if exists("/lib/systemd/system/default.target") else ""
+    sysv = []
+    links = [(n.split("/")[2], n.rsplit("/", 1)[1], i) for n, i in entries.items() if re.fullmatch(r"/etc/rc[0-6S]\.d/[SK]\d\d.+", n)]
+    for name, info in sorted(entries.items()):
+        if name.startswith("/etc/init.d/") and name.count("/") == 3 and info["type"] != "dir":
+            script = name.rsplit("/", 1)[1]
+            starts = sorted({level[2] for level, link, li in links if link[0] == "S" and link[3:] == script}, key=lambda lvl: (lvl != "S", lvl))
+            boot = [lvl for lvl in starts if lvl in "S12345"]
+            order = next((link[1:3] for level, link, li in sorted(links, key=lambda l: (l[0][2] != "S", l[0])) if link[3:] == script and link[0] == "S"
+                          and (not boot or level[2] in boot)), "")
+            sysv.append({"name": script, "path": name, "runlevels": starts, "boot": bool(boot), "order": order, **who(name)})
+    sysv.sort(key=lambda r: (not r["boot"], not r["runlevels"], "S" not in r["runlevels"], r["order"], r["name"]))
+    rules = []
+    for name in sorted(rule_files, key=lambda n: n.rsplit("/", 1)[1]):
+        body = text.get(_resolve(entries, name), "")
+        lines = [l for l in body.splitlines() if l.strip() and not l.lstrip().startswith("#")]
+        comment = next((l.lstrip("# ").strip() for l in body.splitlines() if l.startswith("#") and len(l.strip("# ")) > 3), "")
+        base = name.rsplit("/", 1)[1]
+        masked = entries[name]["type"] == "link" and entries[name]["target"] == "/dev/null"
+        overridden = not name.startswith("/etc/") and f"/etc/udev/rules.d/{base}" in entries
+        rules.append({"name": base, "path": name, "rules": 0 if masked else len(lines), "comment": comment[:120], "local": name.startswith("/etc/"),
+                      "masked": masked, "overridden": overridden, **who(name)})
+    dbus = []
+    for name in sorted(dbus_files):
+        values = _ini(text.get(_resolve(entries, name), ""))
+        kind = "activation" if name.endswith(".service") else "policy"
+        dbus.append({"name": values.get("Name") or name.rsplit("/", 1)[1].rsplit(".", 1)[0], "path": name, "kind": kind,
+                     "bus": "session" if "/services/" in name else "system", "exec": values.get("Exec", ""), "unit": values.get("SystemdService", ""), **who(name)})
+    return {"image": image, "machine": machine, "init": init, "default_target": Path(default).name if default else "",
+            "units": rows, "sysv": sysv, "udev": rules, "dbus": dbus,
+            "starts": [u["name"] for u in rows if u["enabled"] and not u["masked"]] + [s["name"] for s in sysv if set(s["runlevels"]) & set("S12345")]}
+
+
+def services_report(data: dict) -> str:
+    lines = [f"SERVICES IN {data['image']} ({data['machine']})", "", f"init system  {data['init']}" + (f" · default target {data['default_target']}" if data["default_target"] else ""), ""]
+    if data["units"]:
+        lines.append("SYSTEMD UNITS")
+        for u in data["units"]:
+            state = "masked" if u["masked"] else ("enabled → " + ", ".join(u["enabled"])) if u["enabled"] else "installed"
+            lines.append(f"  {'●' if u['enabled'] and not u['masked'] else '○'} {u['name']:<34} {state:<34} {u['package'] or '—'} ({u['recipe'] or '—'})")
+            if u["description"]:
+                lines.append(f"      {u['description']}")
+        lines.append("")
+    if data["sysv"]:
+        lines.append("SYSV INIT SCRIPTS")
+        for s in data["sysv"]:
+            lines.append(f"  {'●' if s['runlevels'] else '○'} {s['name']:<28} {('runlevels ' + ''.join(s['runlevels']) + ' · order ' + s['order']) if s['runlevels'] else 'not started':<30} {s['package'] or '—'} ({s['recipe'] or '—'})")
+        lines.append("")
+    if data["udev"]:
+        lines.append("UDEV RULES")
+        for r in data["udev"]:
+            state = "disabled in /etc" if r["masked"] else "replaced by /etc" if r["overridden"] else f"{r['rules']:>3} rules" + ("  · /etc" if r["local"] else "")
+            lines.append(f"  {r['name']:<40} {state:<18} {r['package'] or 'not from a package'}")
+        lines.append("")
+    if data["dbus"]:
+        lines.append("D-BUS")
+        for d in data["dbus"]:
+            lines.append(f"  {d['kind']:<10} {d['name']:<44} {d['bus']:<7} {d['unit'] or d['exec'] or ''}  {d['package'] or '—'}")
+        lines.append("")
+    lines.append("Change a service: an append to its recipe (SYSTEMD_AUTO_ENABLE, SYSTEMD_SERVICE, INITSCRIPT_PARAMS) or remove its package from the image.")
+    return "\n".join(lines)
 
 
 def read(profile: Profile, image: str, machine: str, path: str) -> dict:

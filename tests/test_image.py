@@ -106,3 +106,60 @@ def test_append_starts_from_the_device_file(tmp_path):
     values.update(recipe="base-files", file="motd", file_content="Welcome to the board\n")
     result = plan("append", values, profile, "wrynose")
     assert result["files"]["recipes-core/base-files/files/motd"] == "Welcome to the board\n"
+
+
+def systemd_image(tmp_path):
+    """A systemd image: units in /lib, enablement links in /etc, a masked unit, udev rules (one disabled), D-Bus."""
+    root = tmp_path / "sd"
+    runtime = root / "build/tmp/pkgdata/qemuarm64/runtime"
+    runtime.mkdir(parents=True)
+    (runtime / "openssh").write_text('PN: openssh\nPV: 9.9\nPKG:openssh: openssh-sshd\nFILES_INFO:openssh: {"/lib/systemd/system/sshd.socket": 10, "/lib/systemd/system/sshd@.service": 10}\n')
+    (runtime / "systemd").write_text('PN: systemd\nPV: 257\nFILES_INFO:systemd: {"/lib/systemd/systemd": 1, "/lib/systemd/system/systemd-networkd.service": 1, "/lib/udev/rules.d/80-net-setup-link.rules": 1}\n')
+    images = root / "build/tmp/deploy/images/qemuarm64"
+    images.mkdir(parents=True)
+    files = {"./lib/systemd/systemd": b"\0ELF",
+             "./lib/systemd/system/sshd.socket": b"[Unit]\nDescription=OpenSSH Server Socket\n[Socket]\nListenStream=22\n",
+             "./lib/systemd/system/sshd@.service": b"[Unit]\nDescription=OpenSSH Per-Connection Daemon\n[Service]\nExecStart=-/usr/sbin/sshd -i\n",
+             "./lib/systemd/system/systemd-networkd.service": b"[Unit]\nDescription=Network Configuration\n[Service]\nExecStart=!!/lib/systemd/systemd-networkd\n",
+             "./lib/systemd/system/multi-user.target": b"[Unit]\nDescription=Multi-User System\n",
+             "./lib/udev/rules.d/80-net-setup-link.rules": b"# Network link names\nACTION==\"add\", IMPORT{builtin}=\"net_setup_link\"\nNAME=\"$env{ID_NET_NAME}\"\n",
+             "./lib/udev/rules.d/60-serial.rules": b"# Serial\nSUBSYSTEM==\"tty\", GOTO=\"x\"\n",
+             "./usr/share/dbus-1/system-services/org.freedesktop.network1.service": b"[D-BUS Service]\nName=org.freedesktop.network1\nExec=/bin/false\nUser=root\nSystemdService=dbus-org.freedesktop.network1.service\n"}
+    links = {"./etc/systemd/system/multi-user.target.wants/systemd-networkd.service": "/lib/systemd/system/systemd-networkd.service",
+             "./etc/systemd/system/sockets.target.wants/sshd.socket": "/lib/systemd/system/sshd.socket",
+             "./etc/systemd/system/default.target": "/lib/systemd/system/multi-user.target",
+             "./etc/systemd/system/getty@.service": "/dev/null",
+             "./etc/udev/rules.d/80-net-setup-link.rules": "/dev/null"}
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w") as archive:
+        for name, data in files.items():
+            info = tarfile.TarInfo(name)
+            info.size, info.uname, info.gname = len(data), "root", "root"
+            archive.addfile(info, io.BytesIO(data))
+        for name, target in links.items():
+            info = tarfile.TarInfo(name)
+            info.type, info.linkname = tarfile.SYMTYPE, target
+            archive.addfile(info)
+    (images / "acme-image-qemuarm64.rootfs.tar.bz2").write_bytes(bz2.compress(buffer.getvalue()))
+    return Profile(name="sd", root=str(root), mode="host")
+
+
+def test_services_in_the_image(tmp_path):
+    from bitloom import rootfs
+    profile = systemd_image(tmp_path)
+    data = rootfs.services(profile, "acme-image", "qemuarm64")
+    assert data["init"] == "systemd" and data["default_target"] == "multi-user.target"
+    units = {u["name"]: u for u in data["units"]}
+    assert units["systemd-networkd.service"]["enabled"] == ["multi-user.target"] and units["systemd-networkd.service"]["exec"] == "/lib/systemd/systemd-networkd"
+    assert units["sshd.socket"]["enabled"] == ["sockets.target"] and units["sshd.socket"]["recipe"] == "openssh"
+    assert units["sshd@.service"]["enabled"] == [] and units["sshd@.service"]["exec"] == "/usr/sbin/sshd -i"
+    assert units["getty@.service"]["masked"]
+    assert set(data["starts"]) == {"systemd-networkd.service", "sshd.socket"}
+    rules = {(r["name"], r["local"]): r for r in data["udev"]}
+    assert rules[("80-net-setup-link.rules", True)]["masked"] and rules[("80-net-setup-link.rules", False)]["overridden"]
+    assert rules[("60-serial.rules", False)]["rules"] == 1 and rules[("60-serial.rules", False)]["comment"] == "Serial"
+    assert data["dbus"] == [{"name": "org.freedesktop.network1", "path": "/usr/share/dbus-1/system-services/org.freedesktop.network1.service", "kind": "activation",
+                             "bus": "system", "exec": "/bin/false", "unit": "dbus-org.freedesktop.network1.service", "package": "", "recipe": ""}]
+    text = rootfs.services_report(data)
+    assert "● systemd-networkd.service" in text and "disabled in /etc" in text and "replaced by /etc" in text
+    assert rootfs.listing(profile, "acme-image", "qemuarm64", "/lib/systemd/system")["children"][0]["owner"] == "root:root"

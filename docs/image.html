@@ -27,8 +27,32 @@
 <li><strong>Totals</strong>: the size on the device, the number of files and of packages.</li>
 <li><strong>Biggest packages</strong> and <strong>biggest folders</strong>: where the space goes. Click a package to see which recipe builds it; click a folder to open it.</li>
 <li><strong>The file tree</strong>, folder by folder, each entry with its size, a bar relative to the folder, and the <strong>package · recipe</strong> that installs it. Symbolic links show their target.</li>
-<li><strong>The selected file</strong>: size, permissions, the package and recipe, the layer (yours or upstream), the images that contain it and <em>what pulls it in</em> (the packages that depend on it, such as <code>packagegroup-core-boot</code>), the existing <code>.bbappend</code> files of that recipe, and the content when it is a small text file.</li>
+<li><strong>The selected file</strong>: size, permissions, owner and group, the package and recipe, the layer (yours or upstream), the images that contain it and <em>what pulls it in</em> (the packages that depend on it, such as <code>packagegroup-core-boot</code>), the existing <code>.bbappend</code> files of that recipe, and the content when it is a small text file.</li>
 </ul>
+<h2 id="what-starts-on-the-device">What starts on the device<a class="anchor" href="#what-starts-on-the-device" aria-label="Link to this section">#</a></h2>
+<p><strong>Services</strong> (next to <em>Files</em>) shows what the image runs and what reacts to it, read from the root filesystem, each entry with the package and recipe that installs it:</p>
+<ul>
+<li>the <strong>init system</strong> (systemd, SysV init or BusyBox init) and, with systemd, the default target;</li>
+<li><strong>systemd units</strong>: the ones that <em>start at boot</em> (enabled by a link in <code>/etc/systemd/system/*.wants</code>, with the target that wants them), the ones <em>installed but not enabled</em> (started on demand by a socket, D-Bus or another unit, or not at all) and the <em>masked</em> ones (linked to <code>/dev/null</code>), with their description and <code>ExecStart</code>;</li>
+<li><strong>SysV init scripts</strong> in start order: <code>rcS.d</code> first, then the runlevel, with their <code>S</code> number; the scripts run only at shutdown and reboot, and the helpers linked nowhere, are listed apart;</li>
+<li><strong>udev rules</strong> in the order udev applies them, with the number of rules and their first comment; a file in <code>/etc/udev/rules.d</code> replaces the one with the same name in <code>/lib</code>, and a link to <code>/dev/null</code> disables it;</li>
+<li><strong>D-Bus</strong>: services started on request (their bus name and systemd unit) and bus policies.</li>
+</ul>
+<p>Select an entry to open its file with the usual details: owner, package, recipe, layer and <em>Change it with an append</em>. To change what starts, append to the recipe (<code>SYSTEMD_AUTO_ENABLE</code>, <code>SYSTEMD_SERVICE</code>, <code>INITSCRIPT_PARAMS</code>) or take its package out of the image.</p>
+<details class="shot"><summary><span>Screenshot</span> Services of a real Wrynose core-image-minimal: init scripts in boot order, the selected script and its recipe</summary><div class="shot-body"><img src="assets/web-image-services.png" alt="Services of a real Wrynose core-image-minimal: init scripts in boot order, the selected script and its recipe" loading="lazy" decoding="async"></div></details>
+<p>The same list is in the TUI (<strong>Analysis → Services in the image</strong>) and on the command line:</p>
+<pre><code class="language-console">$ bitloom --services core-image-minimal
+SERVICES IN core-image-minimal (qemux86-64)
+
+init system  sysvinit
+
+SYSV INIT SCRIPTS
+  ● banner.sh                    runlevels S · order 02         initscripts (initscripts)
+  ● sysfs.sh                     runlevels S · order 02         initscripts (initscripts)
+  ● mountall.sh                  runlevels S · order 03         initscripts (initscripts)
+  ● udev                         runlevels S · order 04         eudev (eudev)
+…
+</code></pre>
 <h2 id="change-it">Change it<a class="anchor" href="#change-it" aria-label="Link to this section">#</a></h2>
 <p>Under the file, Bitloom says what to do:</p>
 <ul>
@@ -56,13 +80,14 @@ sysvinit-inittab (sysvinit-inittab) ships this file
 <li>Ownership comes from package data (<code>FILES_INFO</code>); files created at image assembly time have no package, as explained above.</li>
 <li>Disk images (<code>ext4</code>, <code>wic</code>) are not opened: Bitloom needs a tar archive or the rootfs folder.</li>
 <li>Very large images take a few seconds the first time (the archive is read once, then cached until it changes).</li>
-<li>The TUI offers <em>Which recipe installs…</em> in Analysis and the rootfs inventory in Artifacts (<code>i</code>); the folder-by-folder explorer is in the web dashboard.</li>
+<li>Owners come from the archive. The <code>rootfs</code> folder in <code>tmp/work</code> belongs to your build user (pseudo keeps the real owners in its own database), so owners are not shown for it.</li>
+<li>The TUI offers <em>Which recipe installs…</em> and <em>Services in the image</em> in Analysis and the rootfs inventory in Artifacts (<code>i</code>); the folder-by-folder explorer is in the web dashboard.</li>
 </ul>
 </article>
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="web.html"><small>Previous</small>Web dashboard</a><a class="next" href="compliance.html"><small>Next</small>SBOM, CRA and releases</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/image.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-you-see">What you see</a><a href="#change-it">Change it</a><a href="#which-recipe-installs">Which recipe installs…?</a><a href="#practical-limits">Practical limits</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-you-see">What you see</a><a href="#what-starts-on-the-device">What starts on the device</a><a href="#change-it">Change it</a><a href="#which-recipe-installs">Which recipe installs…?</a><a href="#practical-limits">Practical limits</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>
