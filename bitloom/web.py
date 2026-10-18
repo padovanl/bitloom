@@ -542,6 +542,37 @@ class Dashboard:
             return rootfs.listing(profile, image, machine, query.get("dir", ["/"])[0])
         return rootfs.read(profile, image, machine, query.get("path", [""])[0])
 
+    def practices(self, query):
+        from .practices import review
+        profile = self.profile(query.get("profile", [""])[0])
+        return review(profile, self.entries(profile))
+
+    def practices_save(self, body):
+        """Switch rules on or off, change severities, add, edit or remove company rules (bitloom-practices.json)."""
+        from .practices import load_config, review, save_config
+        profile = self.profile(body.get("profile"))
+        config = load_config(profile)
+        for key in ("disabled", "severity", "rules"):
+            if key in body:
+                config[key] = body[key]
+        save_config(profile, config)
+        return review(profile, self.entries(profile))
+
+    def practices_try(self, body):
+        """What a company rule would report, before it is saved."""
+        from .practices import try_rule
+        profile = self.profile(body.get("profile"))
+        return try_rule(profile, body.get("rule") or {}, self.entries(profile))
+
+    def practices_export(self, query):
+        from .practices import report, review
+        profile = self.profile(query.get("profile", [""])[0])
+        fmt = query.get("format", ["md"])[0]
+        if fmt not in {"md", "json", "text"}:
+            raise ValueError("format must be md, json or text")
+        text = report(review(profile, self.entries(profile)), fmt)
+        return text, f"yocto-practices-{profile.name}.{ {'md': 'md', 'json': 'json', 'text': 'txt'}[fmt] }"
+
     def whois(self, query):
         from .whois import lookup
         profile = self.profile(query.get("profile", [""])[0])
@@ -645,6 +676,16 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     payload = dashboard.metadata(query)
                 elif route[:2] == ("GET", "image") and len(route) == 3 and route[2] in {"list", "summary", "dir", "file"}:
                     payload = dashboard.image_view(query, route[2])
+                elif route == ("GET", "practices"):
+                    payload = dashboard.practices(query)
+                elif route == ("POST", "practices"):
+                    payload = dashboard.practices_save(self.body())
+                elif route == ("POST", "practices", "try"):
+                    payload = dashboard.practices_try(self.body())
+                elif route == ("GET", "practices", "export"):
+                    text, name = dashboard.practices_export(query)
+                    self.send(HTTPStatus.OK, text.encode(), "text/plain; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
+                    return
                 elif route == ("GET", "whois"):
                     payload = dashboard.whois(query)
                 elif route == ("GET", "images"):

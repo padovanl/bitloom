@@ -127,9 +127,11 @@ def main():
     parser.add_argument("--fail-on-unpatched", action="store_true", help="With --vulns: exit 2 when an unpatched finding matches")
     parser.add_argument("--format", choices=["text", "md", "html", "csv", "json", "sarif"], default="text",
                         help="With --vulns: report format (md/html readable reports with NVD/OSV links, csv, json, sarif for GitHub code scanning)")
-    parser.add_argument("-o", "--output", type=Path, help="With --vulns: write the report to this file instead of standard output")
+    parser.add_argument("-o", "--output", type=Path, help="With --vulns or --practices: write the report to this file instead of standard output")
     parser.add_argument("--all-statuses", action="store_true", help="With --vulns: include patched and ignored findings, not only unpatched")
     parser.add_argument("--work-usage", action="store_true", help="Print disk usage per recipe in tmp/work with rm_work advice")
+    parser.add_argument("--practices", action="store_true", help="Review the project against Yocto best practices and bitloom-practices.json; exits 2 on errors (or warnings with --fail-on warning)")
+    parser.add_argument("--fail-on", choices=["error", "warning", "never"], default="error", help="--practices: what makes the exit status 2")
     parser.add_argument("--who-installs", metavar="FILE_OR_PACKAGE", help="Which recipe puts a file (/etc/motd) or package (libc6) in the built images, and how to change it")
     parser.add_argument("--fleet", action="store_true", help="Probe every device in <state>/devices.json; exit 1 unless all are online")
     parser.add_argument("--network", action="store_true", help="With --doctor: also probe mirrors, hash equivalence and PR servers")
@@ -171,6 +173,19 @@ def _commands(parser, args) -> None:
         return
     if args.demo:
         args.config = prepare_demo(args.state)
+    if args.practices:
+        from .models import Settings
+        from .practices import report, review
+        profile = Settings(args.config).profile
+        data = review(profile)
+        text = report(data, args.format if args.format in {"md", "json", "text"} else "text")
+        if args.output:
+            Path(args.output).write_text(text + "\n")
+            print(f"Wrote {args.output}")
+        else:
+            print(text)
+        failing = data["errors"] + (data["warnings"] if args.fail_on == "warning" else 0)
+        raise SystemExit(2 if args.fail_on != "never" and failing else 0)
     if args.who_installs:
         from .inspectors import metadata
         from .models import Settings

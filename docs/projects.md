@@ -2,7 +2,7 @@
 
 Bitloom works with many projects at once: every project is a profile, and switching project is switching profile (`P`). The **Projects** hub opens existing folders, creates new Yocto projects and clones projects from GitHub or any Git server. The **guided setup** reads how a folder builds and proposes a ready-to-use profile.
 
-Open the hub with **Configuration → `w`**, **Ctrl+P → Projects**, or the *Projects* panel in the web dashboard's Configuration section (`7`).
+Open the hub with **Configuration → `w`**, **Ctrl+P → Projects**, or the *Projects* panel in the web dashboard's Configuration section (`8`).
 
 ![Projects hub with recent projects](assets/projects.png)
 

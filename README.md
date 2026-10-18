@@ -28,6 +28,7 @@ bitloom --web              # prints the URL (with its access token) and opens yo
 * **Recipes**: every layer with its counts, folders (`recipes-core`, `classes-recipe`…) that open on demand, filters for recipes, images, appends, classes and kas files, *Use as target*.
 * **SBOM & CRA**: release support, SBOM quality gauges, vulnerabilities from sbom-cve-check, cve-check and Grype, exports to Markdown, HTML, CSV, JSON and SARIF, CRA readiness.
 * **Studio**: create a layer, distribution, machine, image, recipe or append one step at a time: every option explained, where the files go and their content shown as you choose, a review of exactly what Create will do, then the next step (build it, use it, add an image to the new layer).
+* **Practices**: how far the project follows the Yocto best practices (layers, appends, recipes, security, configuration), with the file and line of each finding and how to fix it. Switch rules on or off, change their severity, add your company's own rules in `bitloom-practices.json`; `bitloom --practices` fails CI on errors. → [Best practices](docs/practices.md)
 * **Projects**: guided setup from a folder (kas files, bitbake-setup workspaces, Poky checkouts, `YML=… ./run_kas.sh build` launcher scripts, one profile per product), new projects pinned to Scarthgap or Wrynose, clone from Git.
 * `Ctrl+K` palette, `?` keys, toasts and browser notifications, light and dark themes, phone and tablet layouts. → [Web dashboard](docs/web.md)
 

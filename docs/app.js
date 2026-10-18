@@ -48,6 +48,7 @@ const PHRASES = [
   ['1,300 recipes,', 'sorted by layer.'],
   ['Which recipe put', 'this file here?'],
   ['Right tool for', 'your Yocto release.'],
+  ['Best practices,', 'your company\'s rules.'],
 ];
 const stage = document.querySelector('.rot-stage');
 if (stage) {
