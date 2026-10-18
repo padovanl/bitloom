@@ -17,6 +17,7 @@ PAGE = r"""<!doctype html>
   --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --ease: cubic-bezier(.2, .8, .2, 1);
   --code: #060a0e;
+  --viz-1: #3987e5; --viz-2: #d95926; --viz-3: #199e70; --viz-4: #c98500; --viz-5: #d55181; --viz-6: #008300; --viz-other: #5c6b74;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -25,6 +26,7 @@ PAGE = r"""<!doctype html>
     --bg: #f4f2ec; --bg2: #efece4; --surface: #fbfaf6; --raised: #ffffff; --line: #e1dccf; --line2: #d3ccbb; --fg: #23292f; --muted: #66707a;
     --accent: #17786d; --accent2: #345b91; --ink: #ffffff; --ok: #1f7a4d; --warn: #8a5a00; --err: #b0302c; --info: #2f5f9e;
     --glow: rgba(23, 120, 109, .12); --shadow: 0 10px 30px rgba(60, 50, 20, .10);
+    --viz-1: #2a78d6; --viz-2: #eb6834; --viz-3: #1baf7a; --viz-4: #eda100; --viz-5: #e87ba4; --viz-6: #008300; --viz-other: #a3a9ad;
   }
 }
 :root[data-theme="light"] {
@@ -32,6 +34,7 @@ PAGE = r"""<!doctype html>
   --bg: #f4f2ec; --bg2: #efece4; --surface: #fbfaf6; --raised: #ffffff; --line: #e1dccf; --line2: #d3ccbb; --fg: #23292f; --muted: #66707a;
   --accent: #17786d; --accent2: #345b91; --ink: #ffffff; --ok: #1f7a4d; --warn: #8a5a00; --err: #b0302c; --info: #2f5f9e;
   --glow: rgba(23, 120, 109, .12); --shadow: 0 10px 30px rgba(60, 50, 20, .10);
+  --viz-1: #2a78d6; --viz-2: #eb6834; --viz-3: #1baf7a; --viz-4: #eda100; --viz-5: #e87ba4; --viz-6: #008300; --viz-other: #a3a9ad;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; color: var(--fg); font: 14px/1.5 var(--sans); }
@@ -359,6 +362,28 @@ details.rule .mark { font: 700 13px var(--mono); text-align: center; }
 .pr-form .err { color: var(--err); font-size: 13px; min-height: 1.2em; }
 .pr-form-actions { display: flex; gap: 8px; }
 #img-mode { margin-right: 10px; } #img-mode button { padding: 3px 10px; }
+/* Image insights: thin marks, values in text ink, one hue for magnitude, categorical only for layers */
+.ins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; align-items: start; }
+.ins .panel { margin: 0; } .ins .wide { grid-column: 1 / -1; }
+.ins .card-body { padding: 12px 16px 16px; } .ins h3 { margin: 0; font-size: 14px; } .ins .sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 10px; }
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; background: var(--line); border-radius: 12px; overflow: hidden; }
+.kpi { background: var(--surface); padding: 14px 16px; } .kpi b { display: block; font: 600 22px/1.2 var(--sans); font-variant-numeric: tabular-nums; } .kpi span { color: var(--muted); font-size: 12.5px; }
+.kpi.alert b { color: var(--warn); }
+.stack { display: flex; gap: 2px; height: 22px; margin: 6px 0 12px; } .stack > span { border-radius: 4px; min-width: 3px; }
+.legend { display: grid; gap: 4px; } .legend .li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 2px 0; }
+.legend .sw { width: 10px; height: 10px; border-radius: 3px; } .legend .v { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; } .legend .tag { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px; }
+.hbars { display: grid; gap: 3px; } .hbar { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 13px; padding: 3px 4px; border-radius: 6px; border: 0; background: none; color: inherit; text-align: left; cursor: default; }
+.hbar.link { cursor: pointer; } .hbar.link:hover, .hbar.link:focus-visible { background: var(--raised); outline: none; }
+.hbar .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .hbar .n small { color: var(--muted); margin-left: 6px; }
+.hbar .t { height: 10px; } .hbar .b { display: block; height: 10px; border-radius: 0 4px 4px 0; background: var(--viz-1); min-width: 2px; }
+.hbar .b.other { background: var(--viz-other); } .hbar .v { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; white-space: nowrap; }
+.ports { width: 100%; border-collapse: collapse; font-size: 13px; } .ports th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.ports td { padding: 6px 8px; border-bottom: 1px solid var(--line); } .ports .num { font-family: var(--mono); }
+.finding { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.finding .ic { font-weight: 700; } .finding.error .ic { color: var(--err); } .finding.warning .ic { color: var(--warn); } .finding.info .ic { color: var(--info); } .finding.ok .ic { color: var(--ok); }
+.finding small { display: block; color: var(--muted); }
+#ins-tip { position: fixed; z-index: 60; pointer-events: none; background: var(--raised); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; box-shadow: var(--shadow); max-width: 340px; }
+@media (max-width: 900px) { .ins { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hbar { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) auto; } }
 .svc.selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .dts-bar { display: flex; gap: 10px; align-items: center; } .dts-bar input { flex: 1; }
 .dts { font: 12.5px/1.55 var(--mono); padding: 8px 0 14px; max-height: 70vh; overflow: auto; white-space: pre; tab-size: 4; }
@@ -756,14 +781,15 @@ details.folder > summary { padding: 8px 14px; }
 
     <section id="view-image" class="view" hidden>
       <div class="panel img-top">
-        <div class="head"><h2>Image</h2><select id="img-pick" aria-label="Built image"></select><span class="meta" id="img-source"></span><span style="flex:1"></span>
+        <div class="head"><h2>Image</h2><select id="img-pick" aria-label="Built image"></select><span class="meta" id="img-source"></span><span style="flex:1"></span><div class="seg" id="img-mode" role="radiogroup" aria-label="Show"><button role="radio" aria-checked="true" data-mode="files">Files</button><button role="radio" aria-checked="false" data-mode="services" title="What starts on the device: init, systemd units or SysV scripts, udev rules, D-Bus">Services</button><button role="radio" aria-checked="false" data-mode="devicetree" title="The device trees the build deployed, decompiled">Device tree</button><button role="radio" aria-checked="false" data-mode="insights" title="Charts: where the space goes, licences, what listens, security">Insights</button></div>
           <div class="who"><input type="search" id="img-find" placeholder="Which recipe installs… /etc/motd, libc6, busybox" aria-label="Which recipe installs a file or package"><button class="btn" id="img-find-btn">Find</button></div></div>
         <div class="img-stats" id="img-stats"></div>
         <div class="img-charts"><div><h4>Biggest packages</h4><div id="img-packages" class="bars"></div></div><div><h4>Biggest folders</h4><div id="img-folders" class="bars"></div></div></div>
       </div>
-      <div class="split img-split">
+      <div id="img-insights" class="ins" hidden></div>
+      <div class="split img-split" id="img-split">
         <div class="panel">
-          <div class="head"><div class="seg" id="img-mode" role="radiogroup" aria-label="Show"><button role="radio" aria-checked="true" data-mode="files">Files</button><button role="radio" aria-checked="false" data-mode="services" title="What starts on the device: init, systemd units or SysV scripts, udev rules, D-Bus">Services</button><button role="radio" aria-checked="false" data-mode="devicetree" title="The device trees the build deployed, decompiled">Device tree</button></div>
+          <div class="head">
             <div class="img-crumbs" id="img-crumbs" role="navigation" aria-label="Folder"></div><span style="flex:1"></span><span class="meta" id="img-dir-size"></span></div>
           <div class="list" id="img-list" role="listbox" aria-label="Folder content"></div>
           <div class="list" id="img-services" aria-label="Services" hidden></div>
@@ -2122,16 +2148,104 @@ async function chooseImage(img, dir = "/") {
   } catch (error) { stats.textContent = ""; stats.append(el("div", {class: "empty", text: error.message})); }
   await openDir(dir);
   if (imgMode === "services") loadServices();
+  if (imgMode === "insights") loadInsights();
 }
 function setImgMode(mode) {
   imgMode = mode;
   for (const b of document.querySelectorAll("#img-mode button")) b.setAttribute("aria-checked", String(b.dataset.mode === mode));
   $("img-list").hidden = mode !== "files"; $("img-crumbs").hidden = mode !== "files"; $("img-services").hidden = mode !== "services"; $("img-dt").hidden = mode !== "devicetree";
+  $("img-split").hidden = mode === "insights"; $("img-insights").hidden = mode !== "insights";
+  if (mode === "insights") loadInsights();
   $("img-dir-size").textContent = mode === "files" && imgLast ? human(imgLast.size) : "";
   if (mode === "services") loadServices();
   if (mode === "devicetree") loadDeviceTrees();
 }
 let dtFiles = [], dtCurrent = null;
+function tipOn(node, text) {
+  // Hover (and keyboard focus) shows the exact values; the label stays readable without it.
+  const show = (x, y) => { let tip = $("ins-tip"); if (!tip) { tip = el("div", {id: "ins-tip", role: "tooltip"}); document.body.append(tip); }
+    tip.textContent = text; tip.hidden = false; tip.style.left = Math.min(x + 14, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (y + 14) + "px"; };
+  node.addEventListener("mousemove", (e) => show(e.clientX, e.clientY));
+  node.addEventListener("focus", () => { const r = node.getBoundingClientRect(); show(r.left, r.bottom); });
+  for (const ev of ["mouseleave", "blur"]) node.addEventListener(ev, () => { const tip = $("ins-tip"); if (tip) tip.hidden = true; });
+  node.setAttribute("aria-label", text);
+  return node;
+}
+function card(title, sub, wide = false) {
+  const body = el("div", {class: "card-body"}, el("h3", {text: title}), el("div", {class: "sub", text: sub}));
+  return [el("div", {class: "panel" + (wide ? " wide" : "")}, body), body];
+}
+function hbars(rows, {value, label, note = () => "", tip, run = null, max = null}) {
+  const top = max || Math.max(1, ...rows.map(value));
+  const box = el("div", {class: "hbars"});
+  for (const row of rows) {
+    const bar = el(run ? "button" : "div", {class: "hbar" + (run ? " link" : ""), tabindex: run ? "0" : "-1", ...(run ? {type: "button", onclick: () => run(row)} : {})},
+      el("span", {class: "n"}, label(row), ...(note(row) ? [el("small", {text: note(row)})] : [])),
+      el("span", {class: "t"}, el("span", {class: "b" + (row.other ? " other" : ""), style: `width:${Math.max(0.5, 100 * value(row) / top)}%`})),
+      el("span", {class: "v", text: tip(row).split(" · ")[0]}));
+    box.append(tipOn(bar, label(row) + " · " + tip(row)));
+  }
+  return box;
+}
+let insightsTicket = 0;
+async function loadInsights() {
+  const box = $("img-insights"), ticket = ++insightsTicket;
+  box.textContent = "";
+  if (!imgCurrent) { box.append(el("div", {class: "panel wide"}, el("div", {class: "empty", text: "No built image to analyse yet."}))); return; }
+  const wait = el("div", {class: "panel wide"}, el("div", {class: "card-body"})); skeletonIn(wait.firstChild); box.append(wait);
+  let d;
+  try { d = await api(`/api/image/insights?${imgQuery()}`); } catch (error) { box.textContent = ""; box.append(el("div", {class: "panel wide"}, el("div", {class: "empty", text: error.message}))); return; }
+  if (ticket !== insightsTicket) return;
+  box.textContent = "";
+  const pct = (n) => (100 * n / Math.max(1, d.total)).toFixed(n / d.total < 0.01 ? 1 : 0) + "%";
+  // Headline numbers: tiles, not charts.
+  const kpis = el("div", {class: "kpis wide"});
+  for (const [value, label, alert] of [[human(d.total), "on the device"], [d.files.toLocaleString(), "files"], [String(d.packages), "packages"],
+      [String(d.boot), `started at boot · ${d.init}`], [String(d.ports.length), d.ports.length === 1 ? "port listening" : "ports listening", d.ports.length > 0],
+      [String(d.setuid.length), "setuid / setgid files", d.setuid.length > 6]])
+    kpis.append(el("div", {class: "kpi" + (alert ? " alert" : "")}, el("b", {text: value}), el("span", {text: label})));
+  box.append(kpis);
+  // Part-to-whole by layer: the only categorical chart (≤6 layers + Other, colours by slot, legend with values).
+  const [layers, lb] = card("Where the space goes · by layer", "Your layers are marked; upstream ones are where an append changes things.", true);
+  const stack = el("div", {class: "stack", role: "img", "aria-label": "Size by layer"}), legend = el("div", {class: "legend"});
+  d.layers.forEach((row, i) => {
+    const colour = row.other || row.name === "not from a package" ? "var(--viz-other)" : `var(--viz-${i + 1})`;
+    stack.append(tipOn(el("span", {style: `flex:${Math.max(row.size, d.total / 400)};background:${colour}`, tabindex: "0"}), `${row.name}: ${human(row.size)} · ${pct(row.size)} · ${row.files} files`));
+    legend.append(el("div", {class: "li"}, el("span", {class: "sw", style: `background:${colour}`}), el("span", {}, row.name + (row.other ? ` (${row.count} layers)` : ""), ...(row.mine ? [" ", el("span", {class: "tag", text: "yours"})] : [])),
+      el("span", {class: "v", text: human(row.size)}), el("span", {class: "v", text: pct(row.size)})));
+  });
+  lb.append(stack, legend); box.append(layers);
+  const [kinds, kb] = card("By kind of file", "Debug symbols, development files and documentation are rarely needed on a device.");
+  kb.append(hbars(d.kinds, {value: (r) => r.size, label: (r) => r.name, tip: (r) => `${human(r.size)} · ${pct(r.size)} · ${r.files} files`}));
+  box.append(kinds);
+  const [recipes, rb] = card("Biggest recipes", "Select one for its packages, layer and how to change it.");
+  rb.append(hbars(d.recipes, {value: (r) => r.size, label: (r) => r.name, tip: (r) => `${human(r.size)} · ${pct(r.size)} · ${r.files} files`,
+    run: (r) => { if (!r.other && r.name !== "not from a package") { setImgMode("files"); whoInstalls(r.name); } }}));
+  box.append(recipes);
+  const [lic, lcb] = card("Licences", "Packages in the image per licence expression, with the space they take.");
+  lcb.append(hbars(d.licences, {value: (r) => r.packages, label: (r) => r.name, note: (r) => r.other ? `${r.count} more` : "",
+    tip: (r) => `${r.packages} ${r.packages === 1 ? "package" : "packages"} · ${human(r.size)}` + (r.names ? " · " + r.names.join(", ") : "")}));
+  box.append(lic);
+  const [hubs, hb] = card("What everything depends on", "Installed packages that most others need (RDEPENDS): changing them touches the whole image.");
+  if (d.hubs.length) hb.append(hbars(d.hubs, {value: (r) => r.dependants, label: (r) => r.package, tip: (r) => `${r.dependants} ${r.dependants === 1 ? "package needs" : "packages need"} it · ${r.examples.join(", ")}`, run: (r) => { setImgMode("files"); whoInstalls(r.package); }}));
+  else hb.append(el("div", {class: "meta", text: "No dependencies between installed packages found (pkgdata missing?)."}));
+  box.append(hubs);
+  const [net, nb] = card("What listens on the network", "From systemd sockets, inetd and the server programs in the image, with their configured port.");
+  if (d.ports.length) {
+    const table = el("table", {class: "ports"}, el("tr", {}, ...["Port", "Service", "Found in", "At boot", "Package"].map((h) => el("th", {text: h}))));
+    for (const p of d.ports) table.append(el("tr", {}, el("td", {class: "num", text: `${p.port}/${p.proto}`}), el("td", {text: p.what}), el("td", {class: "meta", text: p.how}),
+      el("td", {text: p.boot ? "● yes" : "○ on demand"}), el("td", {class: "meta", text: p.package || "—"})));
+    nb.append(table);
+  } else nb.append(el("div", {class: "finding ok"}, el("span", {class: "ic", text: "✔"}), el("span", {text: "Nothing listens on the network.", }, el("small", {text: "No SSH, web, DNS, MQTT or other server program, socket unit or inetd service in this image."}))));
+  box.append(net);
+  const [sec, sb] = card("Security at a glance", "Accounts, special permissions and what should not ship.");
+  const finding = (level, text, fix) => el("div", {class: "finding " + level}, el("span", {class: "ic", text: {error: "✖", warning: "▲", info: "●", ok: "✔"}[level]}), el("span", {text}, ...(fix ? [el("small", {text: fix})] : [])));
+  if (d.root.password) sb.append(finding(d.root.empty ? "error" : "ok", `root password: ${d.root.password}`));
+  for (const f of d.findings) sb.append(finding(f.level, f.text.replace(/(\d+) bytes/, (_, n) => human(Number(n))), f.fix));
+  sb.append(finding(d.setuid.length ? "info" : "ok", `${d.setuid.length} setuid/setgid ${d.setuid.length === 1 ? "file" : "files"}`, d.setuid.map((f) => `${f.path} (${f.mode}${f.recipe ? ", " + f.recipe : ""})`).join(" · ")));
+  sb.append(finding(d.writable.length ? "warning" : "ok", d.writable.length ? `${d.writable.length} world-writable paths without the sticky bit` : "No world-writable path without the sticky bit", d.writable.slice(0, 8).join(" · ")));
+  box.append(sec);
+}
 async function loadDeviceTrees() {
   const box = $("img-dt"); box.textContent = ""; skeletonIn(box);
   try { dtFiles = (await api(`/api/devicetree?profile=${prof()}`)).files; } catch (error) { box.textContent = ""; box.append(el("div", {class: "empty", text: error.message})); return; }

@@ -268,6 +268,7 @@ def services(profile: Profile, image: str, machine: str) -> dict:
         values = _ini(text.get(_resolve(entries, unit.get("path", "")), ""))
         alias_of = Path(_resolve(entries, unit["path"])).name if unit.get("path") else name
         rows.append({"name": name, "path": unit.get("path", ""), "kind": name.rsplit(".", 1)[1], "description": values.get("Description", ""),
+                     "listen": [f"{'udp' if k == 'ListenDatagram' else 'tcp'} {v}" for k, v in values.items() if k in ("ListenStream", "ListenDatagram")],
                      "exec": values.get("ExecStart", "").lstrip("-@+!"), "enabled": sorted(set(wanted.get(name, []) + (wanted.get(alias_of, []) if alias_of != name else []))),
                      "masked": bool(unit.get("masked")), **who(unit.get("path", ""))})
     default = _resolve(entries, "/etc/systemd/system/default.target") if exists("/etc/systemd/system/default.target") else \

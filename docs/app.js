@@ -49,6 +49,7 @@ const PHRASES = [
   ['Which recipe put', 'this file here?'],
   ['Right tool for', 'your Yocto release.'],
   ['Best practices,', 'your company\'s rules.'],
+  ['Where did', 'the 30 MiB go?'],
 ];
 const stage = document.querySelector('.rot-stage');
 if (stage) {
