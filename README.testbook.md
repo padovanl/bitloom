@@ -664,6 +664,9 @@ The following ledger is generated from the current ACTIONS list. Match each titl
 | CMD077 / `fragment-disable` | Disable a configuration fragment | fragment=core/yocto/sstate-mirror-cdn | after CMD076 | The fragment is removed from OE_FRAGMENTS. | TODO |
 | CMD078 / `setup-status` | bitbake-setup: compare with upstream | none | a bitbake-setup workspace (see the guided setup case) | Shows the differences with the template; on a kas profile refused with "not set up with bitbake-setup"; on Scarthgap refused because its BitBake has no bitbake-setup. | TODO |
 | CMD079 / `setup-update` | bitbake-setup: update layers and configuration | none | a bitbake-setup workspace | Interactive: updates the layer checkouts and asks before changing the build configuration. | TODO |
+| CMD080 / `kernel-savedefconfig` | Save kernel defconfig | none | a profile with a kernel built (for example after building core-image-minimal) | `${B}/defconfig` appears in the kernel's build folder; on a runtime without the task the action is refused with the probed reason. | TODO |
+| CMD081 / `uboot-menuconfig` | U-Boot menuconfig | none | a machine with a bootloader (for example `qemuarm64` with u-boot; qemux86-64 has none) | Interactive menuconfig of virtual/bootloader in a terminal; on qemux86-64 refused before running (no do_menuconfig for the bootloader). | TODO |
+| CMD082 / `uboot-diffconfig` | Export U-Boot config changes | none | after CMD081 | `fragment.cfg` with the changes in the bootloader's work folder. | TODO |
 
 Rows are not a single destructive execution sequence. Recreate the relevant workspace state before devtool finish/reset/update/upgrade, and choose actual signature/artifact paths where requested. Mark direct hardware and unsupported runtime tests N/A with prerequisites recorded.
 

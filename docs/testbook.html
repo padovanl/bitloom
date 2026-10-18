@@ -1657,6 +1657,30 @@ PY
 <td>Interactive: updates the layer checkouts and asks before changing the build configuration.</td>
 <td>TODO</td>
 </tr>
+<tr>
+<td>CMD080 / <code>kernel-savedefconfig</code></td>
+<td>Save kernel defconfig</td>
+<td>none</td>
+<td>a profile with a kernel built (for example after building core-image-minimal)</td>
+<td><code>${B}/defconfig</code> appears in the kernel's build folder; on a runtime without the task the action is refused with the probed reason.</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD081 / <code>uboot-menuconfig</code></td>
+<td>U-Boot menuconfig</td>
+<td>none</td>
+<td>a machine with a bootloader (for example <code>qemuarm64</code> with u-boot; qemux86-64 has none)</td>
+<td>Interactive menuconfig of virtual/bootloader in a terminal; on qemux86-64 refused before running (no do_menuconfig for the bootloader).</td>
+<td>TODO</td>
+</tr>
+<tr>
+<td>CMD082 / <code>uboot-diffconfig</code></td>
+<td>Export U-Boot config changes</td>
+<td>none</td>
+<td>after CMD081</td>
+<td><code>fragment.cfg</code> with the changes in the bootloader's work folder.</td>
+<td>TODO</td>
+</tr>
 </tbody>
 </table>
 <p>Rows are not a single destructive execution sequence. Recreate the relevant workspace state before devtool finish/reset/update/upgrade, and choose actual signature/artifact paths where requested. Mark direct hardware and unsupported runtime tests N/A with prerequisites recorded.</p>
