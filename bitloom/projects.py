@@ -11,6 +11,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import module_command
 from .models import Profile
 
 # Pinned, verified release templates (the same tags Bitloom's real validation builds use).
@@ -104,8 +105,8 @@ def bbsetup_plan(directory: str, name: str, release: str, machine: str, distro: 
     return {"root": str(root), "name": name, "release": release, "tool": "bitbake-setup", "files": {}, "layer": None,
             "command": shown, "setup": str(root / name),
             "display": " \\\n    ".join(shlex.join(part) for part in (shown[:5], shown[5:9], shown[9:14], shown[14:])),
-            "job": [sys.executable, "-m", "bitloom.bbsetup", "--top", str(root), "--release", release, "--name", name, "--configuration", configuration,
-                    *[x for c in choices for x in ("--choice", c)]]}
+            "job": module_command("bitloom.bbsetup", "--top", str(root), "--release", release, "--name", name, "--configuration", configuration,
+                                  *[x for c in choices for x in ("--choice", c)])}
 
 
 def bbsetup_request(plan: dict, runtime: str, machine: str, distro: str, target: str) -> dict:

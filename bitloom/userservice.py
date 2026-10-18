@@ -38,16 +38,17 @@ def units(state: Path, config: Path, name: str = "bitloom", web: bool = False, h
         if entry and entry not in keep and not entry.startswith("/mnt/") and ".vscode-server" not in entry:
             keep.append(entry)
     common = [f"Environment={_quote('PATH=' + os.pathsep.join(keep))}", f"WorkingDirectory={_quote(str(Path.home()))}"]
+    from . import module_command
+    run = lambda module, *args: " ".join(_quote(part) for part in module_command(module, *args))
     service = "\n".join(["[Unit]", f"Description=Bitloom build service ({state})", "",
-                         "[Service]", "Type=simple", f"ExecStart={_quote(python)} -m bitloom.daemon {_quote(str(state))}",
+                         "[Service]", "Type=simple", f"ExecStart={run('bitloom.daemon', str(state))}",
                          *common, "Restart=on-failure", "RestartSec=5", "", "[Install]", "WantedBy=default.target", ""])
     result = {f"{name}.service": service}
     if web:
         result[f"{name}-web.service"] = "\n".join([
             "[Unit]", f"Description=Bitloom web dashboard on {host}:{port}", f"Requires={name}.service", f"After={name}.service", "",
             "[Service]", "Type=simple",
-            f"ExecStart={_quote(python)} -m bitloom --web --no-browser --persistent-token --host {_quote(host)} --port {port} "
-            f"--config {_quote(str(config))} --state {_quote(str(state))}",
+            f"ExecStart={run('bitloom', '--web', '--no-browser', '--persistent-token', '--host', host, '--port', str(port), '--config', str(config), '--state', str(state))}",
             *common, "Restart=on-failure", "RestartSec=5", "", "[Install]", "WantedBy=default.target", ""])
     return result
 

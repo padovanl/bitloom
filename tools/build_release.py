@@ -1,4 +1,4 @@
-"""Build versioned source, wheel and self-contained Debian release assets."""
+"""Build versioned source, wheel, self-contained Debian and single-file (bitloom.pyz) release assets."""
 from __future__ import annotations
 
 import argparse
@@ -75,7 +75,7 @@ def build(version: str, output: Path) -> None:
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     names = [f'bitloom-{version}.tar.gz', f'bitloom-{version}-py3-none-any.whl',
-             f'bitloom_{version}_all.deb', f'bitloom-{version}.spdx.json', 'SHA256SUMS']
+             f'bitloom_{version}_all.deb', f'bitloom-{version}.spdx.json', f'bitloom-{version}.pyz', 'SHA256SUMS']
     if any((output / name).exists() for name in names):
         raise RuntimeError('Release assets already exist in the output directory; use a fresh directory.')
     if not shutil.which('dpkg-deb'):
@@ -130,6 +130,9 @@ def build(version: str, output: Path) -> None:
         (documentation / 'copyright').write_text((source / 'NOTICE').read_text() + '\n\n' + (source / 'LICENSE').read_text())
         shutil.copy2(assets / names[3], documentation / 'sbom.spdx.json')    # what the package bundles, for CRA reviews
         run('dpkg-deb', '--root-owner-group', '--build', str(package), str(assets / names[2]))
+        # The same files as one executable: python3 bitloom.pyz, or copy it into a build container (pure Python, 3.10+).
+        import zipapp
+        zipapp.create_archive(library, assets / names[4], interpreter='/usr/bin/env python3', main='bitloom.cli:main', compressed=True)
         for name in names[:-1]:
             shutil.copy2(assets / name, output / name)
         (output / 'SHA256SUMS').write_text(''.join(

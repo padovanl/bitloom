@@ -16,7 +16,8 @@ def test_plan_follows_the_official_template(tmp_path):
     assert plan["tool"] == "bitbake-setup" and plan["setup"] == str(tmp_path / "top/acme")
     assert plan["command"][-4:] == ["poky-wrynose", "poky", "machine/qemuarm64", "distro/poky"]
     assert "--non-interactive" in plan["command"] and "init --non-interactive" in plan["display"]
-    assert plan["job"][:3] == [sys.executable, "-m", "bitloom.bbsetup"]
+    from bitloom import module_command
+    assert plan["job"][:3] == module_command("bitloom.bbsetup")[:3] and "--top" in plan["job"]   # runs from any install, .deb and .pyz included
     with pytest.raises(ValueError, match="not available for scarthgap.*BitBake 2.16"):
         bbsetup_plan(str(tmp_path / "x"), "acme", "scarthgap", "qemux86-64", "poky")
     with pytest.raises(ValueError, match="offers MACHINE"):
