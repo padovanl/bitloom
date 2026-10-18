@@ -62,7 +62,9 @@ Generare in locale gli stessi pacchetti della release (`.deb`, `.tar.gz`, wheel 
 
 ## 3. Integrazione con `run_kas.sh` (6hd, st005)
 
-Dalla root del progetto lancia `bitloom`. Il setup guidato (Configuration → `w` Projects → `o`, oppure *Set up a project* nella dashboard; si apre da solo al primo avvio senza profili) rileva gli script launcher e propone un profilo `wrapper`, che si può anche scrivere a mano in `.bitloom/profiles.json`:
+Dalla root del progetto lancia `bitloom --web` (oppure `bitloom` per la TUI). Al primo avvio, senza profili, si apre da solo il setup guidato sulla cartella corrente (nella dashboard: Configuration → *Set up a project*; nella TUI: Configuration → `w` Projects → `o`). Per uno script launcher propone **un profilo `wrapper` per ogni prodotto**, cioè per ogni YML che non è un frammento incluso da altri, con titolo `YML=… ./run_kas.sh build`, MACHINE e target letti dal YML (seguendo gli `includes`) e `KAS_WORK_DIR` ricavato dallo script (anche forme come `${KAS_WORK_DIR:-$HOME/…}`, `build-${YML%.yml}`, `$(basename $YML .yml)`, `TOP=$(cd $(dirname $0) && pwd)`). **Save all N products** (TUI: `^A`) li salva tutti insieme; `P` o il menu profili passa dall'uno all'altro.
+
+Il profilo si può anche scrivere a mano in `.bitloom/profiles.json`:
 
 ```json
 {
