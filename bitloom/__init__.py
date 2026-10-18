@@ -1,5 +1,5 @@
 """Bitloom — a local-first Yocto development cockpit."""
-__version__ = "0.1.0"
+__version__ = "0.0.3"
 
 
 def archive():
