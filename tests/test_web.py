@@ -156,3 +156,29 @@ def test_failed_build_summary_starts_with_the_diagnosis(tmp_path):
     failed = job_report(log, failed=True)['summary']
     assert failed.startswith('FAILURE DIAGNOSIS') and 'log.do_compile.42' in failed and 'Next step:' in failed
     assert not job_report(log)['summary'].startswith('FAILURE DIAGNOSIS')
+
+
+def test_page_script_declares_each_name_once():
+    """A duplicated top-level let/const/function is a SyntaxError that leaves the whole dashboard dead."""
+    import re
+    from collections import Counter
+    from bitloom.webpage import PAGE
+    script = PAGE.split('<script>')[-1].split('</script>')[0]
+    names = []
+    for line in script.splitlines():
+        if line.startswith(('let ', 'const ')):
+            # let a = 1, b = [...]: split on top-level commas only
+            depth, part, parts = 0, '', []
+            for ch in line.split(' ', 1)[1].rstrip(';'):
+                depth += ch in '([{' and 1 or ch in ')]}' and -1 or 0
+                if ch == ',' and depth == 0:
+                    parts.append(part); part = ''
+                else:
+                    part += ch
+            parts.append(part)
+            names += [re.match(r'\s*([\w$]+)', p)[1] for p in parts if re.match(r'\s*([\w$]+)', p)]
+        match = re.match(r'(?:async\s+)?function\s+([\w$]+)', line)
+        if match:
+            names.append(match[1])
+    duplicates = [name for name, count in Counter(names).items() if count > 1]
+    assert not duplicates, duplicates

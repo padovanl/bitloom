@@ -26,7 +26,7 @@ bitloom --web              # prints the URL (with its access token) and opens yo
 * **Target picker**: the build field lists the image recipes found in your layers, kas target and images already built first.
 * **Recipes**: every layer with its counts, folders (`recipes-core`, `classes-recipe`…) that open on demand, filters for recipes, images, appends, classes and kas files, *Use as target*.
 * **SBOM & CRA**: release support, SBOM quality gauges, vulnerabilities from sbom-cve-check, cve-check and Grype, exports to Markdown, HTML, CSV, JSON and SARIF, CRA readiness.
-* **Studio**: a guided form for a layer, distribution, machine, image, recipe or append, with every option explained, the lines each field writes highlighted and the exact steps Create will take.
+* **Studio**: an editor for your layers (Explorer, tabs, BitBake highlighting, Ctrl+S) with *New ▸* layer, distribution, machine, image, recipe or append: a guided Inspector explains every option, the files it will write open as tabs you can still edit, and the exact steps Create will take are listed first.
 * **Projects**: guided setup from a folder (kas files, Poky checkouts, `YML=… ./run_kas.sh build` launcher scripts, one profile per product), new projects pinned to Scarthgap or Wrynose, clone from Git.
 * `Ctrl+K` palette, `?` keys, toasts and browser notifications, light and dark themes, phone and tablet layouts. → [Web dashboard](docs/web.md)
 

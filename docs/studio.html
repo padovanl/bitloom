@@ -21,16 +21,26 @@
 <p>Studio creates the metadata of your own product: a product layer, your distribution instead of Poky, machines, images, recipes and appends. Defaults follow the detected Yocto release, and you see every file, and everything Create will do, before anything is written.</p>
 <p>Open it with <strong>Recipes → <code>c</code></strong> in the TUI, <strong>Ctrl+P → Studio</strong>, or section <strong>5</strong> of the <a href="web.html">web dashboard</a>.</p>
 <details class="shot"><summary><span>Screenshot</span> Studio creating a distribution on Wrynose</summary><div class="shot-body"><img src="assets/studio.png" alt="Studio creating a distribution on Wrynose" loading="lazy" decoding="async"></div></details>
+<h2 id="the-web-studio-an-editor-for-your-layers">The web Studio: an editor for your layers<a class="anchor" href="#the-web-studio-an-editor-for-your-layers" aria-label="Link to this section">#</a></h2>
+<p>In the web dashboard (section <strong>5</strong>) Studio is laid out like a code editor:</p>
+<ul>
+<li><strong>Explorer</strong> (left): your layers first, with every file, then the upstream layers (Poky, OE-Core, meta-yocto…) marked <em>read-only</em>. Type in <em>Filter files</em> to narrow the tree. Click a file to open it in a tab.</li>
+<li><strong>Editor</strong> (centre): tabs, line numbers and BitBake syntax highlighting (assignments, operators, strings, <code>${expansions}</code>, <code>inherit</code>/<code>require</code>, comments, task functions). Files of your own layers can be edited: <strong>Ctrl+S</strong> saves, and the save is refused if the file changed on disk since you opened it, or while a build is queued or running, so a build never reads half-edited metadata. Upstream files open read-only: add a <code>.bbappend</code> in your layer instead.</li>
+<li><strong>New ▾</strong> (or <code>n</code>): pick a layer, distribution, machine, image, application recipe or append. The <strong>Inspector</strong> opens on the right with the guided form, and the files it will write open as green <strong>new</strong> tabs, also marked <em>new</em> in the Explorer. You can type into a planned file before creating it: the tab shows <em>edited by hand</em> and Create writes your version.</li>
+<li><strong>Create will… / Problems</strong> (bottom): the exact steps Create takes, and anything to fix (a value that cannot work, a layer the plan needs).</li>
+<li><strong>Create</strong> (or <strong>Ctrl+Enter</strong>) writes the files, refreshes the Explorer and opens the main file; for images and recipes a toast offers to build it.</li>
+</ul>
+<details class="shot"><summary><span>Screenshot</span> The web Studio: Explorer, editor with the planned image recipe, Inspector</summary><div class="shot-body"><img src="assets/web-studio.png" alt="The web Studio: Explorer, editor with the planned image recipe, Inspector" loading="lazy" decoding="async"></div></details>
+<details class="shot"><summary><span>Animation</span> Opening a file, then New ▸ Image: the planned file follows the form</summary><div class="shot-body"><img src="assets/web-clip-studio.gif" alt="Opening a file, then New ▸ Image: the planned file follows the form" loading="lazy" decoding="async"></div></details>
 <h2 id="how-the-form-reads">How the form reads<a class="anchor" href="#how-the-form-reads" aria-label="Link to this section">#</a></h2>
 <p>The form is split into numbered sections: <strong>Where the files go</strong>, <strong>Name and identity</strong>, <strong>What goes in</strong> and <strong>Policies</strong>. Each field has a plain label; the BitBake variable it sets is shown next to it (for example <em>Product name</em> · <code>DISTRO_NAME</code>), so the form is readable without knowing Yocto and still tells experts exactly what is written.</p>
 <ul>
-<li><strong>Choices explain themselves.</strong> Under a drop-down, a line says what the selected option means (<em>systemd: full service manager; default from Wrynose</em>). Feature chips show their meaning on hover or focus, and the line under them lists what is selected.</li>
-<li><strong>The preview follows the field.</strong> Focusing a field highlights the lines it writes and switches the preview to the file that contains them. The main file (the distribution, machine, image or recipe) is the first tab, marked ●; the layer files come after it.</li>
-<li><strong>When you press Create</strong> lists the steps in order: the files written and where, the kas overlay or <code>bitbake-layers add-layer</code>, whether the new <code>DISTRO</code>/<code>MACHINE</code> is selected and the build offered next. Nothing happens that is not on this list.</li>
-<li><strong>Errors point at the field.</strong> A value that cannot work (an id with capitals, a size that is not a number, <code>debug-tweaks</code> on 5.1+) is marked on the field itself with the reason, and Create is disabled until it is fixed.</li>
-<li><strong>No layer of your own yet?</strong> The Layer field says so: a new layer (default <code>meta-acme</code>) is created together with the files. The layer choice is kept when you switch between kinds.</li>
+<li><strong>Choices explain themselves.</strong> Under a drop-down, a line says what the selected option means (<em>systemd: full service manager; default from Wrynose</em>). Feature chips show their meaning on hover or focus, and the line under them lists what is selected. Help that quotes an example follows what you type (<em>You build it with: bitbake gateway-image</em>).</li>
+<li><strong>The editor follows the field.</strong> Focusing a field highlights the lines it writes and switches to the planned file that contains them.</li>
+<li><strong>Errors point at the field</strong> and are listed under Problems; Create stays disabled until they are fixed.</li>
+<li><strong>No layer of your own yet?</strong> The Layer field says so: a new layer (default <code>meta-acme</code>) is created together with the files and shown in the Explorer as a new layer. The layer choice is kept when you switch between kinds.</li>
 </ul>
-<details class="shot"><summary><span>Animation</span> Studio in the web dashboard: editing a field highlights the lines it writes</summary><div class="shot-body"><img src="assets/web-clip-studio.gif" alt="Studio in the web dashboard: editing a field highlights the lines it writes" loading="lazy" decoding="async"></div></details>
+<p>In the TUI (<strong>Recipes → <code>c</code></strong>) the same form and plan appear in one dialog: kinds on the left, the form in the middle, the steps and the files on the right.</p>
 <h2 id="what-you-can-create">What you can create<a class="anchor" href="#what-you-can-create" aria-label="Link to this section">#</a></h2>
 <table>
 <thead>
@@ -112,7 +122,7 @@
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="compliance.html"><small>Previous</small>SBOM, CRA and releases</a><a class="next" href="teams.html"><small>Next</small>Teams and CI/CD</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/studio.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#how-the-form-reads">How the form reads</a><a href="#what-you-can-create">What you can create</a><a href="#where-files-go">Where files go</a><a href="#registration">Registration</a><a href="#keyboard">Keyboard</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#the-web-studio-an-editor-for-your-layers">The web Studio: an editor for your layers</a><a href="#how-the-form-reads">How the form reads</a><a href="#what-you-can-create">What you can create</a><a href="#where-files-go">Where files go</a><a href="#registration">Registration</a><a href="#keyboard">Keyboard</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

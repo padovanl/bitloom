@@ -470,3 +470,69 @@ def register(settings, profile: Profile, result: dict, use: bool, submit) -> tup
     if target:
         messages.append(f"build target: {target}")
     return messages, target
+
+
+# --- Workspace explorer for the web Studio -------------------------------------------------------------
+
+SKIP_DIRS = {".git", "__pycache__", ".bitloom"}
+TEXT_LIMIT = 1024 * 1024
+
+
+def layer_list(entries, profile: Profile) -> list[dict]:
+    """Every layer of the workspace for the explorer: your layers first and editable, upstream ones read-only."""
+    writable = set(product_layers(entries, profile))
+    rows = [{"name": e.name, "path": str(e.path), "writable": e.path in writable} for e in entries if e.kind == "layer"]
+    return sorted(rows, key=lambda r: (not r["writable"], r["name"] in {"meta-selftest", "meta-skeleton"}, r["name"]))
+
+
+def list_layer_files(layer: Path, limit: int = 4000) -> list[str]:
+    """Files of one layer, relative to it, folders first in walk order; capped for very large layers."""
+    found = []
+    for directory, dirs, files in os.walk(layer):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
+        base = Path(directory)
+        for name in sorted(files):
+            path = base / name
+            if not path.is_symlink():
+                found.append(str(path.relative_to(layer)))
+                if len(found) >= limit:
+                    return found
+    return found
+
+
+def _resolve(path: str, layers: list[dict], need_writable: bool) -> Path:
+    target = Path(path).expanduser().resolve()
+    for layer in layers:
+        root = Path(layer["path"]).resolve()
+        if target == root or target.is_relative_to(root):
+            if need_writable and not layer["writable"]:
+                raise ValueError(f"{layer['name']} is an upstream layer: Studio does not modify it. Add a .bbappend in your layer instead.")
+            return target
+    raise ValueError("Studio opens files of the workspace's layers only")
+
+
+def read_text(path: str, layers: list[dict]) -> dict:
+    target = _resolve(path, layers, False)
+    if not target.is_file():
+        raise LookupError("No such file")
+    stat = target.stat()
+    if stat.st_size > TEXT_LIMIT:
+        raise ValueError("File larger than 1 MiB: open it in your editor")
+    data = target.read_bytes()
+    if b"\0" in data[:4096]:
+        raise ValueError("Binary file")
+    writable = any(l["writable"] and (target == Path(l["path"]).resolve() or target.is_relative_to(Path(l["path"]).resolve())) for l in layers)
+    return {"path": str(target), "text": data.decode(errors="replace"), "mtime": stat.st_mtime, "writable": writable}
+
+
+def write_text(path: str, text: str, mtime: float, layers: list[dict]) -> dict:
+    """Save an existing file of one of your layers; refuses when it changed on disk since it was opened."""
+    target = _resolve(path, layers, True)
+    if not target.is_file():
+        raise LookupError("No such file: Studio's forms create new files")
+    if abs(target.stat().st_mtime - float(mtime)) > 1e-6:
+        raise ValueError("The file changed on disk since you opened it: reopen it to see the new content")
+    temporary = target.with_name(f".{target.name}.bitloom-{os.getpid()}")
+    temporary.write_text(text)
+    os.replace(temporary, target)
+    return {"path": str(target), "mtime": target.stat().st_mtime}

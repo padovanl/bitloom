@@ -6,17 +6,30 @@ Open it with **Recipes → `c`** in the TUI, **Ctrl+P → Studio**, or section *
 
 ![Studio creating a distribution on Wrynose](assets/studio.png)
 
+## The web Studio: an editor for your layers
+
+In the web dashboard (section **5**) Studio is laid out like a code editor:
+
+* **Explorer** (left): your layers first, with every file, then the upstream layers (Poky, OE-Core, meta-yocto…) marked *read-only*. Type in *Filter files* to narrow the tree. Click a file to open it in a tab.
+* **Editor** (centre): tabs, line numbers and BitBake syntax highlighting (assignments, operators, strings, `${expansions}`, `inherit`/`require`, comments, task functions). Files of your own layers can be edited: **Ctrl+S** saves, and the save is refused if the file changed on disk since you opened it, or while a build is queued or running, so a build never reads half-edited metadata. Upstream files open read-only: add a `.bbappend` in your layer instead.
+* **New ▾** (or `n`): pick a layer, distribution, machine, image, application recipe or append. The **Inspector** opens on the right with the guided form, and the files it will write open as green **new** tabs, also marked *new* in the Explorer. You can type into a planned file before creating it: the tab shows *edited by hand* and Create writes your version.
+* **Create will… / Problems** (bottom): the exact steps Create takes, and anything to fix (a value that cannot work, a layer the plan needs).
+* **Create** (or **Ctrl+Enter**) writes the files, refreshes the Explorer and opens the main file; for images and recipes a toast offers to build it.
+
+![The web Studio: Explorer, editor with the planned image recipe, Inspector](assets/web-studio.png)
+
+![Opening a file, then New ▸ Image: the planned file follows the form](assets/web-clip-studio.gif)
+
 ## How the form reads
 
 The form is split into numbered sections: **Where the files go**, **Name and identity**, **What goes in** and **Policies**. Each field has a plain label; the BitBake variable it sets is shown next to it (for example *Product name* · `DISTRO_NAME`), so the form is readable without knowing Yocto and still tells experts exactly what is written.
 
-* **Choices explain themselves.** Under a drop-down, a line says what the selected option means (*systemd: full service manager; default from Wrynose*). Feature chips show their meaning on hover or focus, and the line under them lists what is selected.
-* **The preview follows the field.** Focusing a field highlights the lines it writes and switches the preview to the file that contains them. The main file (the distribution, machine, image or recipe) is the first tab, marked ●; the layer files come after it.
-* **When you press Create** lists the steps in order: the files written and where, the kas overlay or `bitbake-layers add-layer`, whether the new `DISTRO`/`MACHINE` is selected and the build offered next. Nothing happens that is not on this list.
-* **Errors point at the field.** A value that cannot work (an id with capitals, a size that is not a number, `debug-tweaks` on 5.1+) is marked on the field itself with the reason, and Create is disabled until it is fixed.
-* **No layer of your own yet?** The Layer field says so: a new layer (default `meta-acme`) is created together with the files. The layer choice is kept when you switch between kinds.
+* **Choices explain themselves.** Under a drop-down, a line says what the selected option means (*systemd: full service manager; default from Wrynose*). Feature chips show their meaning on hover or focus, and the line under them lists what is selected. Help that quotes an example follows what you type (*You build it with: bitbake gateway-image*).
+* **The editor follows the field.** Focusing a field highlights the lines it writes and switches to the planned file that contains them.
+* **Errors point at the field** and are listed under Problems; Create stays disabled until they are fixed.
+* **No layer of your own yet?** The Layer field says so: a new layer (default `meta-acme`) is created together with the files and shown in the Explorer as a new layer. The layer choice is kept when you switch between kinds.
 
-![Studio in the web dashboard: editing a field highlights the lines it writes](assets/web-clip-studio.gif)
+In the TUI (**Recipes → `c`**) the same form and plan appear in one dialog: kinds on the left, the form in the middle, the steps and the files on the right.
 
 ## What you can create
 

@@ -72,6 +72,8 @@ def main():
             page.locator('#meta-groups details.folder summary').first.click(); page.wait_for_timeout(500); shot('web-recipes')
             page.keyboard.press('4'); page.wait_for_timeout(1800); shot('web-compliance')
             page.keyboard.press('5'); page.wait_for_timeout(1500)
+            page.keyboard.press('n'); page.wait_for_timeout(400)
+            page.locator('#ide-menu button b', has_text='Distribution').first.click(); page.wait_for_timeout(1500)
             page.locator('#sf-title').focus(); page.wait_for_timeout(600); shot('web-studio')
             page.locator('#sf-title').blur()
             page.keyboard.press('Control+k'); page.wait_for_timeout(300); page.keyboard.type('sbom'); page.wait_for_timeout(500); shot('web-palette')
