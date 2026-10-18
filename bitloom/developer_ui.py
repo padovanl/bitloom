@@ -335,7 +335,11 @@ class DeveloperPanel(Vertical):
         table.add_column('Item', width=22)
         table.add_column('Value / state')
         table.border_title = 'Evidence'
-        self.query_one('#dev-detail', RichLog).border_title = 'Detail'
+        detail = self.query_one('#dev-detail', RichLog)
+        detail.border_title = 'Detail'
+        # An empty pane says what fills it.
+        detail.write(Text('Choose a view in the selector, fill the recipe or target and press i (Inspect): '
+                          'the evidence appears on the left, its detail here. F2 queues the related operations.', style='dim italic'))
         self.fields()
         self.set_interval(15, self.check_stale)
 

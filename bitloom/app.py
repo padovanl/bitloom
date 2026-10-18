@@ -625,6 +625,9 @@ class BitloomApp(App):
         self.update_telemetry()
         self.refresh_history()
         self.action_refresh()
+        self.main_query("#analysis-output", RichLog).write(Text(
+            "Choose an analysis in the selector, fill its fields and press a (Analyze): the report appears here, x exports it. "
+            "Diagnose explains the last failed build.", style="dim italic"))
         self.main_query("#history", DataTable).focus()
         if not self.settings.path.exists():
             # First run without profiles: start the guided setup in the current directory.
