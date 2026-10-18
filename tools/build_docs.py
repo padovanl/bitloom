@@ -127,6 +127,9 @@ def build():
         text = source.read_text()
         content = md.render(text)
         content = re.sub(r'href="([^"#]+)\.md([#"][^"]*)', r'href="\1.html\2', content)
+        if name == 'testbook':
+            # README.testbook.md sits at the repository root and links docs/…; its page is built inside docs/.
+            content = content.replace('href="docs/', 'href="')
         content = expandable_images(content)
         source_link = f'{REPOSITORY}/blob/main/README.testbook.md' if name == 'testbook' else f'{REPOSITORY}/blob/main/docs/{name}.md'
         title = text.splitlines()[0].lstrip('# ')
