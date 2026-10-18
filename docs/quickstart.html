@@ -15,13 +15,14 @@
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
-<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html" aria-current="page">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html">BitBake assistant</a><a href="practices.html">Best practices</a><a href="migration.html">Migrate to a newer release</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html" aria-current="page">Quickstart</a><a href="runtimes.html">Where your build runs</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html">BitBake assistant</a><a href="practices.html">Best practices</a><a href="migration.html">Migrate to a newer release</a><a href="ci.html">CI and build servers</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Get started</div>
 <aside class="classic-note" role="note"><b>Note</b><p>You are reading Bitloom's documentation in <em>Yocto-docs mode</em>: same words, the look of the Sphinx and Read the Docs pages Yocto developers know by heart. A friendly tribute, not affiliated with the Yocto Project. <a href="#" data-classic-off>Back to the Bitloom look</a>.</p></aside>
 <article class="doc"><h1 id="quickstart">Quickstart</h1>
 <p>From nothing to a build you can follow in the browser, in five steps. Every step also works in the terminal UI; the two share one build service.</p>
 <h2 id="1-install">1. Install<a class="anchor" href="#1-install" aria-label="Link to this section">#</a></h2>
+<p>Whatever your build uses (BitBake on the machine, kas, kas-container, a Docker image, your own launcher script), Bitloom works with it: see <a href="runtimes.html">Where your build runs</a>.</p>
 <p>Download the version you want from <a href="https://github.com/padovanl/bitloom/releases">GitHub Releases</a> (replace <code>1.2.3</code>):</p>
 <pre><code class="language-bash">sudo apt install ./bitloom_1.2.3_all.deb            # Debian / Ubuntu: dependencies included
 </code></pre>
@@ -84,10 +85,10 @@ bitloom --web
 <li><a href="compliance.md">SBOM, CRA and releases</a>: SBOM quality, vulnerabilities and their exports, CRA readiness.</li>
 <li><a href="studio.html">Studio</a>: your own layer, distribution, machine, image or recipe, explained field by field.</li>
 <li><a href="guide.md">User guide</a>: profiles and runtimes, caches, analysis, troubleshooting.</li>
-<li><a href="teams.html">Teams and CI/CD</a>: headless <code>--ci</code> runs, team profiles, launcher scripts in depth.</li>
+<li><a href="ci.html">Teams and CI/CD</a>: headless <code>--ci</code> runs, team profiles, launcher scripts in depth.</li>
 </ul>
 </article>
-<nav class="pager" aria-label="Previous and next page"><a class="next" href="guide.html"><small>Next</small>User guide</a></nav>
+<nav class="pager" aria-label="Previous and next page"><a class="next" href="runtimes.html"><small>Next</small>Where your build runs</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/quickstart.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 <footer class="classic-footer">© Copyright 2026, Luca Padovan. Built with Bitloom, dressed up as Sphinx in a theme inspired by Read the Docs. No reStructuredText was harmed.</footer>
 </main>

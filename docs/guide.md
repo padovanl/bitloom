@@ -10,7 +10,7 @@ More guides:
 * [SBOM, CRA and Yocto releases](compliance.md): release awareness, SBOM quality, vulnerabilities (cve-check, sbom-cve-check, Grype), CRA readiness, EN 40000 and SBOM settings.
 * [Studio](studio.md): create your own distribution, machines, images, recipes and layers.
 * [Daily helpers](#daily-helpers): build notifications, ETA, comparison with the previous run, tmp/work usage.
-* [Teams, CI/CD and setup](teams.md): headless CI runs, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.
+* [CI and build servers](ci.md): headless CI runs, the build service as a system service, team profiles, NFS and setup checks, image matrix, device fleet, console builds and project launcher scripts.
 
 ## What Bitloom covers
 
@@ -63,6 +63,16 @@ python3 -m venv .venv
 
 Alternatively, install the release wheel with `.venv/bin/python -m pip install /path/to/bitloom-1.2.3-py3-none-any.whl`. Source and wheel installation require Python 3.10+, venv support and internet access to install dependencies. WSL users should install inside their Linux distribution.
 
+### One file: bitloom.pyz
+
+`bitloom-1.2.3.pyz` is Bitloom and its dependencies in a single file (pure Python, about 3 MB). It needs nothing but Python 3.10 or newer: no installation, no virtual environment, no root.
+
+```bash
+python3 bitloom-1.2.3.pyz --web        # or: chmod +x bitloom-1.2.3.pyz && ./bitloom-1.2.3.pyz
+```
+
+It is the way to put Bitloom inside a build container without rebuilding the image (mount it, or `COPY` it in a Dockerfile): see [Where your build runs](runtimes.md#bitloom-next-to-the-build-or-inside-it).
+
 ### Verify downloaded assets
 
 Download `SHA256SUMS` alongside the packages, then run `sha256sum --check --ignore-missing SHA256SUMS` in the same directory. Check that the package you downloaded reports `OK`.
@@ -102,7 +112,7 @@ Profiles are local JSON stored at `.bitloom/profiles.json` by default. State is 
 | `name` | Unique profile identifier |
 | `root` | Absolute or relative project root (resolved on the host) |
 | `build_dir` | Build directory, relative to root or absolute on host |
-| `mode` | `host`, `kas`, `container`, `kas-container` or `wrapper` (a project launcher script, see [Teams](teams.md#project-launcher-scripts)) |
+| `mode` | `host`, `kas`, `container`, `kas-container` or `wrapper` (a project launcher script, see [Where your build runs](runtimes.md#launcher-scripts)) |
 | `init_script` | Host/container init script; autodetects oe-init-build-env or poky/oe-init-build-env |
 | `kas_file` | kas configuration path(s), including colon-separated composition |
 | `engine` | Docker or Podman for generic container mode |
@@ -117,7 +127,7 @@ Profiles are local JSON stored at `.bitloom/profiles.json` by default. State is 
 | `source_mappings` | Absolute runtime-to-host directory mappings for Developer IDE exports |
 | `launcher`, `launcher_shell` | `wrapper` mode: the script argv and how it runs a command (`{command}`) |
 
-A profiles file can also contain `"include": [...]` with read-only team profile files; see [Teams](teams.md#team-profiles).
+A profiles file can also contain `"include": [...]` with read-only team profile files; see [CI and build servers](ci.md#team-profiles).
 
 `DL_DIR`/`SSTATE_DIR` in local.conf are read as literal hints. `${TOPDIR}` is expanded; other expressions require a profile path override. Runtime paths, especially kas container paths, may differ from host paths. Use **Resolve env** to inspect the authoritative result.
 
@@ -200,7 +210,7 @@ While a build runs, the Tasks card and the web progress line show an ETA. It com
 
 ## Errors and log search
 
-Failures generate a notification and refresh the task-log browser. Analysis → *Failure diagnosis* anchors on the root cause instead of the first line mentioning a failure: compiler errors, the first make `***` line with the output leading to it, out-of-memory kills, full disks, fetch and patch failures and pseudo aborts. It lists the failed tasks and maps known causes to a next step, for example retrying a MakeMaker "Makefile has been rebuilt" race, pinning the peeled commit of an annotated kas tag, or `bitbake -c clean <recipe>` when a build interrupted by a restart left empty object files behind (undefined references to `main`). These rules come from failures seen on real Scarthgap and Wrynose builds. **Builds → `c`** opens console builds that were started outside Bitloom ([details](teams.md#builds-started-elsewhere)). Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.bitloom/exports`.
+Failures generate a notification and refresh the task-log browser. Analysis → *Failure diagnosis* anchors on the root cause instead of the first line mentioning a failure: compiler errors, the first make `***` line with the output leading to it, out-of-memory kills, full disks, fetch and patch failures and pseudo aborts. It lists the failed tasks and maps known causes to a next step, for example retrying a MakeMaker "Makefile has been rebuilt" race, pinning the peeled commit of an annotated kas tag, or `bitbake -c clean <recipe>` when a build interrupted by a restart left empty object files behind (undefined references to `main`). These rules come from failures seen on real Scarthgap and Wrynose builds. **Builds → `c`** opens console builds that were started outside Bitloom ([details](ci.md#builds-started-elsewhere)). Select a failed build in history and use Failed task log in Task logs to read paths explicitly reported by BitBake through the original runtime. This works with container-only paths too; at most ten logs are queued per click. Search selected logs case-insensitively with three surrounding lines, or toggle errors-only. Pause freezes live display while output continues to be written to disk; Resume reloads the captured tail. The live view keeps 5,000 lines; searches inspect the complete file and cap the rendered result. Export copies the original complete log to `.bitloom/exports`.
 
 Task logs are discovered under the standard `tmp/work/ARCH/RECIPE/VERSION/temp` hierarchy and ordered by modification time. Custom TMPDIR layouts currently require setting build_dir to match the expected layout or opening logs externally. Symlink aliases are skipped to avoid duplicate entries.
 

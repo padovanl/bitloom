@@ -27,6 +27,16 @@
 
 ![Bitloom web dashboard following a build](docs/assets/web-builds.png)
 
+## 🔌 Works with how you build
+
+Bitloom does not change your build. Describe it once in a profile (the guided setup proposes it from your project folder) and every feature, from builds and logs to the image explorer, SBOM checks, Studio and the migration assistant, works the same on:
+
+| BitBake on the machine | kas | kas-container | Your Docker / Podman image | A running build container | Your launcher script |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| Poky, split repositories, bitbake-setup | `kas shell -c` | `kas-container shell -c` | `docker run` per command | `docker exec` | `YML=… ./run_build.sh` |
+
+Launcher scripts need to forward `shell -c "<command>"`, keep standard input open and keep the build folder on the machine: the four-line change and a ready script are in [Where your build runs](docs/runtimes.md). Bitloom runs next to your build (one install drives them all), or inside your build container: every release has `bitloom.pyz`, one file to mount or copy, no image rebuild.
+
 ## 🌐 Web dashboard
 
 ```bash
@@ -69,8 +79,8 @@ Over SSH keep the default loopback address and tunnel it: `ssh -L 8765:127.0.0.1
 * **Studio**: your own distribution, machines, images, recipes and layers, explained field by field. → [Studio](docs/studio.md)
 * **Developer workbench** (`F10` in the TUI): variable origins, rebuild signatures, failed-task investigation, devtool, SDK/IDE setup, image comparisons, devices. → [Developer](docs/developer.md)
 * **Daily helpers**: notifications when a build ends (desktop, ntfy, Slack/Teams), ETA, run comparison, tmp/work usage. → [Guide](docs/guide.md#daily-helpers)
-* **Build server**: `bitloom --service-install --web` runs the build service and the dashboard as systemd user services, with a dashboard URL that survives restarts. → [Teams](docs/teams.md#a-build-server-run-bitloom-as-a-service)
-* **Teams and CI/CD**: headless `--ci` matrix with JUnit and annotations, shared team profiles, infrastructure checks, device fleet, image matrix, builds started outside Bitloom. → [Teams](docs/teams.md)
+* **Build server**: `bitloom --service-install --web` runs the build service and the dashboard as systemd user services, with a dashboard URL that survives restarts. → [CI and build servers](docs/ci.md#a-build-server-run-bitloom-as-a-service)
+* **CI and build servers**: headless `--ci` matrix with JUnit and annotations, profiles shared by a team, infrastructure checks, device fleet, image matrix, builds started outside Bitloom. → [CI and build servers](docs/ci.md)
 
 ## 📥 Install
 
@@ -81,6 +91,8 @@ sudo apt install ./bitloom_1.2.3_all.deb      # Debian / Ubuntu, dependencies in
 
 tar -xzf bitloom-1.2.3.tar.gz && cd bitloom-1.2.3   # any Linux / WSL2
 python3 -m venv .venv && .venv/bin/python -m pip install .
+
+python3 bitloom-1.2.3.pyz --web               # one file, nothing to install: Python 3.10+ only
 ```
 
 Verify with `sha256sum --check --ignore-missing SHA256SUMS`; `bitloom --version` prints the installed version. Each release also ships `bitloom-1.2.3.spdx.json`, the SPDX SBOM of Bitloom and every Python package bundled in the `.deb` (also installed as `/usr/share/doc/bitloom/sbom.spdx.json`). Docker or Podman, kas and Yocto are separate tools for real builds. Details: [installation](docs/guide.md#install-from-a-github-release).
