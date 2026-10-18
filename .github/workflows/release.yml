@@ -40,6 +40,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
+      - name: Stable releases come from main
+        if: ${{ !inputs.prerelease && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Stable releases are cut from main (this run is on ${GITHUB_REF}). Run from main, or tick 'pre-release'." >&2
+          exit 1
       - name: Validate version and reject existing tags
         run: |
           python -c 'import os; from tools.build_release import release_version; release_version(os.environ["RELEASE_VERSION"])'
@@ -61,6 +66,8 @@ jobs:
           sudo dpkg -i "dist/release/bitloom_${RELEASE_VERSION}_all.deb"
           cd /tmp
           /usr/bin/bitloom --help
+          test "$(/usr/bin/bitloom --version)" = "bitloom ${RELEASE_VERSION}"
+          python3 -c 'import json, sys; d = json.load(open("/usr/share/doc/bitloom/sbom.spdx.json")); assert {p["name"] for p in d["packages"]} >= {"bitloom", "textual", "rich"}' 
           /usr/bin/python3 -c 'import os, sys; sys.path.insert(0, "/opt/bitloom/lib"); import bitloom; assert bitloom.__version__ == os.environ["RELEASE_VERSION"]'
       - name: Smoke test the installed package
         working-directory: /tmp
@@ -80,6 +87,16 @@ jobs:
           name: bitloom-${{ inputs.version }}
           path: dist/release/
           if-no-files-found: error
+      - name: Tag the released source
+        # The tag points at a commit whose pyproject.toml and bitloom/__init__.py carry the version, so
+        # installing from the tag or a checkout of it reports the same version as the assets.
+        run: |
+          python -c 'import os; from pathlib import Path; from tools.build_release import set_version; set_version(Path("."), os.environ["RELEASE_VERSION"])'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -q -am "Release ${RELEASE_VERSION}"
+          git tag -a "v${RELEASE_VERSION}" -m "Bitloom ${RELEASE_VERSION}"
+          git push origin "v${RELEASE_VERSION}"
       - name: Publish GitHub release
         env:
           PRERELEASE: ${{ inputs.prerelease }}
@@ -89,4 +106,4 @@ jobs:
           if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
           if [ "$DRAFT" = "true" ]; then flags+=(--draft); fi
           gh release create "v${RELEASE_VERSION}" dist/release/* \
-            --target "$GITHUB_SHA" --title "Bitloom ${RELEASE_VERSION}" --generate-notes "${flags[@]}"
+            --verify-tag --title "Bitloom ${RELEASE_VERSION}" --generate-notes "${flags[@]}"

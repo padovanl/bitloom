@@ -15,7 +15,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `↑ ↓  j / k` | Move down / up in tables, trees and logs |
 | `Ctrl+Y / Ctrl+V` | Page up / page down (nano) |
 | `t` | Edit the build target (when no section uses t) |
-| `↓` (in the target field) | List the image recipes found in the project; type to filter, Enter picks. `→` accepts the inline suggestion. Same in the web dashboard. |
+| `↓ (in the target field)` | List the image recipes found in the project; type to filter, Enter picks. → accepts the inline suggestion. Same in the web dashboard. |
 | `b` | Build the target (outside Recipes) |
 | `P` | Switch profile |
 | `F2` | Command center (every operation, filtered as you type) |
@@ -141,6 +141,7 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | --- | --- |
 | `Esc / Ctrl+X` | Close or cancel the dialog; in editors ^X asks before discarding changes |
 | `Ctrl+O` | Write out: save files and profiles, confirm forms (Ctrl+S also works) |
+| `Ctrl+A` | Guided setup: save every product of a launcher script as its own profile |
 | `Ctrl+W / Alt+W` | Editors: where is (search) / find next |
 | `Ctrl+K / Ctrl+U` | Editors: cut the current line / uncut (paste) |
 | `Ctrl+G` | Keyboard reference |

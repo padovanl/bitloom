@@ -15,10 +15,11 @@ Open the hub with **Configuration → `w`**, **Ctrl+P → Projects**, or the *Pr
    * **Poky / OE-Core checkouts**: `oe-init-build-env` (also under `poky/`, `sources/`, `layers/`) with existing build directories and their MACHINE/DISTRO.
 3. Choose a proposal with **↑/↓**; the form on the right fills in. Every field is explained and checked as you type: project root, kas files, launcher executable, `KAS_WORK_DIR` (refused when missing, warned when on `/mnt/<drive>` under WSL), init script, profile validity. For launcher scripts it also warns when the script does not pass its arguments on (BitBake commands need `shell -c`) and when no build exists yet in the folder Bitloom will read.
 4. **^O** saves. The profile becomes active, and the selectors, metadata, task logs and health checks reload immediately: press **`b`** to build.
+5. When one launcher builds several products, **^A** (web: **Save all N products**) saves one profile per product in one go; the first becomes active and `P` (web: the profile menu) switches between them. Projects lists the folder once, naming all its profiles.
 
 If a folder already has a profile, opening it switches to that profile instead of asking again.
 
-On the very first start, when no profiles file exists, the guided setup opens automatically in the current directory.
+On the very first start, when no profiles file exists, the guided setup opens automatically in the current directory: in the TUI (`bitloom`) and in the web dashboard (`bitloom --web` opens Configuration with the proposals for the folder it was started in).
 
 ![Guided setup proposing a launcher script and a kas configuration](assets/setup-wizard.png)
 

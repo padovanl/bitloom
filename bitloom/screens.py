@@ -1313,7 +1313,8 @@ class SetupScreen(ModalScreen):
     SetupScreen Horizontal.buttons Button { margin-right: 1; }
     """
     BINDINGS = [("escape", "dismiss", "Close"), Binding("ctrl+x", "dismiss", "Close", priority=True),
-                Binding("ctrl+o", "save", "Save", priority=True), Binding("ctrl+s", "save", "Save", priority=True, show=False)]
+                Binding("ctrl+o", "save", "Save", priority=True), Binding("ctrl+s", "save", "Save", priority=True, show=False),
+                Binding("ctrl+a", "save_all", "Save all products", priority=True)]
     FIELDS = [("name", "Profile name", "Unique name shown in the profile switcher (P)."),
               ("kas_file", "kas configuration", "kas modes: the YAML file(s), colon-separated, relative to the project."),
               ("init_script", "Init script", "host: oe-init-build-env path relative to the project; empty if you start from an initialised shell."),
@@ -1480,6 +1481,33 @@ class SetupScreen(ModalScreen):
             self.notify(str(exc), severity="error", timeout=10)
             return
         self.dismiss(profile.name)
+
+    def action_save_all(self):
+        """One launcher, several products (YML=a.yml, YML=b.yml): save every product profile at once;
+        the first one proposed becomes active."""
+        from .setup import check, save
+        products = [c for c in self.candidates if c.mode == "wrapper"]
+        if len(products) < 2:
+            self.notify("Save all is for launcher scripts with several products; ^O saves this proposal", severity="warning")
+            return
+        saved, skipped = [], []
+        for candidate in products:
+            try:
+                profile = Profile.from_dict(candidate.profile)
+                if any(status == "ERR" for status, _ in check(profile)):
+                    raise ValueError("checks failed")
+                save(self.settings, profile)
+                saved.append(profile.name)
+            except (OSError, ValueError, TypeError) as exc:
+                skipped.append(f"{candidate.profile.get('name')}: {exc}")
+        if saved:
+            self.settings.active = saved[0]
+            self.settings.save()
+        if skipped:
+            self.notify("Not saved: " + "; ".join(skipped), severity="warning", timeout=10)
+        if saved:
+            self.notify(f"Saved {len(saved)} profiles: {', '.join(saved)} · P switches between them", timeout=8)
+            self.dismiss(saved[0])
 
 
 class ProjectsScreen(ModalScreen):

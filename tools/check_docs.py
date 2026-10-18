@@ -4,6 +4,7 @@ pip install playwright
 PLAYWRIGHT_BROWSERS_PATH=/tmp/bitloom-browsers python -m playwright install chromium
 PLAYWRIGHT_BROWSERS_PATH=/tmp/bitloom-browsers python tools/check_docs.py
 """
+import tempfile
 import functools
 import http.server
 import threading
@@ -13,6 +14,9 @@ from urllib.parse import unquote, urlsplit
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+# Full-page review captures are not documentation: keep them out of docs/assets (and the release archive).
+SHOTS = Path(tempfile.gettempdir()) / 'bitloom-docs-check'
+SHOTS.mkdir(exist_ok=True)
 
 
 def check_links():
@@ -66,7 +70,7 @@ def check():
             assert page.locator('#lightbox').is_visible()
             page.keyboard.press('Escape')
             assert not page.locator('#lightbox').is_visible()
-            page.screenshot(path=str(ROOT / 'docs/assets/docs-site.png'), full_page=True)
+            page.screenshot(path=str(SHOTS / 'docs-site.png'), full_page=True)
             for name in ('guide', 'commands', 'validation', 'testbook', 'roadmap', 'developer'):
                 page.goto(f'{url}/{name}.html', wait_until='networkidle')
                 assert page.locator('h1').count() == 1
@@ -78,10 +82,11 @@ def check():
             page.set_viewport_size({'width': 390, 'height': 844})
             page.goto(url, wait_until='networkidle')
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
-            page.screenshot(path=str(ROOT / 'docs/assets/docs-mobile.png'), full_page=True)
+            page.screenshot(path=str(SHOTS / 'docs-mobile.png'), full_page=True)
             assert not failures, failures
             browser.close()
             print('PASS: feature filter, runtime switch, screenshot dialog, manual pages with navigation and search, mobile layout; no page errors or failed resources')
+            print(f'Full-page captures for review: {SHOTS}')
     finally:
         server.shutdown()
         server.server_close()
