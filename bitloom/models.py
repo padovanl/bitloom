@@ -205,7 +205,22 @@ def read_assignments(path: Path) -> dict[str, str]:
         return {}
     values = {}
     for line in path.read_text(errors="replace").splitlines():
-        m = re.match(r'^\s*([\w:.-]+)\s*(?:\?\?=|\?=|:=|=)\s*"(.*?)"\s*(?:#.*)?$', line)
-        if m:
-            values[m[1]] = m[2]
+        m = re.match(r'^\s*([\w:.-]+)\s*(\?\?=|\?=|:=|\+=|=\+|\.=|=\.|=)\s*"(.*?)"\s*(?:#.*)?$', line)
+        if not m:
+            continue
+        key, op, value = m[1], m[2], m[3]
+        # Appends and prepends build on what is already there (INHERIT += "buildhistory"), as BitBake does.
+        old = values.get(key)
+        if op == "+=":
+            values[key] = f"{old} {value}" if old else value
+        elif op == "=+":
+            values[key] = f"{value} {old}" if old else value
+        elif op == ".=":
+            values[key] = (old or "") + value
+        elif op == "=.":
+            values[key] = value + (old or "")
+        elif op in ("?=", "??=") and old is not None:
+            continue
+        else:
+            values[key] = value
     return values

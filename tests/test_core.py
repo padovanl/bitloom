@@ -274,3 +274,14 @@ def test_kas_metadata_indexes_external_checkout(tmp_path):
     (conf / 'layer.conf').write_text('')
     profile = Profile(root=str(project), mode='kas', environment={'KAS_WORK_DIR': str(work)})
     assert any(e.name == 'meta' and e.kind == 'layer' for e in metadata(profile))
+
+
+def test_read_assignments_follows_appends(tmp_path):
+    """kas writes INHERIT += "…" in local.conf: health and SBOM checks read it as set."""
+    from bitloom.models import read_assignments
+    conf = tmp_path / 'local.conf'
+    conf.write_text('INHERIT += "buildstats"\nINHERIT += "buildhistory"\nMACHINE ?= "qemux86-64"\nMACHINE ?= "qemuarm"\n'
+                    'DISTRO = "poky"\nDISTRO_FEATURES =+ "wifi"\nPATH_X .= "/b"\nIMAGE_NAME = "core"\nIMAGE_NAME =. "my-"\n')
+    values = read_assignments(conf)
+    assert values['INHERIT'] == 'buildstats buildhistory' and values['MACHINE'] == 'qemux86-64'
+    assert values['DISTRO_FEATURES'] == 'wifi' and values['PATH_X'] == '/b' and values['IMAGE_NAME'] == 'my-core'
