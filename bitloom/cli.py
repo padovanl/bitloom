@@ -113,6 +113,15 @@ def make_demo(directory: Path, release: str | None = None):
 
 
 def main():
+    if len(sys.argv) > 2 and sys.argv[1] == "--run-module":
+        # bitloom.pyz runs its own modules this way (python -m cannot see inside the archive).
+        import runpy
+        module = sys.argv[2]
+        if not module.startswith("bitloom."):
+            raise SystemExit("bitloom: --run-module only runs Bitloom's own modules")
+        sys.argv = [module, *sys.argv[3:]]
+        runpy.run_module(module, run_name="__main__", alter_sys=True)
+        return
     from . import __version__
     parser = argparse.ArgumentParser(description="Bitloom — Yocto / BitBake development cockpit")
     parser.add_argument("--version", action="store_true", help="Show the version, the author and the licence, and exit")

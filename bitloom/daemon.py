@@ -49,7 +49,8 @@ def ensure_service(state):
     try: rpc(state,{'op':'status'}); return
     except (OSError,ValueError): pass
     with (state/'service.log').open('ab') as log:
-        subprocess.Popen([sys.executable,'-m','bitloom.daemon',str(state)],stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+        from . import module_command
+        subprocess.Popen(module_command('bitloom.daemon',str(state)),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
     for _ in range(100):
         try: rpc(state,{'op':'status'}); return
         except (OSError,ValueError): time.sleep(.05)
