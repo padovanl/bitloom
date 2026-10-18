@@ -15,7 +15,7 @@
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
-<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html" aria-current="page">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html">BitBake assistant</a><a href="practices.html">Best practices</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html" aria-current="page">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html">BitBake assistant</a><a href="practices.html">Best practices</a><a href="migration.html">Migrate to a newer release</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
 <aside class="classic-note" role="note"><b>Note</b><p>You are reading Bitloom's documentation in <em>Yocto-docs mode</em>: same words, the look of the Sphinx and Read the Docs pages Yocto developers know by heart. A friendly tribute, not affiliated with the Yocto Project. <a href="#" data-classic-off>Back to the Bitloom look</a>.</p></aside>
@@ -80,9 +80,14 @@ bitloom --web --config .bitloom/profiles.json --state .bitloom
 <td>How far the project follows the Yocto best practices: a score, what needs attention with the file and line, every rule with an on/off switch and a severity, your company's own rules, and a report to export. See <a href="practices.md">Best practices</a>.</td>
 </tr>
 <tr>
+<td><code>9</code></td>
+<td>Migrate</td>
+<td>Move the project to a newer release (Scarthgap → Wrynose): every rule of the official migration guides checked on your files, safe fixes with a diff and undo, a new kas file and profile for the new release, then build and verify. See <a href="migration.html">Migrate</a>.</td>
+</tr>
+<tr>
 <td><code>8</code></td>
 <td>Configuration</td>
-<td>Projects (recent, new, clone), guided project setup, <em>What this release can do</em> (every release-dependent feature, ✔ or ✖ with the reason, checked in the project), health checks, setup checks and literal <code>local.conf</code> values. See <a href="projects.html">Projects</a>.</td>
+<td>Projects (recent, new, clone), guided project setup, <em>What this release can do</em> (every release-dependent feature, ✔ or ✖ with the reason, checked in the project), health checks, setup checks and literal <code>local.conf</code> values. See <a href="projects.md">Projects</a>.</td>
 </tr>
 </tbody>
 </table>

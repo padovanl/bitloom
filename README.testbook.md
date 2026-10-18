@@ -195,6 +195,16 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 8e.3 | TUI: `2`, open a recipe with `o` from your layer (or `n` *New file* with a `.bb` path); type `inherit sys`, `Ctrl+Space`, `Enter`; move onto a variable, `Alt+D`. | A list of classes; Enter inserts `systemd`; the line under the editor lists problems or *✔ no problems found*; Alt+D shows the variable's documentation. |
 | 8e.4 | `bitloom --config .validation/profiles.json --lint meta-acme; echo $?`; then on a folder with a `DEPENDS_append`; `bitloom --config .validation/profiles.json --explain IMAGE_INSTAL; echo $?` | Clean layer: exit 0; with the error: the file:line, the fix and exit 2. `--explain` suggests `IMAGE_INSTALL` and exits 1. |
 
+### Stage 8f — Migrate Scarthgap → Wrynose (no builds; a build at the end is optional)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8f.1 | Web on `kas-scarthgap`: `9`. | *scarthgap 5.0 LTS → wrynose 6.0 LTS*; the path 5.1 → 5.2 → 5.3 → 6.0 with the guides linked; *2 break the build* (the poky repository in `tests/integration/kas-minimal.yml`, `LAYERSERIES_COMPAT_acme`) and *1 with a safe fix* (when the Studio test layer meta-acme is still there). |
+| 8f.2 | *Preview the selected fixes*, *Apply*; then *Undo*. | The diff `LAYERSERIES_COMPAT_acme = "scarthgap"` → `"wrynose"`; after Apply the count drops; Undo restores the file (check `meta-acme/conf/layer.conf`). |
+| 8f.3 | Step 3: read the diff; *Write kas-minimal-wrynose.yml and the profile*. | The new file next to `kas-minimal.yml` with bitbake, openembedded-core and meta-yocto at yocto-6.0.2 (the same as `kas-wrynose.yml`); the profile `kas-scarthgap-wrynose` with `KAS_WORK_DIR` `…/bitloom-kas-validation-wrynose`; the old file and profile unchanged. |
+| 8f.4 | Optional (≈30 min, downloads): step 4, *Switch*, *Parse metadata*, *Build the image*. | The new profile parses and builds core-image-minimal on Wrynose in its own work directory; `kas-scarthgap` still builds as before. Remove the profile and `tests/integration/kas-minimal-wrynose.yml` afterwards. |
+| 8f.5 | On `kas-wrynose`: `9`. TUI on `kas-scarthgap`: `7`, *Migration check*, `a`. CLI: `bitloom --config .validation/profiles.json --migrate --to wrynose; echo $?` | Wrynose: *on the newest release Bitloom covers*. TUI and CLI: the same report as the web; exit 2 while something breaks the build. |
+
 ### Stage 9 — Projects, setup and notifications (no builds)
 
 | # | Do | You should see |

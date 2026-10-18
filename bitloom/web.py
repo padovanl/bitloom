@@ -577,6 +577,58 @@ class Dashboard:
             raise ValueError("File too large to check")
         return {"problems": language.lint(vocab, text, str((body or {}).get("filename", "")))}
 
+    def migrate(self, what, query, body=None):
+        """The migration assistant: scan, preview and apply fixes, backups, the kas file for the new release."""
+        from dataclasses import asdict
+        from . import migration
+        from .studio import product_layers
+        from .versions import describe, detect_release
+        body = body or {}
+        profile = self.profile(body.get("profile") or query.get("profile", [""])[0])
+        entries = self.entries(profile)
+        if what == "backups":
+            return {"backups": migration.backups(self.state)}
+        if what == "restore":
+            return {"restored": migration.restore(self.state, str(body.get("id", "")))}
+        fixes = body.get("fixes") if isinstance(body.get("fixes"), list) else []
+        if what == "preview":
+            return {"files": migration.preview(fixes, [profile.root_path, *[layer.parent for layer in product_layers(entries, profile)]])}
+        if what == "apply":
+            return migration.apply(profile, self.state, fixes, [profile.root_path, *product_layers(entries, profile)])
+        source = detect_release(profile, entries)
+        target = str(body.get("to") or query.get("to", [""])[0])
+        options = migration.targets_for(source)
+        if what == "kas":
+            target = target or (options[-1] if options else "")
+            try:
+                plan = migration.kas_for(profile, target)
+            except ValueError as exc:
+                return {"available": False, "reason": str(exc), **migration.checkout_advice(profile, target)}
+            if body.get("write"):
+                from .setup import save
+                written = migration.write_kas(profile, target)
+                new = migration.migrated_profile(profile, target, written["kas_file"])
+                settings = self.settings()
+                settings.profiles = [p for p in settings.profiles if p.name != new.name] + [new]
+                settings.save()
+                return {"available": True, **written, "profile": asdict(new)}
+            return {"available": True, **plan, "profile": asdict(migration.migrated_profile(profile, target, plan["kas_file"]))}
+        if not options:
+            return {"source": source, "source_label": describe(source), "targets": [], "findings": [], "steps": [],
+                    "reason": "This project is on the newest release Bitloom covers." if source else "The project's release is not known yet."}
+        target = target if target in options else options[-1]
+        data = migration.scan(profile, target, entries, source)
+        return {**data, "source_label": describe(source), "target_label": describe(target),
+                "targets": [{"series": t, "label": describe(t)} for t in options]}
+
+    def migrate_export(self, query):
+        from .migration import report
+        fmt = query.get("format", ["md"])[0]
+        if fmt not in {"md", "json", "text"}:
+            raise ValueError("format must be md, json or text")
+        data = self.migrate("scan", query)
+        return report(data, fmt), f"migration-{data.get('target', 'none')}.{ {'md': 'md', 'json': 'json', 'text': 'txt'}[fmt] }"
+
     def devicetree(self, query):
         from . import devicetree
         profile = self.profile(query.get("profile", [""])[0])
@@ -729,6 +781,16 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     text, name = dashboard.practices_export(query)
                     self.send(HTTPStatus.OK, text.encode(), "text/plain; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
                     return
+                elif route == ("GET", "migrate"):
+                    payload = dashboard.migrate("scan", query)
+                elif route == ("GET", "migrate", "export"):
+                    text, name = dashboard.migrate_export(query)
+                    self.send(HTTPStatus.OK, text.encode(), "text/plain; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
+                    return
+                elif route[:2] == ("GET", "migrate") and len(route) == 3 and route[2] in {"kas", "backups"}:
+                    payload = dashboard.migrate(route[2], query)
+                elif route[:2] == ("POST", "migrate") and len(route) == 3 and route[2] in {"preview", "apply", "restore", "kas"}:
+                    payload = dashboard.migrate(route[2], query, self.body())
                 elif route[:2] == ("GET", "lang") and len(route) == 3 and route[2] in {"complete", "explain"}:
                     payload = dashboard.language(route[2], query)
                 elif route == ("POST", "lang", "lint"):

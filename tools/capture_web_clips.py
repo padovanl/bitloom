@@ -11,6 +11,7 @@ import argparse
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import threading
@@ -20,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', str(Path.home() / '.cache/ms-playwright'))  # browsers stay in the real home
-if not {'--only-real', '--image', '--assistant'} & set(sys.argv):
+if not {'--only-real', '--image', '--assistant', '--migration'} & set(sys.argv):
     os.environ['HOME'] = '/home/developer'   # paths shown in demo clips must not reveal the author's account
 sys.path.insert(0, str(ROOT))
 from bitloom.cli import prepare_demo
@@ -354,6 +355,46 @@ def assistant_shots(browser, config, profile, state):
         server.shutdown()
 
 
+def migration_shots(browser):
+    """The migration assistant on the sample project of the tests (every case of the guides), Scarthgap -> Wrynose."""
+    import tempfile
+    sys.path.insert(0, str(ROOT / 'tests'))
+    from test_migration import project
+    from bitloom.models import Settings
+    work = Path(tempfile.mkdtemp(prefix='bitloom-migrate-'))
+    profile = project(work)
+    settings = Settings(work / 'profiles.json')
+    settings.profiles, settings.active = [profile], 'acme'
+    settings.save()
+    board, server, base, post = serve(work / 'profiles.json', work / 'state', 'clips')
+    try:
+        page = browser.new_page(viewport=VIEWPORT, color_scheme='dark')
+        page.goto(base + '/#token=clips')
+        page.wait_for_timeout(2500)
+        page.evaluate("document.activeElement && document.activeElement.blur()")
+        page.click('nav button[data-view="migrate"]')
+        page.wait_for_selector('#mg-findings .mg-f', timeout=30000)
+        page.wait_for_timeout(800)
+        page.screenshot(path=str(OUTPUT / 'web-migrate.png'))
+        print('web-migrate.png')
+        page.click('#mg-preview')
+        page.wait_for_selector('#mg-diffs details', timeout=20000)
+        page.evaluate("document.querySelector('#mg-step-2').scrollIntoView({block: 'start'})")
+        page.wait_for_timeout(400)
+        page.screenshot(path=str(OUTPUT / 'web-migrate-fixes.png'))
+        print('web-migrate-fixes.png')
+        page.click('#mg-apply')
+        page.wait_for_timeout(2500)
+        page.evaluate("document.getElementById('toasts').replaceChildren()")
+        page.evaluate("document.querySelector('#mg-step-3').scrollIntoView({block: 'start'})")
+        page.wait_for_timeout(400)
+        page.screenshot(path=str(OUTPUT / 'web-migrate-kas.png'))
+        print('web-migrate-kas.png')
+    finally:
+        server.shutdown()
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def main():
     from playwright.sync_api import sync_playwright
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -361,14 +402,17 @@ def main():
     parser.add_argument('--state', default=None, help='state directory for --real (default: next to CONFIG)')
     parser.add_argument('--only-real', action='store_true')
     parser.add_argument('--image', nargs=2, metavar=('CONFIG', 'PROFILE'), help='record the Image explorer on a profile with a built image')
+    parser.add_argument('--migration', action='store_true', help='capture the migration assistant on the sample project')
     parser.add_argument('--assistant', nargs=2, metavar=('CONFIG', 'PROFILE'), help='capture the BitBake language assistant on a real project')
     args = parser.parse_args()
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
-        if not args.only_real and not args.image and not args.assistant:
+        if not args.only_real and not args.image and not args.assistant and not args.migration:
             demo_clips(browser)
         if args.real:
             real_clip(browser, args.real[0], args.real[1], args.state or str(Path(args.real[0]).parent / 'state'))
+        if args.migration:
+            migration_shots(browser)
         if args.assistant:
             assistant_shots(browser, args.assistant[0], args.assistant[1], args.state or str(Path(args.assistant[0]).parent / 'state'))
         if args.image:

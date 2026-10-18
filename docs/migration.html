@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migrate to a newer release — Bitloom documentation</title>
+<meta name="description" content="Bitloom documentation: Migrate to a newer release">
+<link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;if(/[?&]classic\b/.test(location.search))localStorage.setItem('bitloom-docs-classic','1');if(localStorage.getItem('bitloom-docs-classic')==='1')document.documentElement.dataset.classic='1'}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<body>
+<header class="topbar">
+<button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
+<a class="brand" href="index.html"><img src="assets/bitloom-icon.svg" width="26" height="26" alt=""> Bitloom <small>docs</small></a>
+<div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
+<span class="spacer"></span>
+<a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="classic-toggle" class="icon-button classic-toggle" type="button" aria-pressed="false" aria-label="Yocto-docs mode" title="Feeling homesick? Read these docs dressed like the Yocto Project's">¶</button>
+<button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
+</header>
+<div class="layout">
+<nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html">BitBake assistant</a><a href="practices.html">Best practices</a><a href="migration.html" aria-current="page">Migrate to a newer release</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
+<main class="content">
+<div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
+<aside class="classic-note" role="note"><b>Note</b><p>You are reading Bitloom's documentation in <em>Yocto-docs mode</em>: same words, the look of the Sphinx and Read the Docs pages Yocto developers know by heart. A friendly tribute, not affiliated with the Yocto Project. <a href="#" data-classic-off>Back to the Bitloom look</a>.</p></aside>
+<article class="doc"><h1 id="migrate-to-a-newer-release">Migrate to a newer release</h1>
+<p>Moving a product from one Yocto LTS to the next means reading every migration guide in between and finding, in your own layers, what each one changes. From Scarthgap (5.0) to Wrynose (6.0) that is four guides: 5.1 Styhead, 5.2 Walnascar, 5.3 Whinlatter and 6.0 Wrynose. Bitloom has them as rules, checks your files against all of them, fixes what is mechanical, and moves the checkout without touching the build you have.</p>
+<p>Open it with section <strong>9</strong> of the <a href="web.html">web dashboard</a> (or Ctrl+K → <em>Migrate</em>), the TUI's <strong>Analysis → Migration check</strong>, or <code>bitloom --migrate</code>.</p>
+<details class="shot"><summary><span>Screenshot</span> The migration assistant: Scarthgap to Wrynose through the four guides, with what breaks the build first</summary><div class="shot-body"><img src="assets/web-migrate.png" alt="The migration assistant: Scarthgap to Wrynose through the four guides, with what breaks the build first" loading="lazy" decoding="async"></div></details>
+<h2 id="how-it-works">How it works<a class="anchor" href="#how-it-works" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>The path.</strong> Bitloom reads the project's release and offers every newer one it covers; the path shows each release on the way, each linked to its official guide. A migration that skips releases chains their rules: nothing is skipped.</li>
+<li><strong>Your files only.</strong> Your layers, the build configuration (<code>local.conf</code>, <code>auto.conf</code>, <code>site.conf</code>, <code>bblayers.conf</code>) and the kas files of the profile, <code>local_conf_header</code> included; for a launcher-script profile, the kas file its variable names (<code>YML=…</code>). Upstream layers (OE-Core, meta-yocto, meta-openembedded…) are replaced by the new release, not migrated.</li>
+<li><strong>Three kinds of finding</strong>: what <strong>breaks the build</strong> (an error from that release on), what <strong>changes behaviour</strong> and deserves a look, and what is <strong>good to know</strong>. Each says where (file and line), what changed, what to do, and links the exact section of the guide.</li>
+</ul>
+<h2 id="what-it-checks">What it checks<a class="anchor" href="#what-it-checks" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>From the guide</th>
+<th>In your files</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5.1</td>
+<td><code>S = &quot;${WORKDIR}&quot;</code>; <code>${WORKDIR}/&lt;file&gt;</code> for files from <code>SRC_URI</code> (now in <code>${UNPACKDIR}</code>); <code>../</code> in <code>LIC_FILES_CHKSUM</code>; Go recipes without <code>destsuffix=${GO_SRCURI_DESTSUFFIX}</code>; removed variables (<code>TCLIBCAPPEND</code>, <code>VOLATILE_LOG_DIR</code>, <code>VOLATILE_TMP_DIR</code>), recipes (libnewt, python3-toml, mpeg2dec…), the <code>siteconfig</code> class; <code>license-incompatible</code> renamed <code>license-exception</code></td>
+</tr>
+<tr>
+<td>5.2</td>
+<td><code>debug-tweaks</code>; Git <code>SRC_URI</code> without <code>branch=</code> or with several branches; <code>virtual/${TARGET_PREFIX}gcc</code> and the other toolchain providers; <code>BB_CURRENT_MC == &quot;default&quot;</code>; <code>UBOOT_ENTRYPOINT</code> without <code>0x</code>; <code>ZSTD_COMPRESSION_LEVEL = &quot;-3&quot;</code>; systemd's <code>usrmerge</code>; <code>UBOOT_ENV</code> in FIT images; <code>ld-is-gold</code>; removed variables, recipes (libnss-mdns renamed avahi-libnss-mdns…) and classes</td>
+</tr>
+<tr>
+<td>5.3</td>
+<td>kas files on the <code>poky</code> repository; <code>S = &quot;${WORKDIR}/…&quot;</code>, <code>S = &quot;${WORKDIR}/git&quot;</code>; <code>FOO=&quot;bar&quot;</code> without spaces; Wic plugins with dashes; <code>fitImage</code> as <code>KERNEL_IMAGETYPE</code>; <code>CFLAGS +=</code> in recipes that also build natively; removed variables, recipes, <code>PACKAGECONFIG</code> options and classes (<code>kernel-fitimage</code>, <code>icecc</code>)</td>
+</tr>
+<tr>
+<td>6.0</td>
+<td><code>LAYERSERIES_COMPAT</code> of your layers; <code>*_BACKFILL</code>, <code>*_BACKFILL_CONSIDERED</code>, <code>DISTRO_FEATURES_DEFAULT</code>; meta-poky's removed templates; <code>create-spdx-2.2</code>; the <code>cve-check</code> class and its variables; <code>CVE_PRODUCT</code> escapes; <code>WIC_SECTOR_SIZE</code>; WKS files outside <code>files/wic</code>; <code>systemd</code> and <code>sysvinit</code> together; the comma form of <code>UBOOT_CONFIG[x]</code>; <code>PKG_CONFIG_*</code> without <code>inherit pkgconfig</code>; VEX file names; <code>DEBUG_BUILD</code>; the default init manager without a <code>DISTRO</code>; removed recipes, options and classes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="fix-what-is-mechanical">Fix what is mechanical<a class="anchor" href="#fix-what-is-mechanical" aria-label="Link to this section">#</a></h2>
+<p>About half of the findings have a <strong>safe fix</strong>: a rename, the new syntax, the new variable, <code>LAYERSERIES_COMPAT</code>, <code>cve-check</code> → <code>OE_FRAGMENTS += &quot;core/yocto/sbom-cve-check&quot;</code>, <code>debug-tweaks</code> → the four features it stood for. Select them, <strong>Preview</strong> shows the diff of every file, <strong>Apply</strong> writes them. Several fixes on one line are combined. The original files are kept in the state folder, and <strong>Undo</strong> restores any earlier set. A file changed since the scan is never overwritten.</p>
+<details class="shot"><summary><span>Screenshot</span> Step 2: the diffs of the selected fixes, before anything is written</summary><div class="shot-body"><img src="assets/web-migrate-fixes.png" alt="Step 2: the diffs of the selected fixes, before anything is written" loading="lazy" decoding="async"></div></details>
+<p>What needs a decision stays with you, explained: a Git URL without a branch, a removed recipe you depend on (which layer now has it), WKS files to move, <code>UBOOT_CONFIG</code> to split.</p>
+<h2 id="move-the-checkout">Move the checkout<a class="anchor" href="#move-the-checkout" aria-label="Link to this section">#</a></h2>
+<p>For a kas or launcher-script project, Bitloom writes the project's kas file <strong>for the new release, as a new file</strong> (<code>kas-wrynose.yml</code> next to <code>kas.yml</code>), never over the current one:</p>
+<ul>
+<li>the <code>poky</code> repository becomes <code>bitbake</code>, <code>openembedded-core</code> and <code>meta-yocto</code> at the tags Bitloom's own Wrynose builds use, with your layers mapped to the right repository and <code>build_system: openembedded</code>;</li>
+<li>other repositories on a release branch (<code>branch: scarthgap</code>) move to the new branch; their old commit pins are removed, and <em>Generate kas lock file</em> records new ones after the first checkout;</li>
+<li>a new profile (<code>&lt;name&gt;-wrynose</code>) builds it with <strong>its own work directory</strong>, so the current build stays as it is until the new one works. A launcher-script profile keeps its script and gets its variable pointed at the new file.</li>
+</ul>
+<details class="shot"><summary><span>Screenshot</span> Step 3: the kas file for Wrynose, as a diff of the current one</summary><div class="shot-body"><img src="assets/web-migrate-kas.png" alt="Step 3: the kas file for Wrynose, as a diff of the current one" loading="lazy" decoding="async"></div></details>
+<p>For a Poky checkout or a bitbake-setup workspace, the step explains how to set up the new release next to the current one (bitbake-setup workspaces belong to one release).</p>
+<h2 id="build-and-verify">Build and verify<a class="anchor" href="#build-and-verify" aria-label="Link to this section">#</a></h2>
+<p>Step 4 switches to the new profile, parses the metadata (<code>bitbake -p</code>), builds the image and opens <a href="practices.html">Best practices</a>. Scan again: what is left needs a human, and the build log of the new release tells the rest; Bitloom's failure diagnosis reads it for you.</p>
+<h2 id="command-line">Command line<a class="anchor" href="#command-line" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-console">$ bitloom --migrate --to wrynose              # exit 2 while something breaks the build
+Migration scarthgap → wrynose
+
+Path: scarthgap → styhead → walnascar → whinlatter → wrynose · your layers: meta-acme · 6 files · 48 rules from the official guides
+2 break the build · 0 to review · 0 good to know · 1 with a safe fix
+…
+$ bitloom --migrate --to wrynose --apply      # apply the safe fixes, originals kept in the state folder
+$ bitloom --migrate --format md &gt; migration.md
+</code></pre>
+<h2 id="practical-limits">Practical limits<a class="anchor" href="#practical-limits" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>The rules read files: values computed by Python or set in classes outside your layers are not evaluated; the first build on the new release finds the rest.</li>
+<li>Removed recipes are found in dependencies, images and your appends; a recipe pulled in by another layer is reported when that layer is updated.</li>
+<li>Bitloom covers Scarthgap to Wrynose and the releases between them. Each future release adds its guide's rules as one more step.</li>
+</ul>
+</article>
+<nav class="pager" aria-label="Previous and next page"><a class="prev" href="practices.html"><small>Previous</small>Best practices</a><a class="next" href="teams.html"><small>Next</small>Teams and CI/CD</a></nav>
+<div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/migration.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+<footer class="classic-footer">© Copyright 2026, Luca Padovan. Built with Bitloom, dressed up as Sphinx in a theme inspired by Read the Docs. No reStructuredText was harmed.</footer>
+</main>
+<div class="classic-version"><button type="button" aria-expanded="false"><b>Bitloom</b><span>v: latest ▾</span></button><p hidden>Bitloom has one version: the one that works. For the others, see Releases on GitHub.</p></div>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#how-it-works">How it works</a><a href="#what-it-checks">What it checks</a><a href="#fix-what-is-mechanical">Fix what is mechanical</a><a href="#move-the-checkout">Move the checkout</a><a href="#build-and-verify">Build and verify</a><a href="#command-line">Command line</a><a href="#practical-limits">Practical limits</a></aside>
+</div>
+<script src="docs.js"></script>
+</body></html>
