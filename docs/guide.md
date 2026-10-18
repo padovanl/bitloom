@@ -358,7 +358,11 @@ Press **F7** or the toolbar's **Themes** button. Choose a palette to preview it 
 | Forest | Dark green with sage accents |
 | Ember | Warm brown with amber and coral |
 | Paper | Light paper background with dark text |
+| Catppuccin Latte | Light lavender-grey with violet and blue |
+| Solarized Light | Warm cream with teal and blue |
 | High Contrast | Black background with bright white, cyan and yellow |
+
+The web dashboard has the same palettes in its theme menu (the round button in the top bar); see [Web dashboard](web.md#themes).
 
 The choice is a UI preference stored in `appearance.json` under the selected state directory, independent of build profiles. Missing, malformed or unknown saved themes fall back to Bitloom. Themes do not change build settings or stop queued work.
 

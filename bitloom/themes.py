@@ -16,6 +16,8 @@ PALETTES = [
     ('Forest', '#101b15', '#1c3024', '#dce9d9', '#94d69c', '#d5c28b', True),
     ('Ember', '#211611', '#35241c', '#f0dcc9', '#f3a661', '#db8374', True),
     ('Paper', '#f5f3ed', '#e7e3d8', '#292f35', '#176f65', '#345b91', False),
+    ('Catppuccin Latte', '#eff1f5', '#e6e9ef', '#4c4f69', '#8839ef', '#1e66f5', False),
+    ('Solarized Light', '#fdf6e3', '#eee8d5', '#3a4f57', '#1f7f78', '#1d6fae', False),
     ('High Contrast', '#000000', '#161616', '#ffffff', '#00ffff', '#ffff00', True),
 ]
 THEMES = {

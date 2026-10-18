@@ -36,6 +36,7 @@ PAGE = r"""<!doctype html>
   --glow: rgba(23, 120, 109, .12); --shadow: 0 10px 30px rgba(60, 50, 20, .10);
   --viz-1: #2a78d6; --viz-2: #eb6834; --viz-3: #1baf7a; --viz-4: #eda100; --viz-5: #e87ba4; --viz-6: #008300; --viz-other: #a3a9ad;
 }
+/*THEMES*/
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; color: var(--fg); font: 14px/1.5 var(--sans); }
 body { background: radial-gradient(1200px 600px at 85% -10%, var(--glow), transparent 60%), radial-gradient(900px 500px at -10% 110%, var(--glow), transparent 60%), var(--bg); background-attachment: fixed; }
@@ -44,7 +45,7 @@ kbd { font: 11px var(--mono); border: 1px solid var(--line2); border-bottom-widt
 .app { display: grid; grid-template-columns: 216px 1fr; grid-template-rows: auto 1fr; height: 100vh; }
 
 /* Header */
-header { grid-column: 1 / -1; position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 18px;
+header { grid-column: 1 / -1; position: sticky; top: 0; z-index: 55; display: flex; align-items: center; gap: 12px; padding: 10px 18px;
   background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 10px; font: 700 16px var(--mono); letter-spacing: .02em; }
 .brand svg.logo { width: 30px; height: 30px; filter: drop-shadow(0 4px 10px var(--glow)); }
@@ -382,6 +383,13 @@ details.rule .mark { font: 700 13px var(--mono); text-align: center; }
 .finding { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .finding .ic { font-weight: 700; } .finding.error .ic { color: var(--err); } .finding.warning .ic { color: var(--warn); } .finding.info .ic { color: var(--info); } .finding.ok .ic { color: var(--ok); }
 .finding small { display: block; color: var(--muted); }
+.theme-pick { position: relative; }
+.theme-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 1000; width: 260px; padding: 6px; background: var(--raised); border: 1px solid var(--line2); border-radius: 12px; box-shadow: var(--shadow); animation: lang-in .12s var(--ease); }
+.theme-menu .grp { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 8px 8px 4px; }
+.theme-menu button { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; width: 100%; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.theme-menu button:hover, .theme-menu button:focus-visible { background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.theme-menu button[aria-checked="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); } .theme-menu button[aria-checked="true"]::after { content: "✓"; color: var(--accent); }
+.theme-menu .sw { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--line2); } .theme-menu .sw span { flex: 1; }
 #ins-tip { position: fixed; z-index: 60; pointer-events: none; background: var(--raised); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; box-shadow: var(--shadow); max-width: 340px; }
 @media (max-width: 900px) { .ins { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hbar { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) auto; } }
 .svc.selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -713,6 +721,8 @@ details.folder > summary { padding: 8px 14px; }
     <button class="btn" id="palette-btn" title="Command palette (Ctrl+K)"><kbd>⌘K</kbd>Search</button>
     <span class="chip"><span class="dot" id="service-dot"></span><span id="service-label">connecting…</span></span>
     <button class="btn" id="notify-btn" title="Browser notifications when builds finish" aria-label="Browser notifications when builds finish"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
+    <div class="theme-pick"><button class="btn" id="theme-btn" title="Theme" aria-label="Theme" aria-haspopup="menu" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg></button>
+      <div class="theme-menu" id="theme-menu" role="menu" hidden></div></div>
     <button class="btn" id="keys-btn" title="Keyboard shortcuts (?)">?</button>
   </header>
   <nav aria-label="Sections">
@@ -2709,6 +2719,29 @@ function paintCode() {
   syncScroll();
   if (first >= 0) { const area = $("ide-text"), top = first * parseFloat(getComputedStyle(area).lineHeight); if (top < area.scrollTop || top > area.scrollTop + area.clientHeight - 40) { area.scrollTop = Math.max(0, top - 60); syncScroll(); } }
 }
+/* Themes: System follows the operating system; the others are chosen here and remembered in this browser. */
+const THEME_LIST = [["system", "System", ["#080d11", "#84c9c0", "#f4f2ec"]], ["dark", "Bitloom dark", ["#0f1920", "#84c9c0", "#d4e1e7"]], ["light", "Bitloom light", ["#fbfaf6", "#17786d", "#23292f"]],
+  ...Object.entries(window.BITLOOM_THEMES || {}).map(([id, t]) => [id, t.label, [t.surface, t.accent, t.fg]])];
+function themeNow() { try { return localStorage.getItem("bitloom-theme") || "system"; } catch (error) { return "system"; } }
+function applyTheme(id) {
+  if (id === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", id);
+  try { if (id === "system") localStorage.removeItem("bitloom-theme"); else localStorage.setItem("bitloom-theme", id); } catch (error) { /* private window: this session only */ }
+  for (const b of document.querySelectorAll("#theme-menu button")) b.setAttribute("aria-checked", String(b.dataset.theme === id));
+}
+function openThemes() {
+  const menu = $("theme-menu"), open = menu.hidden;
+  menu.hidden = !open; $("theme-btn").setAttribute("aria-expanded", String(open));
+  if (!open) return;
+  menu.textContent = "";
+  const current = themeNow();
+  for (const [title, items] of [["Bitloom", THEME_LIST.slice(0, 3)], ["Palettes", THEME_LIST.slice(3)]]) {
+    menu.append(el("div", {class: "grp", text: title}));
+    for (const [id, label, colours] of items) menu.append(el("button", {role: "menuitemradio", "data-theme": id, "aria-checked": String(id === current), onclick: () => applyTheme(id)},
+      el("span", {class: "sw", "aria-hidden": "true"}, ...colours.map((c) => el("span", {style: `background:${c}`}))), el("span", {text: label})));
+  }
+  menu.querySelector('[aria-checked="true"]')?.focus();
+}
+
 /* BitBake language assistant in the editor: completion (Ctrl+Space or as you type), the meaning of the word
    under the caret, and the problems a parse would report, from the project's own layers. */
 let langItems = [], langIndex = 0, langFrom = 0, langTimer = null, lintTimer = null, docTimer = null, langProblems = [], langQuiet = false;
@@ -2947,6 +2980,7 @@ function paletteEntries() {
   entries.push({label: "Which recipe installs… (a file on the device or a package)", hint: "4", run: () => { setView("image"); setTimeout(() => $("img-find").focus(), 100); }});
   entries.push({label: "Explore the built image", hint: "4", run: () => setView("image")});
   entries.push({label: "Best practices", hint: "7", run: () => setView("practices")});
+  for (const [id, label] of THEME_LIST) entries.push({label: "Theme: " + label, hint: "theme", run: () => applyTheme(id)});
   entries.push({label: "Add a company rule (best practices)", hint: "7", run: () => { setView("practices"); openRuleDialog(); }});
   for (const profile of (state ? state.profiles : [])) {
     if (profile.name === $("profile").value) continue;
@@ -3011,6 +3045,13 @@ function wire() {
   $("pr-recheck").addEventListener("click", () => loadPractices());
   $("pr-export").addEventListener("click", exportPractices);
   for (const b of document.querySelectorAll("#img-mode button")) b.addEventListener("click", () => setImgMode(b.dataset.mode));
+  $("theme-btn").addEventListener("click", (e) => { e.stopPropagation(); openThemes(); });
+  document.addEventListener("click", (e) => { if (!$("theme-menu").hidden && !e.target.closest(".theme-pick")) { $("theme-menu").hidden = true; $("theme-btn").setAttribute("aria-expanded", "false"); } });
+  $("theme-menu").addEventListener("keydown", (e) => {
+    const items = [...$("theme-menu").querySelectorAll("button")], at = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(at + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); }
+    if (e.key === "Escape") { e.stopPropagation(); $("theme-menu").hidden = true; $("theme-btn").focus(); }
+  });
   $("pr-add").addEventListener("click", () => openRuleDialog());
   $("pr-form").addEventListener("submit", saveRule);
   $("pr-form").addEventListener("input", syncRuleForm); $("pr-form").addEventListener("change", syncRuleForm);
@@ -3165,3 +3206,43 @@ function wire() {
 </body>
 </html>
 """
+
+
+# Named palettes for the dashboard, as the TUI has them (F7). Chart colours (--viz-*) are the validated dark or light
+# set for the theme's surface; status colours keep their meaning in every theme.
+WEB_THEMES = {
+    # id: (label, dark, bg, bg2, surface, raised, line, line2, fg, muted, accent, accent2, ok, warn, err, info, code)
+    "nord": ("Nord", True, "#2e3440", "#2b303b", "#3b4252", "#434c5e", "#4c566a", "#5a657b", "#eceff4", "#a8b1c2", "#88c0d0", "#81a1c1", "#a3be8c", "#ebcb8b", "#e48b93", "#81a1c1", "#2a2f3a"),
+    "dracula": ("Dracula", True, "#21222c", "#232530", "#282a36", "#343746", "#3a3d4d", "#4a4e62", "#f8f8f2", "#a4a9c7", "#bd93f9", "#8be9fd", "#50fa7b", "#f1fa8c", "#ff6e6e", "#8be9fd", "#1e1f29"),
+    "tokyo-night": ("Tokyo Night", True, "#16161e", "#1a1b26", "#1f2335", "#24283b", "#2f3549", "#3b4261", "#c0caf5", "#8a93bd", "#7aa2f7", "#bb9af7", "#9ece6a", "#e0af68", "#f7768e", "#7dcfff", "#13131a"),
+    "catppuccin-mocha": ("Catppuccin Mocha", True, "#11111b", "#181825", "#1e1e2e", "#313244", "#313244", "#45475a", "#cdd6f4", "#a6adc8", "#cba6f7", "#89b4fa", "#a6e3a1", "#f9e2af", "#f38ba8", "#89b4fa", "#11111b"),
+    "gruvbox": ("Gruvbox", True, "#1d2021", "#232526", "#282828", "#32302f", "#3c3836", "#504945", "#ebdbb2", "#a89984", "#8ec07c", "#83a598", "#b8bb26", "#fabd2f", "#fb4934", "#83a598", "#1d2021"),
+    "solarized-dark": ("Solarized Dark", True, "#002029", "#00252f", "#002b36", "#073642", "#0b3a46", "#1f4b57", "#a7b4b4", "#7a9095", "#2aa198", "#268bd2", "#859900", "#b58900", "#e2504d", "#4aa0e0", "#001f27"),
+    "high-contrast": ("High contrast", True, "#000000", "#000000", "#0a0a0a", "#161616", "#5a5a5a", "#8a8a8a", "#ffffff", "#d0d0d0", "#00ffff", "#ffff00", "#00ff7f", "#ffd700", "#ff6b6b", "#80c8ff", "#000000"),
+    "catppuccin-latte": ("Catppuccin Latte", False, "#eff1f5", "#e6e9ef", "#f7f8fb", "#ffffff", "#ccd0da", "#bcc0cc", "#4c4f69", "#5c5f77", "#8839ef", "#1e66f5", "#2f7d1f", "#a35a00", "#c4113a", "#1e5fd6", "#e6e9ef"),
+    "solarized-light": ("Solarized Light", False, "#eee8d5", "#e9e2cb", "#fdf6e3", "#fffbf0", "#ddd6c1", "#cfc8b2", "#3a4f57", "#586e75", "#1f7f78", "#1d6fae", "#5f7a00", "#8a6500", "#c3281f", "#1d6fae", "#f5eedb"),
+}
+_VIZ = {True: "--viz-1: #3987e5; --viz-2: #d95926; --viz-3: #199e70; --viz-4: #c98500; --viz-5: #d55181; --viz-6: #008300; --viz-other: #5c6b74;",
+        False: "--viz-1: #2a78d6; --viz-2: #eb6834; --viz-3: #1baf7a; --viz-4: #eda100; --viz-5: #e87ba4; --viz-6: #008300; --viz-other: #a3a9ad;"}
+
+
+def _theme_css() -> str:
+    blocks = [":root[data-theme=\"dark\"] { color-scheme: dark; }"]
+    for ident, (label, dark, bg, bg2, surface, raised, line, line2, fg, muted, accent, accent2, ok, warn, err, info, code) in WEB_THEMES.items():
+        r, g, b = (int(accent[i:i + 2], 16) for i in (1, 3, 5))
+        blocks.append(f":root[data-theme=\"{ident}\"] {{ color-scheme: {'dark' if dark else 'light'}; --bg: {bg}; --bg2: {bg2}; --surface: {surface}; --raised: {raised}; "
+                      f"--line: {line}; --line2: {line2}; --fg: {fg}; --muted: {muted}; --accent: {accent}; --accent2: {accent2}; --ink: {'#0b0d12' if dark else '#ffffff'}; "
+                      f"--ok: {ok}; --warn: {warn}; --err: {err}; --info: {info}; --code: {code}; --glow: rgba({r}, {g}, {b}, {'.16' if dark else '.10'}); "
+                      f"--shadow: {'0 10px 30px rgba(0, 0, 0, .40)' if dark else '0 10px 30px rgba(60, 50, 20, .10)'}; {_VIZ[dark]} }}")
+    return "\n".join(blocks)
+
+
+def _theme_js() -> str:
+    import json
+    data = {k: {"label": v[0], "surface": v[4], "accent": v[10], "fg": v[8]} for k, v in WEB_THEMES.items()}
+    # Applied before the first paint, so a chosen theme never flashes the default one.
+    return ("<script>window.BITLOOM_THEMES = " + json.dumps(data) + ";try{const t=localStorage.getItem(\"bitloom-theme\");"
+            "if(t)document.documentElement.setAttribute(\"data-theme\",t);}catch(e){}</script>")
+
+
+PAGE = PAGE.replace("/*THEMES*/", _theme_css(), 1).replace("</head>", _theme_js() + "\n</head>", 1)
