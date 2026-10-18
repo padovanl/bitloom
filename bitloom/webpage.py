@@ -305,50 +305,66 @@ details.opt summary::-webkit-details-marker { display: none; }
 details.opt[open] summary { background: var(--glow); }
 details.opt .body { padding: 6px 16px 14px; color: var(--muted); animation: enter .3s var(--ease); }
 
-/* Studio: an editor for your layers */
+/* Studio: a guided way to create Yocto metadata */
 body[data-view=studio] .cards { display: none; }
-.studio-ide { display: flex; flex-direction: column; gap: 10px; min-height: calc(100vh - 230px); }
-.ide-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.ide-crumbs { display: flex; align-items: center; gap: 6px; font: 12.5px var(--mono); color: var(--muted); min-width: 0; overflow: hidden; }
-.ide-crumbs b { color: var(--fg); font-weight: 600; } .ide-crumbs .sep { opacity: .5; }
-.ide-crumbs .tag { margin-left: 6px; }
-.ide-new { position: relative; }
-.ide-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 340px; padding: 6px; border: 1px solid var(--line2); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); animation: pop .16s var(--ease); }
-.ide-menu button { all: unset; display: grid; grid-template-columns: 24px 1fr; gap: 0 8px; width: calc(100% - 20px); padding: 8px 10px; border-radius: 8px; cursor: pointer; }
-.ide-menu button:hover, .ide-menu button:focus-visible { background: color-mix(in srgb, var(--accent) 14%, transparent); }
-.ide-menu .ico { color: var(--accent); grid-row: span 2; font-size: 16px; } .ide-menu small { color: var(--muted); font-size: 12px; line-height: 1.35; }
-.ide { display: grid; grid-template-columns: 260px minmax(0, 1fr) 360px; gap: 10px; flex: 1; min-height: 600px; }
-.ide.no-inspector { grid-template-columns: 260px minmax(0, 1fr); }
-.ide.no-inspector .ide-inspector { display: none; }
-.ide-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--line); }
-.ide-head button { all: unset; margin-left: auto; cursor: pointer; color: var(--muted); padding: 0 4px; border-radius: 4px; font-size: 13px; letter-spacing: 0; }
-.ide-head button:hover { color: var(--fg); }
-.ide-explorer #ide-filter { margin: 8px; width: calc(100% - 16px); padding: 6px 10px; font-size: 12.5px; }
-.ide-tree { overflow: auto; flex: 1; padding: 0 0 10px; font: 12.5px var(--mono); }
-.tnode { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px calc(10px + var(--d, 0) * 14px); cursor: pointer; white-space: nowrap; color: var(--fg); user-select: none; border-left: 2px solid transparent; }
-.tnode:hover { background: color-mix(in srgb, var(--raised) 70%, var(--glow)); }
-.tnode.active { background: color-mix(in srgb, var(--accent) 14%, transparent); border-left-color: var(--accent); }
-.tnode:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
-.tnode .tw { width: 10px; color: var(--muted); flex: none; transition: transform .15s; } .tnode.open > .tw { transform: rotate(90deg); }
-.tnode .ti { width: 14px; text-align: center; flex: none; color: var(--muted); }
-.tnode .tn { overflow: hidden; text-overflow: ellipsis; }
-.tnode.layer .tn { font-weight: 650; } .tnode.layer.ro .tn { color: var(--muted); font-weight: 500; }
-.tnode .lock { margin-left: auto; color: var(--muted); font-size: 11px; }
-.tnode.planned .tn { color: var(--ok); } .tnode.planned .ti { color: var(--ok); }
-.tnode .badge-new { margin-left: auto; font-size: 10px; color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); border-radius: 999px; padding: 0 6px; }
-.tgroup { padding: 10px 12px 4px; font: 10.5px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.ide-main { display: flex; flex-direction: column; min-width: 0; }
-.ide-tabs { display: flex; gap: 1px; background: var(--bg2); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; min-height: 36px; }
-.ide-tab { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; height: 36px; font: 12.5px var(--mono); color: var(--muted); cursor: pointer; white-space: nowrap; border-right: 1px solid var(--line); border-top: 2px solid transparent; }
+.sg-start { display: grid; gap: 22px; padding: 26px 4px 10px; }
+.sg-start header, .sg-done header { all: unset; display: grid; gap: 6px; }
+.sg-start h2, .sg-done h2 { margin: 0; font-size: 24px; letter-spacing: -.4px; }
+.sg-start p, .sg-done p { margin: 0; color: var(--muted); max-width: 820px; line-height: 1.55; }
+.sg-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.sg-kind { all: unset; cursor: pointer; display: grid; gap: 8px; align-content: start; padding: 18px; border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(160deg, var(--raised), var(--surface)); transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; }
+.sg-kind:hover, .sg-kind:focus-visible { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); outline: none; }
+.sg-kind .top { display: flex; align-items: center; gap: 10px; } .sg-kind .ico { font-size: 20px; color: var(--accent); } .sg-kind b { font-size: 16px; }
+.sg-kind .key { margin-left: auto; }
+.sg-kind p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.sg-kind .gets { font: 12px var(--mono); color: var(--fg); padding: 6px 9px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sg-kind .when { font-size: 12px; color: var(--muted); } .sg-kind .when b { font-size: 12px; color: var(--accent); font-weight: 600; }
+.sg { display: grid; grid-template-columns: 230px minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-height: calc(100vh - 140px); }
+.sg-nav { display: flex; flex-direction: column; }
+.sg-nav .kind-title { padding: 14px 16px 4px; display: flex; gap: 8px; align-items: center; font-weight: 700; } .sg-nav .kind-title .ico { color: var(--accent); }
+.sg-nav .kind-desc { padding: 0 16px 10px; color: var(--muted); font-size: 12.5px; line-height: 1.45; border-bottom: 1px solid var(--line); }
+.sg-steplist { list-style: none; margin: 0; padding: 10px 8px; display: grid; gap: 2px; }
+.sg-steplist button { all: unset; display: flex; align-items: center; gap: 10px; width: calc(100% - 20px); padding: 9px 10px; border-radius: 9px; cursor: pointer; color: var(--muted); font-size: 13.5px; }
+.sg-steplist button:hover { color: var(--fg); background: var(--raised); }
+.sg-steplist button:focus-visible { outline: 2px solid var(--accent); }
+.sg-steplist button.current { color: var(--fg); background: color-mix(in srgb, var(--accent) 13%, transparent); font-weight: 650; }
+.sg-steplist .dot { width: 22px; height: 22px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 700 11px var(--mono); border: 1px solid var(--line2); background: var(--bg2); }
+.sg-steplist .current .dot { border-color: var(--accent); color: var(--accent); }
+.sg-steplist .done .dot { background: color-mix(in srgb, var(--ok) 22%, transparent); border-color: transparent; color: var(--ok); }
+.sg-steplist .bad .dot { background: color-mix(in srgb, var(--err) 22%, transparent); border-color: transparent; color: var(--err); }
+.sg-nav .spacer { flex: 1; }
+.sg-nav .restart { margin: 10px; }
+.sg-main { display: flex; flex-direction: column; min-width: 0; }
+.sg-main .sg-head { padding: 16px 18px 6px; } .sg-main .sg-head h3 { margin: 0; font-size: 18px; } .sg-main .sg-head p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.sg-main .form { flex: 1; padding-top: 0; }
+.sg-main .st-sec legend { display: none; }
+.sg-foot { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--line); }
+.sg-foot .grow { flex: 1; }
+.sg-review { padding: 4px 18px 10px; display: grid; gap: 14px; }
+.sg-review h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.sg-summary { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 13px; }
+.sg-summary dt { color: var(--muted); } .sg-summary dd { margin: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-word; }
+.sg-review .st-steps { border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); }
+.problem { display: flex; gap: 8px; padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+.problem.err { color: var(--err); background: color-mix(in srgb, var(--err) 10%, transparent); } .problem.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); } .problem.ok { color: var(--muted); }
+.sg-preview { display: flex; flex-direction: column; min-width: 0; }
+.ide-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--line); }
+.ide-head .meta { text-transform: none; letter-spacing: 0; }
+.sg-where { padding: 10px 14px; border-bottom: 1px solid var(--line); font: 12.5px var(--mono); display: grid; gap: 1px; max-height: 210px; overflow: auto; }
+.sg-where .row-w { display: flex; gap: 6px; align-items: center; padding: 1px 0 1px calc(var(--d, 0) * 14px); color: var(--muted); white-space: nowrap; }
+.sg-where .row-w.layer { color: var(--fg); font-weight: 650; } .sg-where .row-w.new { color: var(--ok); cursor: pointer; } .sg-where .row-w.new:hover { text-decoration: underline; }
+.sg-where .row-w .badge-new { font-size: 10px; border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); border-radius: 999px; padding: 0 6px; }
+.sg-where .more { color: var(--muted); font-style: italic; padding-left: calc(var(--d, 0) * 14px); }
+.ide-tabs { display: flex; gap: 1px; background: var(--bg2); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: thin; min-height: 34px; }
+.ide-tab { display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 34px; font: 12.5px var(--mono); color: var(--muted); cursor: pointer; white-space: nowrap; border-right: 1px solid var(--line); border-top: 2px solid transparent; }
 .ide-tab:hover { color: var(--fg); }
 .ide-tab.active { color: var(--fg); background: var(--code); border-top-color: var(--accent); }
-.ide-tab.plan .nm { color: var(--ok); } .ide-tab.plan .nm::before { content: "+ "; }
-.ide-tab .x { all: unset; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 4px; font-size: 12px; color: var(--muted); }
-.ide-tab .x:hover { background: var(--line); color: var(--fg); }
-.ide-tab.dirty .x::before { content: "●"; font-size: 10px; } .ide-tab.dirty .x { font-size: 0; } .ide-tab.dirty .x:hover { font-size: 12px; } .ide-tab.dirty .x:hover::before { content: ""; }
+.ide-tab.main .nm::after { content: " ●"; color: var(--accent); }
+.ide-tab.dirty .nm::after { content: " ✎"; color: var(--warn); }
 .ide-path { display: flex; gap: 10px; align-items: center; padding: 6px 14px; font: 11.5px var(--mono); color: var(--muted); background: var(--code); border-bottom: 1px solid var(--line); min-height: 30px; }
 .ide-path span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.ide-editor { position: relative; flex: 1; display: grid; grid-template-columns: 48px 1fr; background: var(--code); min-height: 320px; overflow: hidden; }
+.ide-path label.check { font: 12px var(--sans); }
+.ide-editor { position: relative; flex: 1; display: grid; grid-template-columns: 44px 1fr; background: var(--code); min-height: 300px; overflow: hidden; }
 .ide-gutter { padding: 10px 8px 10px 0; text-align: right; font: 12.5px/1.65 var(--mono); color: color-mix(in srgb, var(--muted) 60%, transparent); overflow: hidden; user-select: none; }
 .ide-gutter div.hl { color: var(--accent); }
 .ide-code { position: relative; overflow: hidden; }
@@ -356,31 +372,20 @@ body[data-view=studio] .cards { display: none; }
 .ide-code pre { pointer-events: none; color: var(--fg); }
 .ide-code textarea { background: transparent; color: transparent; caret-color: var(--accent); resize: none; outline: none; box-shadow: none; border-radius: 0; }
 .ide-code textarea::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); color: transparent; }
-.ide-code textarea[readonly] { caret-color: transparent; }
+.ide-code textarea[readonly] { caret-color: transparent; cursor: default; }
 .ide-code pre .ln { display: block; min-height: 1.65em; } .ide-code pre .ln.hl { background: color-mix(in srgb, var(--accent) 15%, transparent); box-shadow: inset 3px 0 var(--accent); margin: 0 -14px; padding: 0 14px; }
 .t-com { color: var(--muted); font-style: italic; } .t-var { color: var(--accent2); } .t-op { color: var(--warn); } .t-str { color: var(--ok); } .t-exp { color: var(--warn); } .t-kw { color: var(--accent); font-weight: 600; } .t-fn { color: var(--info); }
-.ide-welcome { flex: 1; display: grid; place-content: center; gap: 18px; padding: 30px; text-align: center; background: var(--code); }
-.ide-welcome h3 { margin: 0; font-size: 20px; } .ide-welcome p { margin: 0; color: var(--muted); max-width: 560px; }
-.ide-welcome .kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 200px)); gap: 10px; justify-content: center; text-align: left; }
-.kind { all: unset; cursor: pointer; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--raised), var(--surface)); transition: transform .2s var(--ease), border-color .2s, box-shadow .2s; display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; align-content: start; }
-.kind:hover { transform: translateY(-2px); border-color: var(--accent); }
-.kind:focus-visible { outline: 2px solid var(--accent); }
-.kind .ico { font-size: 17px; color: var(--accent); grid-row: span 2; line-height: 1.3; } .kind b { font-size: 14px; }
-.kind small { color: var(--muted); line-height: 1.35; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.ide-bottom { border-top: 1px solid var(--line); max-height: 210px; display: flex; flex-direction: column; }
-.ide-btabs { display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid var(--line); }
-.ide-btabs button { all: unset; cursor: pointer; padding: 7px 10px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid transparent; }
-.ide-btabs button.active { color: var(--fg); border-bottom-color: var(--accent); }
-.ide-btabs .count { margin-left: 5px; padding: 0 6px; border-radius: 999px; background: var(--line); font-size: 10px; }
-.ide-btabs .count.warn { background: color-mix(in srgb, var(--warn) 25%, transparent); color: var(--warn); } .ide-btabs .count.err { background: color-mix(in srgb, var(--err) 25%, transparent); color: var(--err); }
-#ide-bottom-body { overflow: auto; }
-#ide-bottom-body .st-steps { border-bottom: 0; }
-.problem { display: flex; gap: 8px; padding: 6px 14px; font-size: 13px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-.problem.err { color: var(--err); } .problem.warn { color: var(--warn); } .problem.ok { color: var(--muted); }
-.ide-inspector { display: flex; flex-direction: column; min-height: 0; }
-.ide-inspector .form { flex: 1; }
-@media (max-width: 1250px) { .ide { grid-template-columns: 220px minmax(0, 1fr) 320px; } }
-@media (max-width: 1050px) { .ide, .ide.no-inspector { grid-template-columns: 1fr; } .ide-explorer { max-height: 260px; } .ide-welcome .kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sg-done { display: grid; gap: 20px; padding: 26px 4px; }
+.sg-done .created { font: 12.5px var(--mono); display: grid; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--bg2); border: 1px solid var(--line); }
+.sg-done .created span::before { content: "+ "; color: var(--ok); }
+.sg-next { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.sg-next button { all: unset; cursor: pointer; display: grid; gap: 4px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); transition: border-color .2s, transform .2s var(--ease); }
+.sg-next button:hover, .sg-next button:focus-visible { border-color: var(--accent); transform: translateY(-2px); outline: none; }
+.sg-next button.primary-next { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.sg-next b { font-size: 14px; } .sg-next small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+@media (max-width: 1250px) { .sg { grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 1050px) { .sg { grid-template-columns: 1fr; } .sg-steplist { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); } .sg-nav .spacer { display: none; } .sg-kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .sg-kinds { grid-template-columns: 1fr; } }
 .st-intro { padding: 12px 16px 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
 .form { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
 .form.swap { animation: enter .3s var(--ease); }
@@ -607,36 +612,42 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
       <div class="panel"><div class="head"><h2>SBOM, vulnerability and traceability options</h2><span style="flex:1"></span><span class="hint">Change them in the TUI: Configuration → <kbd>s</kbd> (writes a managed block with a backup)</span></div><div id="sb-options"></div></div>
     </section>
 
-    <section id="view-studio" class="view studio-ide" hidden>
-      <div class="ide-bar">
-        <div class="ide-crumbs" id="ide-crumbs"><b>Studio</b><span class="sep">·</span><span>your layers, recipes and configuration</span></div>
-        <span style="flex:1"></span>
-        <div class="ide-new"><button class="btn" id="ide-new-btn" aria-haspopup="menu" aria-expanded="false" title="Create a layer, distribution, machine, image, recipe or append (n)"><kbd>n</kbd>New ▾</button><div class="ide-menu" id="ide-menu" role="menu" hidden></div></div>
-        <button class="btn" id="ide-save" title="Save the open file (Ctrl+S)" disabled><kbd>⌃S</kbd>Save</button>
-        <button class="btn primary" id="st-create" disabled title="Create the planned files (Ctrl+Enter)">✦ Create files</button>
+    <section id="view-studio" class="view" hidden>
+      <div class="sg-start" id="sg-start">
+        <header><h2>What do you want to create?</h2><p>Studio walks you through it one step at a time, explains every choice, shows the files it will write and where they go, and changes nothing until you press Create. Existing files are never overwritten.</p></header>
+        <div class="sg-kinds" id="sg-kinds"></div>
       </div>
-      <div class="ide no-inspector" id="ide">
-        <nav class="panel ide-explorer" aria-label="Explorer">
-          <div class="ide-head">Explorer<button id="ide-refresh" title="Reload the layers" aria-label="Reload the layers">⟳</button></div>
-          <input type="search" id="ide-filter" placeholder="Filter files" aria-label="Filter files">
-          <div class="ide-tree" id="ide-tree" role="tree" aria-label="Layers and files"></div>
+      <div class="sg" id="sg-flow" hidden>
+        <nav class="panel sg-nav" aria-label="Steps">
+          <div class="kind-title"><span class="ico" id="sg-kind-ico"></span><span id="st-title"></span></div>
+          <div class="kind-desc" id="st-desc"></div>
+          <ol class="sg-steplist" id="sg-steplist"></ol>
+          <div class="spacer"></div>
+          <button class="btn restart" id="sg-restart" title="Choose something else to create (Esc)">← Something else</button>
         </nav>
-        <section class="panel ide-main">
-          <div class="ide-tabs" id="ide-tabs" role="tablist" aria-label="Open files"></div>
-          <div class="ide-path" id="ide-path" hidden><span id="ide-path-text"></span><span id="ide-path-state"></span></div>
-          <div class="ide-editor" id="ide-editor" hidden><div class="ide-gutter" id="ide-gutter"></div><div class="ide-code"><pre id="ide-hl" aria-hidden="true"></pre><textarea id="ide-text" spellcheck="false" autocomplete="off" aria-label="File content"></textarea></div></div>
-          <div class="ide-welcome" id="ide-welcome"><h3>Your layers, in one place</h3><p>Open any file from the Explorer: files of your own layers can be edited and saved; upstream layers (Poky, OE-Core) are read-only. To add something, pick what to create: a guided form opens on the right and the files it will write open here as new tabs, which you can still edit before creating them.</p><div class="kinds" id="kinds"></div></div>
-          <div class="ide-bottom" id="ide-bottom" hidden>
-            <div class="ide-btabs" role="tablist"><button data-b="steps" class="active" role="tab">Create will…</button><button data-b="problems" role="tab">Problems<span class="count" id="ide-problems-n">0</span></button></div>
-            <div id="ide-bottom-body"><ol class="st-steps" id="st-steps"></ol><div id="ide-problems" hidden></div></div>
-          </div>
-        </section>
-        <aside class="panel ide-inspector" aria-label="Inspector">
-          <div class="ide-head"><span id="st-title">Inspector</span><button id="ide-close-form" title="Close the form and its planned files" aria-label="Close the form">✕</button></div>
-          <div class="st-intro" id="st-desc"></div>
+        <section class="panel sg-main">
+          <div class="sg-head"><h3 id="sg-step-title"></h3><p id="sg-step-help"></p></div>
           <div class="form" id="st-form"></div>
-          <div class="tools st-actions"><label class="check" id="st-use-wrap"><span class="switch"><input type="checkbox" id="st-use" checked><span></span></span><span id="st-use-label">use for this profile</span></label></div>
-        </aside>
+          <div class="sg-review" id="sg-review" hidden>
+            <div><h4>Your choices</h4><dl class="sg-summary" id="sg-summary"></dl></div>
+            <div><h4>Create will</h4><ol class="st-steps" id="st-steps"></ol></div>
+            <div id="ide-problems"></div>
+            <label class="check" id="st-use-wrap"><span class="switch"><input type="checkbox" id="st-use" checked><span></span></span><span id="st-use-label">use for this profile</span></label>
+          </div>
+          <div class="sg-foot"><button class="btn" id="sg-back">← Back</button><span class="grow"></span><span class="hint" id="sg-hint"></span><button class="btn primary" id="sg-next">Next →</button><button class="btn primary" id="st-create" hidden title="Create the files (Ctrl+Enter)">✦ Create files</button></div>
+        </section>
+        <section class="panel sg-preview" aria-label="Preview">
+          <div class="ide-head">Where it goes<span class="meta" id="st-layer"></span></div>
+          <div class="sg-where" id="sg-where"></div>
+          <div class="ide-tabs" id="ide-tabs" role="tablist" aria-label="Files Create will write"></div>
+          <div class="ide-path" id="ide-path"><span id="ide-path-text"></span><label class="check" title="Change the generated text yourself before creating it"><span class="switch"><input type="checkbox" id="sg-edit"><span></span></span>edit before creating</label></div>
+          <div class="ide-editor" id="ide-editor"><div class="ide-gutter" id="ide-gutter"></div><div class="ide-code"><pre id="ide-hl" aria-hidden="true"></pre><textarea id="ide-text" spellcheck="false" autocomplete="off" aria-label="Generated file" readonly></textarea></div></div>
+        </section>
+      </div>
+      <div class="sg-done" id="sg-done" hidden>
+        <header><h2 id="sg-done-title">Created</h2><p id="sg-done-text"></p></header>
+        <div class="created" id="sg-created"></div>
+        <div><h4 style="margin:0 0 10px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)">What next</h4><div class="sg-next" id="sg-next-actions"></div></div>
       </div>
     </section>
 
@@ -1515,237 +1526,110 @@ async function scanGrype() {
   catch (error) { toast("Grype", error.message, "error"); }
 }
 
-/* Studio: explorer, editor with tabs, inspector with the guided form */
+/* Studio: a guided way to create Yocto metadata, one step at a time */
+let lastPlan = null, studioVar = "", studioSections = {}, studioMode = "", studioKinds = [], studioActive = false;
+let sgSteps = [], sgStep = 0, sgVisited = new Set(), planEdits = {}, ideCurrent = null, layerFiles = {};
 let studioPreviewTimer = null;
 function previewStudioSoon() { clearTimeout(studioPreviewTimer); studioPreviewTimer = setTimeout(previewStudio, 300); }
-let lastPlan = null, studioVar = "", studioSections = {}, studioMode = "", studioKinds = [], studioActive = false;
-let ideLayers = [], ideRoot = "", ideOpen = new Set(), ideFiles = {}, ideTabs = [], ideCurrent = null, planEdits = {};
-const KIND_KEYS = {layer: "l", distro: "d", machine: "m", image: "i", recipe: "r", append: "a"};
+const GUIDE = {
+  layer: {gets: "meta-acme/conf/layer.conf, README, licence", when: "Start here: what you create next goes into it."},
+  distro: {gets: "conf/distro/acme.conf", when: "Your product's name and version on the device, its init system, security and SBOM policy."},
+  machine: {gets: "conf/machine/acme-board.conf", when: "Your board, starting from a reference machine you already build for."},
+  image: {gets: "recipes-core/images/acme-image.bb", when: "What ends up on the device. Build it with bitbake acme-image."},
+  recipe: {gets: "recipes-example/acme-hello/ with source and licence", when: "Your application, built and packaged, ready to add to an image."},
+  append: {gets: "recipes-…/<recipe>/<recipe>_%.bbappend", when: "Change an existing recipe without copying it: add a file, set options."},
+};
+const STEP_HELP = {
+  where: "Everything you create lives in a layer of your own; upstream layers such as Poky and OE-Core are never modified.",
+  identity: "The names BitBake uses and, for distributions, what the device shows.",
+  contents: "What it starts from and what goes in. Each option says what it does.",
+  policy: "Security hardening, licences and the SBOM policy.",
+  review: "Check your choices and exactly what Create will do. Nothing has been written yet.",
+};
 
-async function loadStudio(reload = false) {
+async function loadStudio() {
   const data = await api(`/api/studio/fields?profile=${prof()}&kind=${studioKind}`);
   studioSections = data.sections || {}; studioMode = data.mode; studioKinds = data.kinds;
-  renderNewMenu(); renderWelcome();
-  if (!ideLayers.length || reload) await loadLayers();
+  const box = $("sg-kinds"); box.textContent = "";
+  studioKinds.forEach((kind, i) => box.append(el("button", {class: "sg-kind", onclick: () => startForm(kind.id)},
+    el("div", {class: "top"}, el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title})),
+    el("p", {text: kind.description}),
+    el("div", {class: "gets", title: "You get", text: (GUIDE[kind.id] || {}).gets || ""}),
+    el("div", {class: "when"}, el("b", {text: "Use it for "}), (GUIDE[kind.id] || {}).when || ""))));
+  showScreen(studioActive ? "flow" : "start");
   if (studioActive) await openForm(studioKind, data);
-  else renderEditor();
 }
-function renderNewMenu() {
-  const menu = $("ide-menu"); menu.textContent = "";
-  for (const kind of studioKinds) menu.append(el("button", {role: "menuitem", title: kind.description, onclick: () => { closeMenu(); startForm(kind.id); }},
-    el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title}), el("small", {text: kind.description})));
-}
-function renderWelcome() {
-  const kinds = $("kinds"); kinds.textContent = "";
-  for (const kind of studioKinds) kinds.append(el("button", {class: "kind", title: kind.description, onclick: () => startForm(kind.id)},
-    el("span", {class: "ico", text: ICONS[kind.id] || "✦"}), el("b", {text: kind.title}), el("small", {text: kind.description})));
-}
-function closeMenu() { $("ide-menu").hidden = true; $("ide-new-btn").setAttribute("aria-expanded", "false"); }
+function showScreen(name) { $("sg-start").hidden = name !== "start"; $("sg-flow").hidden = name !== "flow"; $("sg-done").hidden = name !== "done"; }
 
-/* Explorer */
-async function loadLayers() {
-  try { const data = await api(`/api/studio/layers?profile=${prof()}`); ideLayers = data.layers; ideRoot = data.root; }
-  catch (error) { ideLayers = []; toast("Studio", error.message, "error"); }
-  if (!ideOpen.size) for (const layer of ideLayers.filter((l) => l.writable)) ideOpen.add(layer.path);
-  for (const path of ideOpen) if (ideLayers.some((l) => l.path === path) && !ideFiles[path]) await loadFiles(path);
-  renderTree();
-}
-async function loadFiles(path) {
-  try { ideFiles[path] = (await api(`/api/studio/files?profile=${prof()}&layer=${encodeURIComponent(path)}`)).files; } catch (error) { ideFiles[path] = []; }
-}
-function plannedFor(layerPath) {
-  if (!lastPlan || !studioActive) return [];
-  return lastPlan.layer === layerPath || (lastPlan.new_layer && !layerPath) ? Object.keys(lastPlan.files) : [];
-}
-function renderTree() {
-  const tree = $("ide-tree"), needle = $("ide-filter").value.trim().toLowerCase(); tree.textContent = "";
-  const node = (props, depth, ...children) => { const n = el("div", {...props, tabindex: "0", role: "treeitem", style: `--d:${depth}`}, ...children);
-    n.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); n.click(); } }); return n; };
-  const fileRow = (layerPath, rel, planned) => {
-    const depth = rel.split("/").length, name = rel.split("/").pop(), id = planned ? "plan:" + rel : layerPath + "/" + rel;
-    return node({class: "tnode file" + (planned ? " planned" : "") + (ideCurrent === id ? " active" : ""), title: planned ? "Will be created: " + rel : rel,
-      onclick: () => planned ? openPlanTab(rel) : openFile(layerPath + "/" + rel)}, depth,
-      el("span", {class: "tw"}), el("span", {class: "ti", text: planned ? "+" : iconFor(name)}), el("span", {class: "tn", text: name}), ...(planned ? [el("span", {class: "badge-new", text: "new"})] : []));
-  };
-  const layerBlock = (layer, files, planned) => {
-    const open = ideOpen.has(layer.path) || !!needle || planned.length > 0;
-    tree.append(node({class: "tnode layer" + (layer.writable ? "" : " ro") + (open ? " open" : ""), title: layer.path,
-      onclick: async () => { ideOpen.has(layer.path) ? ideOpen.delete(layer.path) : ideOpen.add(layer.path); if (!ideFiles[layer.path] && layer.path) await loadFiles(layer.path); renderTree(); }}, 0,
-      el("span", {class: "tw", text: "▸"}), el("span", {class: "ti", text: layer.writable ? "▤" : "▢"}), el("span", {class: "tn", text: layer.name}),
-      ...(layer.writable ? [] : [el("span", {class: "lock", title: "Upstream layer: read-only", text: "read-only"})]), ...(layer.planned ? [el("span", {class: "badge-new", text: "new"})] : [])));
-    if (!open) return;
-    // Folders are implied by the paths: show each folder once, then its files.
-    const all = [...new Set([...(files || []), ...planned])].filter((rel) => !needle || rel.toLowerCase().includes(needle)).sort();
-    const seen = new Set();
-    for (const rel of all) {
-      const parts = rel.split("/");
-      for (let i = 1; i < parts.length; i++) {
-        const folder = parts.slice(0, i).join("/");
-        if (!seen.has(folder)) { seen.add(folder); tree.append(node({class: "tnode dir"}, i, el("span", {class: "tw"}), el("span", {class: "ti", text: "▾"}), el("span", {class: "tn", text: parts[i - 1]}))); }
-      }
-      tree.append(fileRow(layer.path, rel, planned.includes(rel) && !(files || []).includes(rel)));
-    }
-  };
-  if (lastPlan && studioActive && lastPlan.new_layer) {
-    tree.append(el("div", {class: "tgroup", text: "New layer"}));
-    layerBlock({name: lastPlan.layer.split("/").pop(), path: "", writable: true, planned: true}, [], Object.keys(lastPlan.files));
-  }
-  const mine = ideLayers.filter((l) => l.writable), upstream = ideLayers.filter((l) => !l.writable);
-  tree.append(el("div", {class: "tgroup", text: mine.length ? "Your layers" : "Your layers · none yet"}));
-  for (const layer of mine) layerBlock(layer, ideFiles[layer.path], lastPlan && !lastPlan.new_layer && lastPlan.layer === layer.path ? Object.keys(lastPlan.files) : []);
-  if (upstream.length) { tree.append(el("div", {class: "tgroup", text: "Upstream · read-only"})); for (const layer of upstream) layerBlock(layer, ideFiles[layer.path], []); }
-}
-function iconFor(name) { return name.endsWith(".bb") ? "◆" : name.endsWith(".bbappend") ? "⊕" : name.endsWith(".bbclass") ? "◇" : name.endsWith(".conf") ? "⚙" : name.endsWith(".inc") ? "≡" : name.endsWith(".md") ? "¶" : "·"; }
-
-/* Tabs and editor */
-async function openFile(path) {
-  let tab = ideTabs.find((t) => t.id === path);
-  if (!tab) {
-    try {
-      const data = await api(`/api/studio/file?profile=${prof()}&path=${encodeURIComponent(path)}`);
-      tab = {id: path, kind: "file", path: data.path, name: data.path.split("/").pop(), text: data.text, original: data.text, mtime: data.mtime, writable: data.writable};
-      ideTabs.push(tab);
-    } catch (error) { toast("Cannot open " + path.split("/").pop(), error.message, "error"); return; }
-  }
-  ideCurrent = tab.id; renderTabs(); renderEditor(); renderTree();
-}
-function openPlanTab(name) {
-  if (!lastPlan || !(name in lastPlan.files)) return;
-  ideCurrent = "plan:" + name; renderTabs(); renderEditor(); renderTree();
-}
-function planTabs() { return lastPlan && studioActive ? [lastPlan.main, ...Object.keys(lastPlan.files).filter((n) => n !== lastPlan.main)].filter((n) => n in lastPlan.files).map((name) => ({id: "plan:" + name, kind: "plan", name, path: (lastPlan.layer + "/" + name).replace(/\/+/g, "/")})) : []; }
-function allTabs() { return [...planTabs(), ...ideTabs]; }
-function tabText(tab) { return tab.kind === "plan" ? (planEdits[tab.name] ?? lastPlan.files[tab.name]) : tab.text; }
-function renderTabs() {
-  const box = $("ide-tabs"); box.textContent = "";
-  for (const tab of allTabs()) {
-    const dirty = tab.kind === "plan" ? tab.name in planEdits : tab.text !== tab.original;
-    const close = el("button", {class: "x", title: tab.kind === "plan" ? "Planned files close with the form" : "Close", "aria-label": "Close", text: "✕",
-      onclick: (event) => { event.stopPropagation(); if (tab.kind === "plan") return closeForm(); closeTab(tab.id); }});
-    box.append(el("div", {class: "ide-tab" + (tab.id === ideCurrent ? " active" : "") + (tab.kind === "plan" ? " plan" : "") + (dirty ? " dirty" : ""), role: "tab", title: tab.path,
-      "aria-selected": String(tab.id === ideCurrent), onclick: () => { ideCurrent = tab.id; renderTabs(); renderEditor(); renderTree(); }},
-      el("span", {class: "nm", text: tab.name.split("/").pop()}), close));
-  }
-}
-function closeTab(id) {
-  const tab = ideTabs.find((t) => t.id === id);
-  if (tab && tab.text !== tab.original && !confirm(`Discard your changes to ${tab.name}?`)) return;
-  ideTabs = ideTabs.filter((t) => t.id !== id);
-  if (ideCurrent === id) { const rest = allTabs(); ideCurrent = rest.length ? rest[rest.length - 1].id : null; }
-  renderTabs(); renderEditor(); renderTree();
-}
-function currentTab() { return allTabs().find((t) => t.id === ideCurrent) || null; }
-function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-function highlightLine(line) {
-  // A small BitBake highlighter: comments, assignments, keywords, strings and ${expansions}.
-  const strings = (text) => escapeHtml(text).replace(/"([^"\\]|\\.)*"/g, (m) => `<span class="t-str">${m.replace(/\$\{[^}]*\}/g, (e) => `<span class="t-exp">${e}</span>`)}</span>`).replace(/(^|[^>])(\$\{[^}"]*\})/g, '$1<span class="t-exp">$2</span>');
-  if (/^\s*#/.test(line)) return `<span class="t-com">${escapeHtml(line)}</span>`;
-  let m = line.match(/^(\s*)(export\s+)?([A-Za-z_][\w${}:/.+-]*?)(\s*)(\?\?=|\?=|:=|\+=|=\+|\.=|=\.|=)(.*)$/);
-  if (m) return `${m[1]}${m[2] ? `<span class="t-kw">${m[2]}</span>` : ""}<span class="t-var">${escapeHtml(m[3])}</span>${m[4]}<span class="t-op">${escapeHtml(m[5])}</span>${strings(m[6])}`;
-  m = line.match(/^(\s*)(inherit|require|include|addtask|deltask|EXPORT_FUNCTIONS|addhandler|python|fakeroot)\b(.*)$/);
-  if (m) return `${m[1]}<span class="t-kw">${m[2]}</span>${strings(m[3])}`;
-  m = line.match(/^(\s*)([\w:-]+)(\s*\(\s*\)\s*\{.*)$/);
-  if (m) return `${m[1]}<span class="t-fn">${escapeHtml(m[2])}</span>${strings(m[3])}`;
-  return strings(line);
-}
-function renderEditor() {
-  const tab = currentTab(), editor = $("ide-editor"), text = $("ide-text");
-  $("ide-welcome").hidden = !!tab; editor.hidden = !tab; $("ide-path").hidden = !tab;
-  $("ide-save").disabled = !(tab && tab.kind === "file" && tab.writable && tab.text !== tab.original);
-  renderCrumbs(tab);
-  if (!tab) return;
-  if (text.value !== tabText(tab)) text.value = tabText(tab);
-  text.readOnly = tab.kind === "file" && !tab.writable;
-  $("ide-path-text").textContent = tab.path;
-  $("ide-path-state").textContent = tab.kind === "plan" ? (tab.name in planEdits ? "new · edited by hand" : "new · follows the form") : tab.writable ? (tab.text !== tab.original ? "modified · Ctrl+S saves" : "saved") : "read-only (upstream layer)";
-  paintCode();
-}
-function paintCode() {
-  const tab = currentTab(); if (!tab) return;
-  const lines = $("ide-text").value.split("\n");
-  // Whole words only: DISTRO must not light up DISTRO_NAME or ${DISTRO}.
-  const word = tab.kind === "plan" && studioVar ? new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])") : null;
-  let first = -1;
-  $("ide-hl").innerHTML = lines.map((line, i) => { const hit = word && word.test(line); if (hit && first < 0) first = i; return `<span class="ln${hit ? " hl" : ""}">${highlightLine(line) || " "}</span>`; }).join("");
-  $("ide-gutter").innerHTML = lines.map((_, i) => `<div${word && word.test(lines[i]) ? ' class="hl"' : ""}>${i + 1}</div>`).join("");
-  syncScroll();
-  if (first >= 0) { const top = first * parseFloat(getComputedStyle($("ide-text")).lineHeight); const area = $("ide-text"); if (top < area.scrollTop || top > area.scrollTop + area.clientHeight - 40) { area.scrollTop = Math.max(0, top - 60); syncScroll(); } }
-}
-function syncScroll() {
-  const area = $("ide-text");
-  $("ide-hl").scrollTop = area.scrollTop; $("ide-hl").scrollLeft = area.scrollLeft; $("ide-gutter").scrollTop = area.scrollTop;
-}
-function renderCrumbs(tab) {
-  const crumbs = $("ide-crumbs"); crumbs.textContent = "";
-  if (!tab) { crumbs.append(el("b", {text: "Studio"}), el("span", {class: "sep", text: "·"}), el("span", {text: "your layers, recipes and configuration"})); return; }
-  const layer = tab.kind === "plan" ? lastPlan.layer.split("/").pop() : (ideLayers.find((l) => tab.path.startsWith(l.path + "/")) || {name: ""}).name;
-  const rel = tab.kind === "plan" ? tab.name : tab.path.slice(((ideLayers.find((l) => tab.path.startsWith(l.path + "/")) || {path: ""}).path.length) + 1);
-  const parts = [layer, ...rel.split("/")].filter(Boolean);
-  parts.forEach((part, i) => { if (i) crumbs.append(el("span", {class: "sep", text: "›"})); crumbs.append(i === parts.length - 1 ? el("b", {text: part}) : el("span", {text: part})); });
-  crumbs.append(el("span", {class: "tag " + (tab.kind === "plan" ? "ok" : tab.writable ? "accent" : ""), text: tab.kind === "plan" ? "new" : tab.writable ? "your layer" : "read-only"}));
-}
-// Kept for the form: focusing a field repaints the highlighted lines.
-function renderCode(follow) {
-  if (follow && studioVar && lastPlan) {
-    const word = new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])");
-    const tab = currentTab();
-    if (!(tab && tab.kind === "plan" && tabText(tab).split("\n").some((l) => word.test(l)))) {
-      const other = planTabs().find((t) => tabText(t).split("\n").some((l) => word.test(l)));
-      if (other) { ideCurrent = other.id; renderTabs(); renderEditor(); renderTree(); return; }
-    }
-  }
-  paintCode();
-}
-let saving = false;
-async function saveFile() {
-  const tab = currentTab();
-  if (saving || !tab || tab.kind !== "file" || !tab.writable || tab.text === tab.original) return;
-  saving = true;
-  try {
-    const result = await api("/api/studio/file", {method: "POST", body: JSON.stringify({profile: prof(), path: tab.path, text: tab.text, mtime: tab.mtime})});
-    tab.original = tab.text; tab.mtime = result.mtime; metaRows = []; imageRows = null;
-    toast("Saved", tab.name, "success"); renderTabs(); renderEditor();
-  } catch (error) { toast("Not saved", error.message, "error"); }
-  finally { saving = false; }
-}
-
-/* The guided form (inspector) */
-async function startForm(kind) {
-  studioKind = kind; studioValues = {layer: studioValues.layer, new_layer: studioValues.new_layer}; planEdits = {}; studioVar = ""; studioActive = true;
+async function startForm(kind, preset = {}) {
+  studioKind = kind; studioValues = {layer: studioValues.layer, new_layer: studioValues.new_layer, ...preset};
+  planEdits = {}; studioVar = ""; studioActive = true; sgStep = 0; sgVisited = new Set(); $("sg-edit").checked = false;
+  showScreen("flow");
   await openForm(kind);
 }
 async function openForm(kind, data = null) {
   data = data && data.fields ? data : await api(`/api/studio/fields?profile=${prof()}&kind=${kind}`);
   const info = studioKinds.find((k) => k.id === kind) || {title: kind, description: ""};
-  $("st-title").textContent = info.title; $("st-desc").textContent = info.description;
-  $("ide").classList.remove("no-inspector"); $("ide-bottom").hidden = false;
+  $("st-title").textContent = info.title; $("st-desc").textContent = info.description; $("sg-kind-ico").textContent = ICONS[kind] || "✦";
   studioFields = data.fields;
   const choosable = ["distro", "machine"].includes(kind) && ["host", "container"].includes(data.mode);
   $("st-use-wrap").hidden = !choosable;
   $("st-use-label").textContent = `use this ${kind === "distro" ? "DISTRO" : "MACHINE"} in profile ${prof()}`;
-  const form = $("st-form"); form.textContent = ""; form.classList.remove("swap"); void form.offsetWidth; form.classList.add("swap");
-  let section = null, number = 0;
+  const form = $("st-form"); form.textContent = "";
+  let section = null;
   for (const field of studioFields) {
     if (field.choices.length && !field.choices.includes(studioValues[field.id] ?? "") && field.kind === "choice") delete studioValues[field.id];
     const value = studioValues[field.id] ?? field.default;
     studioValues[field.id] = value;
-    if (field.section !== section) {
-      section = field.section; number++;
-      form.append(el("fieldset", {class: "st-sec", "data-section": section}, el("legend", {}, el("span", {class: "n", text: String(number)}), studioSections[section] || section)));
-    }
+    if (field.section !== section) { section = field.section; form.append(el("fieldset", {class: "st-sec", "data-section": section}, el("legend", {text: studioSections[section] || section}))); }
     form.lastChild.append(studioField(field, value));
   }
+  sgSteps = [...new Set(studioFields.map((f) => f.section)), "review"];
   syncNewLayer();
   await previewStudio();
-  if (lastPlan) { ideCurrent = "plan:" + lastPlan.main; renderTabs(); renderEditor(); renderTree(); }
-  const first = form.querySelector("input[type=text], select"); if (first) first.focus();
+  showStep(sgStep);
+}
+function stepOf(fieldId) { const field = studioFields.find((f) => f.id === fieldId); return field ? sgSteps.indexOf(field.section) : -1; }
+function showStep(index) {
+  sgStep = Math.max(0, Math.min(index, sgSteps.length - 1)); sgVisited.add(sgStep);
+  const name = sgSteps[sgStep], review = name === "review";
+  for (const set of document.querySelectorAll("#st-form fieldset")) set.hidden = set.dataset.section !== name;
+  $("st-form").hidden = review; $("sg-review").hidden = !review;
+  $("sg-step-title").textContent = review ? "Review and create" : (studioSections[name] || name);
+  $("sg-step-help").textContent = STEP_HELP[name] || "";
+  $("sg-back").disabled = sgStep === 0;
+  $("sg-next").hidden = review; $("st-create").hidden = !review;
+  $("sg-next").textContent = sgSteps[sgStep + 1] === "review" ? "Review →" : "Next →";
+  $("sg-hint").textContent = review ? "Ctrl+Enter creates" : "Enter: next step";
+  if (review) renderReview();
+  renderStepList();
+  const first = review ? $("st-create") : $("st-form").querySelector(`fieldset[data-section="${name}"] input[type=text], fieldset[data-section="${name}"] select, fieldset[data-section="${name}"] button`);
+  if (first && !first.disabled) first.focus({preventScroll: true});
+}
+function renderStepList() {
+  const list = $("sg-steplist"); list.textContent = "";
+  const bad = new Set([...document.querySelectorAll("#st-form .fld.invalid")].map((n) => stepOf(n.dataset.field)));
+  if (!lastPlan) bad.add(sgSteps.length - 1);
+  sgSteps.forEach((name, i) => {
+    const state = i === sgStep ? "current" : bad.has(i) ? "bad" : sgVisited.has(i) ? "done" : "";
+    list.append(el("li", {}, el("button", {class: state, onclick: () => showStep(i), "aria-current": String(i === sgStep)},
+      el("span", {class: "dot", text: state === "done" ? "✓" : state === "bad" ? "!" : String(i + 1)}), name === "review" ? "Review and create" : (studioSections[name] || name))));
+  });
+}
+function renderReview() {
+  const summary = $("sg-summary"); summary.textContent = "";
+  for (const field of studioFields) {
+    if (field.id === "new_layer" && !(studioValues.layer || "").startsWith("new layer")) continue;
+    let value = studioValues[field.id] ?? "";
+    if (field.kind === "bool") value = value === "1" ? "yes" : "no";
+    if (field.id === "layer" && value.startsWith("/")) value = value.split("/").pop();
+    summary.append(el("dt", {text: field.label}), el("dd", {text: value || "—"}));
+  }
 }
 function closeForm() {
-  if (Object.keys(planEdits).length && !confirm("Close the form and drop your edits to the planned files?")) return;
+  if (Object.keys(planEdits).length && !confirm("Leave this and drop your edits to the generated files?")) return;
   studioActive = false; lastPlan = null; planEdits = {}; studioVar = "";
-  $("ide").classList.add("no-inspector"); $("ide-bottom").hidden = true; $("st-create").disabled = true; $("st-create").textContent = "✦ Create files";
-  if (ideCurrent && ideCurrent.startsWith("plan:")) ideCurrent = ideTabs.length ? ideTabs[ideTabs.length - 1].id : null;
-  renderTabs(); renderEditor(); renderTree();
+  showScreen("start");
 }
 
 function hintFor(field, choice) { const pair = (field.hints || []).find(([c]) => c === choice); return pair ? pair[1] : ""; }
@@ -1801,6 +1685,104 @@ function syncNewLayer() {
   const node = document.querySelector('#st-form [data-field="new_layer"]');
   if (node) node.hidden = !(studioValues.layer || "").startsWith("new layer");
 }
+function strings(text) {
+  // Tokens of a value: "strings" (with their ${expansions}) and bare ${expansions}.
+  const out = [], re = /"(?:[^"\\]|\\.)*"|\$\{[^}"]*\}/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(["", text.slice(last, m.index)]);
+    if (m[0][0] === '"') {
+      let at = 0, e; const inner = /\$\{[^}]*\}/g;
+      while ((e = inner.exec(m[0]))) { if (e.index > at) out.push(["t-str", m[0].slice(at, e.index)]); out.push(["t-exp", e[0]]); at = e.index + e[0].length; }
+      if (at < m[0].length) out.push(["t-str", m[0].slice(at)]);
+    } else out.push(["t-exp", m[0]]);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(["", text.slice(last)]);
+  return out;
+}
+function highlightLine(line) {
+  // A small BitBake highlighter returning [class, text] tokens: comments, assignments, keywords, strings, ${expansions}.
+  if (/^\s*#/.test(line)) return [["t-com", line]];
+  let m = line.match(/^(\s*)(export\s+)?([A-Za-z_][\w${}:/.+-]*?)(\s*)(\?\?=|\?=|:=|\+=|=\+|\.=|=\.|=)(.*)$/);
+  if (m) return [["", m[1]], ["t-kw", m[2] || ""], ["t-var", m[3]], ["", m[4]], ["t-op", m[5]], ...strings(m[6])];
+  m = line.match(/^(\s*)(inherit|require|include|addtask|deltask|EXPORT_FUNCTIONS|addhandler|python|fakeroot)\b(.*)$/);
+  if (m) return [["", m[1]], ["t-kw", m[2]], ...strings(m[3])];
+  m = line.match(/^(\s*)([\w:-]+)(\s*\(\s*\)\s*\{.*)$/);
+  if (m) return [["", m[1]], ["t-fn", m[2]], ...strings(m[3])];
+  return strings(line);
+}
+/* Preview: where the files go, and their content */
+async function renderWhere() {
+  const box = $("sg-where"); box.textContent = "";
+  if (!lastPlan) { box.append(el("div", {class: "more", text: "Fix the highlighted field to see where the files go."})); return; }
+  const layerName = lastPlan.layer.split("/").pop();
+  $("st-layer").textContent = lastPlan.new_layer ? " · new layer" : "";
+  let existing = [];
+  if (!lastPlan.new_layer) {
+    if (!(lastPlan.layer in layerFiles)) { try { layerFiles[lastPlan.layer] = (await api(`/api/studio/files?profile=${prof()}&layer=${encodeURIComponent(lastPlan.layer)}`)).files; } catch (error) { layerFiles[lastPlan.layer] = []; } }
+    existing = layerFiles[lastPlan.layer];
+  }
+  box.textContent = "";
+  box.append(el("div", {class: "row-w layer", title: lastPlan.layer}, "▤ " + layerName, ...(lastPlan.new_layer ? [el("span", {class: "badge-new", text: "new layer"})] : [])));
+  const planned = Object.keys(lastPlan.files), folders = [...new Set(planned.map((n) => n.includes("/") ? n.slice(0, n.lastIndexOf("/")) : ""))].sort();
+  for (const folder of folders) {
+    const depth = folder ? 1 : 0;
+    if (folder) box.append(el("div", {class: "row-w", style: "--d:1"}, "▾ " + folder + "/"));
+    const here = (n) => (n.includes("/") ? n.slice(0, n.lastIndexOf("/")) : "") === folder;
+    const mine = planned.filter(here), others = existing.filter((n) => here(n) && !mine.includes(n)).sort();
+    for (const name of mine) box.append(el("div", {class: "row-w new", style: `--d:${depth + 1}`, title: "Will be created", onclick: () => openPlanTab(name)},
+      "+ " + name.split("/").pop(), el("span", {class: "badge-new", text: "new"})));
+    for (const name of others.slice(0, 6)) box.append(el("div", {class: "row-w", style: `--d:${depth + 1}`}, "  " + name.split("/").pop()));
+    if (others.length > 6) box.append(el("div", {class: "more", style: `--d:${depth + 1}`, text: `… ${others.length - 6} more already there`}));
+  }
+}
+function planNames() { return lastPlan ? [lastPlan.main, ...Object.keys(lastPlan.files).filter((n) => n !== lastPlan.main)].filter((n) => n in lastPlan.files) : []; }
+function tabText(name) { return planEdits[name] ?? lastPlan.files[name]; }
+function openPlanTab(name) { ideCurrent = name; renderTabs(); renderEditor(); }
+function renderTabs() {
+  const box = $("ide-tabs"); box.textContent = "";
+  for (const name of planNames()) box.append(el("div", {class: "ide-tab" + (name === ideCurrent ? " active" : "") + (name === lastPlan.main ? " main" : "") + (name in planEdits ? " dirty" : ""),
+    role: "tab", title: name + (name === lastPlan.main ? " · the main file" : ""), "aria-selected": String(name === ideCurrent), onclick: () => openPlanTab(name)}, el("span", {class: "nm", text: name.split("/").pop()})));
+}
+function renderEditor() {
+  const text = $("ide-text");
+  if (!lastPlan || !(ideCurrent in lastPlan.files)) { text.value = ""; $("ide-path-text").textContent = ""; paintCode(); return; }
+  if (text.value !== tabText(ideCurrent)) text.value = tabText(ideCurrent);
+  text.readOnly = !$("sg-edit").checked;
+  $("ide-path-text").textContent = ideCurrent + (ideCurrent in planEdits ? " · edited by you" : "");
+  paintCode();
+}
+function paintCode() {
+  const lines = $("ide-text").value.split("\n");
+  // Whole words only: DISTRO must not light up DISTRO_NAME or ${DISTRO}.
+  const word = studioVar ? new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])") : null;
+  let first = -1;
+  const code = document.createDocumentFragment(), gutter = document.createDocumentFragment();
+  lines.forEach((line, i) => {
+    const hit = !!word && word.test(line); if (hit && first < 0) first = i;
+    const row = el("span", {class: "ln" + (hit ? " hl" : "")});
+    for (const [cls, text] of highlightLine(line)) if (text) row.append(cls ? el("span", {class: cls, text}) : document.createTextNode(text));
+    if (!line) row.append(" ");
+    code.append(row); gutter.append(el("div", {class: hit ? "hl" : "", text: String(i + 1)}));
+  });
+  $("ide-hl").replaceChildren(code); $("ide-gutter").replaceChildren(gutter);
+  syncScroll();
+  if (first >= 0) { const area = $("ide-text"), top = first * parseFloat(getComputedStyle(area).lineHeight); if (top < area.scrollTop || top > area.scrollTop + area.clientHeight - 40) { area.scrollTop = Math.max(0, top - 60); syncScroll(); } }
+}
+function syncScroll() { const area = $("ide-text"); $("ide-hl").scrollTop = area.scrollTop; $("ide-hl").scrollLeft = area.scrollLeft; $("ide-gutter").scrollTop = area.scrollTop; }
+// The form calls this when a field gets the focus: show the file it writes, with its lines highlighted.
+function renderCode(follow) {
+  if (follow && studioVar && lastPlan) {
+    const word = new RegExp("(^|[^\\w@{-])" + studioVar.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&") + "(?![\\w-])");
+    if (!(ideCurrent in lastPlan.files && tabText(ideCurrent).split("\n").some((l) => word.test(l)))) {
+      const other = planNames().find((n) => tabText(n).split("\n").some((l) => word.test(l)));
+      if (other) { ideCurrent = other; renderTabs(); renderEditor(); return; }
+    }
+  }
+  paintCode();
+}
+
 async function previewStudio() {
   if (!studioActive) return;
   const steps = $("st-steps"), problems = $("ide-problems");
@@ -1808,7 +1790,6 @@ async function previewStudio() {
   const issues = [];
   try {
     const plan = await api("/api/studio/preview", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues, use: $("st-use").checked})});
-    // Hand edits survive only for files the plan still writes.
     for (const name of Object.keys(planEdits)) if (!(name in plan.files)) delete planEdits[name];
     lastPlan = plan;
     const count = Object.keys(plan.files).length;
@@ -1816,42 +1797,56 @@ async function previewStudio() {
     steps.className = "st-steps"; steps.textContent = "";
     steps.append(...plan.steps.map((text) => el("li", {text})));
     for (const note of plan.notes) issues.push(["warn", note]);
-    if (Object.keys(planEdits).length) issues.push(["ok", `Edited by hand: ${Object.keys(planEdits).join(", ")}. Changing the form no longer updates ${Object.keys(planEdits).length === 1 ? "it" : "them"}.`]);
-    if (!ideCurrent || (ideCurrent.startsWith("plan:") && !(ideCurrent.slice(5) in plan.files))) ideCurrent = "plan:" + plan.main;
+    if (Object.keys(planEdits).length) issues.push(["ok", `You edited ${Object.keys(planEdits).join(", ")} by hand: the form no longer changes ${Object.keys(planEdits).length === 1 ? "it" : "them"}.`]);
+    if (!(ideCurrent in plan.files)) ideCurrent = plan.main;
   } catch (error) {
     lastPlan = null; $("st-create").disabled = true; $("st-create").textContent = "✦ Create files";
-    // Point at the field to fix, as a form would, and list it under Problems.
     const field = error.field && document.querySelector(`#st-form [data-field="${error.field}"]`) || document.querySelector('#st-form [data-field="name"]');
     if (field) { field.classList.add("invalid"); field.append(el("div", {class: "err", text: "✖ " + error.message})); }
-    steps.className = "st-steps"; steps.textContent = ""; steps.append(el("li", {class: "cap", text: "Fix the problem to see what Create will do"}));
-    issues.push(["err", error.message]);
-    if (ideCurrent && ideCurrent.startsWith("plan:")) ideCurrent = ideTabs.length ? ideTabs[ideTabs.length - 1].id : null;
-    showBottom("problems");
+    steps.className = "st-steps"; steps.textContent = ""; steps.append(el("li", {class: "cap", text: "Fix the problem first"}));
+    issues.push(["err", error.message + (field ? ` (step ${stepOf(field.dataset.field) + 1})` : "")]);
   }
   problems.textContent = "";
   for (const [level, text] of issues) problems.append(el("div", {class: "problem " + level, text: (level === "err" ? "✖ " : level === "warn" ? "⚠ " : "ℹ ") + text}));
-  if (!issues.length) problems.append(el("div", {class: "problem ok", text: "No problems."}));
-  const counter = $("ide-problems-n"), serious = issues.filter(([l]) => l !== "ok");
-  counter.textContent = String(serious.length); counter.className = "count" + (issues.some(([l]) => l === "err") ? " err" : serious.length ? " warn" : "");
-  renderTabs(); renderEditor(); renderTree();
-}
-function showBottom(name) {
-  for (const b of document.querySelectorAll(".ide-btabs button")) b.classList.toggle("active", b.dataset.b === name);
-  $("st-steps").hidden = name !== "steps"; $("ide-problems").hidden = name !== "problems";
+  renderTabs(); renderEditor(); renderWhere(); renderStepList();
+  if (sgSteps[sgStep] === "review") renderReview();
 }
 async function createStudio() {
-  if (!lastPlan) return;
+  if (!lastPlan || sgSteps[sgStep] !== "review") return;
+  const plan = lastPlan, kind = studioKind;
   try {
-    const result = await api("/api/studio/create", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind: studioKind, values: studioValues, use: $("st-use").checked, edits: planEdits})});
-    toast(`Created ${result.written.length} ${result.written.length === 1 ? "file" : "files"}`, result.messages.join(" · "), "success", result.target ? {label: "Build " + result.target, run: () => { $("target").value = result.target; $("target").dataset.touched = "1"; queue("build", {target: result.target}); }} : null);
-    metaRows = []; imageRows = null;                 // Recipes and the image list pick the new files up
-    const main = result.written.find((path) => path.endsWith("/" + lastPlan.main)) || result.written[0];
+    const result = await api("/api/studio/create", {method: "POST", body: JSON.stringify({profile: $("profile").value, kind, values: studioValues, use: $("st-use").checked, edits: planEdits})});
+    metaRows = []; imageRows = null; layerFiles = {};   // Recipes, the image list and the layer view pick the new files up
     studioActive = false; lastPlan = null; planEdits = {};
-    $("ide").classList.add("no-inspector"); $("ide-bottom").hidden = true; $("st-create").disabled = true; $("st-create").textContent = "✦ Create files";
-    ideFiles = {}; ideOpen = new Set(ideOpen); await loadLayers();
-    const layer = ideLayers.find((l) => main && main.startsWith(l.path + "/")); if (layer) { ideOpen.add(layer.path); await loadFiles(layer.path); renderTree(); }
-    if (main) await openFile(main); else { ideCurrent = null; renderTabs(); renderEditor(); }
+    showDone(kind, plan, result);
   } catch (error) { toast("Studio", error.message, "error"); }
+}
+function showDone(kind, plan, result) {
+  showScreen("done");
+  const info = studioKinds.find((k) => k.id === kind) || {title: kind};
+  $("sg-done-title").textContent = `${info.title} created`;
+  $("sg-done-text").textContent = result.messages.join(" · ");
+  const created = $("sg-created"); created.textContent = "";
+  for (const path of result.written) created.append(el("span", {text: path}));
+  const next = $("sg-next-actions"); next.textContent = "";
+  const action = (title, text, run, primary = false) => next.append(el("button", {class: primary ? "primary-next" : "", onclick: run}, el("b", {text: title}), el("small", {text})));
+  const name = plan.main.split("/").pop().replace(/(_[^_]*)?\.(bb|bbappend|conf)$/, "");
+  if (result.target) {
+    action(`Build ${result.target}`, "Queue the build now and follow it in Builds.", () => { $("target").value = result.target; $("target").dataset.touched = "1"; queue("build", {target: result.target}); }, true);
+    action("Make it the build target", "Put it in the target field; b builds it later.", () => { $("target").value = result.target; $("target").dataset.touched = "1"; toast("Target set", result.target, "success"); });
+  } else if (kind === "distro" || kind === "machine") {
+    action(`Build ${$("target").value || "the target"}`, `The next build uses the new ${kind === "distro" ? "DISTRO" : "MACHINE"} (see the steps above).`, () => queue("build", {target: $("target").value}), true);
+  } else if (kind === "append") {
+    action(`Rebuild ${name}`, "Build the recipe again so the change applies.", () => queue("build", {target: name}), true);
+  }
+  if (kind === "layer" || plan.new_layer) {
+    const layer = plan.layer;
+    action("Add a distribution to it", "Your product's name, version and policies.", () => startForm("distro", {layer}), kind === "layer");
+    action("Add an image to it", "What ends up on the device.", () => startForm("image", {layer}));
+  }
+  action("See it in Recipes", "Find the new files in the layer view.", () => { setView("recipes"); $("meta-search").value = name; renderLayers(); renderMeta(); });
+  action("Create something else", "Back to the list of what Studio creates.", () => showScreen("start"));
+  next.querySelector("button")?.focus();
 }
 
 /* Operations */
@@ -1975,35 +1970,22 @@ function wire() {
   $("retry-btn").addEventListener("click", () => control("retry"));
   $("st-create").addEventListener("click", createStudio);
   $("st-use").addEventListener("change", previewStudio);
-  $("ide-new-btn").addEventListener("click", (event) => { event.stopPropagation(); const menu = $("ide-menu"); menu.hidden = !menu.hidden; $("ide-new-btn").setAttribute("aria-expanded", String(!menu.hidden)); if (!menu.hidden) menu.querySelector("button")?.focus(); });
-  document.addEventListener("click", (event) => { if (!event.target.closest(".ide-new")) closeMenu(); });
-  $("ide-menu").addEventListener("keydown", (event) => {
-    const items = [...$("ide-menu").querySelectorAll("button")], at = items.indexOf(document.activeElement);
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); items[(at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); }
-    else if (event.key === "Escape") { event.stopPropagation(); closeMenu(); $("ide-new-btn").focus(); }
-  });
-  $("ide-save").addEventListener("click", saveFile);
-  $("ide-close-form").addEventListener("click", closeForm);
-  $("ide-refresh").addEventListener("click", async () => { ideFiles = {}; await loadLayers(); toast("Explorer", "Layers reloaded", "info"); });
-  $("ide-filter").addEventListener("input", renderTree);
-  for (const b of document.querySelectorAll(".ide-btabs button")) b.addEventListener("click", () => showBottom(b.dataset.b));
+  $("sg-next").addEventListener("click", () => showStep(sgStep + 1));
+  $("sg-back").addEventListener("click", () => showStep(sgStep - 1));
+  $("sg-restart").addEventListener("click", closeForm);
+  $("sg-edit").addEventListener("change", () => { renderEditor(); if ($("sg-edit").checked) $("ide-text").focus(); });
   $("ide-text").addEventListener("scroll", syncScroll);
-  $("ide-text").addEventListener("input", () => {
-    const tab = currentTab(); if (!tab) return;
-    if (tab.kind === "plan") { planEdits[tab.name] = $("ide-text").value; previewStudioSoon(); }
-    else tab.text = $("ide-text").value;
-    paintCode(); renderTabs(); $("ide-save").disabled = !(tab.kind === "file" && tab.writable && tab.text !== tab.original);
-    $("ide-path-state").textContent = tab.kind === "plan" ? "new · edited by hand" : tab.text !== tab.original ? "modified · Ctrl+S saves" : "saved";
-  });
-  $("ide-text").addEventListener("keydown", (event) => {
-    if (event.key === "Tab" && !event.shiftKey && !$("ide-text").readOnly) { event.preventDefault(); document.execCommand("insertText", false, "    "); }
-    else if ((event.ctrlKey || event.metaKey) && event.key === "s") { event.preventDefault(); event.stopPropagation(); saveFile(); }
-    else if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); createStudio(); }
-    else if (event.key === "Escape") { $("ide-text").blur(); }
+  $("ide-text").addEventListener("input", () => { if (!lastPlan || !(ideCurrent in lastPlan.files)) return; planEdits[ideCurrent] = $("ide-text").value; paintCode(); renderTabs(); previewStudioSoon(); });
+  $("ide-text").addEventListener("keydown", (event) => { if (event.key === "Tab" && !event.shiftKey && !$("ide-text").readOnly) { event.preventDefault(); document.execCommand("insertText", false, "    "); } });
+  $("st-form").addEventListener("keydown", (event) => {
+    // Enter moves on, as in any wizard; chips and selects keep their own Enter.
+    if (event.key === "Enter" && event.target.tagName === "INPUT" && event.target.type === "text") { event.preventDefault(); showStep(sgStep + 1); }
   });
   document.addEventListener("keydown", (event) => {
     if (view !== "studio") return;
-    if ((event.ctrlKey || event.metaKey) && event.key === "s") { event.preventDefault(); saveFile(); }
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); if (sgSteps[sgStep] === "review") createStudio(); else showStep(sgSteps.length - 1); }
+    else if (event.key === "Escape" && !$("sg-flow").hidden && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) && !document.querySelector("dialog[open]")) closeForm();
+    else if (event.key === "Escape" && !$("sg-done").hidden) showScreen("start");
   });
   for (const id of ["vu-source", "vu-status"]) $(id).addEventListener("change", loadVulns);
   for (const id of ["vu-min", "vu-q"]) $(id).addEventListener("input", () => { clearTimeout(vulnTimer); vulnTimer = setTimeout(loadVulns, 200); });
@@ -2070,7 +2052,6 @@ function wire() {
     else if (event.key === "?") { $("keys-dialog").showModal(); handled(); }
     else if (event.key === "b") { queue("build", {target: $("target").value}); handled(); }
     else if (event.key === "q") { openQueue(); handled(); }
-    else if (event.key === "n" && view === "studio") { $("ide-new-btn").click(); handled(); }
     else if (event.key === "t") { $("target").focus(); $("target").select(); openCombo(false); handled(); }
     else if (view === "builds") {
       const rows = state ? [...state.history.map((row) => row.id), ...consoleRows.map((row) => "console:" + row.path)] : [], index = rows.indexOf(selected);
