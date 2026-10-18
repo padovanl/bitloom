@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .models import Profile, read_assignments
-from .versions import describe, support
+from .versions import describe
 
 BEGIN = "# >>> bitloom sbom settings (managed: edit in Bitloom or remove the block) >>>"
 END = "# <<< bitloom sbom settings <<<"
@@ -27,9 +27,8 @@ class Option:
     cra: str = ""
     choices: tuple[str, ...] = ()
     default: str = ""
-    since: str = ""
-    until: str = ""
-    verified: bool = True         # False: first release not confirmed; verify with bitbake-getvar
+    needs: tuple[str, ...] = ()   # capabilities (bitloom/capabilities.py) the project's release must have
+    verified: bool = True         # False: the variable's first release is not confirmed; verify with bitbake-getvar
     lines: tuple[str, ...] = field(default=())  # extra fixed lines when enabled
     template: str = ""            # text options: assignment with {value}; default: <name>_name/_type
     on_since: str = ""            # Poky enables it by default from this release (shown as "on (default)")
@@ -40,65 +39,79 @@ OPTIONS = [
            "Writes IMAGE-MACHINE.spdx.json next to every image and per-recipe documents in tmp/deploy/spdx. "
            "Poky enables it by default; other distros may not. SPDX 3.0 is the default format from 5.1 and the only one in 6.0 Wrynose.",
            "CRA Annex I asks manufacturers to identify and document components, including a machine-readable SBOM of at least top-level dependencies.",
-           since="kirkstone", on_since="langdale"),
+           on_since="langdale"),
     Option("supplier", "Package supplier (SPDX_PACKAGE_SUPPLIER)", "text", "SPDX_PACKAGE_SUPPLIER",
            "Organisation recorded as suppliedBy for every package. Sets SPDX_PACKAGE_SUPPLIER_name and _type = \"organization\". "
            "Recipes can override it with SPDX_PACKAGE_SUPPLIER:pn-<recipe>.",
            "Identifies the manufacturer in the SBOM; scanners and authorities see who supplies each component.",
-           since="styhead", verified=False),
+           needs=("spdx-supplier-3",)),
     Option("supplier-22", "Supplier, SPDX 2.2 (SPDX_SUPPLIER)", "text", "SPDX_SUPPLIER",
            "SPDX 2.2 releases (up to 5.0 by default) record SPDX_SUPPLIER on every package; its default is the placeholder "
            "'Organization: OpenEmbedded ()', which does not identify your company.",
-           "Identifies the manufacturer in SPDX 2.2 SBOMs.", until="whinlatter", verified=False,
+           "Identifies the manufacturer in SPDX 2.2 SBOMs.", needs=("spdx2",),
            template='SPDX_SUPPLIER = "Organization: {value}"'),
     Option("image-supplier", "Image supplier (SPDX_IMAGE_SUPPLIER)", "text", "SPDX_IMAGE_SUPPLIER",
            "Organisation recorded as suppliedBy on the root elements of the image SBOM (_name, _type = \"organization\").",
-           "The product-level SBOM names the manufacturer placing it on the market.", since="styhead", verified=False),
+           "The product-level SBOM names the manufacturer placing it on the market.", needs=("spdx-supplier-3",)),
     Option("include-vex", "VEX data in SBOMs (SPDX_INCLUDE_VEX)", "choice", "SPDX_INCLUDE_VEX",
            "none: no VEX. current (default): vulnerabilities not fixed upstream. all: also historical, fixed ones (large and slow).",
            "VEX states whether a known vulnerability affects the product: the basis for vulnerability handling and user advisories.",
-           choices=("none", "current", "all"), default="current", since="styhead", verified=False),
+           choices=("none", "current", "all"), default="current", needs=("spdx3",), verified=False),
     Option("vex-class", "VEX metadata class", "inherit", "vex",
            "Adds do_generate_vex to every recipe; image builds produce a VEX report of all packages in DEPLOY_DIR_IMAGE for external scanners.",
-           "Lets external vulnerability tools assess the product without rebuilding it.", verified=False),
+           "Lets external vulnerability tools assess the product without rebuilding it.", needs=("vex",)),
     Option("sbom-cve-check", "sbom-cve-check on image builds", "fragment", "core/yocto/sbom-cve-check",
            "Post-build CVE analysis of the image's SPDX 3 SBOM (Bootlin sbom-cve-check). Enabled with "
            "bitbake-config-build enable-fragment; reports in DEPLOY_DIR_IMAGE according to SBOM_CVE_CHECK_EXPORT_VARS.",
-           "Continuous identification of known vulnerabilities in shipped components.", since="wrynose"),
+           "Continuous identification of known vulnerabilities in shipped components.", needs=("sbom-cve-check", "fragments")),
     Option("sbom-cve-warnings", "Warn on unpatched CVEs", "flag", "SBOM_CVE_CHECK_SHOW_WARNINGS",
            "Shows a build warning for each CVE with the Unpatched status found by sbom-cve-check.",
-           "Surfaces actionable vulnerabilities during development instead of after release.", since="wrynose"),
+           "Surfaces actionable vulnerabilities during development instead of after release.", needs=("sbom-cve-check",)),
     Option("cve-check", "cve-check class (pre-Wrynose)", "inherit", "cve-check",
            "Classic per-recipe CVE checking against the NVD database; summary in tmp/log/cve. Removed in 6.0 Wrynose, replaced by sbom-cve-check.",
-           "Continuous identification of known vulnerabilities on releases before 6.0.", until="whinlatter"),
+           "Continuous identification of known vulnerabilities on releases before 6.0.", needs=("cve-check",)),
     Option("include-sources", "Describe source files (SPDX_INCLUDE_SOURCES)", "flag", "SPDX_INCLUDE_SOURCES",
            "Adds every source file used in the build to the SPDX output. Much larger SBOMs; useful for licence audits.",
-           "Deeper component evidence when customers or auditors require file-level provenance.", since="kirkstone"),
+           "Deeper component evidence when customers or auditors require file-level provenance."),
     Option("compiled-sources", "Only compiled sources (SPDX_INCLUDE_COMPILED_SOURCES)", "flag", "SPDX_INCLUDE_COMPILED_SOURCES",
            "Like SPDX_INCLUDE_SOURCES but limited to files compiled into delivered packages, using debug-source information.",
            "File-level provenance focused on what is actually shipped.", verified=False),
     Option("kernel-config", "Kernel configuration in SBOM", "flag", "SPDX_INCLUDE_KERNEL_CONFIG",
            "Exports the Linux kernel .config as a separate Build object (SPDX 3.0 only).",
-           "Documents which kernel features (attack surface) are enabled.", since="styhead", verified=False),
+           "Documents which kernel features (attack surface) are enabled.", needs=("spdx3",), verified=False),
     Option("packageconfig", "PACKAGECONFIG in SBOM", "flag", "SPDX_INCLUDE_PACKAGECONFIG",
            "Exports PACKAGECONFIG features and their enabled/disabled state (SPDX 3.0 only).",
-           "Shows the configuration of each component, which decides whether a CVE applies.", since="styhead", verified=False),
+           "Shows the configuration of each component, which decides whether a CVE applies.", needs=("spdx3",), verified=False),
     Option("pretty", "Readable SBOM JSON (SPDX_PRETTY)", "flag", "SPDX_PRETTY",
-           "Indented, multi-line SPDX JSON. Easier to review and diff, larger on disk.", since="kirkstone"),
+           "Indented, multi-line SPDX JSON. Easier to review and diff, larger on disk."),
     Option("buildhistory", "Build history with Git commits", "inherit", "buildhistory",
            "Records image, package and SDK contents per build and commits them (BUILDHISTORY_COMMIT = \"1\"), so every change is diffable.",
-           "Traceability of what changed between released versions.", since="kirkstone", lines=('BUILDHISTORY_COMMIT = "1"',)),
+           "Traceability of what changed between released versions.", lines=('BUILDHISTORY_COMMIT = "1"',)),
 ]
 BY_ID = {option.id: option for option in OPTIONS}
 
 
-def availability(option: Option, series: str | None) -> tuple[bool | None, str]:
-    ok, reason = support(series, option.since, option.until)
+def availability(option: Option, series: str | None, profile=None) -> tuple[bool | None, str]:
+    """Whether the project's release has what the option needs (bitloom/capabilities.py)."""
+    from .capabilities import check_all
+    ok, reason = check_all(option.needs, series, profile)
     if ok is not False and not option.verified:
-        note = f"first release not confirmed; verify on {describe(series)} with bitbake-getvar {option.name}" if option.kind != "inherit" \
-            else f"first release not confirmed; the class must exist in {describe(series)}"
+        note = f"first release of {option.name} not confirmed; verify on {describe(series)} with bitbake-getvar {option.name}"
         return (None if ok is None else ok), (reason + "; " if reason else "") + note
     return ok, reason
+
+
+def requirement(option: Option) -> str:
+    """What the option needs, in a few words: 'SPDX 3.0 · 5.1+', 'any release'."""
+    from .capabilities import CAPABILITIES
+    from .versions import INFO
+    parts = []
+    for name in option.needs:
+        cap = CAPABILITIES[name]
+        version = lambda series: INFO[series][0] if series in INFO else series
+        span = f"{version(cap.since)}+" if cap.since and not cap.until else f"≤{version(cap.until)}" if cap.until and not cap.since else f"{version(cap.since)}–{version(cap.until)}" if cap.since else "with " + (cap.tool or cap.bbclass)
+        parts.append(f"{cap.title.split(' (')[0]} · {span}")
+    return "; ".join(parts) or "any release"
 
 
 def target(profile: Profile) -> Path:
@@ -221,8 +234,8 @@ def kas_files_with_overlay(profile: Profile) -> str | None:
     return None if OVERLAY in files else ":".join([*files, OVERLAY])
 
 
-def info_markdown(option: Option, series: str | None, state: str) -> str:
-    ok, reason = availability(option, series)
+def info_markdown(option: Option, series: str | None, state: str, profile=None) -> str:
+    ok, reason = availability(option, series, profile)
     badge = {True: "✔ available", False: "✖ not available", None: "? check"}[ok]
     lines = [f"## {option.title}", "", f"`{option.name}` · {option.kind} · **{badge}** in {describe(series)}" + (f" — {reason}" if reason else ""), "",
              option.info, ""]

@@ -280,11 +280,13 @@ def cra_checks(profile: Profile, state: Path | None = None, today: date | None =
     elif legacy:
         add("OK", "Vulnerability analysis", "cve-check summary in tmp/log/cve (pre-6.0 releases)")
     else:
-        from .versions import ORDER
-        if series in ORDER and ORDER[series] >= ORDER["wrynose"]:
+        from .capabilities import check
+        modern, _ = check("sbom-cve-check", series, profile)
+        classic, _ = check("cve-check", series, profile)
+        if modern:
             hint = "enable sbom-cve-check (Configuration → SBOM settings, or bitbake-config-build enable-fragment core/yocto/sbom-cve-check)"
-        elif series in ORDER:
-            hint = f'INHERIT += "cve-check" ({series} predates sbom-cve-check, which arrives with 6.0 Wrynose)'
+        elif classic:
+            hint = f'INHERIT += "cve-check" ({series or "this release"} predates sbom-cve-check, which arrives with 6.0 Wrynose)'
         else:
             hint = 'Wrynose: sbom-cve-check fragment; older releases: INHERIT += "cve-check"'
         add("WARN", "Vulnerability analysis", "none found: " + hint)

@@ -123,6 +123,10 @@ def _shell_value(raw: str) -> str:
     return re.split(r"\s+#|\s*;\s*|\s+&&\s+(?![^()]*\))", raw.strip())[0].replace('"', "").replace("'", "")
 
 
+def _bitbake_setup_dir(path: Path) -> bool:
+    return (path / "build/init-build-env").is_file() and (path / "config").is_dir() and (path / "layers").is_dir()
+
+
 def script_work_dir(script: Path, root: Path, variables: dict | None = None) -> str:
     """The KAS_WORK_DIR a launcher script sets or defaults to, with $HOME, $PWD, the script's folder,
     simple variables the script assigns (SCRIPT_DIR=…) and the profile's own variables (YML=kas/a.yml:
@@ -202,6 +206,19 @@ def detect(root: Path, profiles=()) -> list[Candidate]:
     if not root.is_dir():
         raise ValueError(f"{root} is not a directory")
     candidates = []
+    # bitbake-setup workspaces: this folder, or a top directory (bitbake-builds/ with site.conf) holding several.
+    setups = [root] if _bitbake_setup_dir(root) else [d for d in sorted(root.iterdir()) if d.is_dir() and _bitbake_setup_dir(d)] if (root / "site.conf").is_file() else []
+    for setup_dir in setups[:8]:
+        fragments = read_assignments(setup_dir / "build/conf/toolcfg.conf").get("OE_FRAGMENTS", "").split()
+        machine = next((f.split("/", 1)[1] for f in fragments if f.startswith("machine/")), "")
+        distro = next((f.split("/", 1)[1] for f in fragments if f.startswith("distro/")), "")
+        evidence = [f"bitbake-setup workspace {setup_dir.name}: build/init-build-env, config/ and layers/"]
+        if fragments:
+            evidence.append("fragments " + " ".join(fragments))
+        profile = {"name": slug(setup_dir.name)[:40], "root": str(setup_dir), "mode": "host", "init_script": "build/init-build-env",
+                   "build_dir": "build", "machine": machine, "distro": distro, "targets": ["core-image-minimal"]}
+        candidates.append(Candidate("host", f"bitbake-setup: {setup_dir.name}", evidence, profile, 35,
+                                    ["bitbake-setup status and update, and the configuration fragments, are in Operations (q / F2)."]))
     configs = kas_files(root)
     engine = "docker" if shutil.which("docker") else "podman" if shutil.which("podman") else "docker"
     for script, variables in launchers(root):

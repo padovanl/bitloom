@@ -654,7 +654,7 @@ class BitloomApp(App):
             self.notify("Wait for the Developer probe before queueing a command", severity="warning")
             return
         from .commands import availability
-        ok, reason = availability(action, self.release)
+        ok, reason = availability(action, self.release, self.profile)
         if ok is False:
             self.notify(f"{action.title}: {reason}", severity="warning", timeout=12)
             return

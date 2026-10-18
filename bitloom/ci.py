@@ -157,7 +157,7 @@ async def run(config: Path, state: Path, specs: list[str], profiles: list[str], 
         releases = {profile.name: detect_release(profile) for profile, _, _ in plan}
         for index, (profile, action, argv) in enumerate(plan, 1):
             title = f'{action.title} · {" ".join(argv[1 + len(action.args):])}' if action.inputs else action.title
-            ok, reason = availability(action, releases[profile.name])
+            ok, reason = availability(action, releases[profile.name], profile)
             if ok is False:
                 # Do what this release can do: skip with the alternative instead of failing the matrix.
                 output.annotate('warning', f'{profile.name}: {title} skipped', reason)

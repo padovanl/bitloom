@@ -166,12 +166,12 @@ class Dashboard:
 
     def actions(self):
         return [{"id": a.id, "group": a.group, "title": a.title, "inputs": list(a.inputs), "help": a.help,
-                 "interactive": a.interactive, "since": a.since, "until": a.until} for a in ACTIONS]
+                 "interactive": a.interactive, "needs": list(a.needs)} for a in ACTIONS]
 
     def release_check(self, action, profile):
         from .commands import availability
         from .versions import detect_release
-        return availability(action, detect_release(profile))
+        return availability(action, detect_release(profile), profile)
 
     def preview(self, body):
         action = BY_ID.get(body.get("action", ""))
@@ -301,7 +301,7 @@ class Dashboard:
 
     def compliance(self, query):
         from .sbom import DEADLINES, analyse, cra_checks, sbom_files
-        from .sbom_settings import OPTIONS, availability, current
+        from .sbom_settings import OPTIONS, availability, current, requirement
         from .versions import INFO, describe, detect_release
         profile = self.profile(query.get("profile", [""])[0])
         series = detect_release(profile)
@@ -314,10 +314,10 @@ class Dashboard:
         managed, elsewhere = current(profile)
         options = []
         for option in OPTIONS:
-            ok, reason = availability(option, series)
+            ok, reason = availability(option, series, profile)
             options.append({"id": option.id, "title": option.title, "name": option.name, "kind": option.kind, "info": option.info, "cra": option.cra,
                             "available": ok, "reason": reason, "value": managed.get(option.id) or elsewhere.get(option.id) or "",
-                            "since": option.since, "until": option.until, "verified": option.verified})
+                            "requires": requirement(option), "verified": option.verified})
         support = INFO.get(series)
         return {"release": describe(series), "series": series, "support_until": support[1].isoformat() if support else None, "lts": bool(support and support[2]),
                 "sboms": sboms, "checks": [{"status": s, "item": i, "detail": d} for s, i, d in cra_checks(profile, self.state)],
@@ -498,8 +498,12 @@ class Dashboard:
         return {"active": profiles[0].name, "saved": [p.name for p in profiles]}
 
     def health(self, query):
+        from .capabilities import matrix
+        from .versions import describe, detect_release
         profile = self.profile(query.get("profile", [""])[0])
-        return {"checks": [{"status": s, "name": n, "detail": d} for s, n, d in diagnostics(profile)]}
+        series = detect_release(profile)
+        return {"checks": [{"status": s, "name": n, "detail": d} for s, n, d in diagnostics(profile)],
+                "release": describe(series) if series else "release unknown", "capabilities": matrix(series, profile)}
 
     def entries(self, profile):
         """The workspace metadata, organised by layer; a walk takes ~0.7 s, so it is reused for 30 s."""

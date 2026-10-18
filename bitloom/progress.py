@@ -55,13 +55,15 @@ class TaskProgress(Static):
         fraction = self.fraction()
         # Label: "252 / 420 tasks", then percentage and ETA; the bar takes what is left.
         label = Text()
-        if self.total:
+        if self.status == "success":
+            label.append("done", style="bold")
+            if self.total:
+                label.append(f" · {self.total:,} tasks", style=muted)
+        elif self.total:
             label.append(f"{self.done:,}", style="bold")
             label.append(f" / {self.total:,} tasks", style=muted)
         elif self.status == "running":
             label.append("waiting for task counts", style=muted)
-        elif self.status == "success":
-            label.append("done", style=muted)
         right = Text()
         if fraction is not None:
             right.append(f"{100 * fraction:.0f}%" if fraction in (0, 1) or fraction >= .995 else f"{100 * fraction:.1f}%", style=f"bold {color}")
