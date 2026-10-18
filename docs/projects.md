@@ -47,6 +47,17 @@ Bitloom writes `kas.yml` pinned to the release tags verified by its own real bui
 
 ![New project form with the generated kas.yml](assets/new-project.png)
 
+### With bitbake-setup
+
+From Yocto 5.3 (BitBake 2.16) the Yocto Project ships its own setup tool, `bitbake-setup`, with official configuration templates. For a Wrynose project choose **Set up with → bitbake-setup**; for Scarthgap the option is shown as not available (its BitBake has no bitbake-setup), and kas is used.
+
+* **MACHINE** and **DISTRO** are the ones the official `poky-wrynose` template offers: `qemux86-64`, `qemuarm64`, `qemuriscv64`, `genericarm64`, `genericx86-64`; `poky`, `poky-altcfg` (systemd), `poky-tiny`. They become configuration fragments (`machine/…`, `distro/…` in `build/conf/toolcfg.conf`).
+* **Runtime**: *container* runs bitbake-setup, and later every build, in the kas build image (`ghcr.io/siemens/kas/kas`), with the project mounted at its own path because bitbake-setup writes absolute paths; nothing to install but Docker or Podman. *host* needs the Yocto host packages, and Bitloom checks the usual blockers first (the `en_US.UTF-8` locale, compilers, `chrpath`, `diffstat`, `lz4c`, `zstd`) and says what to install.
+* The preview shows the exact command. **Create** runs it as a job you follow in Builds: `bitbake-setup --setting default top-dir-prefix … init --non-interactive --setup-dir-name <name> poky-wrynose poky machine/<machine> distro/<distro>`. When `bitbake-setup` is not on your `PATH`, BitBake is fetched once at the release tag (`yocto-6.0.2`) into `~/.cache/bitloom`.
+* When the job succeeds the profile is saved and becomes active: `b` builds. Add your own layer with Studio → Layer, and enable more fragments with Operations → *Enable a configuration fragment*; *bitbake-setup: compare with upstream* and *update* keep the layers current.
+
+![New project with bitbake-setup: the official template's choices and the command it runs](assets/web-new-project-bbsetup.png)
+
 ## Clone from GitHub or Git
 
 Press **`g`** in the hub (web: **Clone from Git**), enter an `https://`, `ssh://`, `git@` or `file://` URL, the destination (suggested from the URL until you edit it) and an optional branch or tag. Your Git credentials and SSH agent are used as in a terminal.
@@ -68,7 +79,7 @@ The Configuration section has the same three parts: **Projects** (recent list, N
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/projects` | Recent projects, releases, machines and images |
-| `POST /api/projects/preview`, `/create` | Plan or create a new project `{name, dir, release, machine, distro, target, runtime, layer, owner}` |
+| `POST /api/projects/preview`, `/create` | Plan or create a new project `{name, dir, release, machine, distro, target, runtime, layer, owner, tool}`; with `tool: "bitbake-setup"` (runtime `container` or `host`) create returns the job id and the profile to save when it succeeds |
 | `POST /api/projects/clone` | Clone `{url, dest, branch}` as a job; returns the job id |
 | `GET /api/setup/scan?dir=…` | Proposals for a folder |
 | `POST /api/setup/check`, `/save` | Check or save `{profile}`; saving makes it active |

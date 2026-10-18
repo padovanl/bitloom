@@ -385,12 +385,16 @@ class Dashboard:
     def projects(self):
         from .projects import IMAGES, MACHINES, RELEASES, Recent, project_rows
         items = project_rows(self.settings(), Recent(self.state))
+        from .bbsetup import TEMPLATES
         return {"recent": items, "releases": {k: v["title"] for k, v in RELEASES.items()}, "machines": list(MACHINES), "images": list(IMAGES),
+                "bbsetup": {k: {"machines": list(v["machines"]), "distros": list(v["distros"]), "config": v["config"]} for k, v in TEMPLATES.items()},
                 "home": str(Path.home())}
 
     def project_plan(self, body):
-        from .projects import new_project_plan
+        from .projects import bbsetup_plan, new_project_plan
         values = {k: str(body.get(k, "")) for k in ("dir", "name", "release", "machine", "distro", "target", "owner")}
+        if body.get("tool") == "bitbake-setup":
+            return bbsetup_plan(values["dir"], values["name"], values["release"], values["machine"], values["distro"], str(body.get("configuration") or "poky"))
         return new_project_plan(values["dir"], values["name"], values["release"], values["machine"], values["distro"], values["target"],
                                 body.get("layer") is True, values["owner"])
 
@@ -399,12 +403,24 @@ class Dashboard:
         from .setup import save
         plan = self.project_plan(body)
         runtime = body.get("runtime", "kas-container")
+        if plan.get("tool") == "bitbake-setup":
+            return self.project_bbsetup(plan, body, runtime)
         if runtime not in {"kas", "kas-container"}:
             raise ValueError("runtime must be kas or kas-container")
         profile = create_project(plan, runtime)
         save(self.settings(), profile)
         Recent(self.state).add(profile.root_path, profile.name, "created")
         return {"active": profile.name, "root": str(profile.root_path)}
+
+    def project_bbsetup(self, plan, body, runtime):
+        """Run bitbake-setup as a job; the page saves the returned profile when the job succeeds."""
+        from dataclasses import asdict
+        from .projects import bbsetup_request
+        request = bbsetup_request(plan, runtime, str(body.get("machine", "")), str(body.get("distro", "")), str(body.get("target", "")))
+        Path(request["top"]).mkdir(parents=True, exist_ok=True)
+        helper = Profile(name="bitbake-setup", root=request["top"], build_dir=request["top"])
+        result = self.rpc({"op": "submit", "profile": asdict(helper), "title": "bitbake-setup init " + plan["name"], "command": request["job"], "action_id": "project-bbsetup"})
+        return {"id": result["job"]["id"], "dest": request["dest"], "profile": asdict(request["profile"])}
 
     def project_clone(self, body):
         from dataclasses import asdict

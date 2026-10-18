@@ -385,6 +385,7 @@ class BitloomApp(App):
         self.capability_cache = {}
         self.release = None
         self.pending_clones: dict[str, str] = {}
+        self.pending_setups: dict[str, Profile] = {}
         self.pending_scans: set[str] = set()
         self.announced: set[str] = set()
         self.seen_status: dict[str, str] = {}
@@ -1483,6 +1484,11 @@ class BitloomApp(App):
                 self.pending_scans.discard(job.id)
                 if job.status == "success":
                     self.call_after_refresh(self.open_vulnerabilities)
+            made = self.pending_setups.pop(job.id, None) if job.status in {"success", "failed", "cancelled"} else None
+            if made and job.status == "success":
+                self.new_project_result(made)
+            elif made:
+                self.notify(f"bitbake-setup for {made.name} did not finish: see its output in Builds", severity="warning", timeout=12)
             destination = self.pending_clones.get(job.id) if job.status in {"success", "failed", "cancelled"} else None
             if destination:
                 del self.pending_clones[job.id]
@@ -1749,6 +1755,19 @@ class BitloomApp(App):
 
     def new_project_result(self, profile):
         if not profile:
+            return
+        if isinstance(profile, dict):
+            # bitbake-setup: a visible job; the profile is saved when it succeeds (see job_update).
+            try:
+                Path(profile["top"]).mkdir(parents=True, exist_ok=True)
+                helper = Profile(name="bitbake-setup", root=profile["top"], build_dir=profile["top"])
+                job = self.runner.submit(helper, "bitbake-setup init " + profile["profile"].name, profile["job"], "project-bbsetup")
+            except (OSError, ValueError) as exc:
+                self.notify(str(exc), severity="error", timeout=10)
+                return
+            self.pending_setups[job.id] = profile["profile"]
+            self.select_job(job.id, job.log)
+            self.action_section("builds")
             return
         from .projects import Recent
         from .setup import save

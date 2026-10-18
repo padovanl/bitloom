@@ -1638,8 +1638,10 @@ class NewProjectScreen(ModalScreen):
                         ("machine", "MACHINE", Select([(m, m) for m in MACHINES], value="qemux86-64", allow_blank=False, id="np-machine"), "Start on QEMU; derive your board later in Studio."),
                         ("distro", "DISTRO", Input(value="poky", id="np-distro"), "poky, or the id of your own distribution created later with Studio."),
                         ("target", "Image", Select([(i, i) for i in IMAGES], value="core-image-minimal", allow_blank=False, id="np-target"), "The image built by b."),
+                        ("tool", "Set up with", Select([("kas: one kas.yml with pinned repositories", "kas"), ("bitbake-setup: the official templates (Wrynose)", "bitbake-setup")],
+                                                       value="kas", allow_blank=False, id="np-tool"), "bitbake-setup exists from BitBake 2.16 (Yocto 5.3); it runs as a job you follow in Builds."),
                         ("runtime", "Runtime", Select([("kas-container (recommended)", "kas-container"), ("kas on the host", "kas")], value="kas-container", allow_blank=False, id="np-runtime"),
-                         "kas-container brings every Yocto host dependency in a container."),
+                         "kas-container brings every Yocto host dependency in a container. With bitbake-setup: container (the kas build image) or host."),
                     ]:
                         yield Label(label, classes="field-label")
                         yield widget
@@ -1657,8 +1659,10 @@ class NewProjectScreen(ModalScreen):
         self.refresh_preview()
 
     def plan(self):
-        from .projects import new_project_plan
+        from .projects import bbsetup_plan, new_project_plan
         value = lambda ident: str(getattr(self.query_one("#np-" + ident), "value"))
+        if value("tool") == "bitbake-setup":
+            return bbsetup_plan(value("dir"), value("name"), value("release"), value("machine"), value("distro"))
         return new_project_plan(value("dir"), value("name"), value("release"), value("machine"), value("distro"), value("target"),
                                 bool(self.query_one("#np-layer").value), value("owner"))
 
@@ -1670,6 +1674,14 @@ class NewProjectScreen(ModalScreen):
         self.refresh_preview()
 
     def on_select_changed(self, event):
+        if event.select.id == "np-tool":
+            runtime = self.query_one("#np-runtime", Select)
+            if event.value == "bitbake-setup":
+                runtime.set_options([("container: the kas build image (recommended)", "container"), ("host: needs the Yocto host packages", "host")])
+                runtime.value = "container"
+            else:
+                runtime.set_options([("kas-container (recommended)", "kas-container"), ("kas on the host", "kas")])
+                runtime.value = "kas-container"
         self.refresh_preview()
 
     def on_checkbox_changed(self, event):
@@ -1684,6 +1696,12 @@ class NewProjectScreen(ModalScreen):
         except ValueError as exc:
             log.write(Text("✖ " + str(exc), style=self.app.current_theme.error))
             return
+        if plan.get("tool") == "bitbake-setup":
+            log.write(Text("Runs as a job", style=f"bold {self.app.current_theme.success}"))
+            log.write(Text(plan["display"]))
+            log.write(Text(f"\nCreates {plan['setup']}: layers/, build/ with init-build-env and the MACHINE and DISTRO fragments. The profile is saved when the job succeeds."))
+            log.scroll_home(animate=False)
+            return
         for name in ("kas.yml", "README.md", ".gitignore"):
             log.write(Text("+++ " + name, style=f"bold {self.app.current_theme.success}"))
             log.write(Text(plan["files"][name]))
@@ -1692,10 +1710,15 @@ class NewProjectScreen(ModalScreen):
         log.scroll_home(animate=False)
 
     def action_create(self):
-        from .projects import create_project
+        from .projects import bbsetup_request, create_project
         try:
             plan = self.plan()
-            profile = create_project(plan, str(self.query_one("#np-runtime", Select).value))
+            runtime = str(self.query_one("#np-runtime", Select).value)
+            if plan.get("tool") == "bitbake-setup":
+                self.dismiss(bbsetup_request(plan, runtime, str(self.query_one("#np-machine", Select).value), self.query_one("#np-distro", Input).value.strip(),
+                                             str(self.query_one("#np-target", Select).value)))
+                return
+            profile = create_project(plan, runtime)
         except (OSError, ValueError) as exc:
             self.notify(str(exc), severity="error", timeout=10)
             return

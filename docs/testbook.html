@@ -535,6 +535,11 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <td>The checkout: kas proposals for <code>kas-minimal.yml</code> and <code>kas-wrynose.yml</code> with evidence. The work directory: only a host proposal, marked as the kas work directory of <code>kas-wrynose</code> with a warning to switch with <code>P</code> instead. <code>Esc</code> without saving. Web: <code>8</code> → <em>Set up a project</em> shows the same.</td>
 </tr>
 <tr>
+<td>9.3b</td>
+<td>Web <code>8</code> → <em>New project</em>: release Scarthgap, open <em>Set up with</em>; then Wrynose, <em>bitbake-setup</em>, MACHINE <code>qemuarm64</code>, folder <code>~/bitloom-bbsetup-try</code>, runtime <em>container</em>, <em>Create project</em>.</td>
+<td>Scarthgap: <em>bitbake-setup: not available for this release (BitBake 2.16+)</em>. Wrynose: the machine list becomes the template's five machines, the preview shows the <code>bitbake-setup … init --non-interactive … poky-wrynose poky machine/qemuarm64 distro/poky</code> command. Create: a job in Builds (≈30 s with network) ending with <em>setup ready</em>; the profile <code>my-product</code> (container, kas image) becomes active; <code>bitbake-getvar MACHINE</code> via <em>Resolve one BitBake variable</em> answers <code>qemuarm64</code>. Remove the folder and the profile afterwards.</td>
+</tr>
+<tr>
 <td>9.3</td>
 <td><code>n</code> (new project).</td>
 <td>Release, MACHINE, image and runtime fields with a live preview; <code>Esc</code> without creating.</td>

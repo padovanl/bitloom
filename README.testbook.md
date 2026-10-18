@@ -183,6 +183,7 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | --- | --- | --- |
 | 9.1 | `9`, `w` (projects). | Recent projects; the active one marked *active*. |
 | 9.2 | `o`, Enter on the project folder (the Bitloom checkout). Then `o` again with `~/bitloom-kas-wrynose`. | The checkout: kas proposals for `kas-minimal.yml` and `kas-wrynose.yml` with evidence. The work directory: only a host proposal, marked as the kas work directory of `kas-wrynose` with a warning to switch with `P` instead. `Esc` without saving. Web: `8` → *Set up a project* shows the same. |
+| 9.3b | Web `8` → *New project*: release Scarthgap, open *Set up with*; then Wrynose, *bitbake-setup*, MACHINE `qemuarm64`, folder `~/bitloom-bbsetup-try`, runtime *container*, *Create project*. | Scarthgap: *bitbake-setup: not available for this release (BitBake 2.16+)*. Wrynose: the machine list becomes the template's five machines, the preview shows the `bitbake-setup … init --non-interactive … poky-wrynose poky machine/qemuarm64 distro/poky` command. Create: a job in Builds (≈30 s with network) ending with *setup ready*; the profile `my-product` (container, kas image) becomes active; `bitbake-getvar MACHINE` via *Resolve one BitBake variable* answers `qemuarm64`. Remove the folder and the profile afterwards. |
 | 9.3 | `n` (new project). | Release, MACHINE, image and runtime fields with a live preview; `Esc` without creating. |
 | 9.4 | `9`, `o`, `^T`. | A test notification arrives. |
 
