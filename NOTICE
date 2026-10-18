@@ -1,0 +1,30 @@
+Bitloom
+Copyright (C) 2026 Luca Padovan <https://github.com/padovanl/bitloom>
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License (LICENSE) for
+more details.
+
+Additional terms under section 7 of the GNU Affero General Public License
+-------------------------------------------------------------------------
+
+a) Attribution (section 7(b)). Every copy and every modified version must keep
+   this NOTICE file and the attribution "Bitloom, originally created by Luca
+   Padovan (https://github.com/padovanl/bitloom)" in its documentation and in
+   the Appropriate Legal Notices it displays: the "About" line of the web
+   dashboard and the output of "bitloom --version".
+
+b) Origin (section 7(c)). Modified versions must be marked as modified and must
+   not be presented as the original Bitloom.
+
+c) Name (section 7(e)). This license grants no right to use the name "Bitloom"
+   or its logo for a modified version or for a product or service, other than
+   to say truthfully that it is based on Bitloom.
+
+Bundled and installed third-party components keep their own licenses.

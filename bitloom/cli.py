@@ -108,7 +108,7 @@ def make_demo(directory: Path, release: str | None = None):
 def main():
     from . import __version__
     parser = argparse.ArgumentParser(description="Bitloom — Yocto / BitBake development cockpit")
-    parser.add_argument("--version", action="version", version=f"bitloom {__version__}")
+    parser.add_argument("--version", action="store_true", help="Show the version, the author and the licence, and exit")
     parser.add_argument("--config", type=Path, default=Path(".bitloom/profiles.json"))
     parser.add_argument("--state", type=Path, default=Path(".bitloom"))
     parser.add_argument("--demo", action="store_true", help="Create an isolated sample workspace; no fake build execution")
@@ -144,6 +144,10 @@ def main():
     parser.add_argument("--port", type=int, default=8765, help="Web dashboard port (0 picks a free one)")
     parser.add_argument("--no-browser", action="store_true", help="Do not open a browser for --web")
     args = parser.parse_args()
+    if args.version:
+        print(f"bitloom {__version__}\nBitloom, originally created by Luca Padovan (https://github.com/padovanl/bitloom)\n"
+              "AGPL-3.0-or-later: free software, see LICENSE and NOTICE")
+        return 0
     from .models import ConfigError
     try:
         _commands(parser, args)
