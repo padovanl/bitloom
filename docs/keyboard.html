@@ -461,6 +461,21 @@
 </tr>
 </tbody>
 </table>
+<h2 id="0--help">0 · Help<a class="anchor" href="#0--help" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>c</code></td>
+<td>Customise keys</td>
+</tr>
+</tbody>
+</table>
 <h2 id="dialogs">Dialogs<a class="anchor" href="#dialogs" aria-label="Link to this section">#</a></h2>
 <table>
 <thead>
@@ -508,11 +523,18 @@
 </tr>
 </tbody>
 </table>
+<h2 id="your-own-keys">Your own keys<a class="anchor" href="#your-own-keys" aria-label="Link to this section">#</a></h2>
+<p>Every key in the section tables above can be changed. In the TUI open <strong>Help (<code>0</code>) → <code>c</code></strong> (or Ctrl+P → <em>Customise keys</em>), select an action, press <code>Enter</code>, then the new key: a letter (Shift for capitals), Ctrl or Alt with a letter, F11 or F12. <code>r</code> resets one, <code>R</code> resets all. Bitloom refuses a key that another action of the same section already uses, and the keys that work everywhere (numbers, <code>j</code>/<code>k</code>, <code>/</code>, <code>?</code>, <code>[</code>/<code>]</code>, <code>P</code>, F1–F10, the nano Ctrl keys). The new keys apply from the next start (Ctrl+Q detaches; builds keep running); buttons, the footer and <code>?</code> show them.</p>
+<p>They are saved in <code>~/.config/bitloom/keys.json</code> (or the file named by <code>BITLOOM_KEYS</code>), which you can also edit or share:</p>
+<pre><code class="language-json">{&quot;builds&quot;: {&quot;Stop&quot;: &quot;S&quot;, &quot;Retry&quot;: &quot;ctrl+r&quot;}, &quot;analysis&quot;: {&quot;Analyze&quot;: &quot;A&quot;}}
+</code></pre>
+<p><code>bitloom --keys</code> prints the keys in use and why any were refused (exit status 1 when one was); the TUI says it at start.</p>
+<details class="shot"><summary><span>Screenshot</span> Customise keys: Stop moved to S, a reserved key refused</summary><div class="shot-body"><img src="assets/custom-keys.png" alt="Customise keys: Stop moved to S, a reserved key refused" loading="lazy" decoding="async"></div></details>
 </article>
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="projects.html"><small>Previous</small>Projects and setup</a><a class="next" href="web.html"><small>Next</small>Web dashboard</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/keyboard.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#everywhere">Everywhere</a><a href="#1--builds">1 · Builds</a><a href="#2--recipes">2 · Recipes</a><a href="#3--task-logs">3 · Task logs</a><a href="#4--environment">4 · Environment</a><a href="#5--caches">5 · Caches</a><a href="#6--artifacts">6 · Artifacts</a><a href="#7--analysis">7 · Analysis</a><a href="#8--developer">8 · Developer</a><a href="#9--configuration">9 · Configuration</a><a href="#dialogs">Dialogs</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#everywhere">Everywhere</a><a href="#1--builds">1 · Builds</a><a href="#2--recipes">2 · Recipes</a><a href="#3--task-logs">3 · Task logs</a><a href="#4--environment">4 · Environment</a><a href="#5--caches">5 · Caches</a><a href="#6--artifacts">6 · Artifacts</a><a href="#7--analysis">7 · Analysis</a><a href="#8--developer">8 · Developer</a><a href="#9--configuration">9 · Configuration</a><a href="#0--help">0 · Help</a><a href="#dialogs">Dialogs</a><a href="#your-own-keys">Your own keys</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

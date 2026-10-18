@@ -1,6 +1,8 @@
 """Generate the complete command reference from the executable action catalog."""
+import os
 import sys
 from pathlib import Path
+os.environ["BITLOOM_KEYS"] = "default"   # the documented keys are the defaults, whatever this machine customised
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from bitloom.capabilities import CAPABILITIES

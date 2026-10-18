@@ -151,6 +151,7 @@ def main():
     parser.add_argument("--service-install", action="store_true", help="Run the build service as a systemd user service (with --web also the dashboard, with a stable URL)")
     parser.add_argument("--service-uninstall", action="store_true", help="Stop and remove the systemd user services")
     parser.add_argument("--service-name", default="bitloom", help="Unit name for --service-install/--service-uninstall (default bitloom)")
+    parser.add_argument("--keys", action="store_true", help="Show the section keys in use (yours from ~/.config/bitloom/keys.json, and why any were refused)")
     parser.add_argument("--persistent-token", action="store_true", help="--web: keep the dashboard token in the state folder, so the URL survives restarts")
     parser.add_argument("--web", action="store_true", help="Serve the web dashboard (shares the build service with the TUI)")
     parser.add_argument("--host", default="127.0.0.1", help="Web dashboard address (default: loopback only)")
@@ -169,6 +170,14 @@ def main():
 
 
 def _commands(parser, args) -> None:
+    if args.keys:
+        from .keys import OVERRIDE_ERRORS, SECTION_TITLES, effective_table, keys_file
+        print(f"Section keys · yours in {keys_file()}" + ("" if keys_file().is_file() else " (none yet)"))
+        for section, label, key, default in effective_table():
+            print(f"  {SECTION_TITLES.get(section, section):<14} {label:<22} {key:<8} {'(default ' + default + ')' if key != default else ''}")
+        for error in OVERRIDE_ERRORS:
+            print("✖ " + error)
+        raise SystemExit(1 if OVERRIDE_ERRORS else 0)
     if args.service_install or args.service_uninstall:
         from . import userservice
         try:

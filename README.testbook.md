@@ -177,6 +177,14 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 8c.4 | *Export* → Markdown. In a shell: `bitloom --config .validation/profiles.json --practices --profile kas-wrynose; echo "exit $?"`, then with `--fail-on never`. | The report downloads; the CLI prints the same review and exits 2 with errors, 0 with `--fail-on never`. |
 | 8c.5 | Delete the rule and the file (`rm bitloom-practices.json`). | The defaults are back. |
 
+### Stage 8d — Your own keys (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8d.1 | TUI: `0`, `c`. Enter on *Builds · Stop*, press `S`. Enter on *Retry*, press `e`; then `1`. | *✔ Stop: S · saved*; `e` refused (*already does “Errors”*), `1` refused (*reserved*). The table marks `S *`. |
+| 8d.2 | `Esc`, `Ctrl+Q`, start `bitloom` again; `1`, then `S` on a running job; `?`. Then `bitloom --keys`. | `S` stops the job; the Stop button and `?` show `S`; `--keys` lists `S (default s)`. |
+| 8d.3 | Edit `~/.config/bitloom/keys.json` to `{"builds": {"Stop": "j"}}`, start `bitloom`. Then `0`, `c`, `R`. | A warning at start (*reserved*), default keys kept; `R` restores every default and removes the file. |
+
 ### Stage 9 — Projects, setup and notifications (no builds)
 
 | # | Do | You should see |

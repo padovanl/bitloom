@@ -55,7 +55,7 @@ Over SSH keep the default loopback address and tunnel it: `ssh -L 8765:127.0.0.1
 
 ## ⌨️ Terminal UI
 
-`bitloom` opens the same service in the terminal, for SSH sessions and keyboard-only work: numbers open sections, letters act, `/` searches, `?` lists every key, editors use nano keys (`^O`, `^X`, `^W`). TUI and dashboard share queue and history, so a build started in one is followed in the other. → [Keyboard](docs/keyboard.md)
+`bitloom` opens the same service in the terminal, for SSH sessions and keyboard-only work: numbers open sections, letters act, `/` searches, `?` lists every key, editors use nano keys (`^O`, `^X`, `^W`), and every section key can be changed (Help → `c`). TUI and dashboard share queue and history, so a build started in one is followed in the other. → [Keyboard](docs/keyboard.md)
 
 ![Bitloom terminal UI](docs/assets/welcome.png)
 

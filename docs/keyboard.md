@@ -135,6 +135,12 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `v` | Versions |
 | `n` | Network |
 
+## 0 · Help
+
+| Key | Action |
+| --- | --- |
+| `c` | Customise keys |
+
 ## Dialogs
 
 | Key | Action |
@@ -148,3 +154,17 @@ Bitloom is fully usable without a mouse. Section keys work while a table, tree o
 | `Enter` | Command center: queue the selected operation |
 | `↑ / ↓` | Command center filter: choose the operation |
 | `f / g / k` | Interruption dialog: finish, graceful stop, force |
+
+## Your own keys
+
+Every key in the section tables above can be changed. In the TUI open **Help (`0`) → `c`** (or Ctrl+P → *Customise keys*), select an action, press `Enter`, then the new key: a letter (Shift for capitals), Ctrl or Alt with a letter, F11 or F12. `r` resets one, `R` resets all. Bitloom refuses a key that another action of the same section already uses, and the keys that work everywhere (numbers, `j`/`k`, `/`, `?`, `[`/`]`, `P`, F1–F10, the nano Ctrl keys). The new keys apply from the next start (Ctrl+Q detaches; builds keep running); buttons, the footer and `?` show them.
+
+They are saved in `~/.config/bitloom/keys.json` (or the file named by `BITLOOM_KEYS`), which you can also edit or share:
+
+```json
+{"builds": {"Stop": "S", "Retry": "ctrl+r"}, "analysis": {"Analyze": "A"}}
+```
+
+`bitloom --keys` prints the keys in use and why any were refused (exit status 1 when one was); the TUI says it at start.
+
+![Customise keys: Stop moved to S, a reserved key refused](assets/custom-keys.png)
