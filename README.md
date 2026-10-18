@@ -24,17 +24,18 @@ bitloom --web              # prints the URL (with its access token) and opens yo
 
 * **Builds**: live history (new jobs slide in on top), streaming output with search and an errors-only view, progress and ETA, stop, graceful stop and retry, Toaster-style **Summary**, **Sstate reuse**, **Warnings**, **Timings** and **Compare** with the previous run, root-cause diagnosis of failures.
 * **Target picker**: the build field lists the image recipes found in your layers, kas target and images already built first.
+* **Image explorer**: what you built, file by file, with sizes, the biggest packages and folders, and the package and recipe behind every file. *Which recipe installs…* answers for any file or package (also `bitloom --who-installs /etc/motd`), and *Change it with an append* opens Studio already filled in, starting from the file as it is on the device.
 * **Recipes**: every layer with its counts, folders (`recipes-core`, `classes-recipe`…) that open on demand, filters for recipes, images, appends, classes and kas files, *Use as target*.
 * **SBOM & CRA**: release support, SBOM quality gauges, vulnerabilities from sbom-cve-check, cve-check and Grype, exports to Markdown, HTML, CSV, JSON and SARIF, CRA readiness.
 * **Studio**: create a layer, distribution, machine, image, recipe or append one step at a time: every option explained, where the files go and their content shown as you choose, a review of exactly what Create will do, then the next step (build it, use it, add an image to the new layer).
-* **Projects**: guided setup from a folder (kas files, Poky checkouts, `YML=… ./run_kas.sh build` launcher scripts, one profile per product), new projects pinned to Scarthgap or Wrynose, clone from Git.
+* **Projects**: guided setup from a folder (kas files, bitbake-setup workspaces, Poky checkouts, `YML=… ./run_kas.sh build` launcher scripts, one profile per product), new projects pinned to Scarthgap or Wrynose, clone from Git.
 * `Ctrl+K` palette, `?` keys, toasts and browser notifications, light and dark themes, phone and tablet layouts. → [Web dashboard](docs/web.md)
 
 ![A real force compile of busybox followed live in the dashboard, then its summary](docs/assets/web-clip-build.gif)
 
 *A real run, recorded as it happened (about three times faster): force compile of busybox through a `YML=… ./run_kas.sh` launcher profile on Wrynose.*
 
-| ![Typing in the target field filters the project's images](docs/assets/web-clip-target.gif) | ![A failed build: the summary opens on the diagnosis](docs/assets/web-clip-failure.gif) |
+| ![Image explorer: from a file to the append that changes it](docs/assets/web-clip-image.gif) | ![A failed build: the summary opens on the diagnosis](docs/assets/web-clip-failure.gif) |
 | --- | --- |
 | ![Recipes: a layer, the Images filter, a search](docs/assets/web-clip-recipes.gif) | ![Studio: choosing an image, walking its steps, the review](docs/assets/web-clip-studio.gif) |
 
@@ -49,7 +50,8 @@ Over SSH keep the default loopback address and tunnel it: `ssh -L 8765:127.0.0.1
 ## Highlights
 
 * **Builds that survive the window**: a local build service with a serial queue and history; detach, reconnect, follow from the browser or the terminal. Graceful stop and recovery.
-* **SBOM, CRA and releases**: SPDX 3 / 2.2 quality, VEX, vulnerabilities with reports, CRA readiness and timeline, SBOM settings with explanations; features follow the detected Yocto release. → [Compliance](docs/compliance.md)
+* **Release aware**: one registry knows what each Yocto release can do (SPDX 2.2 or 3.0, cve-check or sbom-cve-check, VEX, fragments, bitbake-setup…), checked in the project's own layers and BitBake; what a release lacks is never offered, and Bitloom says what to use instead. → [Release capabilities](docs/commands.md#release-capabilities)
+* **SBOM, CRA and releases**: SPDX 3 / 2.2 quality, VEX, vulnerabilities with reports, CRA readiness and timeline, SBOM settings with explanations. → [Compliance](docs/compliance.md)
 * **Studio**: your own distribution, machines, images, recipes and layers, explained field by field. → [Studio](docs/studio.md)
 * **Developer workbench** (`F10` in the TUI): variable origins, rebuild signatures, failed-task investigation, devtool, SDK/IDE setup, image comparisons, devices. → [Developer](docs/developer.md)
 * **Daily helpers**: notifications when a build ends (desktop, ntfy, Slack/Teams), ETA, run comparison, tmp/work usage. → [Guide](docs/guide.md#daily-helpers)
@@ -89,7 +91,7 @@ bitloom --web              # in your project: the guided setup proposes a profil
 | | |
 | --- | --- |
 | [User guide](docs/guide.md) | Profiles and runtimes, workflows, logs, caches, analysis, themes, troubleshooting |
-| [Manual testbook](README.testbook.md) | Step-by-step acceptance of every feature and all 74 operations |
+| [Manual testbook](README.testbook.md) | Step-by-step acceptance of every feature and all 79 operations |
 | [Command reference](docs/commands.md) · [Keyboard](docs/keyboard.md) | Generated from the code |
 | [Validation](docs/validation.md) | Real Scarthgap and Wrynose builds through kas-container and what was verified |
 | [Research map](docs/roadmap.md) | Sources, criticisms of earlier Yocto interfaces and how Bitloom answers them |

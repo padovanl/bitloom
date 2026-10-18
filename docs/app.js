@@ -46,6 +46,8 @@ const PHRASES = [
   ['Your own distro,', 'explained line by line.'],
   ['Close the laptop.', 'The build keeps going.'],
   ['1,300 recipes,', 'sorted by layer.'],
+  ['Which recipe put', 'this file here?'],
+  ['Right tool for', 'your Yocto release.'],
 ];
 const stage = document.querySelector('.rot-stage');
 if (stage) {

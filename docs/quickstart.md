@@ -25,7 +25,7 @@ Check the result with `bitloom --version`. Real builds also need what your proje
 bitloom --web --demo
 ```
 
-Bitloom prints the dashboard URL, which carries its access token, and opens your browser. The demo has a Scarthgap and a Wrynose sample workspace: switch between them with the profile menu. Press `?` for the keys, `Ctrl+K` for the palette, `1` to `6` for the sections. Nothing here runs a real build.
+Bitloom prints the dashboard URL, which carries its access token, and opens your browser. The demo has a Scarthgap and a Wrynose sample workspace: switch between them with the profile menu. Press `?` for the keys, `Ctrl+K` for the palette, `1` to `7` for the sections. Nothing here runs a real build.
 
 ## 3. Connect your project
 
@@ -53,7 +53,8 @@ Pick a proposal, check the fields (each is explained and checked as you type) an
 1. In **Builds** (`1`), click the target field or press `t`: it lists the image recipes found in your layers, the kas target and the images already built first. Any recipe works too.
 2. Press `b` (or **Build**). The job appears at the top of the history, with live output, progress and an ETA.
 3. When it ends, **Summary** (`u`) groups errors, warnings and failed tasks; **Compare** (`d`) shows what changed since the previous run. A failed build's summary starts with a diagnosis of the real cause: the failed task, its log, the lines that matter and the next step.
-4. **Operations** (`q`) queues any of the 74 operations: one recipe's compile, a clean, a dry run, an SDK, an SBOM or CVE check.
+4. **Operations** (`q`) queues any of the 79 operations: one recipe's compile, a clean, a dry run, an SDK, an SBOM or CVE check. Operations your Yocto release does not have are not offered, and say what to use instead.
+5. **Image** (`4`) opens what you built: every file with its size and the package and recipe that installs it, and *Change it with an append* for anything you want different. See [Image explorer](image.md).
 
 ![A real force compile of busybox followed live, then its summary](assets/web-clip-build.gif)
 

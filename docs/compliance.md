@@ -13,7 +13,7 @@ Bitloom detects the Yocto series from `LAYERSERIES_CORENAMES` in the core layer 
 | styhead … whinlatter | 5.1 – 5.3 | 7 months each | SPDX 3.0 default, `cve-check` |
 | wrynose | 6.0 LTS | until 2030-04 | SPDX 3.0 only, VEX in recipe SBOMs, `sbom-cve-check` replaces `cve-check` |
 
-Every operation, SBOM option and Studio default declares its release window. When a feature does not exist in the detected release, Bitloom says so and offers what the release can do:
+Every operation, SBOM option, CRA check and Studio default asks one registry of **release capabilities** (`bitloom/capabilities.py`, listed in the [command reference](commands.md#release-capabilities)). Each capability is decided by evidence in the project first: the class in its layers (`vex.bbclass`, `sbom-cve-check.bbclass`, `create-spdx-3.0.bbclass`…), the tool in its own BitBake (`bitbake-config-build`, `bitbake-setup`), the kind of workspace; the release number is the fallback when the layers are not visible from Bitloom. A backport is therefore offered, and a class a release lacks is not. Configuration shows the answer for the active project (web: *What this release can do*; TUI: the *Release ·* health rows). When a feature does not exist in the project's release, Bitloom says so and offers what the release can do:
 
 * the command center marks the operation *(not in this release)*, disables queueing and names the alternative (for example `cve-check` on Scarthgap instead of `sbom-cve-check`);
 * the web dashboard refuses it with the same explanation;

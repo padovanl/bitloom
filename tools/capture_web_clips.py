@@ -2,6 +2,7 @@
 
 Run: python tools/capture_web_clips.py                      (labelled demo workspace; needs playwright + pillow)
      python tools/capture_web_clips.py --real CONFIG PROFILE (adds web-clip-build.gif: a real force compile of busybox)
+     python tools/capture_web_clips.py --image CONFIG PROFILE (web-image.png and web-clip-image.gif from a built image)
 
 The demo clips use sample metadata and sample command output, labelled as such; nothing claims a Yocto build.
 The real clip runs an actual BitBake task through the given profile and records it as it happens.
@@ -19,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', str(Path.home() / '.cache/ms-playwright'))  # browsers stay in the real home
-if '--only-real' not in sys.argv:
+if '--only-real' not in sys.argv and '--image' not in sys.argv:
     os.environ['HOME'] = '/home/developer'   # paths shown in demo clips must not reveal the author's account
 sys.path.insert(0, str(ROOT))
 from bitloom.cli import prepare_demo
@@ -178,7 +179,7 @@ def demo_clips(browser):
         page.fill('#meta-search', '')
 
         # Studio: pick what to create, walk the steps, review. The preview follows the focused field.
-        page.keyboard.press('Escape'); page.keyboard.press('5')
+        page.keyboard.press('Escape'); page.keyboard.press('6')
         page.wait_for_timeout(1800)
         clip = Clip(page, box={'x': 230, 'y': 60, 'width': 1210, 'height': 840}, width=1100)
         clip.hold(1.2)
@@ -203,7 +204,7 @@ def demo_clips(browser):
         page.locator('#sg-restart').click()
 
         # Guided setup on a launcher project with two products.
-        page.keyboard.press('Escape'); page.keyboard.press('6')
+        page.keyboard.press('Escape'); page.keyboard.press('7')
         page.wait_for_timeout(1500)
         page.locator('#setup-dir').scroll_into_view_if_needed()
         page.fill('#setup-dir', '')
@@ -257,19 +258,55 @@ def real_clip(browser, config, profile, state):
         server.shutdown()
 
 
+def image_clip(browser, config, profile, state):
+    """The Image explorer on a real built image: the overview, /etc, a file, which recipe installs it, Change it."""
+    board, server, base, post = serve(Path(config), Path(state), 'clips')
+    try:
+        page = browser.new_page(viewport=VIEWPORT, color_scheme='dark')
+        page.goto(base + '/#token=clips')
+        page.wait_for_timeout(3000)
+        page.select_option('#profile', profile)
+        page.wait_for_timeout(1500)
+        page.keyboard.press('4')
+        page.wait_for_timeout(4000)
+        page.screenshot(path=str(OUTPUT / 'web-image.png'))
+        print('web-image.png')
+        clip = Clip(page, box={'x': 230, 'y': 50, 'width': 1210, 'height': 850}, fps=5, width=1100)
+        clip.hold(1.5)
+        page.locator('.ent.dir .n', has_text='etc').first.click()
+        clip.hold(1.4)
+        page.locator('.ent .n', has_text='motd').first.click()
+        clip.hold(2.4)
+        page.fill('#img-find', '')
+        page.locator('#img-find').click()
+        clip.type('#img-find', 'libc6')
+        page.keyboard.press('Enter')
+        clip.hold(2.2)
+        page.locator('.ent .n', has_text='motd').first.click()
+        clip.hold(1.2)
+        page.locator('button', has_text='Change it with an append').first.click()
+        clip.hold(3.0)
+        clip.save('web-clip-image', tail=2.5)
+    finally:
+        server.shutdown()
+
+
 def main():
     from playwright.sync_api import sync_playwright
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--real', nargs=2, metavar=('CONFIG', 'PROFILE'), help='also record a real force compile of busybox')
     parser.add_argument('--state', default=None, help='state directory for --real (default: next to CONFIG)')
     parser.add_argument('--only-real', action='store_true')
+    parser.add_argument('--image', nargs=2, metavar=('CONFIG', 'PROFILE'), help='record the Image explorer on a profile with a built image')
     args = parser.parse_args()
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
-        if not args.only_real:
+        if not args.only_real and not args.image:
             demo_clips(browser)
         if args.real:
             real_clip(browser, args.real[0], args.real[1], args.state or str(Path(args.real[0]).parent / 'state'))
+        if args.image:
+            image_clip(browser, args.image[0], args.image[1], args.state or str(Path(args.image[0]).parent / 'state'))
         browser.close()
 
 
