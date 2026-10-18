@@ -546,7 +546,7 @@ class BitloomApp(App):
                         yield DataTable(id="artifact-table", cursor_type="row")
                     with TabPane(labels["analysis"], id="analysis"):
                         with ToolBar(classes="tools"):
-                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Create runtime file", "runtime-create"), ("Export runtime artifact", "runtime-download"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Which recipe installs…", "whois"), ("Services in the image", "services"), ("Device tree", "devicetree"), ("Package provenance (BitBake)", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
+                            yield Select([("Search metadata", "metadata"), ("Compare manifests", "manifests"), ("Sstate efficiency", "sstate"), ("Warning groups", "warnings"), ("Failure diagnosis", "diagnose"), ("Runtime directory", "runtime-list"), ("Runtime file", "runtime-read"), ("Edit runtime file", "runtime-edit"), ("Create runtime file", "runtime-create"), ("Export runtime artifact", "runtime-download"), ("Build preflight", "preflight"), ("Capture snapshot", "snapshot"), ("Compare snapshots", "compare"), ("Reproducibility bundle", "bundle"), ("Why rebuilding?", "rebuild"), ("Which recipe installs…", "whois"), ("Services in the image", "services"), ("Device tree", "devicetree"), ("Migration check", "migrate"), ("Package provenance (BitBake)", "provenance"), ("Devtool review", "devtool-review"), ("Cache reference plan", "cache-plan")], value="metadata", allow_blank=False, id="analysis-kind")
                             yield Input(placeholder="/ literal metadata search phrase · Enter analyzes", id="analysis-query")
                             yield Button("Analyze", id="analysis-run")
                             yield Button("Export", id="analysis-export")
@@ -2095,7 +2095,7 @@ class BitloomApp(App):
         self.main_query("#analysis-query", Input).display = kind == "metadata"
         self.main_query("#analysis-paths").display = kind != "metadata"
         self.main_query("#analysis-second", Input).display = kind in {"manifests", "compare", "cache-plan", "runtime-download"}
-        placeholders = {"whois":"File on the device (/etc/motd), package (libc6) or recipe", "services":"Image (blank: the newest built image)", "devicetree":"Device tree file (blank: list the deployed ones)", "rebuild":"Recipe to explain", "provenance":"Package name or absolute image file path", "preflight":"Runtime build path (blank uses profile default)", "runtime-list":"Runtime directory path", "runtime-read":"Runtime text file path", "runtime-edit":"Runtime text file path to edit", "runtime-create":"Absolute path for a new runtime file", "runtime-download":"Runtime binary artifact path", "snapshot":"Runtime build path", "bundle":"Runtime build path", "compare":"Before snapshot JSON path", "cache-plan":"Cache directory in host or selected runtime", "devtool-review":"Runtime devtool source directory"}
+        placeholders = {"whois":"File on the device (/etc/motd), package (libc6) or recipe", "services":"Image (blank: the newest built image)", "devicetree":"Device tree file (blank: list the deployed ones)", "migrate":"Target release (blank: the newest covered, e.g. wrynose)", "rebuild":"Recipe to explain", "provenance":"Package name or absolute image file path", "preflight":"Runtime build path (blank uses profile default)", "runtime-list":"Runtime directory path", "runtime-read":"Runtime text file path", "runtime-edit":"Runtime text file path to edit", "runtime-create":"Absolute path for a new runtime file", "runtime-download":"Runtime binary artifact path", "snapshot":"Runtime build path", "bundle":"Runtime build path", "compare":"Before snapshot JSON path", "cache-plan":"Cache directory in host or selected runtime", "devtool-review":"Runtime devtool source directory"}
         self.main_query("#analysis-first", Input).placeholder = placeholders.get(kind, "First manifest / build log path (blank uses selected log)")
         self.main_query("#analysis-second", Input).placeholder = {"cache-plan":"Stamps directory containing signature references", "runtime-download":"Local destination (blank exports into state directory)", "compare":"After snapshot JSON path"}.get(kind, "Second manifest path")
 
@@ -2200,6 +2200,15 @@ class BitloomApp(App):
             if not first or not second: raise ValueError("Enter cache and stamps paths")
             plan = await asyncio.to_thread(cache_plan,Path(first),Path(second)) if Path(first).is_dir() and Path(second).is_dir() else await request(self.profile, "cache-plan", first, stamps=second)
             return json.dumps(plan,indent=2)
+        if kind == "migrate":
+            from .migration import report, scan, targets_for
+            source = self.release
+            options = targets_for(source)
+            target = first or (options[-1] if options else "")
+            if not target:
+                raise ValueError("No newer release to migrate to" + (f" from {source}" if source else ": the release is not detected"))
+            data = await asyncio.to_thread(scan, self.profile, target, list(getattr(self, "entries", [])), source)
+            return report(data) + "\n\nApply the safe fixes and write the kas file for the new release in the web dashboard (9 · Migrate) or with bitloom --migrate --apply."
         if kind == "devicetree":
             from . import devicetree
             if not first:

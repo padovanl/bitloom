@@ -51,6 +51,7 @@ const PHRASES = [
   ['Best practices,', 'your company\'s rules.'],
   ['Where did', 'the 30 MiB go?'],
   ['DEPENDS_append?', 'Not on our watch.'],
+  ['Scarthgap to Wrynose,', 'four guides, one click.'],
 ];
 const stage = document.querySelector('.rot-stage');
 if (stage) {

@@ -37,6 +37,7 @@ ssh -L 8765:127.0.0.1:8765 build-server
 | `5` | SBOM & CRA | Release support, SBOM quality gauges, VEX status, vulnerabilities from cve-check, sbom-cve-check and Grype, CRA readiness checks, the regulation timeline and every SBOM option with its explanation. See [SBOM, CRA and releases](compliance.md). |
 | `6` | Studio | Create a product layer, distribution, machine, image, recipe or append one step at a time: every option explained, where the files go and their content shown live, a review before anything is written, and what to do next. See [Studio](studio.md). |
 | `7` | Practices | How far the project follows the Yocto best practices: a score, what needs attention with the file and line, every rule with an on/off switch and a severity, your company's own rules, and a report to export. See [Best practices](practices.md). |
+| `9` | Migrate | Move the project to a newer release (Scarthgap → Wrynose): every rule of the official migration guides checked on your files, safe fixes with a diff and undo, a new kas file and profile for the new release, then build and verify. See [Migrate](migration.md). |
 | `8` | Configuration | Projects (recent, new, clone), guided project setup, *What this release can do* (every release-dependent feature, ✔ or ✖ with the reason, checked in the project), health checks, setup checks and literal `local.conf` values. See [Projects](projects.md). |
 
 ![Recipes: a layer, the Images filter, then a search](assets/web-clip-recipes.gif)

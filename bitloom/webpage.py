@@ -392,6 +392,30 @@ details.rule .mark { font: 700 13px var(--mono); text-align: center; }
 .theme-menu .sw { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--line2); } .theme-menu .sw span { flex: 1; }
 #ins-tip { position: fixed; z-index: 60; pointer-events: none; background: var(--raised); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; box-shadow: var(--shadow); max-width: 340px; }
 @media (max-width: 900px) { .ins { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hbar { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) auto; } }
+/* Migration assistant */
+.mg-hero { display: flex; align-items: center; gap: 18px; padding: 16px 18px; flex-wrap: wrap; } .mg-hero .big { font-size: 20px; font-weight: 600; }
+.mg-hero select { font-size: 15px; padding: 6px 10px; } .mg-arrow { font-size: 22px; color: var(--muted); }
+.mg-path { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 18px 14px; }
+.mg-path li a { display: inline-flex; gap: 6px; align-items: center; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line2); color: var(--fg); font-size: 12.5px; text-decoration: none; }
+.mg-path li a:hover { border-color: var(--accent); } .mg-path li:not(:last-child)::after { content: "→"; color: var(--muted); margin-left: 6px; } .mg-path b { font-family: var(--mono); font-weight: 600; }
+.mg-kpis { margin: 0 18px 18px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mg-flow { display: grid; gap: 14px; margin-top: 14px; }
+.mg-step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px; padding: 16px 18px 18px 10px; }
+.mg-num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); margin: 2px auto 0; }
+.mg-step.done .mg-num { background: var(--ok); color: var(--ink); } .mg-step.done .mg-num { font-size: 0; } .mg-step.done .mg-num::after { content: "✓"; font-size: 15px; }
+.mg-body h3 { margin: 4px 0 2px; font-size: 15px; } .mg-body .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.mg-group { margin: 10px 0 4px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.mg-f { display: grid; grid-template-columns: 22px 20px minmax(0, 1fr); gap: 8px; padding: 8px 6px; border-bottom: 1px solid var(--line); font-size: 13px; align-items: start; }
+.mg-f .ic { font-weight: 700; } .mg-f.breaks .ic { color: var(--err); } .mg-f.review .ic { color: var(--warn); } .mg-f.info .ic { color: var(--info); }
+.mg-f .w { font-family: var(--mono); font-size: 12px; color: var(--muted); } .mg-f .rel { font: 600 11px var(--mono); padding: 0 6px; border-radius: 999px; border: 1px solid var(--line2); color: var(--muted); margin-right: 6px; }
+.mg-f .adv { color: var(--muted); display: block; margin-top: 2px; } .mg-f a { font-size: 12px; } .mg-f .fixtag { color: var(--ok); font-size: 12px; margin-left: 6px; }
+.mg-f input[type=checkbox] { margin-top: 3px; }
+.mg-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mg-diff { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; } .mg-diff summary { padding: 6px 10px; cursor: pointer; font: 12.5px var(--mono); background: var(--raised); }
+.mg-diff pre { margin: 0; padding: 8px 0; font: 12px/1.5 var(--mono); background: var(--code); overflow: auto; max-height: 360px; } .mg-diff pre span { display: block; padding: 0 12px; white-space: pre; }
+.mg-diff .add { background: color-mix(in srgb, var(--ok) 14%, transparent); } .mg-diff .del { background: color-mix(in srgb, var(--err) 14%, transparent); } .mg-diff .hunk { color: var(--info); }
+.mg-note { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--info) 10%, transparent); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent); font-size: 13px; margin-top: 8px; }
+@media (max-width: 900px) { .mg-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .svc.selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .dts-bar { display: flex; gap: 10px; align-items: center; } .dts-bar input { flex: 1; }
 .dts { font: 12.5px/1.55 var(--mono); padding: 8px 0 14px; max-height: 70vh; overflow: auto; white-space: pre; tab-size: 4; }
@@ -737,6 +761,7 @@ details.folder > summary { padding: 8px 14px; }
     <div class="group">WORKSPACE</div>
     <button data-view="practices"><span class="num">7</span><span class="icon">✓</span>Practices</button>
     <button data-view="health"><span class="num">8</span><span class="icon">⚙</span>Configuration</button>
+    <button data-view="migrate"><span class="num">9</span><span class="icon">⇪</span>Migrate</button>
     <div class="foot">Same service and history as the TUI.<br><kbd>?</kbd> keys · <kbd>Ctrl</kbd><kbd>K</kbd> search<br><span class="about">Bitloom, originally created by Luca Padovan · <a href="https://github.com/padovanl/bitloom" target="_blank" rel="noopener">AGPL-3.0 · source</a></span></div>
   </nav>
   <main>
@@ -830,6 +855,35 @@ details.folder > summary { padding: 8px 14px; }
           <div class="list" id="img-dt" aria-label="Device trees" hidden></div>
         </div>
         <div class="panel img-detail" id="img-detail"><div class="empty">Select a file to see which package and recipe put it in the image, and how to change it.</div></div>
+      </div>
+    </section>
+
+    <section id="view-migrate" class="view" hidden>
+      <div class="panel mg-top">
+        <div class="mg-hero">
+          <div><div class="hint">This project</div><div class="big" id="mg-from">…</div></div>
+          <span class="mg-arrow" aria-hidden="true">→</span>
+          <div><div class="hint">Move to</div><select id="mg-to" aria-label="Target release"></select></div>
+          <span style="flex:1"></span>
+          <button class="btn" id="mg-rescan">↻ Scan again</button><select id="mg-format" aria-label="Report format"><option value="md">Markdown</option><option value="json">JSON</option><option value="text">Text</option></select><button class="btn" id="mg-export">Export</button>
+        </div>
+        <ol class="mg-path" id="mg-path" aria-label="Releases on the way, each with its migration guide"></ol>
+        <div class="kpis mg-kpis" id="mg-kpis"></div>
+      </div>
+      <div class="mg-flow">
+        <section class="panel mg-step" id="mg-step-1"><div class="mg-num">1</div><div class="mg-body"><h3>What changes in your files</h3>
+          <p class="sub">From the official migration guides, checked on your layers, the build configuration and the kas files. Upstream layers are replaced by the new release, not migrated.</p>
+          <div class="seg" id="mg-show" role="radiogroup" aria-label="Show"></div><div id="mg-findings"></div></div></section>
+        <section class="panel mg-step" id="mg-step-2"><div class="mg-num">2</div><div class="mg-body"><h3>Apply the safe fixes</h3>
+          <p class="sub">Mechanical changes only (renames, the new syntax, LAYERSERIES_COMPAT). Review the diff first; the originals are kept and one click restores them.</p>
+          <div class="mg-actions"><button class="btn" id="mg-preview">Preview the selected fixes</button><button class="btn primary" id="mg-apply" disabled>Apply</button><span class="hint" id="mg-selected"></span><span style="flex:1"></span><select id="mg-backups" aria-label="Earlier changes"></select><button class="btn" id="mg-restore">Undo</button></div>
+          <div id="mg-diffs"></div></div></section>
+        <section class="panel mg-step" id="mg-step-3"><div class="mg-num">3</div><div class="mg-body"><h3>Move the checkout</h3>
+          <p class="sub">A new kas file for the new release, next to the current one, and a profile with its own work directory: the current build keeps working while you try the new one.</p>
+          <div id="mg-kas"></div></div></section>
+        <section class="panel mg-step" id="mg-step-4"><div class="mg-num">4</div><div class="mg-body"><h3>Build and verify</h3>
+          <p class="sub">On the new profile: parse, build the image, then check what is left.</p>
+          <div class="mg-actions" id="mg-verify"></div></div></section>
       </div>
     </section>
 
@@ -1136,7 +1190,7 @@ const $ = (id) => document.getElementById(id);
 const token = (new URLSearchParams(location.hash.slice(1))).get("token") || sessionStorage.getItem("bitloom-token") || "";
 if (token) { sessionStorage.setItem("bitloom-token", token); history.replaceState(null, "", location.pathname); }
 const GLYPH = {success: "✔", failed: "✖", running: "●", queued: "◌", cancelling: "◐", cancelled: "■", interrupted: "⚠", unknown: "·", skipped: "↷"};
-const VIEWS = ["builds", "recipes", "tasklogs", "image", "compliance", "studio", "practices", "health"];
+const VIEWS = ["builds", "recipes", "tasklogs", "image", "compliance", "studio", "practices", "health", "migrate"];
 const KEYS = [["1 – 6", "Switch section"], ["Ctrl+K", "Command palette: sections, operations, profiles, builds"], ["/", "Search in the current section"],
   ["Esc", "Leave a field / close a dialog"], ["j / k", "Next / previous operation"], ["b", "Build the target"], ["q", "Queue any operation"],
   ["t", "Edit the build target"], ["s", "Force stop the selected operation"], ["g", "Graceful stop (BitBake client SIGINT)"],
@@ -1545,7 +1599,7 @@ function setView(name) {
   for (const section of VIEWS) { const node = $("view-" + section); const show = section === name; if (show && node.hidden) { node.hidden = false; node.style.animation = "none"; void node.offsetWidth; node.style.animation = ""; } else node.hidden = !show; }
   for (const button of document.querySelectorAll("nav button")) button.classList.toggle("active", button.dataset.view === name);
   if (name === "recipes") loadMeta(); if (name === "tasklogs") loadTasks(); if (name === "health") { loadHealth(); loadProjects(); loadNotifications(); if (!setupCandidates.length && !$("setup-dir").value) { const p = profile(); $("setup-dir").value = p ? p.root : ""; scanSetup(); } }
-  if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio(); if (name === "image") loadImage(); if (name === "practices") loadPractices();
+  if (name === "compliance") { loadCompliance(); loadVulns(); } if (name === "studio") loadStudio(); if (name === "image") loadImage(); if (name === "practices") loadPractices(); if (name === "migrate") loadMigrate();
   if (name === "builds") requestAnimationFrame(moveInk);
 }
 function moveInk() {
@@ -2742,6 +2796,126 @@ function openThemes() {
   menu.querySelector('[aria-checked="true"]')?.focus();
 }
 
+/* Migration assistant: from the official migration guides to a build on the new release, one step after the other. */
+let mgData = null, mgShow = "all", mgSelected = new Set(), mgKas = null;
+async function loadMigrate(target = null) {
+  const box = $("mg-findings"); box.textContent = ""; skeletonIn(box);
+  let data;
+  try { data = await api(`/api/migrate?profile=${prof()}${target || $("mg-to").value ? "&to=" + encodeURIComponent(target || $("mg-to").value) : ""}`); }
+  catch (error) { box.textContent = ""; box.append(el("div", {class: "empty", text: error.message})); return; }
+  mgData = data; box.textContent = "";
+  $("mg-from").textContent = data.source_label || "release unknown";
+  const pick = $("mg-to"); pick.textContent = "";
+  for (const t of data.targets || []) pick.append(el("option", {value: t.series, text: t.label}));
+  if (data.target) pick.value = data.target;
+  pick.disabled = !(data.targets || []).length;
+  if (!(data.targets || []).length) { box.append(el("div", {class: "empty", text: data.reason || "Nothing to migrate."})); $("mg-path").textContent = ""; $("mg-kpis").textContent = ""; return; }
+  const path = $("mg-path"); path.textContent = "";
+  path.append(el("li", {}, el("a", {href: "#", onclick: (e) => e.preventDefault()}, el("b", {text: data.source}), " now")));
+  for (const step of data.steps) path.append(el("li", {}, el("a", {href: step.guide, target: "_blank", rel: "noopener", title: "Migration guide " + step.version}, el("b", {text: step.version}), step.series)));
+  const kpis = $("mg-kpis"); kpis.textContent = "";
+  for (const [value, label, alert] of [[data.counts.breaks, "break the build", data.counts.breaks > 0], [data.counts.review, "to review"], [data.counts.info, "good to know"], [data.fixable, "with a safe fix"]])
+    kpis.append(el("div", {class: "kpi" + (alert ? " alert" : "")}, el("b", {text: String(value)}), el("span", {text: label})));
+  mgSelected = new Set(data.findings.map((f, i) => f.fixes.length ? i : -1).filter((i) => i >= 0));
+  renderMigrateFindings(); loadBackups(); loadMigrateKas();
+  $("mg-step-1").classList.toggle("done", data.counts.breaks === 0);
+  $("mg-step-2").classList.toggle("done", data.fixable === 0);
+}
+function renderMigrateFindings() {
+  const box = $("mg-findings"); box.textContent = "";
+  const seg = $("mg-show"); seg.textContent = "";
+  for (const [id, label] of [["all", `All ${mgData.findings.length}`], ["breaks", "Breaks the build"], ["review", "To review"], ["info", "Good to know"], ["fixable", "Safe fixes"]])
+    seg.append(el("button", {role: "radio", "aria-checked": String(mgShow === id), text: label, onclick: () => { mgShow = id; renderMigrateFindings(); }}));
+  if (!mgData.findings.length) { box.append(el("div", {class: "finding ok"}, el("span", {class: "ic", text: "✔"}), el("span", {text: "Nothing in your files needs changing for this migration. Move the checkout (step 3)."}))); return; }
+  const titles = {breaks: "Breaks the build", review: "Changes behaviour: review", info: "Good to know"};
+  let group = null;
+  mgData.findings.forEach((f, i) => {
+    if (mgShow === "fixable" ? !f.fixes.length : mgShow !== "all" && f.severity !== mgShow) return;
+    if (f.severity !== group) { group = f.severity; box.append(el("div", {class: "mg-group", text: titles[group]})); }
+    const check = f.fixes.length ? el("input", {type: "checkbox", "aria-label": "Apply this fix", onchange: (e) => { if (e.target.checked) mgSelected.add(i); else mgSelected.delete(i); updateMigrateSelection(); }}) : el("span");
+    if (f.fixes.length && mgSelected.has(i)) check.checked = true;
+    const version = (mgData.steps.find((s) => s.series === f.step) || {}).version || f.step;
+    box.append(el("div", {class: "mg-f " + f.severity}, el("span", {class: "ic", text: {breaks: "✖", review: "▲", info: "●"}[f.severity]}), check,
+      el("div", {}, el("span", {class: "rel", text: version}), el("b", {text: f.title}), ...(f.fixes.length ? [el("span", {class: "fixtag", text: "✓ safe fix"})] : []),
+        el("div", {class: "w", text: f.where}), el("span", {text: f.detail}), ...(f.advice ? [el("span", {class: "adv", text: f.advice})] : []),
+        el("a", {href: f.guide, target: "_blank", rel: "noopener", text: "Migration guide " + version + " ↗"}))));
+  });
+  updateMigrateSelection();
+}
+function selectedFixes() { return [...mgSelected].flatMap((i) => mgData.findings[i].fixes); }
+function updateMigrateSelection() { $("mg-selected").textContent = `${mgSelected.size} of ${mgData.fixable} selected`; $("mg-apply").disabled = true; $("mg-diffs").textContent = ""; }
+function diffBlock(file) {
+  const pre = el("pre");
+  for (const line of file.diff.split("\n")) pre.append(el("span", {class: line.startsWith("@@") ? "hunk" : line.startsWith("+") && !line.startsWith("+++") ? "add" : line.startsWith("-") && !line.startsWith("---") ? "del" : "", text: line || " "}));
+  return el("details", {class: "mg-diff", open: ""}, el("summary", {text: `${file.shown || file.path} · ${file.changes} ${file.changes === 1 ? "change" : "changes"}`}), pre);
+}
+async function previewMigrate() {
+  const box = $("mg-diffs"); box.textContent = "";
+  if (!mgSelected.size) { box.append(el("div", {class: "hint", text: "Select at least one fix."})); return; }
+  try {
+    const data = await api("/api/migrate/preview", {method: "POST", body: JSON.stringify({profile: prof(), fixes: selectedFixes()})});
+    for (const file of data.files) box.append(diffBlock(file));
+    $("mg-apply").disabled = false; $("mg-apply").textContent = `Apply to ${data.files.length} ${data.files.length === 1 ? "file" : "files"}`;
+  } catch (error) { box.append(el("div", {class: "notice", text: "✖ " + error.message})); }
+}
+async function applyMigrate() {
+  try {
+    const result = await api("/api/migrate/apply", {method: "POST", body: JSON.stringify({profile: prof(), fixes: selectedFixes()})});
+    toast("Fixes applied", `${result.written.length} files changed · the originals are kept: Undo restores them`, "success");
+    await loadMigrate($("mg-to").value);
+  } catch (error) { toast("Not applied", error.message, "error"); }
+}
+async function loadBackups() {
+  const pick = $("mg-backups"); pick.textContent = "";
+  try {
+    const rows = (await api(`/api/migrate/backups?profile=${prof()}`)).backups;
+    for (const row of rows) pick.append(el("option", {value: row.id, text: `${row.id.replace(/(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)\d\d/, "$1-$2-$3 $4:$5")} · ${row.files.length} files`}));
+    pick.hidden = $("mg-restore").hidden = !rows.length;
+  } catch (error) { pick.hidden = $("mg-restore").hidden = true; }
+}
+async function restoreMigrate() {
+  const id = $("mg-backups").value; if (!id || !confirm("Restore the files as they were before these fixes?")) return;
+  try { const r = await api("/api/migrate/restore", {method: "POST", body: JSON.stringify({profile: prof(), id})}); toast("Restored", `${r.restored.length} files`, "success"); await loadMigrate($("mg-to").value); }
+  catch (error) { toast("Not restored", error.message, "error"); }
+}
+async function loadMigrateKas() {
+  const box = $("mg-kas"); box.textContent = "";
+  let data;
+  try { data = await api(`/api/migrate/kas?profile=${prof()}&to=${encodeURIComponent($("mg-to").value)}`); } catch (error) { box.append(el("div", {class: "notice", text: error.message})); return; }
+  mgKas = data;
+  if (!data.available) { box.append(el("div", {class: "mg-note", text: data.text})); renderMigrateVerify(null); return; }
+  box.append(el("ul", {}, ...data.notes.map((n) => el("li", {text: n}))),
+    diffBlock({path: data.name, diff: data.diff, changes: data.notes.length}),
+    el("div", {class: "mg-note", text: `Creates ${data.name} (the current file is not touched) and the profile ${data.profile.name}` +
+      (data.profile.environment.KAS_WORK_DIR ? ` with its own work directory ${data.profile.environment.KAS_WORK_DIR}` : "") + ". Downloads and sstate are shared only if you set DL_DIR and SSTATE_DIR outside the build."}),
+    el("div", {class: "mg-actions", style: "margin-top:10px"}, el("button", {class: "btn primary", text: `✦ Write ${data.name} and the profile`, onclick: writeMigrateKas})));
+  renderMigrateVerify(null);
+}
+async function writeMigrateKas() {
+  try {
+    const data = await api("/api/migrate/kas", {method: "POST", body: JSON.stringify({profile: prof(), to: $("mg-to").value, write: true})});
+    toast("Ready to try", `${data.name} and the profile ${data.profile.name}`, "success");
+    $("mg-step-3").classList.add("done");
+    $("mg-kas").textContent = ""; $("mg-kas").append(el("div", {class: "finding ok"}, el("span", {class: "ic", text: "✔"}), el("span", {text: `Wrote ${data.name}; profile ${data.profile.name} is ready.`})));
+    await refresh(); renderMigrateVerify(data.profile.name);
+  } catch (error) { toast("Not written", error.message, "error"); }
+}
+function renderMigrateVerify(name) {
+  const box = $("mg-verify"); box.textContent = "";
+  if (!name) { box.append(el("span", {class: "hint", text: "After step 3: switch to the new profile, parse, build, and scan again."})); return; }
+  const use = () => { $("profile").value = name; $("profile").dispatchEvent(new Event("change")); };
+  box.append(el("button", {class: "btn primary", text: `Switch to ${name}`, onclick: use}),
+    el("button", {class: "btn", text: "Parse metadata (bitbake -p)", onclick: () => { use(); setTimeout(() => queue("parse", {}), 400); }}),
+    el("button", {class: "btn", text: "Build the image", onclick: () => { use(); setTimeout(() => queue("build", {target: $("target").value}), 400); }}),
+    el("button", {class: "btn", text: "Best practices", onclick: () => { use(); setView("practices"); }}));
+}
+async function exportMigrate() {
+  const fmt = $("mg-format").value;
+  const response = await fetch(`/api/migrate/export?profile=${prof()}&to=${encodeURIComponent($("mg-to").value)}&format=${fmt}`, {headers: {"X-Bitloom-Token": token}});
+  if (!response.ok) { toast("Export", (await response.json().catch(() => ({}))).error || response.statusText, "error"); return; }
+  const link = el("a", {href: URL.createObjectURL(await response.blob()), download: `migration-${$("mg-to").value}.${fmt === "text" ? "txt" : fmt}`}); link.click();
+}
+
 /* BitBake language assistant in the editor: completion (Ctrl+Space or as you type), the meaning of the word
    under the caret, and the problems a parse would report, from the project's own layers. */
 let langItems = [], langIndex = 0, langFrom = 0, langTimer = null, lintTimer = null, docTimer = null, langProblems = [], langQuiet = false;
@@ -2980,6 +3154,7 @@ function paletteEntries() {
   entries.push({label: "Which recipe installs… (a file on the device or a package)", hint: "4", run: () => { setView("image"); setTimeout(() => $("img-find").focus(), 100); }});
   entries.push({label: "Explore the built image", hint: "4", run: () => setView("image")});
   entries.push({label: "Best practices", hint: "7", run: () => setView("practices")});
+  entries.push({label: "Migrate to a newer Yocto release", hint: "9", run: () => setView("migrate")});
   for (const [id, label] of THEME_LIST) entries.push({label: "Theme: " + label, hint: "theme", run: () => applyTheme(id)});
   entries.push({label: "Add a company rule (best practices)", hint: "7", run: () => { setView("practices"); openRuleDialog(); }});
   for (const profile of (state ? state.profiles : [])) {
@@ -3045,6 +3220,9 @@ function wire() {
   $("pr-recheck").addEventListener("click", () => loadPractices());
   $("pr-export").addEventListener("click", exportPractices);
   for (const b of document.querySelectorAll("#img-mode button")) b.addEventListener("click", () => setImgMode(b.dataset.mode));
+  $("mg-to").addEventListener("change", () => loadMigrate($("mg-to").value)); $("mg-rescan").addEventListener("click", () => loadMigrate($("mg-to").value));
+  $("mg-preview").addEventListener("click", previewMigrate); $("mg-apply").addEventListener("click", applyMigrate); $("mg-restore").addEventListener("click", restoreMigrate);
+  $("mg-export").addEventListener("click", exportMigrate);
   $("theme-btn").addEventListener("click", (e) => { e.stopPropagation(); openThemes(); });
   document.addEventListener("click", (e) => { if (!$("theme-menu").hidden && !e.target.closest(".theme-pick")) { $("theme-menu").hidden = true; $("theme-btn").setAttribute("aria-expanded", "false"); } });
   $("theme-menu").addEventListener("keydown", (e) => {
@@ -3167,7 +3345,7 @@ function wire() {
     if (typing || document.querySelector("dialog[open]") || event.ctrlKey || event.metaKey || event.altKey) return;
     const tabs = {o: "output", u: "summary", w: "warnings", m: "timings", d: "compare"};
     const handled = () => event.preventDefault();
-    if (/^[1-8]$/.test(event.key)) { setView(VIEWS[Number(event.key) - 1]); handled(); }
+    if (/^[1-9]$/.test(event.key)) { setView(VIEWS[Number(event.key) - 1]); handled(); }
     else if (event.key === "/") { const input = document.querySelector(`#view-${view} input[type=search]`); if (input) { input.focus(); handled(); } }
     else if (event.key === "?") { $("keys-dialog").showModal(); handled(); }
     else if (event.key === "b") { queue("build", {target: $("target").value}); handled(); }

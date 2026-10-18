@@ -140,6 +140,9 @@ def main():
     parser.add_argument("--practices", action="store_true", help="Review the project against Yocto best practices and bitloom-practices.json; exits 2 on errors (or warnings with --fail-on warning)")
     parser.add_argument("--fail-on", choices=["error", "warning", "never"], default="error", help="--practices and --lint: what makes the exit status 2")
     parser.add_argument("--services", nargs="?", const="", metavar="IMAGE[:MACHINE]", help="What starts on the device: init system, systemd units or SysV scripts, udev rules and D-Bus services of a built image (newest when omitted)")
+    parser.add_argument("--migrate", action="store_true", help="What changes to move the project to a newer Yocto release (--to), from the official migration guides; exit 2 when something breaks the build")
+    parser.add_argument("--to", metavar="SERIES", help="--migrate: the target release (default: the newest Bitloom covers, for example wrynose)")
+    parser.add_argument("--apply", action="store_true", help="--migrate: apply the safe fixes (originals kept in the state folder)")
     parser.add_argument("--lint", nargs="+", metavar="FILE", help="Check BitBake files (.bb, .bbappend, .bbclass, .inc, .conf; folders are searched) against the project's layers; exit 2 on errors (with --fail-on warning also on warnings)")
     parser.add_argument("--explain", metavar="WORD", help="What a variable, task, class, keyword, machine or distro means in this project")
     parser.add_argument("--insights", nargs="?", const="", metavar="IMAGE[:MACHINE]", help="Where the space of a built image goes, its licences, what listens and a security look (--format json for CI)")
@@ -228,6 +231,31 @@ def _commands(parser, args) -> None:
             print(text)
         failing = data["errors"] + (data["warnings"] if args.fail_on == "warning" else 0)
         raise SystemExit(2 if args.fail_on != "never" and failing else 0)
+    if args.migrate:
+        from .inspectors import metadata
+        from .migration import apply, report, scan, targets_for
+        from .models import Settings
+        from .studio import product_layers
+        from .versions import detect_release
+        profile = Settings(args.config).profile
+        entries = metadata(profile)
+        source = detect_release(profile, entries)
+        options = targets_for(source)
+        target = args.to or (options[-1] if options else "")
+        if not target:
+            parser.exit(1, f"bitloom: no newer release to migrate {source or 'this project'} to\n")
+        try:
+            data = scan(profile, target, entries, source)
+        except ValueError as exc:
+            parser.exit(1, f"bitloom: {exc}\n")
+        if args.apply:
+            fixes = [fix for finding in data["findings"] for fix in finding["fixes"]]
+            roots = [profile.root_path, *product_layers(entries, profile)]
+            result = apply(profile, args.state, fixes, roots)
+            print(f"{len(fixes)} fixes applied to {len(result['written'])} files; originals in {result['backup'] or 'nothing to change'}")
+            data = scan(profile, target, entries, source)
+        print(report(data, args.format if args.format in {"md", "json", "text"} else "text"))
+        raise SystemExit(2 if data["counts"]["breaks"] else 0)
     if args.lint or args.explain:
         import json
         from .inspectors import metadata
