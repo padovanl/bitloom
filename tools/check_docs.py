@@ -79,13 +79,20 @@ def check():
             page.wait_for_selector('#search-results a')
             assert page.locator('#search-results a').count() > 1
             page.keyboard.press('Escape')
+            # Yocto-docs mode: on, remembered across pages, off again.
+            page.click('#classic-toggle')
+            assert page.evaluate('document.documentElement.dataset.classic') == '1'
+            page.goto(f'{url}/guide.html', wait_until='domcontentloaded')
+            assert page.evaluate('document.documentElement.dataset.classic') == '1' and page.locator('.classic-note').is_visible()
+            page.click('[data-classic-off]')
+            assert page.evaluate('document.documentElement.dataset.classic') is None
             page.set_viewport_size({'width': 390, 'height': 844})
             page.goto(url, wait_until='networkidle')
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
             page.screenshot(path=str(SHOTS / 'docs-mobile.png'), full_page=True)
             assert not failures, failures
             browser.close()
-            print('PASS: feature filter, runtime switch, screenshot dialog, manual pages with navigation and search, mobile layout; no page errors or failed resources')
+            print('PASS: feature filter, runtime switch, screenshot dialog, manual pages with navigation, search and Yocto-docs mode, mobile layout; no page errors or failed resources')
             print(f'Full-page captures for review: {SHOTS}')
     finally:
         server.shutdown()

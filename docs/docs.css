@@ -170,3 +170,52 @@ kbd { font: 11px ui-monospace, monospace; padding: 1px 6px; border: 1px solid va
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Yocto-docs mode: Bitloom's documentation dressed the way Sphinx and the Read the Docs theme look,
+   for developers who feel at home there. A tribute, switched on with the ¶ button; same content. */
+html[data-classic] { color-scheme: light; --bg: #fcfcfc; --bg-soft: #f3f6f6; --bg-code: #f8f8f8; --line: #e1e4e5; --line-strong: #c9c9c9;
+  --text: #404040; --muted: #6e6e6e; --faint: #999; --link: #2980b9; --accent: #2980b9; --accent-soft: #e7f2fa; --mark: #f1c40f55; }
+html[data-classic] body { background: #edf0f2; font-family: Lato, "proxima-nova", "Helvetica Neue", Arial, sans-serif; color: #404040; }
+html[data-classic] .topbar { background: #2980b9; border: 0; box-shadow: none; color: #fff; }
+html[data-classic] .topbar .brand, html[data-classic] .topbar .top-link { color: #fff; }
+html[data-classic] .topbar .icon-button { color: #fff; background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .35); }
+html[data-classic] .topbar .brand small { color: #e1f0fa; }
+html[data-classic] .search input { background: #fff; border: 1px solid #2472a4; border-radius: 50px; color: #404040; }
+html[data-classic] .layout { background: #fcfcfc; max-width: none; }
+html[data-classic] .sidebar { background: #343131; border: 0; padding-top: 12px; }
+html[data-classic] .sidebar h3 { color: #55a5d9; font-size: 85%; letter-spacing: .02em; text-transform: uppercase; }
+html[data-classic] .sidebar a, html[data-classic] .sidebar .home { color: #d9d9d9; border-radius: 0; }
+html[data-classic] .sidebar a:hover { background: #4e4a4a; color: #d9d9d9; }
+html[data-classic] .sidebar a[aria-current="page"] { background: #fcfcfc; color: #404040; font-weight: 700; border: 0; box-shadow: none; }
+html[data-classic] .content { max-width: 800px; background: #fcfcfc; }
+html[data-classic] .toc { display: none; }
+html[data-classic] .doc h1, html[data-classic] .doc h2, html[data-classic] .doc h3, html[data-classic] .doc h4 { font-family: "Roboto Slab", "ff-tisa-web-pro", Georgia, serif; font-weight: 700; color: #404040; letter-spacing: 0; border: 0; }
+html[data-classic] .doc h1 { font-size: 175%; } html[data-classic] .doc h2 { font-size: 150%; } html[data-classic] .doc h3 { font-size: 125%; }
+html[data-classic] .doc a { color: #2980b9; } html[data-classic] .doc a:visited { color: #9b59b6; }
+html[data-classic] .doc a.anchor { font-size: 0; } html[data-classic] .doc a.anchor::after { content: "¶"; font-size: 1rem; color: #2980b9; }
+html[data-classic] .doc code { color: #e74c3c; background: #fff; border: 1px solid #e1e4e5; border-radius: 0; padding: 2px 5px; font-size: 75%; }
+html[data-classic] .doc pre { background: #f8f8f8; border: 1px solid #e1e4e5; border-radius: 0; box-shadow: none; }
+html[data-classic] .doc pre code { color: #404040; background: none; border: 0; padding: 0; font-size: 12px; }
+html[data-classic] .doc table { border: 1px solid #e1e4e5; border-radius: 0; } html[data-classic] .doc th { background: #fff; border-bottom: 2px solid #e1e4e5; }
+html[data-classic] .doc tr:nth-child(2n-1) td { background: #f3f6f6; } html[data-classic] .doc td, html[data-classic] .doc th { border-color: #e1e4e5; }
+html[data-classic] .doc blockquote { background: #e7f2fa; border: 0; border-radius: 0; padding: 0 12px 12px; color: #404040; }
+html[data-classic] .doc blockquote::before { content: "Note"; display: block; margin: 0 -12px 12px; padding: 6px 12px; background: #6ab0de; color: #fff; font-weight: 700; }
+html[data-classic] .doc img, html[data-classic] .doc .shot { border-radius: 0; }
+html[data-classic] .breadcrumbs { font-size: 13px; color: #404040; } html[data-classic] .breadcrumbs::before { content: "Docs » "; }
+html[data-classic] .pager a { background: #f3f6f6; border: 1px solid rgba(0, 0, 0, .1); border-radius: 2px; box-shadow: inset 0 1px 2px -1px hsla(0, 0%, 100%, .5), inset 0 -2px 0 0 rgba(0, 0, 0, .1); color: #404040; }
+html[data-classic] .pager .prev small::before { content: "« "; } html[data-classic] .pager .next small::after { content: " »"; }
+html[data-classic] .page-meta { border-top: 1px solid #e1e4e5; color: #6e6e6e; }
+.classic-note, .classic-footer, .classic-version { display: none; }
+html[data-classic] .classic-note { display: block; background: #e7f2fa; margin: 0 0 24px; font-size: 14px; }
+html[data-classic] .classic-note b { display: block; background: #6ab0de; color: #fff; padding: 6px 12px; }
+html[data-classic] .classic-note p { margin: 0; padding: 10px 12px; }
+html[data-classic] .classic-footer { display: block; margin: 28px 0 8px; padding-top: 14px; border-top: 1px solid #e1e4e5; font-size: 13px; color: #6e6e6e; }
+html[data-classic] .classic-version { display: block; position: fixed; left: 0; bottom: 0; width: 260px; z-index: 6; background: #272525; color: #fcfcfc; font: 13px Lato, Arial, sans-serif; border-top: 1px solid #000; }
+.classic-version button { all: unset; box-sizing: border-box; width: 100%; padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; }
+.classic-version button span { color: #27ae60; }
+.classic-version p { margin: 0; padding: 6px 12px 10px; color: #d9d9d9; }
+html[data-classic] .topbar .classic-toggle { background: #fff; color: #2980b9; border-color: #fff; }
+.classic-toggle { font: 700 17px Georgia, serif; }
+@media (min-width: 1101px) { html[data-classic] .layout { grid-template-columns: 260px minmax(0, 1fr); } }
+@media (max-width: 1100px) { html[data-classic] .classic-version { width: 240px; } }
+@media (max-width: 900px) { html[data-classic] .classic-version { display: none; } }
