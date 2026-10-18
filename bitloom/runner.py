@@ -16,7 +16,8 @@ from .models import Profile
 from .store import Store
 
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-PROGRESS = re.compile(r"Running task (\d+) of (\d+)")
+GLUED = re.compile(r"(?<=\.\.\.)(?=(?:WARNING|ERROR|NOTE): )")
+PROGRESS = re.compile(r"Running (?:noexec )?task (\d+) of (\d+)")   # noexec: the last do_build tasks
 SETSCENE = re.compile(r"Running setscene task (\d+) of (\d+)")
 
 
@@ -121,26 +122,12 @@ class Runner:
                     raw = await job.process.stdout.readline()
                     if not raw:
                         break
-                    line = ANSI.sub("", raw.decode(errors="replace")).rstrip()
-                    if "\r" in line:
-                        line = line.rsplit("\r", 1)[-1]  # progress redraws: keep what a terminal would show
-                    output.write(line + "\n")
-                    if "Execution was interrupted" in line:
-                        job.shutdown_message = True
-                    failure = re.search(r"Logfile of failure stored in:\s*(.+)$", line)
-                    if failure and failure[1] not in job.failure_logs:
-                        job.failure_logs.append(failure[1].strip())
-                    self.track_tasks(job, line)
-                    m = PROGRESS.search(line)
-                    if m:
-                        job.progress = (int(m[1]), int(m[2]))
-                    m = SETSCENE.search(line)
-                    if m:
-                        job.setscene = (int(m[1]), int(m[2]))
-                    if "ERROR:" in line or "FAILED" in line:
-                        job.errors.append(line)
-                        job.errors = job.errors[-200:]
-                    self.callback(job, line)
+                    text = ANSI.sub("", raw.decode(errors="replace")).rstrip()
+                    if "\r" in text:
+                        text = text.rsplit("\r", 1)[-1]  # progress redraws: keep what a terminal would show
+                    # "Initialising tasks...WARNING: x": BitBake prints a message before ending its progress line.
+                    for line in GLUED.split(text):
+                        self.handle_line(job, output, line)
                 job.code = await job.process.wait()
                 if job.cancel_requested and job.shutdown_message and job.code >= 0:
                     job.stop_confirmed = True
@@ -166,6 +153,25 @@ class Runner:
             if self.active is job:
                 self.active = None
             self.callback(job, None)
+
+    def handle_line(self, job: Job, output, line: str) -> None:
+        output.write(line + "\n")
+        if "Execution was interrupted" in line:
+            job.shutdown_message = True
+        failure = re.search(r"Logfile of failure stored in:\s*(.+)$", line)
+        if failure and failure[1] not in job.failure_logs:
+            job.failure_logs.append(failure[1].strip())
+        self.track_tasks(job, line)
+        m = PROGRESS.search(line)
+        if m:
+            job.progress = (int(m[1]), int(m[2]))
+        m = SETSCENE.search(line)
+        if m:
+            job.setscene = (int(m[1]), int(m[2]))
+        if "ERROR:" in line or "FAILED" in line:
+            job.errors.append(line)
+            job.errors = job.errors[-200:]
+        self.callback(job, line)
 
     @staticmethod
     def track_tasks(job: Job, line: str):

@@ -121,3 +121,35 @@ def test_kas_work_directory_of_a_profile_is_recognised(tmp_path):
     host = next(c for c in detect(work, [owner]) if c.mode == 'host')
     assert 'kas work directory of profile product' in host.evidence[0] and host.score == 1 and host.hints
     assert 'kas work directory' not in detect(work)[0].evidence[0]
+
+
+def test_wrapper_per_product_with_includes_and_work_dir(tmp_path):
+    """YML=<product>.yml ./run_kas.sh build projects: one profile per product, fragments skipped,
+    machine resolved through includes and KAS_WORK_DIR read from the script."""
+    from bitloom.setup import check, detect, kas_files, script_work_dir
+    from bitloom.models import Profile
+    (tmp_path / "kas").mkdir()
+    (tmp_path / "kas/base.yml").write_text("header:\n  version: 14\nmachine: qemux86-64\ntarget: core-image-minimal\nrepos:\n  poky:\n")
+    (tmp_path / "kas/alpha.yml").write_text("header:\n  version: 14\n  includes:\n    - kas/base.yml\n")
+    (tmp_path / "kas/beta.yml").write_text("header:\n  version: 14\n  includes:\n    - kas/base.yml\nmachine: qemuarm64\ntarget:\n  - beta-image\n  - beta-sdk\n")
+    script = tmp_path / "run_kas.sh"
+    script.write_text('#!/bin/bash\nTOP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\nexport KAS_WORK_DIR=$TOP/builds/$(basename "$YML" .yml)\n'
+                      'cmd=$1; shift\nexec kas-container "$cmd" "$@" "$YML"\n')
+    script.chmod(0o755)
+    assert [p.name for p in kas_files(tmp_path)][-1] == "base.yml"          # the fragment comes last
+    wrappers = [c for c in detect(tmp_path) if c.mode == "wrapper"]
+    assert [c.profile["name"] for c in wrappers] == ["alpha", "beta"]
+    alpha, beta = (c.profile for c in wrappers)
+    assert alpha["environment"] == {"YML": "kas/alpha.yml", "KAS_WORK_DIR": str(tmp_path / "builds/alpha")}
+    assert (alpha["machine"], alpha["targets"]) == ("qemux86-64", ["core-image-minimal"])
+    assert (beta["machine"], beta["targets"]) == ("qemuarm64", ["beta-image", "beta-sdk"])
+    assert wrappers[0].title == "YML=kas/alpha.yml ./run_kas.sh build"
+    kas_proposals = [c.profile["kas_file"] for c in detect(tmp_path) if c.mode != "wrapper"]
+    assert "kas/alpha.yml" in kas_proposals                                  # includes-only files are configurations too
+    results = check(Profile.from_dict(alpha))
+    assert any(status == "WARN" and "no build" in text for status, text in results)
+    (tmp_path / "builds/alpha/build/conf").mkdir(parents=True)
+    assert any(status == "OK" and text.startswith("build directory") for status, text in check(Profile.from_dict(alpha)))
+    script.write_text("#!/bin/bash\nKAS_WORK_DIR=$SOMETHING/x kas-container build $YML\n")
+    assert script_work_dir(script, tmp_path, {"YML": "kas/alpha.yml"}) == ""
+    assert any("does not seem to pass its arguments" in text for _, text in check(Profile.from_dict(alpha)))

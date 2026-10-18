@@ -41,7 +41,53 @@ def _files(root: Path, depth: int = 2, limit: int = 4000):
                 return
 
 
+KAS_HEADER = re.compile(r"^header:\s*$", re.M)
+
+
+def kas_includes(path: Path, root: Path) -> list[Path]:
+    """Local files a kas configuration includes (header: includes:); includes from other repos are skipped."""
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return []
+    block = re.search(r"^header:\s*\n((?:[ \t]+.*\n?|\s*\n)*)", text, re.M)
+    items = re.search(r"^([ \t]+)includes:\s*\n((?:\1[ \t]+.*\n?)*)", block[1], re.M) if block else None
+    result = []
+    for name in re.findall(r"^\s*-\s*['\"]?([^'\"\s{}]+\.ya?ml)['\"]?\s*$", items[2] if items else "", re.M):
+        # kas resolves local includes from the top of the repository holding the file.
+        for base in (root, path.parent):
+            if (base / name).is_file():
+                result.append((base / name).resolve())
+                break
+    return result
+
+
+def kas_values(path: Path, root: Path, seen=None) -> dict:
+    """machine, distro and target as kas resolves them: includes first, the file itself last."""
+    seen = seen or set()
+    if path in seen:
+        return {}
+    seen.add(path)
+    values = {}
+    for include in kas_includes(path, root):
+        values.update(kas_values(include, root, seen))
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return values
+    for key in ("machine", "distro", "target"):
+        match = re.search(rf"^{key}:[ \t]*['\"]?([^'\"\s#]+)", text, re.M)
+        if match:
+            values[key] = match[1]
+    list_target = re.search(r"^target:[ \t]*\n((?:[ \t]+-[ \t]*\S+[ \t]*(?:\n|$))+)", text, re.M)
+    if list_target:
+        values["target"] = " ".join(re.findall(r"-\s*(\S+)", list_target[1]))
+    return values
+
+
 def kas_files(root: Path) -> list[Path]:
+    """kas configurations under root: the ones you build first (not included by another file, with a
+    machine once includes are resolved), fragments meant for includes last."""
     found = []
     for path in _files(root):
         if path.suffix in {".yml", ".yaml"} and path.stat().st_size < 512 * 1024:
@@ -49,10 +95,54 @@ def kas_files(root: Path) -> list[Path]:
                 head = path.read_text(errors="replace")[:4000]
             except OSError:
                 continue
-            if re.search(r"^header:\s*$", head, re.M) and re.search(r"^\s+version:\s*\d+", head, re.M) and re.search(r"^(repos|includes|machine|distro|target):", head, re.M | re.S):
+            if KAS_HEADER.search(head) and re.search(r"^\s+version:\s*\d+", head, re.M) and re.search(r"^(repos|machine|distro|target):|^\s+includes:", head, re.M):
                 found.append(path)
-    # Top-level configurations (with machine/target) first; fragments meant for includes later.
-    return sorted(found, key=lambda p: (not re.search(r"^(machine|target):", p.read_text(errors="replace"), re.M), len(p.parts), str(p)))
+    included = {inc for path in found for inc in kas_includes(path, root)}
+    return sorted(found, key=lambda p: (p.resolve() in included, "machine" not in kas_values(p.resolve(), root), len(p.parts), str(p)))
+
+
+def _shell_value(raw: str) -> str:
+    """One assignment's value as written: a trailing comment or command dropped, quotes removed
+    ("$(dirname "$0")"/out → $(dirname $0)/out)."""
+    return re.split(r"\s+#|\s*;\s*|\s+&&\s+(?![^()]*\))", raw.strip())[0].replace('"', "").replace("'", "")
+
+
+def script_work_dir(script: Path, root: Path, variables: dict | None = None) -> str:
+    """The KAS_WORK_DIR a launcher script sets or defaults to, with $HOME, $PWD, the script's folder,
+    simple variables the script assigns (SCRIPT_DIR=…) and the profile's own variables (YML=kas/a.yml:
+    ${YML%.yml}, $(basename $YML .yml)) expanded; "" when it uses something only known at run time."""
+    try:
+        text = script.read_text(errors="replace")
+    except OSError:
+        return ""
+    match = re.search(r"KAS_WORK_DIR=['\"]?\$\{KAS_WORK_DIR:-([^}]+)\}", text) or re.search(r"^\s*(?:export\s+)?KAS_WORK_DIR=(.+)$", text, re.M)
+    if not match:
+        return ""
+    assigned = {name: _shell_value(raw) for name, raw in re.findall(r"^\s*(?:export\s+|readonly\s+|local\s+)?([A-Z_][A-Z0-9_]*)=(.+)$", text, re.M)
+                if name != "KAS_WORK_DIR" and name not in (variables or {})}
+    here = r"\$\(\s*(?:cd\s+)?\$\(\s*dirname\s+\$(?:\{BASH_SOURCE\[0\]\}|BASH_SOURCE|\{?0\}?)\s*\)(?:\s*&&\s*pwd)?\s*\)|\$\(\s*dirname\s+\$(?:\{BASH_SOURCE\[0\]\}|\{?0\}?)\s*\)|\$\(\s*(?:realpath|readlink\s+-f)\s+\$\(\s*dirname\s+\$\{?0\}?\s*\)\s*\)"
+
+    def expand(value: str, depth: int = 0) -> str:
+        value = re.sub(here, str(script.parent), value)
+        for name, replacement in (("HOME", str(Path.home())), ("PWD", str(root))):
+            value = re.sub(rf"\$\{{{name}\}}|\${name}\b", replacement, value)
+        value = re.sub(r"\$\(\s*pwd\s*\)", str(root), value)
+        for name, given in (variables or {}).items():
+            stem = Path(given).name.rsplit(".", 1)[0]
+            value = re.sub(rf"\$\(\s*basename\s+\$\{{?{name}\}}?(?:\s+\.ya?ml)?\s*\)", stem, value)
+            value = re.sub(rf"\$\{{{name}%%?\.\*\}}|\$\{{{name}%\.ya?ml\}}", given.rsplit(".", 1)[0], value)
+            value = re.sub(rf"\$\{{{name}\}}|\${name}\b", given, value)
+        if depth < 3:
+            for name, raw in assigned.items():
+                if re.search(rf"\$\{{{name}\}}|\${name}\b", value):
+                    value = re.sub(rf"\$\{{{name}\}}|\${name}\b", lambda _m: expand(raw, depth + 1), value)
+        return re.sub(r"^~(?=/|$)", str(Path.home()), value)
+
+    value = expand(_shell_value(match[1]))
+    if "$" in value or "`" in value:
+        return ""
+    path = Path(value)
+    return str(path if path.is_absolute() else (root / path).resolve())
 
 
 def launchers(root: Path) -> list[tuple[Path, list[str]]]:
@@ -100,20 +190,39 @@ def detect(root: Path, profiles=()) -> list[Candidate]:
     for script, variables in launchers(root):
         relative = "./" + str(script.relative_to(root))
         config_var = next((v for v in variables if re.search(r"YML|YAML|KAS|CONF|CONFIG|FILE", v)), variables[0] if variables else "")
-        environment = {}
-        evidence = [f"{relative} is executable and runs kas"]
         hints = ["The script must accept kas subcommands (build, dump…) and forward 'shell -c COMMAND' for BitBake commands and probes."]
-        if config_var:
-            environment[config_var] = str(configs[0].relative_to(root)) if configs else ""
-            evidence.append(f"reads ${config_var}" + (f"; first kas file: {environment[config_var]}" if configs else ""))
-        candidates.append(Candidate("wrapper", f"Launcher script {relative}", evidence,
-                                    {"name": slug(root.name + "-" + script.stem), "root": str(root), "mode": "wrapper", "launcher": [relative],
-                                     "launcher_shell": ["shell", "-c", "{command}"], "environment": environment}, 30, hints))
+        if not script_work_dir(script, root, {config_var: "x.yml"} if config_var else None):
+            hints.append(f"KAS_WORK_DIR is not set by {relative}: kas builds in the folder the script runs from, so Bitloom looks for tmp/ in {root}/build. "
+                         "Set KAS_WORK_DIR in the profile if the script builds elsewhere.")
+        # One profile per product configuration: YML=<file> ./run_kas.sh build is how such projects pick what to build.
+        included = {i for o in configs for i in kas_includes(o, root)}
+        standalone = [c for c in configs if c.resolve() not in included]
+        # A product names a machine (itself or through its includes); other standalone files are shared fragments.
+        top = [c for c in standalone if "machine" in kas_values(c.resolve(), root)] or standalone or configs[:1]
+        for config in (top if config_var else [None])[:8]:
+            environment, evidence = {}, [f"{relative} is executable and runs kas"]
+            values = kas_values(config.resolve(), root) if config else {}
+            work = script_work_dir(script, root, {config_var: str(config.relative_to(root))} if config is not None else None)
+            if config is not None:
+                environment[config_var] = str(config.relative_to(root))
+                evidence.append(f"reads ${config_var}; {config_var}={environment[config_var]}" + (f" (machine {values['machine']})" if values.get("machine") else ""))
+            if work:
+                environment["KAS_WORK_DIR"] = work
+                evidence.append(f"builds in {work} (KAS_WORK_DIR in the script)")
+            name = slug(config.stem if config is not None and len(top) > 1 else root.name + "-" + script.stem)
+            title = f"{config_var}={environment[config_var]} {relative} build" if config is not None else f"Launcher script {relative}"
+            profile = {"name": name, "root": str(root), "mode": "wrapper", "launcher": [relative],
+                       "launcher_shell": ["shell", "-c", "{command}"], "environment": environment}
+            if values.get("machine"):
+                profile["machine"] = values["machine"]
+            if values.get("target"):
+                profile["targets"] = values["target"].split()
+            candidates.append(Candidate("wrapper", title, evidence, profile, 30, list(hints)))
     for config in configs[:6]:
         relative = str(config.relative_to(root))
         values = config.read_text(errors="replace")
-        machine = (re.search(r"^machine:\s*(\S+)", values, re.M) or [None, ""])[1]
-        target = (re.search(r"^target:\s*(\S+)", values, re.M) or [None, ""])[1]
+        resolved = kas_values(config.resolve(), root)
+        machine, target = resolved.get("machine", ""), resolved.get("target", "").split(" ")[0]
         evidence = [f"kas configuration {relative}" + (f" (machine {machine})" if machine else "")]
         container = bool(which("kas-container")) or not which("kas")
         work = str(Path.home() / "bitloom-work" / slug(root.name + "-" + config.stem))
@@ -122,7 +231,7 @@ def detect(root: Path, profiles=()) -> list[Candidate]:
                    "environment": {"KAS_WORK_DIR": work, "KAS_CONTAINER_ENGINE": engine} if container else {}}
         hints = ["kas-container needs a separate work directory on a Linux filesystem (not /mnt/<drive>)."] if container else []
         evidence.append("kas-container found" if which("kas-container") else "kas found" if which("kas") else "neither kas nor kas-container in PATH yet")
-        candidates.append(Candidate(profile["mode"], f"kas: {relative}", evidence, profile, 20 if re.search(r"^machine:", values, re.M) else 10, hints))
+        candidates.append(Candidate(profile["mode"], f"kas: {relative}", evidence, profile, 20 if machine else 10, hints))
     for script in INIT_SCRIPTS:
         if (root / script).is_file():
             builds = build_dirs(root) or [root / "build"]
@@ -165,6 +274,16 @@ def check(profile: Profile) -> list[tuple[str, str]]:
         launcher = profile.launcher[0] if profile.launcher else ""
         path = profile.root_path / launcher
         results.append(("OK" if launcher and path.is_file() and os.access(path, os.X_OK) else "ERR", f"launcher {launcher or '(missing)'}"))
+        try:
+            text = path.read_text(errors="replace") if path.is_file() else ""
+        except OSError:
+            text = ""
+        if text and not re.search(r'"\$@"|\$@|"\$\*"|\$\*|\bshell\b', text):
+            results.append(("WARN", f"{launcher} does not seem to pass its arguments on: BitBake commands run as "
+                                    f"'{launcher} {' '.join(profile.launcher_shell)}' need it to forward 'shell -c COMMAND'"))
+        build = profile.build_path
+        results.append(("OK", f"build directory {build}") if (build / "conf").is_dir() or (build / "tmp").is_dir() else
+                       ("WARN", f"no build in {build} yet: set KAS_WORK_DIR (or KAS_BUILD_DIR) in the profile if the script builds elsewhere"))
         for key, value in profile.environment.items():
             if value.endswith((".yml", ".yaml")):
                 results.append(("OK" if (profile.root_path / value).is_file() or Path(value).is_file() else "WARN", f"{key}={value}"))

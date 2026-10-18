@@ -51,9 +51,14 @@ def log_facts(path: Path) -> dict:
             match = SSTATE.search(line)
             if match:
                 wanted, local, mirrors, missed = map(int, match.groups()[:4])
-                sstate = {'wanted': wanted, 'local': local, 'mirrors': mirrors, 'missed': missed,
-                          'current': int(match[5]) if match[5] else None,
-                          'hit_rate': round((local + mirrors) / wanted, 4) if wanted else None}
+                current = int(match[5]) if match[5] else None
+                total = wanted + (current or 0)
+                # hit_rate: wanted tasks served from sstate. reuse: everything BitBake did not have to run
+                # (already current or from sstate), BitBake's "complete": a forced task makes hit_rate 0%
+                # while 98% of the build was reused.
+                sstate = {'wanted': wanted, 'local': local, 'mirrors': mirrors, 'missed': missed, 'current': current,
+                          'hit_rate': round((local + mirrors) / wanted, 4) if wanted else None,
+                          'reuse': round((local + mirrors + (current or 0)) / total, 4) if total else None}
     return {'warnings': sum(warnings.values()), 'distinct_warnings': [{'message': m, 'count': c} for m, c in warnings.most_common(20)],
             'errors': errors[-20:], 'failed_tasks': failed, 'sstate': sstate}
 
@@ -211,10 +216,11 @@ def main(args) -> int:
         Path(args.junit).write_bytes(junit(results))
     output.write('')
     for row in results:
-        hit = row['sstate']['hit_rate'] if row['sstate'] else None
+        state = row['sstate'] or {}
+        reuse = state.get('reuse', state.get('hit_rate'))
         if row['status'] == 'skipped':
             output.write(f'SKIP  {row["profile"]}: {row["title"]}  {row["reason"]}')
             continue
         output.write(f'{"PASS" if row["status"] == "success" else "FAIL"}  {row["profile"]}: {row["title"]}  '
-                     f'{row["seconds"]:.0f}s  warnings {row["warnings"]}' + (f'  sstate {100 * hit:.0f}%' if hit is not None else ''))
+                     f'{row["seconds"]:.0f}s  warnings {row["warnings"]}' + (f'  sstate reuse {100 * reuse:.0f}% ({state["missed"]} of {state["wanted"]} wanted tasks rebuilt)' if reuse is not None else ''))
     return 0 if summary['ok'] and any(r['status'] == 'success' for r in results) else 1

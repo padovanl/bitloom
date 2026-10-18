@@ -352,14 +352,8 @@ class Dashboard:
         return {"written": [str(p) for p in written], "messages": messages, "target": target}
 
     def projects(self):
-        from .projects import IMAGES, MACHINES, RELEASES, Recent
-        settings = self.settings()
-        roots = {str(p.root_path): p.name for p in settings.profiles}
-        items, seen = [], set()
-        for item in Recent(self.state).load() + [{"root": root, "profile": name, "how": "profile"} for root, name in roots.items()]:
-            if item["root"] not in seen:
-                seen.add(item["root"])
-                items.append({**item, "profile": roots.get(item["root"], "")})
+        from .projects import IMAGES, MACHINES, RELEASES, Recent, project_rows
+        items = project_rows(self.settings(), Recent(self.state))
         return {"recent": items, "releases": {k: v["title"] for k, v in RELEASES.items()}, "machines": list(MACHINES), "images": list(IMAGES),
                 "home": str(Path.home())}
 

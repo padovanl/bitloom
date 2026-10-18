@@ -756,8 +756,10 @@ function renderLog(target, text, query, append = false) {
   if (!append) target.textContent = "";
   const fragment = document.createDocumentFragment();
   const needle = (query || "").toLowerCase();
-  for (const line of text.split("\n")) {
-    if (!line && append) continue;
+  // Chunks end with a newline: that is the end of the last line, not an empty line after it.
+  const lines = text.split("\n");
+  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  for (const line of lines) {
     const span = el("span", {class: append ? "new" : ""});
     if (line.startsWith("$ ")) span.classList.add("l-cmd");
     else if (/ERROR:|FAILED|error:/.test(line)) span.classList.add("l-err");
@@ -1209,8 +1211,8 @@ async function loadProjects() {
   projectInfo = await api("/api/projects");
   const list = $("pj-recent"); list.textContent = "";
   for (const item of projectInfo.recent) {
-    const folder = item.root.split("/").pop() || item.root, active = item.profile && item.profile === $("profile").value;
-    const label = active ? "active" : item.profile ? (item.profile !== folder ? "profile " + item.profile : "switch") : "not set up";
+    const folder = item.root.split("/").pop() || item.root, names = item.profiles || [], active = names.includes($("profile").value);
+    const label = active ? (names.length > 1 ? "active · " + $("profile").value : "active") : names.length > 1 ? "profiles " + names.join(", ") : item.profile ? (item.profile !== folder ? "profile " + item.profile : "switch") : "not set up";
     const row = el("div", {class: "row" + (active ? " current" : ""), tabindex: "0"},
       el("span", {class: "glyph" + (active ? " s-success" : ""), text: active ? "●" : item.profile ? "○" : "+"}),
       el("span", {}, el("b", {text: folder}), el("div", {class: "meta", text: item.root})),

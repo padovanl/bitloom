@@ -1438,6 +1438,11 @@ class BitloomApp(App):
         table.clear()
         for key, values in cells.items():
             table.add_row(*values, key=key)
+        if table.row_count and not self.selected_job_id and not getattr(self, "auto_selected", False):
+            # Open on the latest operation of this profile, as the web dashboard does, instead of an empty output pane.
+            self.auto_selected = True
+            latest = next((row for row in history if row["profile"] == self.profile.name), history[0])
+            self.call_after_refresh(lambda: self.selected_job_id or self.select_job(latest["id"], latest["log"]))
         if table.row_count:
             # Keep the selected job highlighted when new jobs are inserted above it.
             if self.selected_job_id in self.history_rows:

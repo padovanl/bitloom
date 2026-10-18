@@ -1518,19 +1518,17 @@ class ProjectsScreen(ModalScreen):
     def on_mount(self):
         from rich.text import Text
         self.query_one(Vertical).border_title = "Projects"
-        seen, picker = set(), self.query_one("#projects-list", OptionList)
-        roots = {str(p.root_path): p.name for p in self.settings.profiles}
-        for item in self.recent.load() + [{"root": root, "profile": name, "how": "profile"} for root, name in roots.items()]:
-            if item["root"] in seen:
-                continue
-            seen.add(item["root"])
+        picker = self.query_one("#projects-list", OptionList)
+        from .projects import project_rows
+        for item in project_rows(self.settings, self.recent):
             self.items.append(item)
-            profile = roots.get(item["root"])
+            profile, names = item["profile"], item["profiles"]
             folder = Path(item["root"]).name or item["root"]
-            active = profile == self.settings.active
+            active = item["active"]
             # ● active project, ○ set up (switches profile), + not set up yet (opens the guided setup).
             mark = ("● ", "bold $accent") if active else ("○ ", "") if profile else ("+ ", "dim")
-            state = "active" if active else (f"profile {profile}" if profile and profile != folder else "switch") if profile else "not set up"
+            state = (f"active · {profile}" if len(names) > 1 else "active") if active else \
+                (("profiles " + ", ".join(names)) if len(names) > 1 else f"profile {profile}" if profile != folder else "switch") if profile else "not set up"
             label = Text.assemble(mark, (folder, "bold"), ("  " + state, "italic"), ("  " + item["root"], "dim"),
                                   no_wrap=True, overflow="ellipsis")
             picker.add_option(Option(label, id=str(len(self.items) - 1)))

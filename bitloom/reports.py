@@ -85,9 +85,10 @@ def build_summary(path: Path) -> str:
         for line in source:
             line = line.rstrip()
             if 'ERROR:' in line:
-                errors.append(line)
+                errors.append(line[line.index('ERROR:'):] if line.startswith(('Initialising', 'Loading', 'Parsing')) else line)
             if 'WARNING:' in line:
-                warnings.append(line)
+                # Logs written before the runner split "Initialising tasks...WARNING: x" keep the prefix.
+                warnings.append(line[line.index('WARNING:'):] if line.startswith(('Initialising', 'Loading', 'Parsing')) else line)
             if 'failed with exit code' in line:
                 failed.append(line)
             if 'Sstate summary:' in line:
