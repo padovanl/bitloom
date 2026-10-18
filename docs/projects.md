@@ -66,7 +66,7 @@ Recipes → **+ Add** (or Ctrl+K → *Add a layer*) brings a layer into the proj
 * **From a Git URL**: any repository, yours included; the layer's folder inside it, and the branch (the project's release by default).
 * **Your mirror**: a base URL that replaces the original servers (`https://git.mycompany.com/mirrors` → `…/mirrors/meta-virtualization`), for networks that reach only an internal Git server.
 
-Before anything is written, Bitloom asks each remote whether the branch exists (`git ls-remote`), and refuses with the reason when it does not. Then, the way the project builds:
+Before anything is written, Bitloom asks each remote whether the branch exists (`git ls-remote`) and refuses with the reason when it does not; a remote it cannot reach (network, credentials) is shown as *not checked*, and adding stays possible. Then, the way the project builds:
 
 * **kas and launcher scripts**: the repositories go into the kas file's `repos:` (a diff first, the original kept: *Migrate → Undo* restores it). kas fetches them on the next build.
 * **BitBake on the machine, in a container, bitbake-setup**: the repositories are cloned next to the other layers, then `bitbake-layers add-layer` runs through the profile, as jobs you follow in Builds.

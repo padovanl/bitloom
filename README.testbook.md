@@ -210,7 +210,7 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | # | Do | You should see |
 | --- | --- | --- |
 | 8g.1 | Web on `kas-wrynose`: `2`, *+ Add*, type `virtual`, choose *meta-virtualization*. | openembedded-core *already in the project*; meta-oe, meta-python, meta-networking, meta-filesystems and meta-virtualization to add, each *✔ wrynose*; the diff adds `meta-openembedded` (four layers) and `meta-virtualization` to `tests/integration/kas-wrynose.yml`. Do not press *Add* (or press it and use *Migrate → Undo*). |
-| 8g.2 | Mirror `https://git.example.invalid/m`. | The URLs change to the mirror; the branch checks fail (*no wrynose branch* or *not checked*) and *Add* is disabled with the reason. |
+| 8g.2 | Mirror `https://git.example.invalid/m`. | The URLs change to the mirror; each shows *? not checked* with *could not be reached from here (network, credentials or a wrong address)*; *Add* stays possible (a mirror may need credentials Bitloom does not have). |
 | 8g.3 | *From a Git URL*: `https://git.yoctoproject.org/meta-security`, branch `nonexistent`, *Check*. | *✖ no nonexistent branch*; *Add* disabled. |
 | 8g.4 | `bitloom --config .validation/profiles.json --add-layer meta-virtualization` (active profile kas-scarthgap). | The same plan on Scarthgap (branch scarthgap) and the kas diff; nothing written without `--apply`. |
 

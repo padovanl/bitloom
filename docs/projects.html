@@ -98,7 +98,7 @@
 <li><strong>From a Git URL</strong>: any repository, yours included; the layer's folder inside it, and the branch (the project's release by default).</li>
 <li><strong>Your mirror</strong>: a base URL that replaces the original servers (<code>https://git.mycompany.com/mirrors</code> → <code>…/mirrors/meta-virtualization</code>), for networks that reach only an internal Git server.</li>
 </ul>
-<p>Before anything is written, Bitloom asks each remote whether the branch exists (<code>git ls-remote</code>), and refuses with the reason when it does not. Then, the way the project builds:</p>
+<p>Before anything is written, Bitloom asks each remote whether the branch exists (<code>git ls-remote</code>) and refuses with the reason when it does not; a remote it cannot reach (network, credentials) is shown as <em>not checked</em>, and adding stays possible. Then, the way the project builds:</p>
 <ul>
 <li><strong>kas and launcher scripts</strong>: the repositories go into the kas file's <code>repos:</code> (a diff first, the original kept: <em>Migrate → Undo</em> restores it). kas fetches them on the next build.</li>
 <li><strong>BitBake on the machine, in a container, bitbake-setup</strong>: the repositories are cloned next to the other layers, then <code>bitbake-layers add-layer</code> runs through the profile, as jobs you follow in Builds.</li>

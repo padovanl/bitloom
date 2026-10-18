@@ -661,8 +661,10 @@ class Dashboard:
                 checks[layer.url] = layerindex.branch_exists(layer.url, layer.branch)
         plan = layerindex.plan(profile, layers, entries)
         missing = [url for url, ok in checks.items() if ok is False]
+        unreachable = [url for url, ok in checks.items() if ok is None]
         result = {"series": series, "layers": layerindex.describe(layers), "branches": checks, "plan": plan,
-                  "warnings": [f"{url} has no branch {next(l.branch for l in layers if l.url == url)}: choose another branch or a mirror that has it" for url in missing]}
+                  "warnings": [f"{url} has no branch {next(l.branch for l in layers if l.url == url)}: choose another branch or a mirror that has it" for url in missing],
+                  "notices": [f"{url} could not be reached from here (network, credentials or a wrong address): the branch is not checked" for url in unreachable]}
         if what == "plan":
             return result
         if missing:
