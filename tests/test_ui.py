@@ -144,8 +144,8 @@ async def test_analysis_content_search_log_report_and_export(tmp_path):
         assert await eventually(pilot, lambda: len(app.entries) >= 3)   # metadata scan finished
         app.query_one('#workspace', TabbedContent).active = 'analysis'
         app.query_one('#analysis-query', Input).value = 'SRC_URI'
-        app.run_analysis()
-        await app.workers.wait_for_complete()
+        # Wait for this analysis only: background workers (metadata watch) may be replaced meanwhile.
+        await app.run_analysis().wait()
         assert 'file://agent.c' in app.analysis_text
         app.export_analysis()
         assert len(list((tmp_path/'state/exports').glob('analysis-*.txt'))) == 1
@@ -155,8 +155,7 @@ async def test_analysis_content_search_log_report_and_export(tmp_path):
         app.query_one('#analysis-first', Input).value = str(log)
         await pilot.pause(.2)
         assert not app.query_one('#analysis-query', Input).display
-        app.run_analysis()
-        await app.workers.wait_for_complete()
+        await app.run_analysis().wait()
         assert '50.0%' in app.analysis_text
     app.store.close()
 
