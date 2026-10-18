@@ -2862,7 +2862,8 @@ async function planLayer() {
       el("span", {}, el("span", {class: "n", text: l.name}), el("small", {text: (l.present ? "already in the project" : l.url + (l.subdir ? " · " + l.subdir : "")) + (l.required_by.length ? " · needed by " + l.required_by.join(", ") : "")})),
       el("span", {class: "st " + (l.present ? "" : check === false ? "bad" : check ? "good" : ""), text: l.present ? "" : check === false ? `✖ no ${l.branch} branch` : check ? `✔ ${l.branch}` : "? not checked"})));
   }
-  for (const w of d.warnings) box.append(el("div", {class: "notice", text: "⚠ " + w}));
+  for (const w of d.warnings) box.append(el("div", {class: "notice", text: "✖ " + w}));
+  for (const n of d.notices || []) box.append(el("div", {class: "hint", text: "? " + n}));
   if (d.plan.kind === "kas") {
     box.append(el("div", {class: "mg-group", text: `What changes in ${d.plan.name}`}), d.plan.changed ? diffBlock({path: d.plan.name, shown: d.plan.name, diff: d.plan.diff, changes: d.plan.notes.length}) : el("div", {class: "hint", text: "Nothing to change: the kas file already has them."}),
       el("div", {class: "mg-note", text: "kas fetches the new repositories on the next build. The original file is kept: Migrate → Undo restores it."}));
