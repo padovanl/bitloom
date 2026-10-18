@@ -544,6 +544,14 @@ class Dashboard:
             return rootfs.services(profile, image, machine)
         return rootfs.read(profile, image, machine, query.get("path", [""])[0])
 
+    def devicetree(self, query):
+        from . import devicetree
+        profile = self.profile(query.get("profile", [""])[0])
+        name = query.get("name", [""])[0]
+        if not name:
+            return {"files": devicetree.find(profile)}
+        return devicetree.load(profile, name, query.get("machine", [""])[0])
+
     def practices(self, query):
         from .practices import review
         profile = self.profile(query.get("profile", [""])[0])
@@ -688,6 +696,8 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     text, name = dashboard.practices_export(query)
                     self.send(HTTPStatus.OK, text.encode(), "text/plain; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
                     return
+                elif route == ("GET", "devicetree"):
+                    payload = dashboard.devicetree(query)
                 elif route == ("GET", "whois"):
                     payload = dashboard.whois(query)
                 elif route == ("GET", "images"):

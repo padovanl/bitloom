@@ -53,6 +53,27 @@ SYSV INIT SCRIPTS
   ● udev                         runlevels S · order 04         eudev (eudev)
 …
 </code></pre>
+<h2 id="device-tree">Device tree<a class="anchor" href="#device-tree" aria-label="Link to this section">#</a></h2>
+<p><strong>Device tree</strong> lists the <code>.dtb</code> and <code>.dtbo</code> files the build deployed in <code>tmp/deploy/images/&lt;machine&gt;</code> (the short names, not the versioned copies; the machine of the selected image first) and opens one decompiled, with no <code>dtc</code> needed: Bitloom reads the flattened device tree itself, and the DTS text matches what <code>dtc -I dtb -O dts</code> gives (verified by compiling it back with the build's own <code>dtc</code>).</p>
+<ul>
+<li><strong>The board</strong>: model, compatible strings, boot arguments, the console (<code>stdout-path</code>), memory.</li>
+<li><strong>Enabled devices</strong> and <strong>disabled devices</strong> (<code>status = &quot;disabled&quot;</code>), each with its path and first compatible string: select one to jump to its node.</li>
+<li><strong>The DTS text</strong> with search: type, <code>Enter</code> for the next match, <code>Shift+Enter</code> for the previous one. Phandles are shown as <code>&amp;label</code> where the meaning is clear (<code>interrupt-parent = &lt;&amp;interrupt_controller_8000&gt;</code>).</li>
+<li>An <strong>overlay</strong> (<code>.dtbo</code>) is marked as such: the bootloader applies it on top of a base tree.</li>
+</ul>
+<p>To change a device tree, add a <code>.dts</code> or <code>.dtsi</code> to your BSP layer and list it in <code>KERNEL_DEVICETREE</code>, or ship an overlay; never edit the kernel's own tree. x86 and most QEMU machines deploy no device tree; the demo workspace has a labelled sample board.</p>
+<details class="shot"><summary><span>Screenshot</span> The device tree of the demo board: enabled and disabled devices, the DTS with search</summary><div class="shot-body"><img src="assets/web-image-devicetree.png" alt="The device tree of the demo board: enabled and disabled devices, the DTS with search" loading="lazy" decoding="async"></div></details>
+<pre><code class="language-console">$ bitloom --devicetree                      # what was deployed
+demo-board           demo-board.dtb                           base
+$ bitloom --devicetree demo-board.dtb       # summary; --format dts for the text, --format json for tools
+DEVICE TREE demo-board.dtb (demo-board)
+
+model        Demo sample board (not real hardware)
+compatible   demo,board, demo,soc
+bootargs     console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait
+…
+</code></pre>
+<p>In the TUI: <strong>Analysis → Device tree</strong>.</p>
 <h2 id="change-it">Change it<a class="anchor" href="#change-it" aria-label="Link to this section">#</a></h2>
 <p>Under the file, Bitloom says what to do:</p>
 <ul>
@@ -87,7 +108,7 @@ sysvinit-inittab (sysvinit-inittab) ships this file
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="web.html"><small>Previous</small>Web dashboard</a><a class="next" href="compliance.html"><small>Next</small>SBOM, CRA and releases</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/image.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
 </main>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-you-see">What you see</a><a href="#what-starts-on-the-device">What starts on the device</a><a href="#change-it">Change it</a><a href="#which-recipe-installs">Which recipe installs…?</a><a href="#practical-limits">Practical limits</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-you-see">What you see</a><a href="#what-starts-on-the-device">What starts on the device</a><a href="#device-tree">Device tree</a><a href="#change-it">Change it</a><a href="#which-recipe-installs">Which recipe installs…?</a><a href="#practical-limits">Practical limits</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

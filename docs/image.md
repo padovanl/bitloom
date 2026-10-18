@@ -44,6 +44,33 @@ SYSV INIT SCRIPTS
 …
 ```
 
+## Device tree
+
+**Device tree** lists the `.dtb` and `.dtbo` files the build deployed in `tmp/deploy/images/<machine>` (the short names, not the versioned copies; the machine of the selected image first) and opens one decompiled, with no `dtc` needed: Bitloom reads the flattened device tree itself, and the DTS text matches what `dtc -I dtb -O dts` gives (verified by compiling it back with the build's own `dtc`).
+
+* **The board**: model, compatible strings, boot arguments, the console (`stdout-path`), memory.
+* **Enabled devices** and **disabled devices** (`status = "disabled"`), each with its path and first compatible string: select one to jump to its node.
+* **The DTS text** with search: type, `Enter` for the next match, `Shift+Enter` for the previous one. Phandles are shown as `&label` where the meaning is clear (`interrupt-parent = <&interrupt_controller_8000>`).
+* An **overlay** (`.dtbo`) is marked as such: the bootloader applies it on top of a base tree.
+
+To change a device tree, add a `.dts` or `.dtsi` to your BSP layer and list it in `KERNEL_DEVICETREE`, or ship an overlay; never edit the kernel's own tree. x86 and most QEMU machines deploy no device tree; the demo workspace has a labelled sample board.
+
+![The device tree of the demo board: enabled and disabled devices, the DTS with search](assets/web-image-devicetree.png)
+
+```console
+$ bitloom --devicetree                      # what was deployed
+demo-board           demo-board.dtb                           base
+$ bitloom --devicetree demo-board.dtb       # summary; --format dts for the text, --format json for tools
+DEVICE TREE demo-board.dtb (demo-board)
+
+model        Demo sample board (not real hardware)
+compatible   demo,board, demo,soc
+bootargs     console=ttyS0,115200 root=/dev/mmcblk0p2 rootwait
+…
+```
+
+In the TUI: **Analysis → Device tree**.
+
 ## Change it
 
 Under the file, Bitloom says what to do:
