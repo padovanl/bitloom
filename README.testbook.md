@@ -186,6 +186,15 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 8d.2 | `Esc`, `Ctrl+Q`, start `bitloom` again; `1`, then `S` on a running job; `?`. Then `bitloom --keys`. | `S` stops the job; the Stop button and `?` show `S`; `--keys` lists `S (default s)`. |
 | 8d.3 | Edit `~/.config/bitloom/keys.json` to `{"builds": {"Stop": "j"}}`, start `bitloom`. Then `0`, `c`, `R`. | A warning at start (*reserved*), default keys kept; `R` restores every default and removes the file. |
 
+### Stage 8e — BitBake assistant (no builds)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8e.1 | Web on `kas-wrynose`: `6` Studio → *Image*, switch on *edit before creating*, click at the end of the file. Type `IMAGE_FEA`; `↓`; `Enter`. Then a new line `inherit sys`, `Ctrl+Space`. | Suggestions under the cursor with V badges and *FEA* in bold; the documentation of the selected one below the list; Enter inserts `EXTRA_IMAGE_FEATURES`. `inherit sys` offers `syslinux`, `systemd`…, each a C (class). |
+| 8e.2 | Type `IMAGE_INSTALL:append = "htop"`, a new line `DEPENDS_append = " zlib"`, a new line `EXTRA_IMAGE_FEATURES = "debug-tweak"`. Click a problem. | Below the editor: ▲ *adds no space* with the fix, ✖ *old override syntax*, ▲ *not an image feature of this release* (on Scarthgap: *did you mean “debug-tweaks”?*); the line numbers turn red/yellow; clicking selects the line. |
+| 8e.3 | TUI: `2`, open a recipe with `o` from your layer (or `n` *New file* with a `.bb` path); type `inherit sys`, `Ctrl+Space`, `Enter`; move onto a variable, `Alt+D`. | A list of classes; Enter inserts `systemd`; the line under the editor lists problems or *✔ no problems found*; Alt+D shows the variable's documentation. |
+| 8e.4 | `bitloom --config .validation/profiles.json --lint meta-acme; echo $?`; then on a folder with a `DEPENDS_append`; `bitloom --config .validation/profiles.json --explain IMAGE_INSTAL; echo $?` | Clean layer: exit 0; with the error: the file:line, the fix and exit 2. `--explain` suggests `IMAGE_INSTALL` and exits 1. |
+
 ### Stage 9 — Projects, setup and notifications (no builds)
 
 | # | Do | You should see |

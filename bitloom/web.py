@@ -563,6 +563,20 @@ class Dashboard:
             return insights(profile, image, machine, self.entries(profile))
         return rootfs.read(profile, image, machine, query.get("path", [""])[0])
 
+    def language(self, what, query, body=None):
+        """The BitBake language assistant: completion, explanation of a word, diagnostics of a file."""
+        from . import language
+        profile = self.profile((body or {}).get("profile") or query.get("profile", [""])[0])
+        vocab = language.vocabulary(profile, self.entries(profile))
+        if what == "complete":
+            return language.complete(vocab, query.get("before", [""])[0][-400:])
+        if what == "explain":
+            return language.explain(vocab, query.get("word", [""])[0][:120])
+        text = str((body or {}).get("text", ""))
+        if len(text) > 512 * 1024:
+            raise ValueError("File too large to check")
+        return {"problems": language.lint(vocab, text, str((body or {}).get("filename", "")))}
+
     def devicetree(self, query):
         from . import devicetree
         profile = self.profile(query.get("profile", [""])[0])
@@ -715,6 +729,10 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     text, name = dashboard.practices_export(query)
                     self.send(HTTPStatus.OK, text.encode(), "text/plain; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
                     return
+                elif route[:2] == ("GET", "lang") and len(route) == 3 and route[2] in {"complete", "explain"}:
+                    payload = dashboard.language(route[2], query)
+                elif route == ("POST", "lang", "lint"):
+                    payload = dashboard.language("lint", query, self.body())
                 elif route == ("GET", "devicetree"):
                     payload = dashboard.devicetree(query)
                 elif route == ("GET", "whois"):

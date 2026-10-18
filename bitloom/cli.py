@@ -138,8 +138,10 @@ def main():
     parser.add_argument("--all-statuses", action="store_true", help="With --vulns: include patched and ignored findings, not only unpatched")
     parser.add_argument("--work-usage", action="store_true", help="Print disk usage per recipe in tmp/work with rm_work advice")
     parser.add_argument("--practices", action="store_true", help="Review the project against Yocto best practices and bitloom-practices.json; exits 2 on errors (or warnings with --fail-on warning)")
-    parser.add_argument("--fail-on", choices=["error", "warning", "never"], default="error", help="--practices: what makes the exit status 2")
+    parser.add_argument("--fail-on", choices=["error", "warning", "never"], default="error", help="--practices and --lint: what makes the exit status 2")
     parser.add_argument("--services", nargs="?", const="", metavar="IMAGE[:MACHINE]", help="What starts on the device: init system, systemd units or SysV scripts, udev rules and D-Bus services of a built image (newest when omitted)")
+    parser.add_argument("--lint", nargs="+", metavar="FILE", help="Check BitBake files (.bb, .bbappend, .bbclass, .inc, .conf; folders are searched) against the project's layers; exit 2 on errors (with --fail-on warning also on warnings)")
+    parser.add_argument("--explain", metavar="WORD", help="What a variable, task, class, keyword, machine or distro means in this project")
     parser.add_argument("--insights", nargs="?", const="", metavar="IMAGE[:MACHINE]", help="Where the space of a built image goes, its licences, what listens and a security look (--format json for CI)")
     parser.add_argument("--devicetree", nargs="?", const="", metavar="NAME.dtb", help="The device trees the build deployed, or one of them decompiled and summarised (--format dts for the DTS text); no dtc needed")
     parser.add_argument("--who-installs", metavar="FILE_OR_PACKAGE", help="Which recipe puts a file (/etc/motd) or package (libc6) in the built images, and how to change it")
@@ -225,6 +227,41 @@ def _commands(parser, args) -> None:
         else:
             print(text)
         failing = data["errors"] + (data["warnings"] if args.fail_on == "warning" else 0)
+        raise SystemExit(2 if args.fail_on != "never" and failing else 0)
+    if args.lint or args.explain:
+        import json
+        from .inspectors import metadata
+        from .language import BITBAKE_SUFFIXES, explain, lint, vocabulary
+        from .models import Settings
+        profile = Settings(args.config).profile
+        vocab = vocabulary(profile, metadata(profile))
+        if args.explain:
+            data = explain(vocab, args.explain)
+            print(json.dumps(data, indent=2) if args.format == "json" else
+                  f"{data['word']} · {data['kind']}\n{data['doc']}" if data["doc"] else
+                  f"{data['word']}: not known in this project" + (f"; did you mean {', '.join(data['suggest'])}?" if data.get("suggest") else ""))
+            raise SystemExit(0 if data["doc"] else 1)
+        files = []
+        for item in args.lint:
+            path = Path(item)
+            files += sorted(p for p in path.rglob("*") if p.suffix in BITBAKE_SUFFIXES and p.is_file()) if path.is_dir() else [path]
+        results, counts = [], {"error": 0, "warning": 0, "info": 0}
+        for path in files:
+            try:
+                problems = lint(vocab, path.read_text(errors="replace"), str(path))
+            except OSError as exc:
+                problems = [{"line": 0, "level": "error", "message": str(exc), "fix": ""}]
+            for problem in problems:
+                counts[problem["level"]] += 1
+                results.append({"file": str(path), **problem})
+        if args.format == "json":
+            print(json.dumps({"files": len(files), **counts, "problems": results}, indent=2))
+        else:
+            mark = {"error": "✖", "warning": "▲", "info": "●"}
+            for r in results:
+                print(f"{r['file']}:{r['line']}: {mark[r['level']]} {r['message']}" + (f"\n    → {r['fix']}" if r["fix"] else ""))
+            print(f"{len(files)} files · {counts['error']} errors · {counts['warning']} warnings · {counts['info']} notes")
+        failing = counts["error"] + (counts["warning"] if args.fail_on == "warning" else 0)
         raise SystemExit(2 if args.fail_on != "never" and failing else 0)
     if args.insights is not None:
         import json

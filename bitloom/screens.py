@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import re
 from dataclasses import asdict
 from pathlib import Path
 
@@ -26,10 +28,26 @@ class FindBar(Input):
         self.screen.editor().focus()
 
 
+class LangList(OptionList):
+    """Suggestions of the BitBake language assistant; Esc returns to the editor, not out of the dialog."""
+    DEFAULT_CSS = "LangList { height: auto; max-height: 10; border: round $accent; }"
+    BINDINGS = [Binding("escape", "close", "Close", priority=True)]
+
+    def action_close(self):
+        self.display = False
+        self.screen.editor().focus()
+
+
+BITBAKE_FILES = (".bb", ".bbappend", ".bbclass", ".inc", ".conf")
+
+
 class NanoEditor:
-    """nano keys for editor dialogs: ^O write, ^X exit, ^W where is, ^K cut, ^U uncut, ^G help."""
+    """nano keys for editor dialogs: ^O write, ^X exit, ^W where is, ^K cut, ^U uncut, ^G help;
+    and the BitBake language assistant: Ctrl+Space completes, Alt+D describes the word, problems shown as you type."""
     EDITOR = "#content"
     NANO_BINDINGS = [
+        Binding("ctrl+space", "lang_complete", "Complete", priority=True),
+        Binding("alt+d", "lang_describe", "Describe", priority=True, show=False),
         Binding("ctrl+o", "save", "Write out", priority=True),
         Binding("ctrl+s", "save", "Save", priority=True, show=False),
         Binding("ctrl+x", "nano_exit", "Exit", priority=True),
@@ -53,6 +71,97 @@ class NanoEditor:
         bar = FindBar(placeholder="Search (Enter finds, Esc cancels)", id="find-bar")
         bar.display = False
         self.query_one(Vertical).mount(bar)
+        if isinstance(self, ProfilesScreen):
+            return
+        suggestions = LangList(id="lang-list")
+        suggestions.display = False
+        status = Static("", id="lang-status")
+        status.styles.color = "gray"
+        status.styles.height = "auto"
+        status.styles.max_height = 4
+        self.query_one(Vertical).mount(suggestions, status, after=self.editor())
+        self.set_timer(0.3, self.lang_lint)
+
+    # --- BitBake language assistant -------------------------------------------------------------
+    _lang_from = None
+    _lang_items = ()
+    _lang_timer = None
+
+    def lang_filename(self) -> str:
+        return ""
+
+    async def lang_vocab(self):
+        from .language import vocabulary
+        return await asyncio.to_thread(vocabulary, self.app.profile, list(getattr(self.app, "entries", [])))
+
+    async def action_lang_complete(self):
+        from .language import complete
+        editor = self.editor()
+        if editor.read_only:
+            return
+        row, col = editor.cursor_location
+        before = editor.document.get_line(row)[:col]
+        result = complete(await self.lang_vocab(), before)
+        self._lang_items = result["items"]
+        self._lang_from = (row, result["from"])
+        listing = self.query_one("#lang-list", LangList)
+        listing.clear_options()
+        if not self._lang_items:
+            self.notify("No suggestion here", timeout=3)
+            return
+        for item in self._lang_items:
+            listing.add_option(f"{item['label']}  · {item['kind']}" + (f" — {item['doc'][:70]}" if item["doc"] else ""))
+        listing.highlighted = 0
+        listing.display = True
+        listing.focus()
+
+    def on_option_list_option_selected(self, event):
+        if event.option_list.id != "lang-list":
+            return
+        event.stop()
+        item = self._lang_items[event.option_index]
+        editor = self.editor()
+        row, start = self._lang_from
+        end = editor.cursor_location
+        editor.replace(item["insert"], (row, start), end)
+        event.option_list.display = False
+        editor.focus()
+
+    async def action_lang_describe(self):
+        from .language import explain
+        editor = self.editor()
+        row, col = editor.cursor_location
+        line = editor.document.get_line(row)
+        left = re.search(r"[A-Za-z0-9_\-]*$", line[:col])[0]
+        right = re.match(r"[A-Za-z0-9_\-]*", line[col:])[0]
+        data = explain(await self.lang_vocab(), left + right)
+        if data["doc"]:
+            self.notify(data["doc"], title=f"{data['word']} · {data['kind']}", timeout=15)
+        else:
+            self.notify("Not known here" + (f": {', '.join(data['suggest'])}?" if data.get("suggest") else ""), title=data["word"] or "Describe", timeout=8)
+
+    def on_text_area_changed(self, event):
+        if self._lang_timer:
+            self._lang_timer.stop()
+        self._lang_timer = self.set_timer(0.5, self.lang_lint)
+
+    async def lang_lint(self):
+        from .language import lint
+        try:
+            status = self.query_one("#lang-status", Static)
+        except Exception:
+            return
+        name = self.lang_filename()
+        if not name.endswith(BITBAKE_FILES):
+            status.update("Ctrl+Space completes · Alt+D describes the word under the cursor")
+            return
+        problems = lint(await self.lang_vocab(), self.editor().text, name)
+        if not problems:
+            status.update("✔ no problems found · Ctrl+Space completes · Alt+D describes")
+            return
+        mark = {"error": "✖", "warning": "▲", "info": "●"}
+        lines = [f"{mark[p['level']]} line {p['line']}: {p['message']}" + (f" → {p['fix']}" if p["fix"] else "") for p in problems[:3]]
+        status.update("\n".join(lines) + (f"\n… {len(problems) - 3} more" if len(problems) > 3 else ""))
 
     def nano_saved(self):
         self._nano_baseline = self.editor().text
@@ -369,6 +478,9 @@ class FileScreen(NanoEditor, ModalScreen):
                     yield Button("Save + backup", variant="primary", id="save")
                 yield Button("Close", id="close")
 
+    def lang_filename(self):
+        return str(self.path)
+
     def on_mount(self):
         self.query_one(Vertical).border_title = str(self.path)
         self.query_one("#content", TextArea).focus()
@@ -453,6 +565,9 @@ class RuntimeFileScreen(NanoEditor, ModalScreen):
     """Edit runtime files with optimistic concurrency and a preserved backup."""
     DEFAULT_CSS = FileScreen.DEFAULT_CSS.replace('FileScreen', 'RuntimeFileScreen')
     BINDINGS = [("escape", "dismiss", "Close"), *NanoEditor.NANO_BINDINGS]
+
+    def lang_filename(self):
+        return str(self.data.get('path', ''))
 
     def __init__(self, profile, data, editable=True, line=1):
         super().__init__()
@@ -575,6 +690,9 @@ class NewFileScreen(NanoEditor, ModalScreen):
     EDITOR = '#new-content'
     BINDINGS = [('escape','dismiss','Cancel'), *NanoEditor.NANO_BINDINGS]
 
+    def lang_filename(self):
+        return self.query_one('#new-path', Input).value.strip()
+
     def __init__(self,profile):
         super().__init__()
         self.profile=profile
@@ -599,7 +717,10 @@ class NewFileScreen(NanoEditor, ModalScreen):
 
     @on(Select.Changed,'#new-template')
     def template(self,event):
-        samples={'text':'','recipe':'SUMMARY = "My recipe"\nLICENSE = "CLOSED"\nS = "${WORKDIR}"\n\ndo_install() {\n    install -d ${D}${datadir}/${BPN}\n    echo "Hello" > ${D}${datadir}/${BPN}/message.txt\n}\n','append':'# Extend an existing recipe using a matching .bbappend filename.\nSUMMARY:append = " (customized)"\n'}
+        from .capabilities import has
+        # Since 5.1 local sources unpack into UNPACKDIR; S = "${WORKDIR}" is refused there.
+        source = "${UNPACKDIR}" if has("unpackdir", getattr(self.app, "release", None), self.profile) else "${WORKDIR}"
+        samples={'text':'','recipe':'SUMMARY = "My recipe"\nLICENSE = "CLOSED"\nS = "' + source + '"\n\ndo_install() {\n    install -d ${D}${datadir}/${BPN}\n    echo "Hello" > ${D}${datadir}/${BPN}/message.txt\n}\n','append':'# Extend an existing recipe using a matching .bbappend filename.\nSUMMARY:append = " (customized)"\n'}
         if event.value in samples:
             self.query_one('#new-content',TextArea).load_text(samples[event.value])
 

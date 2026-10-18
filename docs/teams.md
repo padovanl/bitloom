@@ -22,6 +22,10 @@ to keep it running when you log out: loginctl enable-linger <you>
 * `loginctl enable-linger` keeps user services running when you are not logged in: run it yourself once.
 * Under WSL, systemd must be enabled in `/etc/wsl.conf` (`[boot] systemd=true`).
 
+## Check BitBake files in a merge request
+
+`bitloom --lint meta-acme` checks recipes, appends, classes, includes and configuration files against the project's own layers in seconds, without BitBake: old override syntax, `:append` without its space, unknown classes, missing includes, typos in variable names, machines and image features the release does not have. It exits 2 on errors (`--fail-on warning` to be stricter), and `--format json` feeds other tools. See [BitBake assistant](assistant.md).
+
 ## Headless CI runs
 
 `bitloom --ci` runs operations without the TUI, with the same profiles, runtimes, serial queue and history:

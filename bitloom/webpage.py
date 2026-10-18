@@ -521,6 +521,30 @@ body[data-view=studio] .cards { display: none; }
 .ide-code textarea[readonly] { caret-color: transparent; cursor: default; }
 .ide-code pre .ln { display: block; min-height: 1.65em; } .ide-code pre .ln.hl { background: color-mix(in srgb, var(--accent) 15%, transparent); box-shadow: inset 3px 0 var(--accent); margin: 0 -14px; padding: 0 14px; }
 .t-com { color: var(--muted); font-style: italic; } .t-var { color: var(--accent2); } .t-op { color: var(--warn); } .t-str { color: var(--ok); } .t-exp { color: var(--warn); } .t-kw { color: var(--accent); font-weight: 600; } .t-fn { color: var(--info); }
+.lang-pop { position: absolute; z-index: 20; width: 380px; max-width: calc(100% - 8px); background: color-mix(in srgb, var(--raised) 96%, var(--accent)); border: 1px solid var(--line2);
+  border-radius: 10px; box-shadow: 0 14px 34px rgba(0, 0, 0, .38), 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent); overflow: hidden; font: 12.5px var(--mono);
+  animation: lang-in .12s var(--ease); transform-origin: top left; }
+@keyframes lang-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+.lang-pop .opts { max-height: 216px; overflow: auto; padding: 4px; scrollbar-width: thin; }
+.lang-pop .opt { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 9px; align-items: center; height: 27px; padding: 0 8px; border-radius: 6px; cursor: pointer; }
+.lang-pop .opt[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.lang-pop .opt:hover:not([aria-selected="true"]) { background: color-mix(in srgb, var(--fg) 6%, transparent); }
+.lang-pop .ico { width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; font: 700 10px var(--sans); color: var(--k, var(--muted));
+  background: color-mix(in srgb, var(--k, var(--muted)) 16%, transparent); border: 1px solid color-mix(in srgb, var(--k, var(--muted)) 35%, transparent); }
+.lang-pop .l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); } .lang-pop .l mark { background: none; color: var(--accent); font-weight: 700; }
+.lang-pop .k { color: var(--muted); font: 11px var(--sans); }
+.lang-pop .detail { border-top: 1px solid var(--line); padding: 8px 12px; font: 12.5px/1.45 var(--sans); color: var(--fg); background: color-mix(in srgb, var(--code) 70%, transparent); }
+.lang-pop .detail b { font-family: var(--mono); } .lang-pop .detail .muted { color: var(--muted); } .lang-pop .detail:empty { display: none; }
+.lang-pop .foot { display: flex; gap: 12px; padding: 5px 12px; border-top: 1px solid var(--line); font: 11px var(--sans); color: var(--muted); }
+.lang-pop .foot kbd { font-size: 10px; padding: 0 4px; } .lang-pop .foot .n { margin-left: auto; }
+.lang-doc { padding: 6px 14px; font-size: 12.5px; color: var(--muted); background: var(--code); border-top: 1px solid var(--line); min-height: 30px; }
+.lang-doc b { color: var(--fg); font-family: var(--mono); font-weight: 600; } .lang-doc:empty { display: none; }
+.lang-lint { background: var(--code); border-top: 1px solid var(--line); max-height: 140px; overflow: auto; } .lang-lint:empty { display: none; }
+.lang-lint button { all: unset; display: grid; grid-template-columns: 18px 54px minmax(0, 1fr); gap: 6px; padding: 4px 14px; font-size: 12.5px; cursor: pointer; width: 100%; box-sizing: border-box; }
+.lang-lint button:hover, .lang-lint button:focus-visible { background: var(--raised); }
+.lang-lint .ln { font-family: var(--mono); color: var(--muted); } .lang-lint small { display: block; color: var(--muted); }
+.lang-lint .error .i { color: var(--err); } .lang-lint .warning .i { color: var(--warn); } .lang-lint .info .i { color: var(--info); }
+.ide-gutter div.lint-error { color: var(--err); font-weight: 700; } .ide-gutter div.lint-warning { color: var(--warn); font-weight: 700; } .ide-gutter div.lint-info { color: var(--info); }
 .sg-done { display: grid; gap: 20px; padding: 26px 4px; }
 .sg-done .created { font: 12.5px var(--mono); display: grid; gap: 4px; padding: 12px 14px; border-radius: 10px; background: var(--bg2); border: 1px solid var(--line); }
 .sg-done .created span::before { content: "+ "; color: var(--ok); }
@@ -973,7 +997,10 @@ details.folder > summary { padding: 8px 14px; }
           <div class="sg-where" id="sg-where"></div>
           <div class="ide-tabs" id="ide-tabs" role="tablist" aria-label="Files Create will write"></div>
           <div class="ide-path" id="ide-path"><span id="ide-path-text"></span><label class="check" title="Change the generated text yourself before creating it"><span class="switch"><input type="checkbox" id="sg-edit"><span></span></span>edit before creating</label></div>
-          <div class="ide-editor" id="ide-editor"><div class="ide-gutter" id="ide-gutter"></div><div class="ide-code"><pre id="ide-hl" aria-hidden="true"></pre><textarea id="ide-text" spellcheck="false" autocomplete="off" aria-label="Generated file" readonly></textarea></div></div>
+          <div class="ide-editor" id="ide-editor"><div class="ide-gutter" id="ide-gutter"></div><div class="ide-code"><pre id="ide-hl" aria-hidden="true"></pre><textarea id="ide-text" spellcheck="false" autocomplete="off" aria-label="Generated file" readonly aria-autocomplete="list" aria-controls="lang-pop"></textarea>
+            <div class="lang-pop" id="lang-pop" role="listbox" aria-label="Suggestions" hidden></div></div></div>
+          <div class="lang-doc" id="lang-doc" aria-live="polite"></div>
+          <div class="lang-lint" id="lang-lint"></div>
         </section>
       </div>
       <div class="sg-done" id="sg-done" hidden>
@@ -2678,8 +2705,106 @@ function paintCode() {
     code.append(row); gutter.append(el("div", {class: hit ? "hl" : "", text: String(i + 1)}));
   });
   $("ide-hl").replaceChildren(code); $("ide-gutter").replaceChildren(gutter);
+  clearTimeout(lintTimer); lintTimer = setTimeout(langLint, 350);
   syncScroll();
   if (first >= 0) { const area = $("ide-text"), top = first * parseFloat(getComputedStyle(area).lineHeight); if (top < area.scrollTop || top > area.scrollTop + area.clientHeight - 40) { area.scrollTop = Math.max(0, top - 60); syncScroll(); } }
+}
+/* BitBake language assistant in the editor: completion (Ctrl+Space or as you type), the meaning of the word
+   under the caret, and the problems a parse would report, from the project's own layers. */
+let langItems = [], langIndex = 0, langFrom = 0, langTimer = null, lintTimer = null, docTimer = null, langProblems = [], langQuiet = false;
+const caretLine = () => { const area = $("ide-text"), upto = area.value.slice(0, area.selectionStart); const row = upto.split("\n").length - 1; return {row, before: upto.slice(upto.lastIndexOf("\n") + 1)}; };
+function langClose() { $("lang-pop").hidden = true; langItems = []; }
+async function langSuggest(force = false) {
+  const area = $("ide-text");
+  if (area.readOnly || area.selectionStart !== area.selectionEnd) return langClose();
+  const {row, before} = caretLine();
+  const trigger = force || /(\$\{\w*|:\w*|\[\w*|^\s*(inherit|inherit_defer|require|include)\s+\S*|"[^"]*\w{2,}|^\s*[A-Za-z_]\w{1,})$/.test(before);
+  if (!trigger) return langClose();
+  let data;
+  try { data = await api(`/api/lang/complete?profile=${prof()}&before=${encodeURIComponent(before)}`); } catch (error) { return langClose(); }
+  if (caretLine().before !== before) return;                        // typed meanwhile: a newer request follows
+  langItems = data.items.filter((i) => force || i.label !== data.word); langIndex = 0; langFrom = before.length - (before.length - data.from);
+  if (!langItems.length) return langClose();
+  const pop = $("lang-pop"); pop.textContent = "";
+  const opts = el("div", {class: "opts"}), detail = el("div", {class: "detail"});
+  langItems.forEach((item, i) => {
+    // The typed letters in bold: the rest of the name is what the suggestion adds.
+    const at = data.word ? item.label.toLowerCase().indexOf(data.word.toLowerCase()) : -1;
+    const label = el("span", {class: "l"});
+    if (at >= 0) label.append(item.label.slice(0, at), el("mark", {text: item.label.slice(at, at + data.word.length)}), item.label.slice(at + data.word.length));
+    else label.textContent = item.label;
+    const [glyph, colour] = LANG_KINDS[item.kind] || ["·", "var(--muted)"];
+    opts.append(el("div", {class: "opt", role: "option", id: "lang-opt-" + i, "aria-selected": String(i === 0), title: item.doc || item.label,
+      onmousedown: (e) => { e.preventDefault(); langIndex = i; langAccept(); }, onmousemove: () => { if (langIndex !== i) langMove(i - langIndex); }},
+      el("span", {class: "ico", style: `--k:${colour}`, text: glyph, "aria-hidden": "true"}), label, el("span", {class: "k", text: item.kind})));
+  });
+  pop.append(opts, detail, el("div", {class: "foot"}, el("span", {}, el("kbd", {text: "↑↓"}), " choose"), el("span", {}, el("kbd", {text: "Enter"}), " insert"),
+    el("span", {}, el("kbd", {text: "Esc"}), " close"), el("span", {class: "n", text: `${langItems.length} ${langItems.length === 1 ? "match" : "matches"}`})));
+  langDetail();
+  // Under the caret: monospace, so columns × character width.
+  const style = getComputedStyle(area), probe = el("span", {text: "M".repeat(10), style: `font:${style.font};position:absolute;visibility:hidden`}); document.body.append(probe);
+  const cw = probe.getBoundingClientRect().width / 10; probe.remove();
+  const lh = parseFloat(style.lineHeight);
+  pop.style.left = Math.max(4, Math.min(14 + data.from * cw - area.scrollLeft - 30, area.clientWidth - 384)) + "px";
+  pop.hidden = false; area.setAttribute("aria-activedescendant", "lang-opt-0");
+  // Below the line when it fits, otherwise above it.
+  const below = 10 + (row + 1) * lh - area.scrollTop + 2, above = 10 + row * lh - area.scrollTop - pop.offsetHeight - 2;
+  pop.style.top = (below + pop.offsetHeight > area.clientHeight && above > 0 ? above : below) + "px";
+}
+const LANG_KINDS = {variable: ["V", "var(--viz-1)"], keyword: ["K", "var(--viz-5)"], class: ["C", "var(--viz-3)"], file: ["F", "var(--viz-4)"],
+  task: ["T", "var(--viz-2)"], recipe: ["R", "var(--accent)"], feature: ["★", "var(--viz-4)"], machine: ["M", "var(--viz-6)"], distro: ["D", "var(--viz-6)"],
+  licence: ["§", "var(--muted)"], flag: ["[ ]", "var(--viz-2)"], override: [":", "var(--viz-5)"], operation: ["+", "var(--viz-5)"]};
+function langDetail() {
+  const item = langItems[langIndex], box = document.querySelector("#lang-pop .detail"); if (!box || !item) return;
+  box.textContent = "";
+  if (item.doc) box.append(el("b", {text: item.label}), el("span", {class: "muted", text: " · " + item.kind}), el("div", {text: item.doc}));
+}
+function langMove(step) {
+  langIndex = (langIndex + step + langItems.length) % langItems.length;
+  const rows = document.querySelectorAll("#lang-pop .opt");
+  rows.forEach((n, i) => n.setAttribute("aria-selected", String(i === langIndex)));
+  rows[langIndex].scrollIntoView({block: "nearest"}); $("ide-text").setAttribute("aria-activedescendant", "lang-opt-" + langIndex);
+  langDetail();
+}
+function langAccept() {
+  const item = langItems[langIndex], area = $("ide-text"); if (!item) return;
+  const caret = area.selectionStart, lineStart = area.value.lastIndexOf("\n", caret - 1) + 1;
+  const start = lineStart + langFrom;
+  area.setRangeText(item.insert, start, caret, "end");
+  langClose(); langQuiet = true; area.dispatchEvent(new Event("input"));
+}
+async function langExplain() {
+  const area = $("ide-text"), text = area.value, at = area.selectionStart;
+  const left = text.slice(0, at).match(/[A-Za-z0-9_\-]*$/)[0], right = text.slice(at).match(/^[A-Za-z0-9_\-]*/)[0], word = left + right;
+  const box = $("lang-doc");
+  if (word.length < 2) { box.textContent = ""; return; }
+  try {
+    const data = await api(`/api/lang/explain?profile=${prof()}&word=${encodeURIComponent(word)}`);
+    box.textContent = "";
+    if (data.doc) box.append(el("b", {text: data.word}), ` · ${data.kind} · ${data.doc}`);
+    else if (data.suggest && data.suggest.length) box.append(el("b", {text: data.word}), ` · not known here: ${data.suggest.join(", ")}?`);
+  } catch (error) { box.textContent = ""; }
+}
+async function langLint() {
+  if (!lastPlan || !(ideCurrent in lastPlan.files) || !/\.(bb|bbappend|bbclass|inc|conf)$/.test(ideCurrent)) { langProblems = []; renderLint(); return; }
+  try { langProblems = (await api("/api/lang/lint", {method: "POST", body: JSON.stringify({profile: prof(), text: $("ide-text").value, filename: ideCurrent})})).problems; }
+  catch (error) { langProblems = []; }
+  renderLint();
+}
+function renderLint() {
+  const box = $("lang-lint"); box.textContent = "";
+  const gutter = $("ide-gutter").children;
+  for (const node of gutter) node.classList.remove("lint-error", "lint-warning", "lint-info");
+  for (const p of langProblems) {
+    const mark = gutter[p.line - 1]; if (mark) { mark.classList.add("lint-" + p.level); mark.title = p.message; }
+    box.append(el("button", {class: p.level, type: "button", onclick: () => goLine(p.line)}, el("span", {class: "i", text: {error: "✖", warning: "▲", info: "●"}[p.level]}),
+      el("span", {class: "ln", text: "line " + p.line}), el("span", {text: p.message}, ...(p.fix ? [el("small", {text: p.fix})] : []))));
+  }
+}
+function goLine(line) {
+  const area = $("ide-text"), lines = area.value.split("\n"), at = lines.slice(0, line - 1).join("\n").length + (line > 1 ? 1 : 0);
+  area.focus(); area.setSelectionRange(at, at + lines[line - 1].length);
+  area.scrollTop = Math.max(0, (line - 4) * parseFloat(getComputedStyle(area).lineHeight)); syncScroll();
 }
 function syncScroll() { const area = $("ide-text"); $("ide-hl").scrollTop = area.scrollTop; $("ide-hl").scrollLeft = area.scrollLeft; $("ide-gutter").scrollTop = area.scrollTop; }
 // The form calls this when a field gets the focus: show the file it writes, with its lines highlighted.
@@ -2917,6 +3042,17 @@ function wire() {
   $("sg-restart").addEventListener("click", closeForm);
   $("sg-edit").addEventListener("change", () => { renderEditor(); if ($("sg-edit").checked) $("ide-text").focus(); });
   $("ide-text").addEventListener("scroll", syncScroll);
+  $("ide-text").addEventListener("keydown", (e) => {
+    if (e.key === " " && e.ctrlKey) { e.preventDefault(); langSuggest(true); return; }
+    if ($("lang-pop").hidden) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); langMove(e.key === "ArrowDown" ? 1 : -1); }
+    else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); langAccept(); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); langClose(); }
+  });
+  // After a suggestion is taken the menu stays closed until the next character typed.
+  $("ide-text").addEventListener("input", () => { clearTimeout(langTimer); if (langQuiet) { langQuiet = false; return; } langTimer = setTimeout(() => langSuggest(false), 120); });
+  for (const ev of ["click", "keyup"]) $("ide-text").addEventListener(ev, () => { clearTimeout(docTimer); docTimer = setTimeout(langExplain, 200); });
+  $("ide-text").addEventListener("blur", () => setTimeout(langClose, 150));
   $("ide-text").addEventListener("input", () => { if (!lastPlan || !(ideCurrent in lastPlan.files)) return; planEdits[ideCurrent] = $("ide-text").value; paintCode(); renderTabs(); previewStudioSoon(); });
   $("ide-text").addEventListener("keydown", (event) => { if (event.key === "Tab" && !event.shiftKey && !$("ide-text").readOnly) { event.preventDefault(); document.execCommand("insertText", false, "    "); } });
   $("st-form").addEventListener("keydown", (event) => {
