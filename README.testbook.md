@@ -62,6 +62,31 @@ bitloom --web --config .validation/profiles.json --state .validation --port 9000
 
 Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side by side for the rest of the tour.
 
+### Every feature, both releases
+
+Every feature runs on both workspaces. The stages below use `kas-wrynose` unless they say otherwise; Stage 8h repeats the release-dependent ones on `kas-scarthgap`. What differs between the two releases is expected, and listed here:
+
+| Feature | Where | `kas-scarthgap` (5.0, poky) | `kas-wrynose` (6.0, split repositories) |
+| --- | --- | --- | --- |
+| Builds, history, progress, stop, retry, detach | 3, 5 | the same | the same |
+| Failure diagnosis | 4 | the same | the same |
+| Top bar | 1 | `kas-container · MACHINE qemux86-64 · DISTRO acme` (the Studio overlay's distribution, from the kas files) | `… DISTRO poky` |
+| Recipes by layer, target picker | 1, 2 | poky's layers plus meta-acme | bitbake, openembedded-core, meta-yocto, meta-acme |
+| Image explorer, *Which recipe installs…* | 8b, 8h | core-image-minimal ≈27.6 MiB, 370 files, 36 packages | ≈29.2 MiB, 372 files, 37 packages |
+| Services · Insights | 8b, 8h | sysvinit, 20 started at boot, 0 ports, 3 setuid files | the same |
+| Device tree | 8b | none (qemux86-64 has no DTB): the reason is shown | the same |
+| SBOM, CVE, CRA, SBOM settings | 8, 8h | SPDX 2.2, cve-check; sbom-cve-check and VEX shown as not available, with the alternative | SPDX 3.0, sbom-cve-check, VEX; cve-check not available |
+| What this release can do | 8b | ✔ spdx2, cve-check, debug-tweaks | ✔ spdx3, sbom-cve-check, VEX, fragments, unpackdir… |
+| Studio | 7, 8h | `debug-tweaks` offered; `${WORKDIR}` in appends | `allow-root-login` and the other features instead; `${UNPACKDIR}` |
+| Best practices | 8c, 8h | ≈81 %, no errors | ≈77 %, 1 error: meta-acme's `LAYERSERIES_COMPAT` is `scarthgap` in a Wrynose project |
+| BitBake assistant | 8e, 8h | `debug-tweak` → *did you mean “debug-tweaks”?* | `debug-tweak` is not an image feature (it was removed) |
+| Migration | 8f | Scarthgap → Wrynose through 5.1–6.0: 2 break the build, 1 safe fix | *on the newest release Bitloom covers* |
+| Add a layer | 8g, 8h | branch `scarthgap` | branch `wrynose` |
+| Projects, guided setup, New project | 9 | kas or (not available) bitbake-setup | kas or bitbake-setup |
+| Keys, themes, palette, notifications | 8d, 10, 10b | the same | the same |
+| Command line, CI, build server | 11, 11b | the same | the same |
+| Launcher script, Bitloom inside a container | 8i | the same | the same |
+
 ### Stage 1 — Find your way around (no builds, 5 minutes)
 
 | # | Do | You should see |
@@ -213,6 +238,29 @@ Open the printed `http://127.0.0.1:9000/#token=…` in a browser. Keep both side
 | 8g.2 | Mirror `https://git.example.invalid/m`. | The URLs change to the mirror; each shows *? not checked* with *could not be reached from here (network, credentials or a wrong address)*; *Add* stays possible (a mirror may need credentials Bitloom does not have). |
 | 8g.3 | *From a Git URL*: `https://git.yoctoproject.org/meta-security`, branch `nonexistent`, *Check*. | *✖ no nonexistent branch*; *Add* disabled. |
 | 8g.4 | `bitloom --config .validation/profiles.json --add-layer meta-virtualization` (active profile kas-scarthgap). | The same plan on Scarthgap (branch scarthgap) and the kas diff; nothing written without `--apply`. |
+
+### Stage 8h — The same on Scarthgap (no builds)
+
+Switch the TUI with `P` and the web with the profile menu to `kas-scarthgap`, then:
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8h.1 | Web: the top bar. | `kas-container · MACHINE qemux86-64 · DISTRO acme`: the kas overlay `kas-studio-meta-acme.yml` selects the acme distribution, and the build uses it (no `?` anywhere). |
+| 8h.2 | `4` Image, then *Services* and *Insights*. | core-image-minimal ≈27.6 MiB, 370 files, 36 packages; sysvinit with 20 scripts at boot in order; 0 ports; 3 setuid files. |
+| 8h.3 | `5` SBOM & CRA; `8` → *What this release can do*. | SPDX 2.2 and cve-check; sbom-cve-check and VEX *not available* with the Scarthgap alternative; capabilities ✔ spdx2, cve-check, debug-tweaks. |
+| 8h.4 | `6` Studio → *Image*, step *What goes in*. Then *Recipe append* for `base-files`, file `motd`. | `debug-tweaks` is offered (not on Wrynose); the append uses `${WORKDIR}/motd`. |
+| 8h.5 | `7` Practices. | ≈81 %, no errors (the meta-acme layer is Scarthgap's). |
+| 8h.6 | Studio, *edit before creating*, type `EXTRA_IMAGE_FEATURES = "debug-tweak"`. | *did you mean “debug-tweaks”?* (on Wrynose there is no suggestion: the feature was removed). |
+| 8h.7 | `2` → *+ Add* → `virtual` → meta-virtualization. Do not add. | The same layers as on Wrynose, branch `scarthgap`, each *✔ scarthgap*. |
+
+### Stage 8i — Your launcher script, and Bitloom inside a container (optional, Docker, ≈5 minutes and network)
+
+| # | Do | You should see |
+| --- | --- | --- |
+| 8i.1 | In a scratch folder, put a copy of `tests/integration/kas-wrynose.yml` as `kas.yml` and the `run_build.sh` of [Where your build runs](docs/runtimes.md#launcher-scripts). `YML=kas.yml ./run_build.sh checkout`, then `YML=kas.yml ./run_build.sh shell -c "bitbake-getvar --value MACHINE" < /dev/null`. | The repositories checked out in the folder, owned by you; `qemux86-64`. |
+| 8i.2 | `bitloom --web` in that folder: the guided setup. Save the proposed launcher profile; Operations → *Resolve one BitBake variable* `DISTRO`. | One *wrapper* proposal titled `YML=kas.yml ./run_build.sh build` with every check ✔; the job prints `DISTRO="poky"` with its origin. |
+| 8i.3 | Download `bitloom-<version>.pyz` from the release (or build one: `python tools/build_release.py 0.0.0 --output /tmp/rel`). Run the `docker run … python3 /opt/bitloom.pyz --web …` of [Where your build runs](docs/runtimes.md#bitloom-next-to-the-build-or-inside-it) in the scratch folder, with a `kas` profile. Open the URL with the token from `.bitloom/state/web.token`. | The dashboard served from inside the official kas image; *Checkout kas repositories* and *Resolve one BitBake variable* run inside the container and succeed. |
+| 8i.4 | `docker rm -f build-dash`; remove the scratch folder. | Nothing of Bitloom is left in the image. |
 
 ### Stage 9 — Projects, setup and notifications (no builds)
 
