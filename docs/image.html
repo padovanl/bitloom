@@ -3,7 +3,7 @@
 <title>Image explorer — Bitloom documentation</title>
 <meta name="description" content="Bitloom documentation: Image explorer">
 <link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;if(/[?&]classic\b/.test(location.search))localStorage.setItem('bitloom-docs-classic','1');if(localStorage.getItem('bitloom-docs-classic')==='1')document.documentElement.dataset.classic='1'}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
 <body>
 <header class="topbar">
 <button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
@@ -11,12 +11,14 @@
 <div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
 <span class="spacer"></span>
 <a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="classic-toggle" class="icon-button classic-toggle" type="button" aria-pressed="false" aria-label="Yocto-docs mode" title="Feeling homesick? Read these docs dressed like the Yocto Project's">¶</button>
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
 <nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html" aria-current="page">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html">BitBake assistant</a><a href="practices.html">Best practices</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
+<aside class="classic-note" role="note"><b>Note</b><p>You are reading Bitloom's documentation in <em>Yocto-docs mode</em>: same words, the look of the Sphinx and Read the Docs pages Yocto developers know by heart. A friendly tribute, not affiliated with the Yocto Project. <a href="#" data-classic-off>Back to the Bitloom look</a>.</p></aside>
 <article class="doc"><h1 id="image-explorer">Image explorer</h1>
 <p>What did the build actually put on the device, where does each file come from, and how do you change it? The Image explorer answers from what BitBake left on disk after the build: no BitBake run, no device needed.</p>
 <p>Open it with section <strong>4</strong> of the <a href="web.html">web dashboard</a>, <strong>Ctrl+K → Explore the built image</strong>, or ask <em>Which recipe installs…</em> from anywhere (web, TUI, command line).</p>
@@ -133,7 +135,9 @@ sysvinit-inittab (sysvinit-inittab) ships this file
 </article>
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="web.html"><small>Previous</small>Web dashboard</a><a class="next" href="compliance.html"><small>Next</small>SBOM, CRA and releases</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/image.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+<footer class="classic-footer">© Copyright 2026, Luca Padovan. Built with Bitloom, dressed up as Sphinx in a theme inspired by Read the Docs. No reStructuredText was harmed.</footer>
 </main>
+<div class="classic-version"><button type="button" aria-expanded="false"><b>Bitloom</b><span>v: latest ▾</span></button><p hidden>Bitloom has one version: the one that works. For the others, see Releases on GitHub.</p></div>
 <aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#what-you-see">What you see</a><a href="#what-starts-on-the-device">What starts on the device</a><a href="#insights">Insights</a><a href="#device-tree">Device tree</a><a href="#change-it">Change it</a><a href="#which-recipe-installs">Which recipe installs…?</a><a href="#practical-limits">Practical limits</a></aside>
 </div>
 <script src="docs.js"></script>

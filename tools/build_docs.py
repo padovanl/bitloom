@@ -109,7 +109,9 @@ def pager(position):
 
 
 THEME_BOOT = ("<script>try{var t=localStorage.getItem('bitloom-docs-theme');"
-              "if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>")
+              "if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;"
+              "if(/[?&]classic\\b/.test(location.search))localStorage.setItem('bitloom-docs-classic','1');"
+              "if(localStorage.getItem('bitloom-docs-classic')==='1')document.documentElement.dataset.classic='1'}catch(e){}</script>")
 
 
 def build():
@@ -141,16 +143,20 @@ def build():
 <div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
 <span class="spacer"></span>
 <a class="top-link" href="{REPOSITORY}">GitHub</a>
+<button id="classic-toggle" class="icon-button classic-toggle" type="button" aria-pressed="false" aria-label="Yocto-docs mode" title="Feeling homesick? Read these docs dressed like the Yocto Project's">¶</button>
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
 <nav id="sidebar" class="sidebar" aria-label="Documentation pages">{sidebar(name)}</nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › {html.escape(group)}</div>
+<aside class="classic-note" role="note"><b>Note</b><p>You are reading Bitloom's documentation in <em>Yocto-docs mode</em>: same words, the look of the Sphinx and Read the Docs pages Yocto developers know by heart. A friendly tribute, not affiliated with the Yocto Project. <a href="#" data-classic-off>Back to the Bitloom look</a>.</p></aside>
 <article class="doc">{content}</article>
 {pager(position)}
 <div class="page-meta"><a href="{source_link}">View the Markdown source</a><a href="{REPOSITORY}/issues">Report a problem</a></div>
+<footer class="classic-footer">© Copyright 2026, Luca Padovan. Built with Bitloom, dressed up as Sphinx in a theme inspired by Read the Docs. No reStructuredText was harmed.</footer>
 </main>
+<div class="classic-version"><button type="button" aria-expanded="false"><b>Bitloom</b><span>v: latest ▾</span></button><p hidden>Bitloom has one version: the one that works. For the others, see Releases on GitHub.</p></div>
 <aside class="toc" aria-label="On this page">{toc(content)}</aside>
 </div>
 <script src="docs.js"></script>

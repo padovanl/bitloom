@@ -3,7 +3,7 @@
 <title>Developer workbench — Bitloom documentation</title>
 <meta name="description" content="Bitloom documentation: Developer workbench">
 <link rel="icon" type="image/svg+xml" href="assets/bitloom-icon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
+<script>try{var t=localStorage.getItem('bitloom-docs-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;if(/[?&]classic\b/.test(location.search))localStorage.setItem('bitloom-docs-classic','1');if(localStorage.getItem('bitloom-docs-classic')==='1')document.documentElement.dataset.classic='1'}catch(e){}</script><link rel="stylesheet" href="docs.css"></head>
 <body>
 <header class="topbar">
 <button id="menu-toggle" class="icon-button" type="button" aria-label="Open the page list" aria-expanded="false" aria-controls="sidebar">☰</button>
@@ -11,12 +11,14 @@
 <div class="search" role="search"><input id="search-input" type="search" placeholder="Search docs" aria-label="Search the documentation" autocomplete="off"><kbd>/</kbd><div id="search-results" class="search-results" role="listbox" hidden></div></div>
 <span class="spacer"></span>
 <a class="top-link" href="https://github.com/padovanl/bitloom">GitHub</a>
+<button id="classic-toggle" class="icon-button classic-toggle" type="button" aria-pressed="false" aria-label="Yocto-docs mode" title="Feeling homesick? Read these docs dressed like the Yocto Project's">¶</button>
 <button id="theme-toggle" class="icon-button" type="button" aria-label="Switch theme">☾</button>
 </header>
 <div class="layout">
 <nav id="sidebar" class="sidebar" aria-label="Documentation pages"><a class="home" href="index.html">← Bitloom home</a><h3>Get started</h3><a href="quickstart.html">Quickstart</a><a href="guide.html">User guide</a><a href="projects.html">Projects and setup</a><a href="keyboard.html">Keyboard</a><h3>Features</h3><a href="web.html">Web dashboard</a><a href="image.html">Image explorer</a><a href="compliance.html">SBOM, CRA and releases</a><a href="studio.html">Studio</a><a href="assistant.html">BitBake assistant</a><a href="practices.html">Best practices</a><a href="teams.html">Teams and CI/CD</a><a href="developer.html" aria-current="page">Developer workbench</a><h3>Reference</h3><a href="commands.html">Command reference</a><a href="validation.html">Validation</a><a href="testbook.html">Manual testbook</a><a href="roadmap.html">Research map</a></nav>
 <main class="content">
 <div class="breadcrumbs"><a href="index.html">Bitloom</a> › Features</div>
+<aside class="classic-note" role="note"><b>Note</b><p>You are reading Bitloom's documentation in <em>Yocto-docs mode</em>: same words, the look of the Sphinx and Read the Docs pages Yocto developers know by heart. A friendly tribute, not affiliated with the Yocto Project. <a href="#" data-classic-off>Back to the Bitloom look</a>.</p></aside>
 <article class="doc"><h1 id="developer-workbench">Developer workbench</h1>
 <p>Press <strong>F10</strong> to open Developer, or reach it with F8/F9 or the sidebar. The workbench implements all fourteen workflows identified in the <a href="roadmap.html">research roadmap</a>, in sixteen views. It works through the selected host, kas, container or kas-container profile. Runtime paths are resolved inside that profile; they are not silently interpreted as host paths.</p>
 <p>For installation, building Bitloom and preparing a real Yocto workspace, start with the <a href="testbook.html">testbook</a>. Its <a href="testbook.html#13-developer-acceptance">Developer acceptance cases</a> cover every view and operation below. Sample demo mode does not provide BitBake.</p>
@@ -166,7 +168,9 @@
 </article>
 <nav class="pager" aria-label="Previous and next page"><a class="prev" href="teams.html"><small>Previous</small>Teams and CI/CD</a><a class="next" href="commands.html"><small>Next</small>Command reference</a></nav>
 <div class="page-meta"><a href="https://github.com/padovanl/bitloom/blob/main/docs/developer.md">View the Markdown source</a><a href="https://github.com/padovanl/bitloom/issues">Report a problem</a></div>
+<footer class="classic-footer">© Copyright 2026, Luca Padovan. Built with Bitloom, dressed up as Sphinx in a theme inspired by Read the Docs. No reStructuredText was harmed.</footer>
 </main>
+<div class="classic-version"><button type="button" aria-expanded="false"><b>Bitloom</b><span>v: latest ▾</span></button><p hidden>Bitloom has one version: the one that works. For the others, see Releases on GitHub.</p></div>
 <aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#everyday-controls">Everyday controls</a><a href="#capture-compare-and-refresh" class="sub">Capture, compare and refresh</a><a href="#views-and-operations">Views and operations</a><a href="#create-a-layer-and-recipe">Create a layer and recipe</a><a href="#clone-and-compare-configuration">Clone and compare configuration</a><a href="#ide-path-mapping" class="sub">IDE path mapping</a><a href="#offline-and-security-checks">Offline and security checks</a><a href="#boards-and-console">Boards and console</a><a href="#capabilities-and-stopping">Capabilities and stopping</a></aside>
 </div>
 <script src="docs.js"></script>

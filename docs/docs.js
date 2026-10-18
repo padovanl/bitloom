@@ -30,6 +30,30 @@
     paintThemeButton();
   }
 
+  // Yocto-docs mode: the same pages in Sphinx's Sunday best (a tribute; the ¶ button or ?classic).
+  const classic = document.getElementById("classic-toggle");
+  function loadClassicFonts() {
+    if (document.getElementById("classic-fonts")) return;
+    const link = document.createElement("link");
+    link.id = "classic-fonts"; link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Roboto+Slab:wght@400;700&display=swap";
+    document.head.appendChild(link);
+  }
+  function setClassic(on) {
+    if (on) { root.dataset.classic = "1"; loadClassicFonts(); } else delete root.dataset.classic;
+    store.set("bitloom-docs-classic", on ? "1" : "0");
+    if (classic) { classic.setAttribute("aria-pressed", String(on)); classic.title = on ? "Back to the Bitloom look" : "Feeling homesick? Read these docs dressed like the Yocto Project's"; }
+  }
+  if (classic) {
+    classic.addEventListener("click", () => setClassic(!root.dataset.classic));
+    setClassic(!!root.dataset.classic);
+  }
+  document.querySelectorAll("[data-classic-off]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); setClassic(false); }));
+  const version = document.querySelector(".classic-version button");
+  if (version) version.addEventListener("click", () => {
+    const note = version.nextElementSibling; note.hidden = !note.hidden; version.setAttribute("aria-expanded", String(!note.hidden));
+  });
+
   // Mobile navigation.
   const menu = document.getElementById("menu-toggle");
   if (menu) {
