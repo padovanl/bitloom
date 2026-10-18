@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault('PLAYWRIGHT_BROWSERS_PATH', str(Path.home() / '.cache/ms-playwright'))  # browsers stay in the real home
-if not {'--only-real', '--image', '--assistant', '--migration'} & set(sys.argv):
+if not {'--only-real', '--image', '--assistant', '--migration', '--layers'} & set(sys.argv):
     os.environ['HOME'] = '/home/developer'   # paths shown in demo clips must not reveal the author's account
 sys.path.insert(0, str(ROOT))
 from bitloom.cli import prepare_demo
@@ -395,6 +395,41 @@ def migration_shots(browser):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def layer_shots(browser):
+    """Add a layer on a copy of the Wrynose kas file: Layer Index search, dependencies, the kas diff (needs the network)."""
+    import tempfile
+    from bitloom.models import Profile, Settings
+    work = Path(tempfile.mkdtemp(prefix='bitloom-layers-'))
+    project = work / 'product'
+    project.mkdir()
+    shutil.copy(ROOT / 'tests/integration/kas-wrynose.yml', project / 'kas.yml')
+    (project / 'openembedded-core/meta/conf').mkdir(parents=True)
+    (project / 'openembedded-core/meta/conf/layer.conf').write_text('BBFILE_COLLECTIONS += "core"\nLAYERSERIES_CORENAMES = "wrynose"\n')
+    settings = Settings(work / 'profiles.json')
+    settings.profiles, settings.active = [Profile(name='product', root=str(project), mode='kas-container', kas_file='kas.yml',
+                                                  environment={'KAS_WORK_DIR': str(project)})], 'product'
+    settings.save()
+    board, server, base, post = serve(work / 'profiles.json', work / 'state', 'clips')
+    try:
+        page = browser.new_page(viewport=VIEWPORT, color_scheme='dark')
+        page.goto(base + '/#token=clips')
+        page.wait_for_timeout(2500)
+        page.evaluate("document.activeElement && document.activeElement.blur()")
+        page.click('nav button[data-view="recipes"]')
+        page.wait_for_timeout(2000)
+        page.click('#ly-open')
+        page.fill('#ly-search', 'virtual')
+        page.wait_for_selector('#ly-results button', timeout=60000)
+        page.locator('#ly-results button').first.click()
+        page.wait_for_selector('#ly-plan .ly-layer', timeout=120000)
+        page.wait_for_timeout(600)
+        page.screenshot(path=str(OUTPUT / 'web-add-layer.png'))
+        print('web-add-layer.png')
+    finally:
+        server.shutdown()
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def main():
     from playwright.sync_api import sync_playwright
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -402,17 +437,20 @@ def main():
     parser.add_argument('--state', default=None, help='state directory for --real (default: next to CONFIG)')
     parser.add_argument('--only-real', action='store_true')
     parser.add_argument('--image', nargs=2, metavar=('CONFIG', 'PROFILE'), help='record the Image explorer on a profile with a built image')
+    parser.add_argument('--layers', action='store_true', help='capture Add a layer (uses the OpenEmbedded Layer Index)')
     parser.add_argument('--migration', action='store_true', help='capture the migration assistant on the sample project')
     parser.add_argument('--assistant', nargs=2, metavar=('CONFIG', 'PROFILE'), help='capture the BitBake language assistant on a real project')
     args = parser.parse_args()
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
-        if not args.only_real and not args.image and not args.assistant and not args.migration:
+        if not args.only_real and not args.image and not args.assistant and not args.migration and not args.layers:
             demo_clips(browser)
         if args.real:
             real_clip(browser, args.real[0], args.real[1], args.state or str(Path(args.real[0]).parent / 'state'))
         if args.migration:
             migration_shots(browser)
+        if args.layers:
+            layer_shots(browser)
         if args.assistant:
             assistant_shots(browser, args.assistant[0], args.assistant[1], args.state or str(Path(args.assistant[0]).parent / 'state'))
         if args.image:

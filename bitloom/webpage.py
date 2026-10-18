@@ -393,6 +393,14 @@ details.rule .mark { font: 700 13px var(--mono); text-align: center; }
 #ins-tip { position: fixed; z-index: 60; pointer-events: none; background: var(--raised); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; box-shadow: var(--shadow); max-width: 340px; }
 @media (max-width: 900px) { .ins { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hbar { grid-template-columns: minmax(0, 120px) minmax(0, 1fr) auto; } }
 /* Migration assistant */
+#ly-dialog { width: min(760px, 95vw); max-height: 92vh; overflow: auto; border: 1px solid var(--line2); border-radius: 12px; background: var(--surface); color: var(--fg); padding: 0; box-shadow: var(--shadow); }
+#ly-dialog::backdrop { background: rgba(0, 0, 0, .55); } .ly-form { padding: 18px 20px; display: grid; gap: 12px; }
+#ly-search { width: 100%; } .ly-results { max-height: 220px; overflow: auto; margin-top: 6px; }
+.ly-results button { all: unset; box-sizing: border-box; display: grid; width: 100%; padding: 7px 10px; border-radius: 8px; cursor: pointer; } .ly-results button:hover, .ly-results button[aria-selected="true"], .ly-results button:focus-visible { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.ly-results b { font-family: var(--mono); font-size: 13px; } .ly-results span { color: var(--muted); font-size: 12.5px; }
+.ly-layer { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: 13px; align-items: center; }
+.ly-layer .n { font-family: var(--mono); } .ly-layer small { display: block; color: var(--muted); font: 12px var(--sans, inherit); } .ly-layer .st { font-size: 12px; color: var(--muted); }
+.ly-layer.new .ic { color: var(--accent); } .ly-layer.have .ic { color: var(--muted); } .ly-layer .bad { color: var(--err); } .ly-layer .good { color: var(--ok); }
 .mg-hero { display: flex; align-items: center; gap: 18px; padding: 16px 18px; flex-wrap: wrap; } .mg-hero .big { font-size: 20px; font-weight: 600; }
 .mg-hero select { font-size: 15px; padding: 6px 10px; } .mg-arrow { font-size: 22px; color: var(--muted); }
 .mg-path { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 18px 14px; }
@@ -812,7 +820,7 @@ details.folder > summary { padding: 8px 14px; }
 
     <section id="view-recipes" class="view split recipes" hidden>
       <nav class="panel layers" aria-label="Layers">
-        <div class="head"><h2>Layers</h2><span class="hint" id="layer-count"></span></div>
+        <div class="head"><h2>Layers</h2><span class="hint" id="layer-count"></span><span style="flex:1"></span><button class="btn" id="ly-open" title="Add a layer from the Layer Index or a Git URL, with its dependencies">+ Add</button></div>
         <div class="list" id="layer-list" role="listbox" aria-label="Layers"></div>
       </nav>
       <div class="panel">
@@ -857,6 +865,24 @@ details.folder > summary { padding: 8px 14px; }
         <div class="panel img-detail" id="img-detail"><div class="empty">Select a file to see which package and recipe put it in the image, and how to change it.</div></div>
       </div>
     </section>
+
+    <dialog id="ly-dialog" aria-labelledby="ly-title">
+      <form method="dialog" class="ly-form" id="ly-form">
+        <div class="prw-head"><h3 id="ly-title">Add a layer</h3><span style="flex:1"></span><button class="btn ghost" value="cancel" formnovalidate aria-label="Close">✕</button></div>
+        <div class="seg" id="ly-mode" role="radiogroup" aria-label="From"><button type="button" role="radio" aria-checked="true" data-mode="index">From the Layer Index</button><button type="button" role="radio" aria-checked="false" data-mode="url">From a Git URL</button></div>
+        <div data-ly="index"><input type="search" id="ly-search" placeholder="Search layers: virtualization, qt5, rust, security…" autocomplete="off" aria-label="Search the OpenEmbedded Layer Index"><div class="ly-results" id="ly-results" role="listbox"></div></div>
+        <div data-ly="url" hidden class="pr-grid">
+          <div class="prw-field wide"><label for="ly-url">Repository URL</label><input type="text" id="ly-url" placeholder="https://git.example.com/meta-acme-bsp.git or git@…"></div>
+          <div class="prw-field"><label for="ly-subdir">Layer folder in the repository</label><input type="text" id="ly-subdir" placeholder="empty when the repository is the layer"></div>
+          <div class="prw-field"><label for="ly-branch">Branch</label><input type="text" id="ly-branch" placeholder="the project's release"></div>
+          <div class="prw-actions" style="grid-column:1/-1"><button type="button" class="btn" id="ly-url-plan">Check</button></div>
+        </div>
+        <div class="prw-field"><label for="ly-mirror">Your mirror (optional) <button type="button" class="q" aria-expanded="false" aria-controls="lyh-mirror" title="What is this?">?</button></label><input type="text" id="ly-mirror" placeholder="https://git.mycompany.com/mirrors"><p class="help" id="lyh-mirror" hidden>Every repository is taken from &lt;mirror&gt;/&lt;repository name&gt; instead of its original server, for example https://git.mycompany.com/mirrors/meta-virtualization. Change it and the plan is checked again.</p></div>
+        <div id="ly-plan"></div>
+        <div class="err" id="ly-error" role="alert"></div>
+        <div class="pr-form-actions"><span style="flex:1"></span><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" type="button" id="ly-add" disabled>Add</button></div>
+      </form>
+    </dialog>
 
     <section id="view-migrate" class="view" hidden>
       <div class="panel mg-top">
@@ -2798,6 +2824,64 @@ function openThemes() {
   menu.querySelector('[aria-checked="true"]')?.focus();
 }
 
+/* Add a layer: the Layer Index or a Git URL, dependencies, the release branch, then the kas file or clone + add-layer. */
+let lyMode = "index", lyChoice = null, lyTimer = null, lyPlanned = null;
+function lyBody() {
+  const base = {profile: prof(), mirror: $("ly-mirror").value.trim()};
+  return lyMode === "url" ? {...base, url: $("ly-url").value.trim(), subdir: $("ly-subdir").value.trim(), branch: $("ly-branch").value.trim()} : {...base, name: lyChoice};
+}
+function openLayerDialog() {
+  lyChoice = null; lyPlanned = null; $("ly-plan").textContent = ""; $("ly-error").textContent = ""; $("ly-add").disabled = true; $("ly-results").textContent = "";
+  $("ly-dialog").showModal(); $(lyMode === "index" ? "ly-search" : "ly-url").focus();
+}
+function setLayerMode(mode) {
+  lyMode = mode;
+  for (const b of document.querySelectorAll("#ly-mode button")) b.setAttribute("aria-checked", String(b.dataset.mode === mode));
+  for (const n of document.querySelectorAll("#ly-form [data-ly]")) n.hidden = n.dataset.ly !== mode;
+  $("ly-plan").textContent = ""; $("ly-add").disabled = true;
+}
+async function searchLayers() {
+  const box = $("ly-results"), q = $("ly-search").value.trim(); box.textContent = "";
+  if (q.length < 2) return;
+  const data = await api(`/api/layers/search?q=${encodeURIComponent(q)}`).catch((e) => ({results: [], error: e.message}));
+  if (data.error) { box.append(el("div", {class: "hint", text: data.error})); setLayerMode("url"); return; }
+  if (!data.results.length) box.append(el("div", {class: "hint", text: "No layer with that name in the Layer Index. Try another word, or add it by URL."}));
+  for (const r of data.results) box.append(el("button", {type: "button", role: "option", onclick: (e) => { for (const b of box.children) b.setAttribute("aria-selected", String(b === e.currentTarget)); lyChoice = r.name; planLayer(); }},
+    el("b", {text: r.name}), el("span", {text: r.summary || r.url})));
+}
+async function planLayer() {
+  const box = $("ly-plan"); box.textContent = ""; $("ly-error").textContent = ""; $("ly-add").disabled = true; skeletonIn(box);
+  try { lyPlanned = await api("/api/layers/plan", {method: "POST", body: JSON.stringify(lyBody())}); }
+  catch (error) { box.textContent = ""; $("ly-error").textContent = "✖ " + error.message; return; }
+  box.textContent = "";
+  const d = lyPlanned, adding = d.layers.filter((l) => !l.present);
+  box.append(el("div", {class: "mg-group", text: `${adding.length} to add · branch ${adding[0] ? adding[0].branch : d.series} (this project builds ${d.series})`}));
+  for (const l of d.layers) {
+    const check = d.branches[l.url];
+    box.append(el("div", {class: "ly-layer " + (l.present ? "have" : "new")}, el("span", {class: "ic", text: l.present ? "✓" : "+"}),
+      el("span", {}, el("span", {class: "n", text: l.name}), el("small", {text: (l.present ? "already in the project" : l.url + (l.subdir ? " · " + l.subdir : "")) + (l.required_by.length ? " · needed by " + l.required_by.join(", ") : "")})),
+      el("span", {class: "st " + (l.present ? "" : check === false ? "bad" : check ? "good" : ""), text: l.present ? "" : check === false ? `✖ no ${l.branch} branch` : check ? `✔ ${l.branch}` : "? not checked"})));
+  }
+  for (const w of d.warnings) box.append(el("div", {class: "notice", text: "⚠ " + w}));
+  if (d.plan.kind === "kas") {
+    box.append(el("div", {class: "mg-group", text: `What changes in ${d.plan.name}`}), d.plan.changed ? diffBlock({path: d.plan.name, shown: d.plan.name, diff: d.plan.diff, changes: d.plan.notes.length}) : el("div", {class: "hint", text: "Nothing to change: the kas file already has them."}),
+      el("div", {class: "mg-note", text: "kas fetches the new repositories on the next build. The original file is kept: Migrate → Undo restores it."}));
+  } else {
+    box.append(el("div", {class: "mg-group", text: "What runs (as jobs you can follow in Builds)"}), el("pre", {class: "ly-steps", text: d.plan.steps.map((s) => "$ " + s.argv.join(" ")).join("\n") || "Nothing to do."}),
+      ...d.plan.notes.map((n) => el("div", {class: "hint", text: n})));
+  }
+  $("ly-add").disabled = !!d.warnings.length || (d.plan.kind === "kas" ? !d.plan.changed : !d.plan.steps.length);
+  $("ly-add").textContent = adding.length ? `Add ${adding.length} ${adding.length === 1 ? "layer" : "layers"}` : "Nothing to add";
+}
+async function addLayer() {
+  try {
+    const result = await api("/api/layers/add", {method: "POST", body: JSON.stringify(lyBody())});
+    $("ly-dialog").close();
+    if (result.jobs) { toast("Adding the layers", `${result.jobs.length} jobs queued: clone, then bitbake-layers add-layer`, "success"); await refresh(); select_(result.jobs[0]); setView("builds"); }
+    else { toast("Layers added", `${result.plan.name} updated: kas fetches them on the next build`, "success", {label: "Build", run: () => queue("build", {target: $("target").value})}); loadMeta(true); }
+  } catch (error) { $("ly-error").textContent = "✖ " + error.message; }
+}
+
 /* Migration assistant: from the official migration guides to a build on the new release, one step after the other. */
 let mgData = null, mgShow = "all", mgSelected = new Set(), mgKas = null;
 async function loadMigrate(target = null) {
@@ -3157,6 +3241,7 @@ function paletteEntries() {
   entries.push({label: "Explore the built image", hint: "4", run: () => setView("image")});
   entries.push({label: "Best practices", hint: "7", run: () => setView("practices")});
   entries.push({label: "Migrate to a newer Yocto release", hint: "9", run: () => setView("migrate")});
+  entries.push({label: "Add a layer (Layer Index or Git URL)", hint: "2", run: () => { setView("recipes"); openLayerDialog(); }});
   for (const [id, label] of THEME_LIST) entries.push({label: "Theme: " + label, hint: "theme", run: () => applyTheme(id)});
   entries.push({label: "Add a company rule (best practices)", hint: "7", run: () => { setView("practices"); openRuleDialog(); }});
   for (const profile of (state ? state.profiles : [])) {
@@ -3222,6 +3307,12 @@ function wire() {
   $("pr-recheck").addEventListener("click", () => loadPractices());
   $("pr-export").addEventListener("click", exportPractices);
   for (const b of document.querySelectorAll("#img-mode button")) b.addEventListener("click", () => setImgMode(b.dataset.mode));
+  $("ly-open").addEventListener("click", openLayerDialog);
+  for (const b of document.querySelectorAll("#ly-mode button")) b.addEventListener("click", () => setLayerMode(b.dataset.mode));
+  $("ly-search").addEventListener("input", () => { clearTimeout(lyTimer); lyTimer = setTimeout(searchLayers, 300); });
+  $("ly-url-plan").addEventListener("click", planLayer); $("ly-add").addEventListener("click", addLayer);
+  $("ly-mirror").addEventListener("change", () => { if (lyMode === "url" ? $("ly-url").value.trim() : lyChoice) planLayer(); });
+  for (const q of document.querySelectorAll("#ly-form .q")) q.addEventListener("click", () => { const help = $(q.getAttribute("aria-controls")); help.hidden = !help.hidden; q.setAttribute("aria-expanded", String(!help.hidden)); });
   $("mg-to").addEventListener("change", () => loadMigrate($("mg-to").value)); $("mg-rescan").addEventListener("click", () => loadMigrate($("mg-to").value));
   $("mg-preview").addEventListener("click", previewMigrate); $("mg-apply").addEventListener("click", applyMigrate); $("mg-restore").addEventListener("click", restoreMigrate);
   $("mg-export").addEventListener("click", exportMigrate);

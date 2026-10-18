@@ -91,6 +91,27 @@
 <li>When the job succeeds the profile is saved and becomes active: <code>b</code> builds. Add your own layer with Studio → Layer, and enable more fragments with Operations → <em>Enable a configuration fragment</em>; <em>bitbake-setup: compare with upstream</em> and <em>update</em> keep the layers current.</li>
 </ul>
 <details class="shot"><summary><span>Screenshot</span> New project with bitbake-setup: the official template's choices and the command it runs</summary><div class="shot-body"><img src="assets/web-new-project-bbsetup.png" alt="New project with bitbake-setup: the official template's choices and the command it runs" loading="lazy" decoding="async"></div></details>
+<h2 id="add-a-layer">Add a layer<a class="anchor" href="#add-a-layer" aria-label="Link to this section">#</a></h2>
+<p>Recipes → <strong>+ Add</strong> (or Ctrl+K → <em>Add a layer</em>) brings a layer into the project, with what it needs:</p>
+<ul>
+<li><strong>From the Layer Index</strong>: type part of a name (<em>virtualization</em>, <em>qt5</em>, <em>rust</em>) and choose. Bitloom asks the <a href="https://layers.openembedded.org">OpenEmbedded Layer Index</a> for the layer on the project's release and every <strong>required dependency</strong>, recursively: meta-virtualization brings meta-oe, meta-python, meta-networking and meta-filesystems. Layers the project already has (by <code>BBFILE_COLLECTIONS</code>) are marked and left alone; layers of one repository (meta-openembedded) go into one entry.</li>
+<li><strong>From a Git URL</strong>: any repository, yours included; the layer's folder inside it, and the branch (the project's release by default).</li>
+<li><strong>Your mirror</strong>: a base URL that replaces the original servers (<code>https://git.mycompany.com/mirrors</code> → <code>…/mirrors/meta-virtualization</code>), for networks that reach only an internal Git server.</li>
+</ul>
+<p>Before anything is written, Bitloom asks each remote whether the branch exists (<code>git ls-remote</code>), and refuses with the reason when it does not. Then, the way the project builds:</p>
+<ul>
+<li><strong>kas and launcher scripts</strong>: the repositories go into the kas file's <code>repos:</code> (a diff first, the original kept: <em>Migrate → Undo</em> restores it). kas fetches them on the next build.</li>
+<li><strong>BitBake on the machine, in a container, bitbake-setup</strong>: the repositories are cloned next to the other layers, then <code>bitbake-layers add-layer</code> runs through the profile, as jobs you follow in Builds.</li>
+</ul>
+<details class="shot"><summary><span>Screenshot</span> Add a layer: meta-virtualization and its dependencies on Wrynose, and the change to the kas file</summary><div class="shot-body"><img src="assets/web-add-layer.png" alt="Add a layer: meta-virtualization and its dependencies on Wrynose, and the change to the kas file" loading="lazy" decoding="async"></div></details>
+<p>The same on the command line (<code>--apply</code> does it; without it, the plan):</p>
+<pre><code class="language-console">$ bitloom --add-layer meta-virtualization --mirror https://git.mycompany.com/mirrors
+Add meta-virtualization to product (wrynose)
+  ✓ openembedded-core        already in the project
+  + meta-oe                  https://git.mycompany.com/mirrors/meta-openembedded · meta-oe · branch wrynose
+…
+$ bitloom --add-layer https://git.mycompany.com/meta-acme-bsp.git --apply
+</code></pre>
 <h2 id="clone-from-github-or-git">Clone from GitHub or Git<a class="anchor" href="#clone-from-github-or-git" aria-label="Link to this section">#</a></h2>
 <p>Press <strong><code>g</code></strong> in the hub (web: <strong>Clone from Git</strong>), enter an <code>https://</code>, <code>ssh://</code>, <code>git@</code> or <code>file://</code> URL, the destination (suggested from the URL until you edit it) and an optional branch or tag. Your Git credentials and SSH agent are used as in a terminal.</p>
 <p>The clone runs as a normal job, so you follow its progress in Builds. When it succeeds, the guided setup opens on the new folder.</p>
@@ -136,7 +157,7 @@
 <footer class="classic-footer">© Copyright 2026, Luca Padovan. Built with Bitloom, dressed up as Sphinx in a theme inspired by Read the Docs. No reStructuredText was harmed.</footer>
 </main>
 <div class="classic-version"><button type="button" aria-expanded="false"><b>Bitloom</b><span>v: latest ▾</span></button><p hidden>Bitloom has one version: the one that works. For the others, see Releases on GitHub.</p></div>
-<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#open-an-existing-project-guided-setup">Open an existing project: guided setup</a><a href="#project-launcher-scripts" class="sub">Project launcher scripts</a><a href="#create-a-new-project">Create a new project</a><a href="#with-bitbake-setup" class="sub">With bitbake-setup</a><a href="#clone-from-github-or-git">Clone from GitHub or Git</a><a href="#recent-projects">Recent projects</a><a href="#web-dashboard">Web dashboard</a><a href="#api">API</a></aside>
+<aside class="toc" aria-label="On this page"><h4>On this page</h4><a href="#open-an-existing-project-guided-setup">Open an existing project: guided setup</a><a href="#project-launcher-scripts" class="sub">Project launcher scripts</a><a href="#create-a-new-project">Create a new project</a><a href="#with-bitbake-setup" class="sub">With bitbake-setup</a><a href="#add-a-layer">Add a layer</a><a href="#clone-from-github-or-git">Clone from GitHub or Git</a><a href="#recent-projects">Recent projects</a><a href="#web-dashboard">Web dashboard</a><a href="#api">API</a></aside>
 </div>
 <script src="docs.js"></script>
 </body></html>

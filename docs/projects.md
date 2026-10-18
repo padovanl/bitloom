@@ -58,6 +58,32 @@ From Yocto 5.3 (BitBake 2.16) the Yocto Project ships its own setup tool, `bitba
 
 ![New project with bitbake-setup: the official template's choices and the command it runs](assets/web-new-project-bbsetup.png)
 
+## Add a layer
+
+Recipes → **+ Add** (or Ctrl+K → *Add a layer*) brings a layer into the project, with what it needs:
+
+* **From the Layer Index**: type part of a name (*virtualization*, *qt5*, *rust*) and choose. Bitloom asks the [OpenEmbedded Layer Index](https://layers.openembedded.org) for the layer on the project's release and every **required dependency**, recursively: meta-virtualization brings meta-oe, meta-python, meta-networking and meta-filesystems. Layers the project already has (by `BBFILE_COLLECTIONS`) are marked and left alone; layers of one repository (meta-openembedded) go into one entry.
+* **From a Git URL**: any repository, yours included; the layer's folder inside it, and the branch (the project's release by default).
+* **Your mirror**: a base URL that replaces the original servers (`https://git.mycompany.com/mirrors` → `…/mirrors/meta-virtualization`), for networks that reach only an internal Git server.
+
+Before anything is written, Bitloom asks each remote whether the branch exists (`git ls-remote`), and refuses with the reason when it does not. Then, the way the project builds:
+
+* **kas and launcher scripts**: the repositories go into the kas file's `repos:` (a diff first, the original kept: *Migrate → Undo* restores it). kas fetches them on the next build.
+* **BitBake on the machine, in a container, bitbake-setup**: the repositories are cloned next to the other layers, then `bitbake-layers add-layer` runs through the profile, as jobs you follow in Builds.
+
+![Add a layer: meta-virtualization and its dependencies on Wrynose, and the change to the kas file](assets/web-add-layer.png)
+
+The same on the command line (`--apply` does it; without it, the plan):
+
+```console
+$ bitloom --add-layer meta-virtualization --mirror https://git.mycompany.com/mirrors
+Add meta-virtualization to product (wrynose)
+  ✓ openembedded-core        already in the project
+  + meta-oe                  https://git.mycompany.com/mirrors/meta-openembedded · meta-oe · branch wrynose
+…
+$ bitloom --add-layer https://git.mycompany.com/meta-acme-bsp.git --apply
+```
+
 ## Clone from GitHub or Git
 
 Press **`g`** in the hub (web: **Clone from Git**), enter an `https://`, `ssh://`, `git@` or `file://` URL, the destination (suggested from the URL until you edit it) and an optional branch or tag. Your Git credentials and SSH agent are used as in a terminal.

@@ -630,6 +630,58 @@ class Dashboard:
         data = self.migrate("scan", query)
         return report(data, fmt), f"migration-{data.get('target', 'none')}.{ {'md': 'md', 'json': 'json', 'text': 'txt'}[fmt] }"
 
+    def add_layer(self, what, query, body=None):
+        """Add a layer from the Layer Index (by name) or a Git URL, with its dependencies, the way the project builds."""
+        from dataclasses import asdict
+        from . import layerindex
+        from .versions import detect_release
+        body = body or {}
+        if what == "search":
+            try:
+                return {"results": layerindex.search(query.get("q", [""])[0])}
+            except OSError as exc:
+                return {"results": [], "error": f"The OpenEmbedded Layer Index is not reachable ({exc}): add the layer by its Git URL"}
+        profile = self.profile(body.get("profile"))
+        entries = self.entries(profile)
+        series = detect_release(profile, entries) or "master"
+        try:
+            if body.get("url"):
+                layers = layerindex.from_url(str(body["url"]), str(body.get("subdir", "")), str(body.get("branch") or series), str(body.get("name", "")))
+                layers[0].present = False
+            else:
+                layers = layerindex.resolve(str(body.get("name", "")), series, layerindex.project_collections(entries))
+        except OSError as exc:
+            raise ValueError(f"The OpenEmbedded Layer Index is not reachable ({exc}): add the layer by its Git URL") from None
+        except LookupError as exc:
+            raise ValueError(str(exc)) from None
+        layerindex.mirror(layers, str(body.get("mirror", "")))
+        checks = {}
+        for layer in layers:
+            if not layer.present and layer.url not in checks:
+                checks[layer.url] = layerindex.branch_exists(layer.url, layer.branch)
+        plan = layerindex.plan(profile, layers, entries)
+        missing = [url for url, ok in checks.items() if ok is False]
+        result = {"series": series, "layers": layerindex.describe(layers), "branches": checks, "plan": plan,
+                  "warnings": [f"{url} has no branch {next(l.branch for l in layers if l.url == url)}: choose another branch or a mirror that has it" for url in missing]}
+        if what == "plan":
+            return result
+        if missing:
+            raise ValueError(result["warnings"][0])
+        if plan["kind"] == "kas":
+            written = layerindex.apply_kas(profile, self.state, plan)
+            self.metadata_cache.pop(f"{profile.name}:{profile.root}", None)
+            return {**result, "written": written}
+        jobs = []
+        for step in plan["steps"]:
+            if step["where"] == "host":
+                Path(step["argv"][-1]).parent.mkdir(parents=True, exist_ok=True)
+                runner = Profile(name="git-clone", root=str(Path(step["argv"][-1]).parent), build_dir=str(Path(step["argv"][-1]).parent))
+                jobs.append(self.rpc({"op": "submit", "profile": asdict(runner), "title": step["title"], "command": step["argv"], "action_id": "layer-clone"})["job"]["id"])
+            else:
+                jobs.append(self.rpc({"op": "submit", "profile": asdict(profile), "title": step["title"], "command": step["argv"], "action_id": "layer-add"})["job"]["id"])
+        self.metadata_cache.pop(f"{profile.name}:{profile.root}", None)
+        return {**result, "jobs": jobs}
+
     def devicetree(self, query):
         from . import devicetree
         profile = self.profile(query.get("profile", [""])[0])
@@ -782,6 +834,10 @@ def make_handler(dashboard: Dashboard, allowed_hosts: set[str] | None):
                     text, name = dashboard.practices_export(query)
                     self.send(HTTPStatus.OK, text.encode(), "text/plain; charset=utf-8", {"Content-Disposition": f'attachment; filename="{name}"'})
                     return
+                elif route == ("GET", "layers", "search"):
+                    payload = dashboard.add_layer("search", query)
+                elif route[:2] == ("POST", "layers") and len(route) == 3 and route[2] in {"plan", "add"}:
+                    payload = dashboard.add_layer(route[2], query, self.body())
                 elif route == ("GET", "migrate"):
                     payload = dashboard.migrate("scan", query)
                 elif route == ("GET", "migrate", "export"):
