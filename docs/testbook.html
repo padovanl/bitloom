@@ -107,14 +107,14 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>Top bar</td>
 <td>1</td>
-<td><code>kas-container · MACHINE qemux86-64 · DISTRO acme</code> (the Studio overlay's distribution, from the kas files)</td>
-<td><code>… DISTRO poky</code></td>
+<td><code>kas-container · MACHINE qemux86-64 · DISTRO poky</code>, read from the kas file (a kas overlay with another <code>distro:</code> would show and apply instead)</td>
+<td>the same</td>
 </tr>
 <tr>
 <td>Recipes by layer, target picker</td>
 <td>1, 2</td>
-<td>poky's layers plus meta-acme</td>
-<td>bitbake, openembedded-core, meta-yocto, meta-acme</td>
+<td>poky's layers (meta, meta-poky, meta-yocto-bsp…)</td>
+<td>openembedded-core, meta-yocto (bitbake is not a layer)</td>
 </tr>
 <tr>
 <td>Image explorer, <em>Which recipe installs…</em></td>
@@ -155,8 +155,8 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>Best practices</td>
 <td>8c, 8h</td>
-<td>≈81 %, no errors</td>
-<td>≈77 %, 1 error: meta-acme's <code>LAYERSERIES_COMPAT</code> is <code>scarthgap</code> in a Wrynose project</td>
+<td>≈73 %, no errors (no layer of your own yet: the layer rules are <em>not applicable</em>)</td>
+<td>the same</td>
 </tr>
 <tr>
 <td>BitBake assistant</td>
@@ -167,7 +167,7 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>Migration</td>
 <td>8f</td>
-<td>Scarthgap → Wrynose through 5.1–6.0: 2 break the build, 1 safe fix</td>
+<td>Scarthgap → Wrynose through 5.1–6.0: 1 breaks the build (the poky repository); a layer of yours adds its own findings</td>
 <td><em>on the newest release Bitloom covers</em></td>
 </tr>
 <tr>
@@ -614,7 +614,7 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>8c.1</td>
 <td>Web on <code>kas-wrynose</code>: <code>7</code> (Practices).</td>
-<td>A score around 80 %, <em>Needs attention</em> grouped by area; <em>LAYERSERIES_COMPAT includes the release you build</em> fails on <code>meta-acme/conf/layer.conf</code> (<em>scarthgap</em>, the project builds wrynose) if the Studio test layer is still there; upstream layers are not judged.</td>
+<td>A score around 73 %, <em>Needs attention</em> grouped by area (configuration: shared caches, own distribution, rm_work…); the layer rules are <em>not applicable</em> until the project has a layer of its own; upstream layers are not judged.</td>
 </tr>
 <tr>
 <td>8c.2</td>
@@ -624,7 +624,7 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>8c.3</td>
 <td><em>Add a company rule</em>. <em>Next</em> without choosing; then the example <em>Products build our distribution</em>; open the <strong>?</strong> of each field; <em>Try it on this project</em>.</td>
-<td>The wizard refuses to go on without a kind of check. The example fills step 2; the plain-words line reads <em>An error unless DISTRO is exactly acme…</em>; <em>Try it</em> reports <code>DISTRO is “poky”, expected “acme”</code> (the <code>acme.conf</code> in meta-acme does not count: the build selects poky). Nothing is saved yet.</td>
+<td>The wizard refuses to go on without a kind of check. The example fills step 2; the plain-words line reads <em>An error unless DISTRO is exactly acme…</em>; <em>Try it</em> reports <code>DISTRO is “poky”, expected “acme”</code>. Nothing is saved yet.</td>
 </tr>
 <tr>
 <td>8c.3b</td>
@@ -697,7 +697,7 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 </tr>
 <tr>
 <td>8e.4</td>
-<td><code>bitloom --config .validation/profiles.json --lint meta-acme; echo $?</code>; then on a folder with a <code>DEPENDS_append</code>; <code>bitloom --config .validation/profiles.json --explain IMAGE_INSTAL; echo $?</code></td>
+<td><code>bitloom --config .validation/profiles.json --lint tests/integration; echo $?</code>; then on a folder with a <code>DEPENDS_append</code>; <code>bitloom --config .validation/profiles.json --explain IMAGE_INSTAL; echo $?</code></td>
 <td>Clean layer: exit 0; with the error: the file:line, the fix and exit 2. <code>--explain</code> suggests <code>IMAGE_INSTALL</code> and exits 1.</td>
 </tr>
 </tbody>
@@ -715,12 +715,12 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>8f.1</td>
 <td>Web on <code>kas-scarthgap</code>: <code>9</code>.</td>
-<td><em>scarthgap 5.0 LTS → wrynose 6.0 LTS</em>; the path 5.1 → 5.2 → 5.3 → 6.0 with the guides linked; <em>2 break the build</em> (the poky repository in <code>tests/integration/kas-minimal.yml</code>, <code>LAYERSERIES_COMPAT_acme</code>) and <em>1 with a safe fix</em> (when the Studio test layer meta-acme is still there).</td>
+<td><em>scarthgap 5.0 LTS → wrynose 6.0 LTS</em>; the path 5.1 → 5.2 → 5.3 → 6.0 with the guides linked; <em>1 breaks the build</em>: the poky repository in <code>tests/integration/kas-minimal.yml</code>.</td>
 </tr>
 <tr>
 <td>8f.2</td>
-<td><em>Preview the selected fixes</em>, <em>Apply</em>; then <em>Undo</em>.</td>
-<td>The diff <code>LAYERSERIES_COMPAT_acme = &quot;scarthgap&quot;</code> → <code>&quot;wrynose&quot;</code>; after Apply the count drops; Undo restores the file (check <code>meta-acme/conf/layer.conf</code>).</td>
+<td>Give the project a layer of its own for a moment: <code>mkdir -p meta-try/conf &amp;&amp; printf 'BBFILE_COLLECTIONS += &quot;try&quot;\nLAYERSERIES_COMPAT_try = &quot;scarthgap&quot;\n' &gt; meta-try/conf/layer.conf</code>. <em>Scan again</em>, <em>Preview the selected fixes</em>, <em>Apply</em>, then <em>Undo</em>. Remove <code>meta-try</code> afterwards.</td>
+<td><em>2 break the build</em>, <em>1 with a safe fix</em>; the diff <code>LAYERSERIES_COMPAT_try = &quot;scarthgap&quot;</code> → <code>&quot;wrynose&quot;</code>; after Apply the count drops; Undo restores <code>meta-try/conf/layer.conf</code>.</td>
 </tr>
 <tr>
 <td>8f.3</td>
@@ -785,7 +785,7 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>8h.1</td>
 <td>Web: the top bar.</td>
-<td><code>kas-container · MACHINE qemux86-64 · DISTRO acme</code>: the kas overlay <code>kas-studio-meta-acme.yml</code> selects the acme distribution, and the build uses it (no <code>?</code> anywhere).</td>
+<td><code>kas-container · MACHINE qemux86-64 · DISTRO poky</code>, read from <code>kas-minimal.yml</code> (no <code>?</code> anywhere).</td>
 </tr>
 <tr>
 <td>8h.2</td>
@@ -805,7 +805,7 @@ bitloom --state .validation --service-stop   # only if a service from an older B
 <tr>
 <td>8h.5</td>
 <td><code>7</code> Practices.</td>
-<td>≈81 %, no errors (the meta-acme layer is Scarthgap's).</td>
+<td>≈73 %, no errors, as on Wrynose.</td>
 </tr>
 <tr>
 <td>8h.6</td>

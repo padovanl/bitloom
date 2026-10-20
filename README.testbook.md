@@ -70,17 +70,17 @@ Every feature runs on both workspaces. The stages below use `kas-wrynose` unless
 | --- | --- | --- | --- |
 | Builds, history, progress, stop, retry, detach | 3, 5 | the same | the same |
 | Failure diagnosis | 4 | the same | the same |
-| Top bar | 1 | `kas-container · MACHINE qemux86-64 · DISTRO acme` (the Studio overlay's distribution, from the kas files) | `… DISTRO poky` |
-| Recipes by layer, target picker | 1, 2 | poky's layers plus meta-acme | bitbake, openembedded-core, meta-yocto, meta-acme |
+| Top bar | 1 | `kas-container · MACHINE qemux86-64 · DISTRO poky`, read from the kas file (a kas overlay with another `distro:` would show and apply instead) | the same |
+| Recipes by layer, target picker | 1, 2 | poky's layers (meta, meta-poky, meta-yocto-bsp…) | openembedded-core, meta-yocto (bitbake is not a layer) |
 | Image explorer, *Which recipe installs…* | 8b, 8h | core-image-minimal ≈27.6 MiB, 370 files, 36 packages | ≈29.2 MiB, 372 files, 37 packages |
 | Services · Insights | 8b, 8h | sysvinit, 20 started at boot, 0 ports, 3 setuid files | the same |
 | Device tree | 8b | none (qemux86-64 has no DTB): the reason is shown | the same |
 | SBOM, CVE, CRA, SBOM settings | 8, 8h | SPDX 2.2, cve-check; sbom-cve-check and VEX shown as not available, with the alternative | SPDX 3.0, sbom-cve-check, VEX; cve-check not available |
 | What this release can do | 8b | ✔ spdx2, cve-check, debug-tweaks | ✔ spdx3, sbom-cve-check, VEX, fragments, unpackdir… |
 | Studio | 7, 8h | `debug-tweaks` offered; `${WORKDIR}` in appends | `allow-root-login` and the other features instead; `${UNPACKDIR}` |
-| Best practices | 8c, 8h | ≈81 %, no errors | ≈77 %, 1 error: meta-acme's `LAYERSERIES_COMPAT` is `scarthgap` in a Wrynose project |
+| Best practices | 8c, 8h | ≈73 %, no errors (no layer of your own yet: the layer rules are *not applicable*) | the same |
 | BitBake assistant | 8e, 8h | `debug-tweak` → *did you mean “debug-tweaks”?* | `debug-tweak` is not an image feature (it was removed) |
-| Migration | 8f | Scarthgap → Wrynose through 5.1–6.0: 2 break the build, 1 safe fix | *on the newest release Bitloom covers* |
+| Migration | 8f | Scarthgap → Wrynose through 5.1–6.0: 1 breaks the build (the poky repository); a layer of yours adds its own findings | *on the newest release Bitloom covers* |
 | Add a layer | 8g, 8h | branch `scarthgap` | branch `wrynose` |
 | Projects, guided setup, New project | 9 | kas or (not available) bitbake-setup | kas or bitbake-setup |
 | Keys, themes, palette, notifications | 8d, 10, 10b | the same | the same |
@@ -196,9 +196,9 @@ Every feature runs on both workspaces. The stages below use `kas-wrynose` unless
 
 | # | Do | You should see |
 | --- | --- | --- |
-| 8c.1 | Web on `kas-wrynose`: `7` (Practices). | A score around 80 %, *Needs attention* grouped by area; *LAYERSERIES_COMPAT includes the release you build* fails on `meta-acme/conf/layer.conf` (*scarthgap*, the project builds wrynose) if the Studio test layer is still there; upstream layers are not judged. |
+| 8c.1 | Web on `kas-wrynose`: `7` (Practices). | A score around 73 %, *Needs attention* grouped by area (configuration: shared caches, own distribution, rm_work…); the layer rules are *not applicable* until the project has a layer of its own; upstream layers are not judged. |
 | 8c.2 | *All rules*: switch off *Each layer has a SECURITY.md*, set *rm_work keeps tmp/work small* to *error*. | The rule moves to *Switched off*, the score changes; `bitloom-practices.json` at the project root holds `"disabled": ["layer-security-policy"]` and the severity. |
-| 8c.3 | *Add a company rule*. *Next* without choosing; then the example *Products build our distribution*; open the **?** of each field; *Try it on this project*. | The wizard refuses to go on without a kind of check. The example fills step 2; the plain-words line reads *An error unless DISTRO is exactly acme…*; *Try it* reports `DISTRO is “poky”, expected “acme”` (the `acme.conf` in meta-acme does not count: the build selects poky). Nothing is saved yet. |
+| 8c.3 | *Add a company rule*. *Next* without choosing; then the example *Products build our distribution*; open the **?** of each field; *Try it on this project*. | The wizard refuses to go on without a kind of check. The example fills step 2; the plain-words line reads *An error unless DISTRO is exactly acme…*; *Try it* reports `DISTRO is “poky”, expected “acme”`. Nothing is saved yet. |
 | 8c.3b | Step 3: the id follows the title; *Save rule*. Then add a rule with id `layer-name`, and one with pattern `(`. | The rule appears under *Company*. The others are refused (*already used*, *not a valid regular expression*). |
 | 8c.4 | *Export* → Markdown. In a shell: `bitloom --config .validation/profiles.json --practices --profile kas-wrynose; echo "exit $?"`, then with `--fail-on never`. | The report downloads; the CLI prints the same review and exits 2 with errors, 0 with `--fail-on never`. |
 | 8c.5 | Delete the rule and the file (`rm bitloom-practices.json`). | The defaults are back. |
@@ -218,14 +218,14 @@ Every feature runs on both workspaces. The stages below use `kas-wrynose` unless
 | 8e.1 | Web on `kas-wrynose`: `6` Studio → *Image*, switch on *edit before creating*, click at the end of the file. Type `IMAGE_FEA`; `↓`; `Enter`. Then a new line `inherit sys`, `Ctrl+Space`. | Suggestions under the cursor with V badges and *FEA* in bold; the documentation of the selected one below the list; Enter inserts `EXTRA_IMAGE_FEATURES`. `inherit sys` offers `syslinux`, `systemd`…, each a C (class). |
 | 8e.2 | Type `IMAGE_INSTALL:append = "htop"`, a new line `DEPENDS_append = " zlib"`, a new line `EXTRA_IMAGE_FEATURES = "debug-tweak"`. Click a problem. | Below the editor: ▲ *adds no space* with the fix, ✖ *old override syntax*, ▲ *not an image feature of this release* (on Scarthgap: *did you mean “debug-tweaks”?*); the line numbers turn red/yellow; clicking selects the line. |
 | 8e.3 | TUI: `2`, open a recipe with `o` from your layer (or `n` *New file* with a `.bb` path); type `inherit sys`, `Ctrl+Space`, `Enter`; move onto a variable, `Alt+D`. | A list of classes; Enter inserts `systemd`; the line under the editor lists problems or *✔ no problems found*; Alt+D shows the variable's documentation. |
-| 8e.4 | `bitloom --config .validation/profiles.json --lint meta-acme; echo $?`; then on a folder with a `DEPENDS_append`; `bitloom --config .validation/profiles.json --explain IMAGE_INSTAL; echo $?` | Clean layer: exit 0; with the error: the file:line, the fix and exit 2. `--explain` suggests `IMAGE_INSTALL` and exits 1. |
+| 8e.4 | `bitloom --config .validation/profiles.json --lint tests/integration; echo $?`; then on a folder with a `DEPENDS_append`; `bitloom --config .validation/profiles.json --explain IMAGE_INSTAL; echo $?` | Clean layer: exit 0; with the error: the file:line, the fix and exit 2. `--explain` suggests `IMAGE_INSTALL` and exits 1. |
 
 ### Stage 8f — Migrate Scarthgap → Wrynose (no builds; a build at the end is optional)
 
 | # | Do | You should see |
 | --- | --- | --- |
-| 8f.1 | Web on `kas-scarthgap`: `9`. | *scarthgap 5.0 LTS → wrynose 6.0 LTS*; the path 5.1 → 5.2 → 5.3 → 6.0 with the guides linked; *2 break the build* (the poky repository in `tests/integration/kas-minimal.yml`, `LAYERSERIES_COMPAT_acme`) and *1 with a safe fix* (when the Studio test layer meta-acme is still there). |
-| 8f.2 | *Preview the selected fixes*, *Apply*; then *Undo*. | The diff `LAYERSERIES_COMPAT_acme = "scarthgap"` → `"wrynose"`; after Apply the count drops; Undo restores the file (check `meta-acme/conf/layer.conf`). |
+| 8f.1 | Web on `kas-scarthgap`: `9`. | *scarthgap 5.0 LTS → wrynose 6.0 LTS*; the path 5.1 → 5.2 → 5.3 → 6.0 with the guides linked; *1 breaks the build*: the poky repository in `tests/integration/kas-minimal.yml`. |
+| 8f.2 | Give the project a layer of its own for a moment: `mkdir -p meta-try/conf && printf 'BBFILE_COLLECTIONS += "try"\nLAYERSERIES_COMPAT_try = "scarthgap"\n' > meta-try/conf/layer.conf`. *Scan again*, *Preview the selected fixes*, *Apply*, then *Undo*. Remove `meta-try` afterwards. | *2 break the build*, *1 with a safe fix*; the diff `LAYERSERIES_COMPAT_try = "scarthgap"` → `"wrynose"`; after Apply the count drops; Undo restores `meta-try/conf/layer.conf`. |
 | 8f.3 | Step 3: read the diff; *Write kas-minimal-wrynose.yml and the profile*. | The new file next to `kas-minimal.yml` with bitbake, openembedded-core and meta-yocto at yocto-6.0.2 (the same as `kas-wrynose.yml`); the profile `kas-scarthgap-wrynose` with `KAS_WORK_DIR` `…/bitloom-kas-validation-wrynose`; the old file and profile unchanged. |
 | 8f.4 | Optional (≈30 min, downloads): step 4, *Switch*, *Parse metadata*, *Build the image*. | The new profile parses and builds core-image-minimal on Wrynose in its own work directory; `kas-scarthgap` still builds as before. Remove the profile and `tests/integration/kas-minimal-wrynose.yml` afterwards. |
 | 8f.5 | On `kas-wrynose`: `9`. TUI on `kas-scarthgap`: `7`, *Migration check*, `a`. CLI: `bitloom --config .validation/profiles.json --migrate --to wrynose; echo $?` | Wrynose: *on the newest release Bitloom covers*. TUI and CLI: the same report as the web; exit 2 while something breaks the build. |
@@ -245,11 +245,11 @@ Switch the TUI with `P` and the web with the profile menu to `kas-scarthgap`, th
 
 | # | Do | You should see |
 | --- | --- | --- |
-| 8h.1 | Web: the top bar. | `kas-container · MACHINE qemux86-64 · DISTRO acme`: the kas overlay `kas-studio-meta-acme.yml` selects the acme distribution, and the build uses it (no `?` anywhere). |
+| 8h.1 | Web: the top bar. | `kas-container · MACHINE qemux86-64 · DISTRO poky`, read from `kas-minimal.yml` (no `?` anywhere). |
 | 8h.2 | `4` Image, then *Services* and *Insights*. | core-image-minimal ≈27.6 MiB, 370 files, 36 packages; sysvinit with 20 scripts at boot in order; 0 ports; 3 setuid files. |
 | 8h.3 | `5` SBOM & CRA; `8` → *What this release can do*. | SPDX 2.2 and cve-check; sbom-cve-check and VEX *not available* with the Scarthgap alternative; capabilities ✔ spdx2, cve-check, debug-tweaks. |
 | 8h.4 | `6` Studio → *Image*, step *What goes in*. Then *Recipe append* for `base-files`, file `motd`. | `debug-tweaks` is offered (not on Wrynose); the append uses `${WORKDIR}/motd`. |
-| 8h.5 | `7` Practices. | ≈81 %, no errors (the meta-acme layer is Scarthgap's). |
+| 8h.5 | `7` Practices. | ≈73 %, no errors, as on Wrynose. |
 | 8h.6 | Studio, *edit before creating*, type `EXTRA_IMAGE_FEATURES = "debug-tweak"`. | *did you mean “debug-tweaks”?* (on Wrynose there is no suggestion: the feature was removed). |
 | 8h.7 | `2` → *+ Add* → `virtual` → meta-virtualization. Do not add. | The same layers as on Wrynose, branch `scarthgap`, each *✔ scarthgap*. |
 
