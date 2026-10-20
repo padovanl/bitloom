@@ -139,6 +139,10 @@ python3 -m venv .venv && .venv/bin/python -m pip install -e '.[dev]'
 
 Screenshots, the documentation site, release packages and the real kas validation builds are described in [Documentation and verification](docs/guide.md#documentation-and-verification) and [Build, launch and try the local Yocto workspace](docs/guide.md#build-launch-and-try-the-local-yocto-workspace).
 
+## 🤝 Contributing
+
+Issues and pull requests are welcome: read [CONTRIBUTING.md](CONTRIBUTING.md) first. Report security problems privately, as [SECURITY.md](SECURITY.md) explains.
+
 ## 🙏 Inspiration and thanks
 
 Bitloom is inspired by the idea behind [yoctui](https://github.com/0xbadcaffe/yoctui): bringing everyday Yocto and BitBake work into a terminal interface. Thank you to [0xbadcaffe](https://github.com/0xbadcaffe), the author of yoctui, for the inspiration and for sharing the project with the community. Bitloom has its own implementation and interface. Hob, Toaster and knotty taught what to avoid; see the [research map](docs/roadmap.md#answering-the-criticisms-of-earlier-yocto-interfaces).
