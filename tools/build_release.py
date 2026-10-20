@@ -113,7 +113,7 @@ def build(version: str, output: Path) -> None:
         size = sum(p.stat().st_size for p in package.rglob('*') if p.is_file())
         (control / 'control').write_text(
             f'Package: bitloom\nVersion: {version}\nArchitecture: all\n'
-            'Maintainer: Luca Padovan <padovan.93@gmail.com>\n'
+            'Maintainer: Luca Padovan <padovanl@users.noreply.github.com>\n'
             'Section: devel\nPriority: optional\nDepends: python3 (>= 3.10)\n'
             f'Installed-Size: {(size + 1023) // 1024}\n'
             'Description: Terminal cockpit for Yocto and BitBake development\n'
