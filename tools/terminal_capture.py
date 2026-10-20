@@ -20,4 +20,29 @@ def terminal_svg(app, title: str) -> str:
     style.text = re.sub(r'@font-face\s*\{.*?\}', '', style.text, flags=re.S).replace('Fira Code, monospace', '"DejaVu Sans Mono", monospace')
     desc = ET.SubElement(root, f'{{{ns["svg"]}}}desc')
     desc.text = title
-    return '\n'.join(line.rstrip() for line in ET.tostring(root, encoding='unicode').splitlines()) + '\n'
+    return private('\n'.join(line.rstrip() for line in ET.tostring(root, encoding='unicode').splitlines()) + '\n')
+
+
+def private(text: str) -> str:
+    """Captures are published: the checkout's folder and the home folder of whoever runs the capture become neutral
+    paths of the same length (each piece of text has a fixed width in the image)."""
+    from pathlib import Path
+
+    names = ["bitloom", "bitloom-src", "bitloom-main", "bitloom-clone", "bitloom-master", "bitloom-checkout", "bitloom-workspace",
+             "bitloom-development", "bitloom-main-checkout", "bitloom-current-checkout", "bitloom-workspace-current",
+             "bitloom-workspace-checkout", "bitloom-development-checkout", "bitloom-workspace-main-checkout"]
+
+    def fit(prefix: str, filler: str, length: int) -> str:
+        exact = next((n for n in names if len(prefix + n) == length), None) if filler.startswith("bitloom") else None
+        if exact:
+            return prefix + exact
+        while len(prefix + filler) < length:
+            filler += "-copy"
+        return (prefix + filler)[:length]
+    checkout = str(Path(__file__).resolve().parents[1])
+    home = str(Path.home())
+    for real, neutral in ((checkout, fit("/home/user/src/", "bitloom-workspace-checkout", len(checkout))),
+                          (home, fit("/home/", "user", len(home)))):
+        if len(real) > 4:
+            text = re.sub(re.escape(real), neutral, text, flags=re.IGNORECASE)
+    return text

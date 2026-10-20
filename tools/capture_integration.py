@@ -3,6 +3,7 @@ import asyncio
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +20,8 @@ async def capture():
     report = json.loads((state / 'result.json').read_text())
     if report['status'] != 'success' or not report.get('artifact_verified'):
         raise RuntimeError('A successfully built and verified rootfs is required before making this capture')
-    config = state / 'profiles.json'
+    # The capture profile goes to a throwaway file: the validation's own profiles.json stays as it is.
+    config = Path(tempfile.mkdtemp(prefix='bitloom-capture-')) / 'profiles.json'
     settings = Settings(config)
     settings.profiles = [Profile(name='kas-scarthgap', root=str(ROOT), mode='kas-container', kas_file='tests/integration/kas-minimal.yml', machine='qemux86-64', distro='poky', environment={'KAS_WORK_DIR': report['work'], 'KAS_CONTAINER_ENGINE': 'docker', 'KAS_CONTAINER_IMAGE':'ghcr.io/siemens/kas/kas@sha256:fef6f850106a6823e65e133ed8157a847431dea4aa2de3a636c11f65e9977476'}, targets=['core-image-minimal'])]
     settings.active = 'kas-scarthgap'
