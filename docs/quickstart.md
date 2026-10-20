@@ -55,7 +55,7 @@ Pick a proposal, check the fields (each is explained and checked as you type) an
 1. In **Builds** (`1`), click the target field or press `t`: it lists the image recipes found in your layers, the kas target and the images already built first. Any recipe works too.
 2. Press `b` (or **Build**). The job appears at the top of the history, with live output, progress and an ETA.
 3. When it ends, **Summary** (`u`) groups errors, warnings and failed tasks; **Compare** (`d`) shows what changed since the previous run. A failed build's summary starts with a diagnosis of the real cause: the failed task, its log, the lines that matter and the next step.
-4. **Operations** (`q`) queues any of the 79 operations: one recipe's compile, a clean, a dry run, an SDK, an SBOM or CVE check. Operations your Yocto release does not have are not offered, and say what to use instead.
+4. **Operations** (`q`) queues any of the 82 operations: one recipe's compile, a clean, a dry run, an SDK, an SBOM or CVE check. Operations your Yocto release does not have are not offered, and say what to use instead.
 5. **Image** (`4`) opens what you built: every file with its size and the package and recipe that installs it, and *Change it with an append* for anything you want different. See [Image explorer](image.md).
 
 ![A real force compile of busybox followed live, then its summary](assets/web-clip-build.gif)
@@ -76,4 +76,5 @@ Opens the terminal UI on the same service, profiles and history: useful over SSH
 * [SBOM, CRA and releases](compliance.md): SBOM quality, vulnerabilities and their exports, CRA readiness.
 * [Studio](studio.md): your own layer, distribution, machine, image or recipe, explained field by field.
 * [User guide](guide.md): profiles and runtimes, caches, analysis, troubleshooting.
-* [Teams and CI/CD](ci.md): headless `--ci` runs, team profiles, launcher scripts in depth.
+* [CI and build servers](ci.md): headless `--ci` runs, the build service as a system service, team profiles.
+* [Where your build runs](runtimes.md): kas, containers, launcher scripts, Bitloom inside a container.

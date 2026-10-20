@@ -70,7 +70,7 @@ bitloom --web
 <li>In <strong>Builds</strong> (<code>1</code>), click the target field or press <code>t</code>: it lists the image recipes found in your layers, the kas target and the images already built first. Any recipe works too.</li>
 <li>Press <code>b</code> (or <strong>Build</strong>). The job appears at the top of the history, with live output, progress and an ETA.</li>
 <li>When it ends, <strong>Summary</strong> (<code>u</code>) groups errors, warnings and failed tasks; <strong>Compare</strong> (<code>d</code>) shows what changed since the previous run. A failed build's summary starts with a diagnosis of the real cause: the failed task, its log, the lines that matter and the next step.</li>
-<li><strong>Operations</strong> (<code>q</code>) queues any of the 79 operations: one recipe's compile, a clean, a dry run, an SDK, an SBOM or CVE check. Operations your Yocto release does not have are not offered, and say what to use instead.</li>
+<li><strong>Operations</strong> (<code>q</code>) queues any of the 82 operations: one recipe's compile, a clean, a dry run, an SDK, an SBOM or CVE check. Operations your Yocto release does not have are not offered, and say what to use instead.</li>
 <li><strong>Image</strong> (<code>4</code>) opens what you built: every file with its size and the package and recipe that installs it, and <em>Change it with an append</em> for anything you want different. See <a href="image.html">Image explorer</a>.</li>
 </ol>
 <details class="shot"><summary><span>Animation</span> A real force compile of busybox followed live, then its summary</summary><div class="shot-body"><img src="assets/web-clip-build.gif" alt="A real force compile of busybox followed live, then its summary" loading="lazy" decoding="async"></div></details>
@@ -85,7 +85,8 @@ bitloom --web
 <li><a href="compliance.md">SBOM, CRA and releases</a>: SBOM quality, vulnerabilities and their exports, CRA readiness.</li>
 <li><a href="studio.html">Studio</a>: your own layer, distribution, machine, image or recipe, explained field by field.</li>
 <li><a href="guide.md">User guide</a>: profiles and runtimes, caches, analysis, troubleshooting.</li>
-<li><a href="ci.html">Teams and CI/CD</a>: headless <code>--ci</code> runs, team profiles, launcher scripts in depth.</li>
+<li><a href="ci.html">CI and build servers</a>: headless <code>--ci</code> runs, the build service as a system service, team profiles.</li>
+<li><a href="runtimes.md">Where your build runs</a>: kas, containers, launcher scripts, Bitloom inside a container.</li>
 </ul>
 </article>
 <nav class="pager" aria-label="Previous and next page"><a class="next" href="runtimes.html"><small>Next</small>Where your build runs</a></nav>
